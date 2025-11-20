@@ -35,8 +35,7 @@ The resulting `.bwextension` artifact is placed under `oiko-launchcontrol/build/
   [bitwig-extensions](https://github.com/bitwig/bitwig-extensions). The helper packages
   (`com.bitwig.extensions.framework`, `…controllers.novation.common`, `…util`) remain under Bitwig’s MIT terms.
 
-- The arp workflow is adapted from Eric Ahrens’ [rhbitwig](https://github.com/rhbitwig/rhbitwig) project (also MIT).
-  User Template 8 intentionally reproduces the Richie Hawtin Arp layout while the rest of the controller keeps the stock Bitwig experience.
+- The arp workflow on User Template 8 is adapted from Eric Ahrens’ [rhbitwig](https://github.com/ericahrens/rhbitwig) project (also MIT).
 
 Please keep these acknowledgements if you redistribute or build on this project.
 
