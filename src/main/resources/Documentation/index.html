@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Launch Control XL by Oiko Audio – Quick Reference</title>
+  <style>
+    body { font-family: sans-serif; margin: 1.5em; }
+    h1 { font-size: 1.4em; }
+    h2 { font-size: 1.1em; margin-top: 1.2em; }
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #888; padding: 4px 8px; }
+  </style>
+</head>
+<body>
+  <h1>Launch Control XL (Oiko)</h1>
+  <p>An extended version of Bitwig’s factory Launch Control XL script (Mk2). It keeps the factory template behaviour intact and adds clean handling for user templates plus a dedicated arp layer taken from Eric Ahrens' rhbitwig script.</p>
+
+  <h2>Setup</h2>
+  <ul>
+    <li>Add the controller entry <strong>“Launch Control XL by Oiko Audio”</strong> in Bitwig’s Controller settings. It uses the standard LCXL MIDI ports.</li>
+    <li>If Bitwig’s automatic detection adds the factory LCXL entry, remove it and keep only the Oiko entry to avoid duplicate binding.</li>
+    <li>Power-cycle the LCXL and select Factory Template&nbsp;1 before adding if you see any odd behaviour.</li>
+  </ul>
+
+  <h2>Factory Templates (8–15)</h2>
+  <ul>
+    <li>Unchanged from the factory script: knobs/faders control sends/device targets per template, transport/track buttons work as usual.</li>
+    <li>LED feedback follows the selected factory template.</li>
+  </ul>
+
+  <table>
+    <tr><th>Template (channel)</th><th>Mode</th><th>Notes</th></tr>
+    <tr><td>8</td><td>Send2FullDevice</td><td>Knobs/faders target 2 sends and device controls.</td></tr>
+    <tr><td>9</td><td>Send2Device1</td><td>2 sends plus device page 1.</td></tr>
+    <tr><td>10</td><td>Send2Project</td><td>2 sends plus project device controls.</td></tr>
+    <tr><td>11</td><td>Send3</td><td>3 sends.</td></tr>
+    <tr><td>12</td><td>Send1Device2</td><td>1 send plus device page 2.</td></tr>
+    <tr><td>13</td><td>Device3</td><td>Device page 3 focus.</td></tr>
+    <tr><td>14</td><td>(unused)</td><td>No factory mapping.</td></tr>
+    <tr><td>15</td><td>Track3</td><td>Track controls focus.</td></tr>
+  </table>
+
+  <h2>User Templates (1–7)</h2>
+  <ul>
+    <li>All MIDI is passed through to Bitwig; the script does not repaint knob LEDs, so your Novation Editor colors are preserved.</li>
+  </ul>
+
+  <h2>Arp Layer (User Template 8)</h2>
+  <ul>
+    <li>User Template&nbsp;8 engages the arp layer (from rhbitwig). Factory layers are disabled; the layer targets the selected Bitwig Arpeggiator device on the first track. If you select a track without an Arpeggiator, LCXL LEDs go dark.</li>
+    <li>Template select: only User Template&nbsp;8 is supported for the arp layer.</li>
+    <li>Octave range: dedicated control to pick 1–4 octaves.</li>
+    <li>Pitch offset: Row&nbsp;1 + faders sum to &plusmn;24 semitones. LED colors show aggregate offset (yellow=0, red for negative, green for positive; brighter at &plusmn;12/&plusmn;24).</li>
+    <li>Velocity: Row&nbsp;2 sets per-step velocity (brighter green = higher velocity).</li>
+    <li>Gate length: Row&nbsp;3 sets per-step gate (brighter yellow = longer; full CCW mutes the step/LED off).</li>
+    <li>2&times;8 button matrix (mode-dependent):
+      <ul>
+        <li>Default (no mode button): Row&nbsp;1 = Step Skip, Row&nbsp;2 = Step Count.</li>
+        <li>Track Select Left: Row&nbsp;1 = Step Count, Row&nbsp;2 = Global Velocity presets.</li>
+        <li>Track Select Right: Row&nbsp;1 = Step Count, Row&nbsp;2 = Global Gate presets.</li>
+        <li>Other mode buttons (Device/Mute/Solo/Record) mirror the rhbitwig mappings for pitch/velocity/gate submodes and pattern/quantize helpers.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>Tested in Bitwig 5.3 (API&nbsp;24 runtime) and 6.0 Beta (API&nbsp;25). Build against <code>extension-api:24</code>.</li>
+    <li>Debug/telemetry messages are prefixed with <code>[LCXL]</code> in the Bitwig controller console.</li>
+  </ul>
+</body>
+</html>

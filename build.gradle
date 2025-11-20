@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    maven {
+        url = 'https://maven.bitwig.com/'
+    }
+    mavenCentral()
+}
+
+group = 'com.oikoaudio'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+    archiveBaseName.set('LaunchControlXlOikontrol')
+    archiveExtension.set('bwextension')
+}
+
+dependencies {
+    implementation 'com.bitwig:extension-api:25'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs += [
+        '--add-opens=java.base/java.util.function=ALL-UNNAMED'
+    ]
+}

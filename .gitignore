@@ -1,0 +1,11 @@
+# Gradle / build outputs
+/build/
+/.gradle/
+
+# IDE clutter
+.DS_Store
+/.idea/
+/.vscode/
+
+# Local test artifacts
+*.bwextension
