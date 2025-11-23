@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * Creates the user-mode NoteInput that leaves MIDI events available for Bitwig mappings.
- */
+   */
 public final class UserModeNoteInputInstaller {
 
    private static final String NOTE_INPUT_NAME = "Launch Control XL Oikontrol";
@@ -23,19 +23,37 @@ public final class UserModeNoteInputInstaller {
    }
 
    public static NoteInput ensureUserModeInput(final MidiIn midiIn, final int reservedChannel) {
+      return ensureUserModeInput(midiIn, new int[]{reservedChannel});
+   }
+
+   public static NoteInput ensureUserModeInput(final MidiIn midiIn, final int... excludedChannels) {
       final MidiIn safeMidiIn = Objects.requireNonNull(midiIn, "midiIn");
-      final String[] masks = buildChannelMasks(reservedChannel);
+      final String[] masks = buildChannelMasks(excludedChannels);
       final NoteInput input = safeMidiIn.createNoteInput(NOTE_INPUT_NAME, masks);
       return NoteInputConfigurator.asNonConsuming(input);
    }
 
-   private static String[] buildChannelMasks(final int reservedChannel) {
-      final boolean hasReserved = reservedChannel >= 0 && reservedChannel < USER_TEMPLATE_CHANNELS;
-      final int activeChannels = hasReserved ? USER_TEMPLATE_CHANNELS - 1 : USER_TEMPLATE_CHANNELS;
+   private static String[] buildChannelMasks(final int... excludedChannels) {
+      final boolean[] exclude = new boolean[USER_TEMPLATE_CHANNELS];
+      if (excludedChannels != null) {
+         for (final int channel : excludedChannels) {
+            if (channel >= 0 && channel < USER_TEMPLATE_CHANNELS) {
+               exclude[channel] = true;
+            }
+         }
+      }
+
+      int activeChannels = 0;
+      for (final boolean ex : exclude) {
+         if (!ex) {
+            activeChannels++;
+         }
+      }
+
       final String[] masks = new String[STATUS_BASES.length * activeChannels];
       int index = 0;
       for (int channel = 0; channel < USER_TEMPLATE_CHANNELS; channel++) {
-         if (hasReserved && channel == reservedChannel) {
+         if (exclude[channel]) {
             continue;
          }
          for (final int statusBase : STATUS_BASES) {

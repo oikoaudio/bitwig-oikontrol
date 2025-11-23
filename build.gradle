@@ -23,7 +23,7 @@ jar {
 }
 
 dependencies {
-    implementation 'com.bitwig:extension-api:25'
+    implementation 'com.bitwig:extension-api:24'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testImplementation 'org.mockito:mockito-core:5.12.0'
 }

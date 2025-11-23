@@ -9,3 +9,7 @@
 
 # Local test artifacts
 *.bwextension
+
+# api documentation and implementation notes used during development
+/doc/dev
+/ref/
