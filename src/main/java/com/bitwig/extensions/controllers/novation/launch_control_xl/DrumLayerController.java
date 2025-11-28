@@ -16,7 +16,9 @@ import com.bitwig.extension.controller.api.RemoteControl;
 import com.bitwig.extension.controller.api.RemoteControlsPage;
 import com.bitwig.extension.controller.api.SettableBooleanValue;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.LaunchControlXlControllerExtension.TrackControl;
+import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.AccentModeLogic;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumMapping;
+import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.PadNoteMapper;
 import com.bitwig.extensions.framework.Layer;
 
 /**
@@ -221,7 +223,7 @@ final class DrumLayerController
       // Derive the outgoing note purely from the current pad bank position and the pad index so it
       // stays consistent across pages (C1 upward).
       final int bankOffset = padBank.scrollPosition().get();
-      final int key = bankOffset + padIndex;
+      final int key = PadNoteMapper.computeNote(bankOffset, padIndex);
       final int appliedVelocity = velocity > 0 ? 100 : 0;
       final int statusOn = 0x90 + midiChannel;
       final int statusOff = 0x80 + midiChannel;
@@ -256,7 +258,7 @@ final class DrumLayerController
    boolean handleMidi(final int status, final int data1, final int data2)
    {
       final int channel = status & 0x0F;
-      if (channel != midiChannel)
+      if (channel != midiChannel && channel != 0)
       {
          return false;
       }
@@ -431,8 +433,10 @@ final class DrumLayerController
       final RemoteControl param = rc.getParameter(3);
       if (!param.exists().get())
          return;
-      // Force the target regardless of current value to support true momentary behaviour.
-      param.value().set(enable ? 127 : 0, 127);
+      final int current = (int) param.value().get();
+      final int next = AccentModeLogic.nextValue(this.accentMomentary, enable, current);
+      if (next != current)
+         param.value().set(next, 127);
       log("Pad accent " + (enable ? "on" : "off") + " pad=" + padIndex);
    }
 
