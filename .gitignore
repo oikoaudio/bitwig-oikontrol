@@ -1,5 +1,5 @@
 # Gradle / build outputs
-/build/
+build/
 /.gradle/
 /bin
 

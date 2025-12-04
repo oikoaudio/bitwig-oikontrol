@@ -98,3 +98,28 @@ the the next set of 8 pads.
 - The Arp "custom scale mode" filter that removes notes of a given pitch does not work as expected yet. It does work
 well with the Global Key/scales in Bitwig 6 however. 
 
+
+## Factory modes
+
+These are the same as in the Bitwig factory script
+
+Factory template 1: Two sends and device mode
+The first and second knobs rows control the sends. You can scroll the send window using the send select buttons. The third knob row controls the remote controls of the currently selected device.
+
+Factory template 2: Two sends and device mode
+The first and second knobs rows control the sends. You can scroll the send window using the send select buttons. The third knob row controls the first remote controls of track's device.
+
+Factory template 3: Two sends and project remotes
+Same as above except that the third row controls the project's remotes.
+
+Factory template 4: Three sends mode
+Same as above except that the third row is an additional send control.
+
+Factory template 5: One send and Two channel device controls mode
+The first row of knobs controls the send. The second and third rows of knobs controls the two first remote controls of each track's selected device.
+
+Factory template 6: Three channel device controls mode
+The first, second and third rows of knobs controls the three first remote controls of each track's selected device.
+
+Factory template 7: Three track remote controls mode
+The first, second and third rows of knobs controls the three first remote controls of each track.
