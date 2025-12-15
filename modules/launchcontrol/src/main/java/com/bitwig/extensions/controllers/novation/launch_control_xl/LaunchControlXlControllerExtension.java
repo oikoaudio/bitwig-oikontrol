@@ -56,14 +56,15 @@ import java.util.OptionalInt;
  */
 public class LaunchControlXlControllerExtension extends ControllerExtension
 {
-   private static final boolean DEBUG_TELEMETRY = true;
-   private static final int DEVICE_DISCOVERY_WIDTH = 128;
+   static final boolean DEBUG_TELEMETRY = true;
+   static final int DEVICE_DISCOVERY_WIDTH = 128;
+   private static HostNotifications sHostActions;
 
    // Launch Control XL (default user mode) MIDI note and CC numbers
-   private static final int[] TRACK_FOCUS_NOTES = {41, 42, 43, 44, 57, 58, 59, 60};
-   private static final int[] TRACK_CONTROL_NOTES = {73, 74, 75, 76, 89, 90, 91, 92};
-   private static final int[] KNOB_CC_OFFSETS = {13, 29, 49};
-   private static final int SLIDER_CC_BASE = 77;
+   static final int[] TRACK_FOCUS_NOTES = {41, 42, 43, 44, 57, 58, 59, 60};
+   static final int[] TRACK_CONTROL_NOTES = {73, 74, 75, 76, 89, 90, 91, 92};
+   static final int[] KNOB_CC_OFFSETS = {13, 29, 49};
+   static final int SLIDER_CC_BASE = 77;
    private static final int SEND_UP_CC = 104;
    private static final int SEND_DOWN_CC = 105;
    private static final int TRACK_LEFT_CC = 106;
@@ -72,6 +73,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private static final int MUTE_NOTE = 106;
    private static final int SOLO_NOTE = 107;
    private static final int RECORD_ARM_NOTE = 108;
+   // user template dedicated to device remote pages (Template 6, zero-based channel 5)
+   private static final int DEVICE_PAGES_USER_TEMPLATE_ID = 5;
 
    // hardcoded user template IDs for Drum and Arp layers
    private static final int DRUM_USER_TEMPLATE_ID = 6; // user template 7 (0-based)
@@ -135,6 +138,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    {
       mHost = getHost();
       mHostActions = new HostNotifications(mHost, DEBUG_TELEMETRY);
+      sHostActions = mHostActions;
+      mDevicePerTrackSupported = mHost.getHostApiVersion() < 25;
 
       mMidiIn = mHost.getMidiInPort(0);
       mMidiOut = mHost.getMidiOutPort(0);
@@ -142,7 +147,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       mUserModeNoteInput = UserModeNoteInputInstaller.ensureUserModeInput(
          mMidiIn,
          ARP_USER_TEMPLATE_ID,
-         DRUM_USER_TEMPLATE_ID);
+         DRUM_USER_TEMPLATE_ID,
+         DEVICE_PAGES_USER_TEMPLATE_ID);
       mAutoAttachToFirst = mHost.getPreferences().getBooleanSetting(
          "Auto-attach to first Drum Machine and Arpeggiator",
          "LaunchControl XL",
@@ -162,6 +168,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       mRemoteControls.setHardwareLayout(HardwareControlType.KNOB, 8);
       mRemoteControls.selectedPageIndex().markInterested();
       mRemoteControls.pageCount().markInterested();
+      initDeviceRemotePages();
 
       mDrumPadBank = mCursorDevice.createDrumPadBank(DrumLayerController.PADS_PER_BANK);
 
@@ -199,15 +206,19 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
             sendBank.getItemAt(j).value().markInterested();
          }
 
-         mTrackDeviceCursors[i] = track.createCursorDevice();
-         mTrackCursorDeviceRemoteControls[i] = mTrackDeviceCursors[i].createCursorRemoteControlsPage(4);
-         mTrackCursorDeviceRemoteControls[i].setHardwareLayout(HardwareControlType.KNOB, 1);
+         if (mDevicePerTrackSupported)
+         {
+            mTrackDeviceCursors[i] = track.createCursorDevice("track-device-" + i, 0);
+            mTrackCursorDeviceRemoteControls[i] = mTrackDeviceCursors[i].createCursorRemoteControlsPage(4);
+            mTrackCursorDeviceRemoteControls[i].setHardwareLayout(HardwareControlType.KNOB, 1);
+         }
 
          mTrackRemoteControls[i] = track.createCursorRemoteControlsPage(4);
 
          for (int j = 0; j < 4; ++j)
          {
-            markParameterInterested(mTrackCursorDeviceRemoteControls[i].getParameter(j));
+            if (mTrackCursorDeviceRemoteControls[i] != null)
+               markParameterInterested(mTrackCursorDeviceRemoteControls[i].getParameter(j));
             markParameterInterested(mTrackRemoteControls[i].getParameter(j));
          }
       }
@@ -239,6 +250,39 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       parameter.markInterested();
       parameter.exists().markInterested();
       parameter.value().markInterested();
+   }
+
+   /**
+    * Pre-create independent cursor pages for the selected device so each hardware row can pin to a
+    * specific remote page (1–6 for knobs/buttons, 7 for navigation).
+    */
+   private void initDeviceRemotePages()
+   {
+      for (int pageIndex = 0; pageIndex < mDeviceRemotePages.length; pageIndex++)
+      {
+         final CursorRemoteControlsPage rc =
+            mCursorDevice.createCursorRemoteControlsPage("device-page-" + (pageIndex + 1), 8, "");
+         rc.selectedPageIndex().markInterested();
+         rc.pageCount().markInterested();
+         final int index = pageIndex;
+         rc.pageCount().addValueObserver(count -> {
+            if (count > index)
+            {
+               rc.selectedPageIndex().set(index);
+            }
+         });
+         if (rc.pageCount().get() > index)
+         {
+            rc.selectedPageIndex().set(index);
+         }
+         rc.setHardwareLayout(HardwareControlType.KNOB, 8);
+         mDeviceRemotePages[pageIndex] = rc;
+
+         for (int i = 0; i < 8; i++)
+         {
+            markParameterInterested(rc.getParameter(i));
+         }
+      }
    }
 
    private void createHardwareSurface()
@@ -363,10 +407,12 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      final int channel = mDrumLayerActive ? DRUM_USER_TEMPLATE_ID : mCurrentTemplateChannel;
+      final int channel = mDrumLayerActive
+         ? DRUM_USER_TEMPLATE_ID
+         : mDevicePagesLayerActive ? DEVICE_PAGES_USER_TEMPLATE_ID : mCurrentTemplateChannel;
       mHostActions.debug("[LCXL] attachHardwareMatchers mode=" + mMode + " channel=" + channel +
          " factoryActive=" + mFactoryTemplateActive + " arpActive=" + mArpLayerActive +
-         " drumActive=" + mDrumLayerActive);
+         " drumActive=" + mDrumLayerActive + " devicePagesActive=" + mDevicePagesLayerActive);
 
       if (mDrumLayerActive)
       {
@@ -441,6 +487,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       createTrackControlsLayers(layers);
       createDeviceLayer(layers);
       createDrumLayer(layers);
+      createDevicePagesLayer(layers);
    }
 
    private void createDeviceLayer(final Layers layers)
@@ -461,7 +508,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
     * {@link DrumLayerController}. This layer takes over knobs/sliders/buttons when the drum template
     * is active, so the helper receives references to all relevant controls.
     */
-    private void createDrumLayer(final Layers layers)
+   private void createDrumLayer(final Layers layers)
    {
       mDrumLayer = new Layer(layers, "Drum");
 
@@ -503,6 +550,40 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       mDrumLayerController.init();
    }
 
+   private void createDevicePagesLayer(final Layers layers)
+   {
+      mDevicePagesLayer = new Layer(layers, "Device Pages (User Template 6)");
+      mDevicePagesController = new DevicePagesController(
+         mDeviceRemotePages,
+         mHardwareKnobs,
+         mHardwareSliders,
+         mKnobsLed,
+         mBottomButtonsLed);
+
+      // Rows 1–3 => pages 1–3, faders => page 4.
+      for (int i = 0; i < 8; ++i)
+      {
+         mDevicePagesLayer.bind(mHardwareKnobs[i], mDeviceRemotePages[0].getParameter(i));
+         mDevicePagesLayer.bind(mHardwareKnobs[8 + i], mDeviceRemotePages[1].getParameter(i));
+         mDevicePagesLayer.bind(mHardwareKnobs[16 + i], mDeviceRemotePages[2].getParameter(i));
+         mDevicePagesLayer.bind(mHardwareSliders[i], mDeviceRemotePages[3].getParameter(i));
+
+         final int idx = i;
+         mDevicePagesLayer.bindPressed(mBtTrackFocus[i],
+            () -> toggleRemoteParameter(mDeviceRemotePages[4].getParameter(idx)));
+         mDevicePagesLayer.bindPressed(mBtTrackControl[i],
+            () -> toggleRemoteParameter(mDeviceRemotePages[5].getParameter(idx)));
+      }
+
+      // Page 7: parameter 0 bumped by Send Up/Down; parameter 1 bumped by Track Left/Right.
+      mDevicePagesLayer.bindPressed(mBtSendUp, () -> bumpRemoteParameter(mDeviceRemotePages[6].getParameter(0), 1));
+      mDevicePagesLayer.bindPressed(mBtSendDown, () -> bumpRemoteParameter(mDeviceRemotePages[6].getParameter(0), -1));
+      mDevicePagesLayer.bindPressed(mBtTrackLeft, () -> bumpRemoteParameter(mDeviceRemotePages[6].getParameter(1), -1));
+      mDevicePagesLayer.bindPressed(mBtTrackRight, () -> bumpRemoteParameter(mDeviceRemotePages[6].getParameter(1), 1));
+
+      mDevicePagesLayer.setIsActive(false);
+   }
+
    private void createModeLayers(final Layers layers)
    {
       mSend2FullDeviceLayer = new Layer(layers, "2 Sends Full Device");
@@ -529,7 +610,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          final SendBank sendBank = mTrackBank.getItemAt(i).sendBank();
          mSend2Device1Layer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
          mSend2Device1Layer.bind(mHardwareKnobs[8 + i], sendBank.getItemAt(1));
-         mSend2Device1Layer.bind(mHardwareKnobs[16 + i], mTrackCursorDeviceRemoteControls[i].getParameter(0));
+         mSend2Device1Layer.bind(mHardwareKnobs[16 + i], deviceParam(i, 0));
       }
 
       mSend1Device2Layer = new Layer(layers, "1 Sends 2 Device");
@@ -537,16 +618,16 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       {
          final SendBank sendBank = mTrackBank.getItemAt(i).sendBank();
          mSend1Device2Layer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend1Device2Layer.bind(mHardwareKnobs[8 + i], mTrackCursorDeviceRemoteControls[i].getParameter(0));
-         mSend1Device2Layer.bind(mHardwareKnobs[16 + i], mTrackCursorDeviceRemoteControls[i].getParameter(1));
+         mSend1Device2Layer.bind(mHardwareKnobs[8 + i], deviceParam(i, 0));
+         mSend1Device2Layer.bind(mHardwareKnobs[16 + i], deviceParam(i, 1));
       }
 
       mDevice3Layer = new Layer(layers, "3 Device");
       for (int i = 0; i < 8; ++i)
       {
-         mDevice3Layer.bind(mHardwareKnobs[i], mTrackCursorDeviceRemoteControls[i].getParameter(0));
-         mDevice3Layer.bind(mHardwareKnobs[8 + i], mTrackCursorDeviceRemoteControls[i].getParameter(1));
-         mDevice3Layer.bind(mHardwareKnobs[16 + i], mTrackCursorDeviceRemoteControls[i].getParameter(2));
+         mDevice3Layer.bind(mHardwareKnobs[i], deviceParam(i, 0));
+         mDevice3Layer.bind(mHardwareKnobs[8 + i], deviceParam(i, 1));
+         mDevice3Layer.bind(mHardwareKnobs[16 + i], deviceParam(i, 2));
       }
 
       mSend2Pan1Layer = new Layer(layers, "2 Sends 1 Pan");
@@ -698,6 +779,11 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          mHostActions.debug(String.format("[LCXL] DRUM MIDI status=%02X data1=%02X data2=%02X (channel %d)",
             status, data1, data2, status & 0x0F));
       }
+      if (mDevicePagesLayerActive)
+      {
+         mHostActions.debug(String.format("[LCXL] DEVICE-PAGES MIDI status=%02X data1=%02X data2=%02X (channel %d)",
+            status, data1, data2, status & 0x0F));
+      }
       if (mFactoryTemplateActive)
       {
          mHostActions.debug(String.format("[LCXL] MIDI status=%02X data1=%02X data2=%02X", status, data1, data2));
@@ -845,6 +931,50 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       return null;
    }
 
+   private void toggleRemoteParameter(final RemoteControl param)
+   {
+      if (param == null || !param.exists().get())
+      {
+         return;
+      }
+      final double current = param.value().get();
+      param.value().set(current > 0 ? 0 : 127, 127);
+   }
+
+   private void bumpRemoteParameter(final RemoteControl param, final double delta)
+   {
+      if (param == null || !param.exists().get())
+      {
+         return;
+      }
+      final double current = param.value().get();
+      final double next = Math.max(0, Math.min(127, current + delta));
+      param.value().set(next, 127);
+   }
+
+   private void setRemoteValue(final RemoteControl param, final double value)
+   {
+      if (param == null || !param.exists().get())
+      {
+         return;
+      }
+      param.value().set(value, 127);
+   }
+
+   /**
+    * Returns a device remote parameter for the given track slot, falling back to track remotes when
+    * per-track cursor devices are unavailable (Bitwig 6 compatibility).
+    */
+   private RemoteControl deviceParam(final int trackIndex, final int paramIndex)
+   {
+      final CursorRemoteControlsPage devicePage = mTrackCursorDeviceRemoteControls[trackIndex];
+      if (devicePage != null)
+      {
+         return devicePage.getParameter(paramIndex);
+      }
+      return mTrackRemoteControls[trackIndex].getParameter(paramIndex);
+   }
+
    /**
     * Focus the track/device for a specific role (drum or arp). Tries the cached index first (when
     * requested) before scanning via the {@link DeviceLocator}, then applies the focus (select track,
@@ -960,6 +1090,32 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
    }
 
+   /**
+    * Engage or disengage the single-device pages user layer (user template 6). Rebinds the hardware
+    * to the dedicated remote pages and shows a popup when activated.
+    */
+   private void setDevicePagesLayerActive(final boolean active)
+   {
+      if (mDevicePagesLayer == null || mDevicePagesLayerActive == active)
+      {
+         return;
+      }
+      mDevicePagesLayerActive = active;
+      if (active)
+      {
+         mHostActions.debug("[LCXL] device pages layer engaged (user template 6)");
+         attachHardwareMatchers();
+         mDevicePagesLayer.setIsActive(true);
+         mHostActions.showPopup("Device pages layer active (Template 6)");
+      }
+      else
+      {
+         mHostActions.debug("[LCXL] device pages layer disengaged");
+         mDevicePagesLayer.setIsActive(false);
+         clearHardwareMatchers();
+      }
+   }
+
    private void selectModeFromSysex(final String sysex)
    {
       final String prefix = "f00020290211770";
@@ -1061,6 +1217,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          {
             final boolean arpTemplate = id == ARP_USER_TEMPLATE_ID;
             final boolean drumTemplate = id == DRUM_USER_TEMPLATE_ID;
+            final boolean devicePagesTemplate = id == DEVICE_PAGES_USER_TEMPLATE_ID;
             mCurrentTemplateChannel = id;
             if (arpTemplate)
             {
@@ -1069,12 +1226,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
             else
             {
                mHostActions.debug("[LCXL] handleTemplateChange -> user template " + (id + 1) +
-                  (drumTemplate ? " (drum)" : ""));
+                  (drumTemplate ? " (drum)" : devicePagesTemplate ? " (device pages)" : ""));
             }
             mFactoryTemplateActive = false;
             setFactoryLayersEnabled(false);
             setArpLayerActive(arpTemplate);
             setDrumLayerActive(drumTemplate);
+            setDevicePagesLayerActive(devicePagesTemplate);
          }
          else
          {
@@ -1083,6 +1241,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
             mFactoryTemplateActive = true;
             setArpLayerActive(false);
             setDrumLayerActive(false);
+            setDevicePagesLayerActive(false);
             setFactoryLayersEnabled(true);
          }
          if (mArpLayerController != null)
@@ -1101,7 +1260,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    public void flush()
    {
       // Do not repaint LEDs in raw user templates without an active overlay layer.
-      if (!mFactoryTemplateActive && !mArpLayerActive && !mDrumLayerActive)
+      if (!mFactoryTemplateActive && !mArpLayerActive && !mDrumLayerActive && !mDevicePagesLayerActive)
       {
          return;
       }
@@ -1140,6 +1299,12 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       if (mDrumLayerActive)
       {
          paintDrumButtons();
+         return;
+      }
+
+      if (mDevicePagesLayerActive)
+      {
+         paintDevicePagesButtons();
          return;
       }
 
@@ -1239,11 +1404,40 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
    }
 
+   private void paintDevicePagesKnobs()
+   {
+      if (mDevicePagesController != null)
+         mDevicePagesController.paintKnobs();
+   }
+
+   private void paintDevicePagesButtons()
+   {
+      if (mDevicePagesController != null)
+         mDevicePagesController.paintButtons();
+   }
+
+   private void setLedForRemote(final SimpleLed led,
+      final RemoteControl param,
+      final int off,
+      final int mid,
+      final int high)
+   {
+      final boolean exists = param != null && param.exists().get();
+      final double value = exists ? param.value().get() : 0;
+      led.setColor(exists ? levelColor(value, off, mid, high) : off);
+   }
+
    protected void paintKnobs()
    {
       if (mDrumLayerActive)
       {
          paintDrumKnobs();
+         return;
+      }
+
+      if (mDevicePagesLayerActive)
+      {
+         paintDevicePagesKnobs();
          return;
       }
 
@@ -1281,7 +1475,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
             {
                mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
                mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               mKnobsLed[16 + i].setColor(levelColor(mTrackCursorDeviceRemoteControls[i].getParameter(0).exists().get() ? mTrackCursorDeviceRemoteControls[i].getParameter(0).value().get() : 0, off, amberLow, amber));
+               final RemoteControl deviceParam0 = deviceParam(i, 0);
+               mKnobsLed[16 + i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
             }
             case Send2Pan1 ->
             {
@@ -1298,14 +1493,19 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
             case Send1Device2 ->
             {
                mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               mKnobsLed[8 + i].setColor(levelColor(mTrackCursorDeviceRemoteControls[i].getParameter(0).exists().get() ? mTrackCursorDeviceRemoteControls[i].getParameter(0).value().get() : 0, off, amberLow, amber));
-               mKnobsLed[16 + i].setColor(levelColor(mTrackCursorDeviceRemoteControls[i].getParameter(1).exists().get() ? mTrackCursorDeviceRemoteControls[i].getParameter(1).value().get() : 0, off, amberLow, amber));
+               final RemoteControl deviceParam0 = deviceParam(i, 0);
+               final RemoteControl deviceParam1 = deviceParam(i, 1);
+               mKnobsLed[8 + i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
+               mKnobsLed[16 + i].setColor(levelColor(deviceParam1 != null && deviceParam1.exists().get() ? deviceParam1.value().get() : 0, off, amberLow, amber));
             }
             case Device3 ->
             {
-               mKnobsLed[i].setColor(levelColor(mTrackCursorDeviceRemoteControls[i].getParameter(0).exists().get() ? mTrackCursorDeviceRemoteControls[i].getParameter(0).value().get() : 0, off, amberLow, amber));
-               mKnobsLed[8 + i].setColor(levelColor(mTrackCursorDeviceRemoteControls[i].getParameter(1).exists().get() ? mTrackCursorDeviceRemoteControls[i].getParameter(1).value().get() : 0, off, amberLow, amber));
-               mKnobsLed[16 + i].setColor(levelColor(mTrackCursorDeviceRemoteControls[i].getParameter(2).exists().get() ? mTrackCursorDeviceRemoteControls[i].getParameter(2).value().get() : 0, off, amberLow, amber));
+               final RemoteControl deviceParam0 = deviceParam(i, 0);
+               final RemoteControl deviceParam1 = deviceParam(i, 1);
+               final RemoteControl deviceParam2 = deviceParam(i, 2);
+               mKnobsLed[i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
+               mKnobsLed[8 + i].setColor(levelColor(deviceParam1 != null && deviceParam1.exists().get() ? deviceParam1.value().get() : 0, off, amberLow, amber));
+               mKnobsLed[16 + i].setColor(levelColor(deviceParam2 != null && deviceParam2.exists().get() ? deviceParam2.value().get() : 0, off, amberLow, amber));
             }
             case Track3 ->
             {
@@ -1441,12 +1641,15 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private CursorTrack mCursorTrack;
    private PinnableCursorDevice mCursorDevice;
    private CursorRemoteControlsPage mRemoteControls;
+   private final CursorRemoteControlsPage[] mDeviceRemotePages = new CursorRemoteControlsPage[7];
    private final CursorDevice[] mTrackDeviceCursors = new CursorDevice[8];
    private final CursorRemoteControlsPage[] mTrackCursorDeviceRemoteControls = new CursorRemoteControlsPage[8];
    private final CursorRemoteControlsPage[] mTrackRemoteControls = new CursorRemoteControlsPage[8];
+   private boolean mDevicePerTrackSupported;
    private CursorRemoteControlsPage mProjectRemoteControlsCursor;
    private RhArpLayerController mArpLayerController;
    private DrumLayerController mDrumLayerController;
+   private DevicePagesController mDevicePagesController;
    private DeviceLocator mDeviceLocator;
    private DrumSettings mDrumSettings;
    private DrumPadBank mDrumPadBank;
@@ -1458,6 +1661,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private boolean mFactoryTemplateActive = true;
    private boolean mArpLayerActive = false;
    private boolean mDrumLayerActive = false;
+   private boolean mDevicePagesLayerActive = false;
    private int mCurrentTemplateChannel = Mode.Send2FullDevice.getChannel();
    private TrackControl mTrackControl = TrackControl.None;
    private Mode mMode = Mode.Send2Device1;
@@ -1556,4 +1760,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private Layer mDeviceLayer;
    private Layer mSend2ProjectLayer;
    private Layer mDrumLayer;
+   private Layer mDevicePagesLayer;
+
+   static void logDebug(final String message)
+   {
+      if (DEBUG_TELEMETRY && sHostActions != null)
+      {
+         sHostActions.debug(message);
+      }
+   }
 }

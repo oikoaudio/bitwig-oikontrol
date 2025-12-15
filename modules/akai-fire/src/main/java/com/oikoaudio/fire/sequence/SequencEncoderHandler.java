@@ -18,7 +18,7 @@ import com.bitwig.extensions.framework.Layer;
 
 public class SequencEncoderHandler extends Layer {
 
-private final static String[] user1ParamNames = { "Volume", "Panning", "Send 1", "Send 2" };
+private final static String[] mixerParamNames = { "Volume", "Panning", "Send 1", "Send 2" };
 private final static String[] user2ParamNames = { "LEN", "PULS", "ROT", "INV/PULS" };
 private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "INV/PULS" };
 
@@ -74,9 +74,9 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 		user2ShiftLayer = new Layer(driver.getLayers(), "ENC_USER2SHIFT_LAYER");
 		encoders = driver.getEncoders();
 		assign(EncoderMode.CHANNEL, channelLayer, encoders);
-		assign(EncoderMode.MIXER, mixerLayer, encoders);
+		assignPadParams(EncoderMode.MIXER, mixerLayer, encoders);
 		assign(EncoderMode.MIXER_SHIFT, mixerShiftLayer, encoders);
-		assignUser1Params(EncoderMode.USER_1, user1Layer, encoders);
+		assign(EncoderMode.USER_1, user1Layer, encoders);
 		assignUser2Params(EncoderMode.USER_2, user2Layer, encoders);
 		assignUser2ShiftParams(EncoderMode.USER_2_SHIFT, user2ShiftLayer, encoders);
 		currentLayer = channelLayer;
@@ -96,10 +96,10 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 		}
 	}
 
-	private void assignUser1Params(final EncoderMode mode, final Layer layer, final TouchEncoder[] encoders) {
+	private void assignPadParams(final EncoderMode mode, final Layer layer, final TouchEncoder[] encoders) {
 		modeMapping.put(mode, layer);
 		for (int i = 0; i < encoders.length; i++) {
-			bindPadEncoder(i, layer, encoders[i], user1ParamNames[i]);
+			bindPadEncoder(i, layer, encoders[i], mixerParamNames[i]);
 		}
 	}
 

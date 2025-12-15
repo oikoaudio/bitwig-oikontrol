@@ -3,6 +3,8 @@ version = '1.1.1'
 jar {
     archiveBaseName.set('LaunchControlXlOikontrol')
     archiveExtension.set('bwextension')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(project(':modules:common').sourceSets.main.output)
 }
 
 dependencies {

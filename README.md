@@ -1,7 +1,8 @@
-# Launch Control XL Oikontrol
+# Bitwig Oikontrol
 
-Launch Control XL Oikontrol is a self-contained fork of Bitwig’s factory Launch Control XL (Mk2) script. It keeps every factory template intact, unlocks the user templates for Bitwig mappings, and dedicates User Template 8 to the
-Richie Hawtin / Eric Ahrens arp workflow while templates 1–7 pass raw MIDI through to Bitwig. This extension also uses the LEDs under each knob to indicate each value (off, low, high).
+Bitwig Oikontrol bundles two controllers under one roof:
+- **Novation Launch Control XL (Mk2):** retains factory templates, frees user templates for Bitwig mappings, and dedicates User Template 8 to the Richie Hawtin / Eric Ahrens arp workflow while templates 1–7 pass raw MIDI into Bitwig. LEDs under each knob mirror values (off, low, high).
+- **Akai Fire:** Oiko-tuned fork of rhbitwig with Euclid mode on User 2 and per-pad mixer on Mixer mode.
 
 ## Requirements
 
@@ -14,12 +15,12 @@ Richie Hawtin / Eric Ahrens arp workflow while templates 1–7 pass raw MIDI thr
 All sources, including the Bitwig framework helpers, live inside this repository. 
 
 ```bash
-cd /path/to/bitwig-launchcontrolmk2-oiko
+cd /path/to/bitwig-oikontrol
 ./gradlew clean build --no-daemon \
   -Dorg.gradle.java.home="$JAVA_HOME"
 ```
 
-The resulting `.bwextension` artifact is placed under `oiko-launchcontrol/build/libs`. Unit tests are located in `src/test/java`; `NoteInputConfiguratorTest` shows how Mockito is used to (thinly) mock Bitwig APIs.
+The resulting `.bwextension` artifact is placed under `bitwig-oikontrol/build/libs`. Unit tests are located in `src/test/java`; `NoteInputConfiguratorTest` shows how Mockito is used to (thinly) mock Bitwig APIs.
 
 ## Documentation
 
@@ -69,7 +70,12 @@ User mode 7 (drum machine) expects a different set of notes sent from the Track 
 Track focus row: **notes** 36, 37, 38, 39, 40, 41, 42, 43 //(C1-G1) momentary values
 Track control row: **notes** 73, 74, 75, 76, 89, 90, 91, 92 //(C#4-E4, F5-G#5)
 
-## Drum & Arp User Modes
+## Device Remotes, Drum & Arp User Modes
+
+**User Mode 6 (Device pages)**
+To activate it, select user template 6 on the LCXL.
+Each row of knobs, faders and buttons corresponds to the remote pages of the selected device
+Ideal for detailed control of a complex device such as a DFAM clone Bitwig Grid sequencer
 
 **User Mode 7 (Drum Machine)**
 To activate it, select user template 7 on the LCXL. Optionally tick “Auto-attach to first Drum Machine and Arpeggiator”
@@ -121,5 +127,7 @@ The first row of knobs controls the send. The second and third rows of knobs con
 Factory template 6: Three channel device controls mode
 The first, second and third rows of knobs controls the three first remote controls of each track's selected device.
 
-Factory template 7: Three track remote controls mode
+Factory Template 7: Not supported
+
+Factory template 8: Three track remote controls mode
 The first, second and third rows of knobs controls the three first remote controls of each track.
