@@ -1,14 +1,28 @@
 # Bitwig Oikontrol
 
-Bitwig Oikontrol bundles two controllers under one roof:
-- **Novation Launch Control XL (Mk2):** retains factory templates, frees user templates for Bitwig mappings, and dedicates User Template 8 to the Richie Hawtin / Eric Ahrens arp workflow while templates 1–7 pass raw MIDI into Bitwig. LEDs under each knob mirror values (off, low, high).
-- **Akai Fire:** Oiko-tuned fork of rhbitwig with Euclid mode on User 2 and per-pad mixer on Mixer mode.
+These are extensions for Bitwig Studio v5.3+. They are Work In Progress primarily for my own use and not (yet) polished for broader release. With that said, feel free to test, use and modify them.
+
+The Novation Launch Ctrl XL extends the factory extension with new user modes. The Akai Fire extension is a fork of the `rhbitwig` extension (attributions below) with small amounts of functionality added. The "rebranding" is a bit unfortunate currently, the intention was/is to allow for sharing of code between the two extensions and adding additional modes that would take it away from purely being a dedicated drum sequencer.
+
+Bitwig Oikontrol currently provides two controller extensions:
+- **Novation Launch Control XL (Mk2):**
+* Retains the factory templates in the extension that ships with Bitwig, on which this extension is based
+* User templates 1-5 pass raw MIDI into Bitwig, enabling project MIDI mapping. LEDs under each knob mirror values (off, low, high).
+* User Template 6: Device Remotes mode. Each row of controls maps to the 1st, 2nd.. 6th page of Preset Remote controls for the selected device. This is useful for in depth control of one patch. In development this was used to control a DFAM grid patch.
+* User Template 7 is Drum Machine mode. The faders control chain volume, knobs map to the remotes on the first device in each chain, and the bottom button row triggers drum pads (top row) and toggles the fourth remote on each channel (bottom row)
+* User Template 8 is the Richie Hawtin / Eric Ahrens arp workflow taken from
+[https://github.com/ericahrens/rhbitwig/]
+
+- **Akai Fire:** A fork of the rhbitwig Akai Fire extension. Differences from the original:
+*-* Euclid mode: User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift=preview placeholder; patterns tile across clip length. Per-pad mixer controls moved from User2 to the Mixer mode
+* Nudging of step timing with code from Wim Van den Borre [https://github.com/wimvandenborre/AkaiFireNudger/]: Grid+arrow buttons left/right for coarse 16th shift of the selected `pad`. Shift+Grid = fine nudge of the selected pad. Held-step micro-nudge disabled for stability for now. 
+- Play button: Alt+Play retriggers current clip; regular Play toggles transport and retriggers on start.
 
 ## Requirements
 
 - **Java:** built and tested with JDK 21.
-- **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in 6.0 (tested beta 6)
-- **Controller:** Novation Launch Control XL Mk2.
+- **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in 6.0 (tested beta 12)
+- **Controllers:** Novation Launch Control XL Mk2, Akai Fire
 
 ## Building & testing
 
@@ -20,10 +34,9 @@ cd /path/to/bitwig-oikontrol
   -Dorg.gradle.java.home="$JAVA_HOME"
 ```
 
-The resulting `.bwextension` artifact is placed under `bitwig-oikontrol/build/libs`. Unit tests are located in `src/test/java`; `NoteInputConfiguratorTest` shows how Mockito is used to (thinly) mock Bitwig APIs.
+The resulting `.bwextension` artifact is placed under `bitwig-oikontrol/build/libs`. Unit tests are located in `src/test/java`. `NoteInputConfiguratorTest` is an example of using Mockito to (thinly) mock Bitwig APIs.
 
 ## Documentation
-
 - Architecural Decision Record (ADR) under `doc/adr/` e.g. `0000-use-adrs.md` (process) and `0001-architecture-summary.md` (factory/user modes, Template 8 arp, Java/API targets).
 - `CHANGES.md`: running changelog of code edits.
 - `BUILD.md`: more detail on local builds and installation.

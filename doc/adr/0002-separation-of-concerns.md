@@ -3,9 +3,9 @@
 ## Context
 
 - The main extension class wires hardware matchers, manages template changes, orchestrates drum/arp layers, and paints LEDs. This makes reasoning and testing difficult.
-- The arpeggiator folder (`controllers/novation/launch_control_xl/arp`) already demonstrates a cleaner split: a small controller orchestrates behaviour while helpers (button modes, state containers) keep logic pure and testable.
+- The arpeggiator folder (`controllers/novation/launch_control_xl/arp`) from rhbitwig demonstrates a cleaner split: a small controller orchestrates behaviour while helpers (button modes, state containers) keep logic pure and testable.
 - New drum features (mute/solo modes, accent buttons, pad auditioning, LED painting) and auto-attach behaviour for drum/arp need clearer ownership boundaries to avoid regressions.
-- We want a shape that allows reusing pure behaviour with different hardware by swapping adapters (e.g., another controller like Akai Fire) without duplicating domain logic.
+- We want an architecture that allows reusing pure behaviour with different hardware by swapping adapters (e.g., another controller like Akai Fire) without duplicating domain logic.
 
 ## Decision
 
