@@ -5,7 +5,7 @@ These are extensions for Bitwig Studio v5.3+. They are Work In Progress primaril
 The Novation Launch Ctrl XL extends the factory extension with new user modes. The Akai Fire extension is a fork of the `rhbitwig` extension (attributions below) with small amounts of functionality added. The "rebranding" is a bit unfortunate currently, the intention was/is to allow for sharing of code between the two extensions and adding additional modes that would take it away from purely being a dedicated drum sequencer.
 
 Bitwig Oikontrol currently provides two controller extensions:
-- **Novation Launch Control XL (Mk2):**
+**Novation Launch Control XL (Mk2):**
 * Retains the factory templates in the extension that ships with Bitwig, on which this extension is based
 * User templates 1-5 pass raw MIDI into Bitwig, enabling project MIDI mapping. LEDs under each knob mirror values (off, low, high).
 * User Template 6: Device Remotes mode. Each row of controls maps to the 1st, 2nd.. 6th page of Preset Remote controls for the selected device. This is useful for in depth control of one patch. In development this was used to control a DFAM grid patch.
@@ -13,8 +13,8 @@ Bitwig Oikontrol currently provides two controller extensions:
 * User Template 8 is the Richie Hawtin / Eric Ahrens arp workflow taken from
 [https://github.com/ericahrens/rhbitwig/]
 
-- **Akai Fire:** A fork of the rhbitwig Akai Fire extension. Differences from the original:
-*-* Euclid mode: User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift=preview placeholder; patterns tile across clip length. Per-pad mixer controls moved from User2 to the Mixer mode
+**Akai Fire:** A fork of the rhbitwig Akai Fire extension. Differences from the original:
+* Euclid mode: User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift=preview placeholder; patterns tile across clip length. Per-pad mixer controls moved from User2 to the Mixer mode
 * Nudging of step timing with code from Wim Van den Borre [https://github.com/wimvandenborre/AkaiFireNudger/]: Grid+arrow buttons left/right for coarse 16th shift of the selected `pad`. Shift+Grid = fine nudge of the selected pad. Held-step micro-nudge disabled for stability for now. 
 - Play button: Alt+Play retriggers current clip; regular Play toggles transport and retriggers on start.
 
@@ -49,6 +49,8 @@ The resulting `.bwextension` artifact is placed under `bitwig-oikontrol/build/li
   (`com.bitwig.extensions.framework`, `…controllers.novation.common`, `…util`) remain under Bitwig’s MIT terms.
 
 - The arp workflow on User Template 8 is adapted from Eric Ahrens’ [rhbitwig](https://github.com/ericahrens/rhbitwig) project (also MIT).
+
+- The Akai Fire extension is a fork of [rhbitwig](https://github.com/ericahrens/rhbitwig) by Eric Ahrens (MIT license)
 
 Please keep these acknowledgements if you redistribute or build on this project.
 
