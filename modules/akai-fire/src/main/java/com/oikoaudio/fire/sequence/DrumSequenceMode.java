@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
-import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.OledDisplay;
-import com.oikoaudio.fire.display.OledDisplay.TextJustification;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.utils.PatternButtons;
@@ -23,6 +22,7 @@ import java.util.stream.Collectors;
 public class DrumSequenceMode extends Layer {
 
     private final ControllerHost host;
+    private final AkaiFireDrumSeqExtension driver;
     private Application app;
 
     private final IntSetValue heldSteps = new IntSetValue();
@@ -34,7 +34,6 @@ public class DrumSequenceMode extends Layer {
     private final Map<Integer, Map<Integer, Integer>> currentNotesInClip = new HashMap<>();
 
     private final NoteStep[] assignments = new NoteStep[32];
-    private final double originalStepSize = 1.0 / 32.0;
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
 
     private final OledDisplay oled;
@@ -58,7 +57,6 @@ public class DrumSequenceMode extends Layer {
     private final SeqClipHandler clipHandler;
     private final RecurrenceEditor recurrenceEditor;
     private final PadHandler padHandler;
-    private final PadRowMuteHandler padRowMuteHandler;
 
     private final BooleanValueObject muteMode = new BooleanValueObject();
     private final BooleanValueObject soloMode = new BooleanValueObject();
@@ -68,7 +66,6 @@ public class DrumSequenceMode extends Layer {
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
     private final BooleanValueObject shiftActive = new BooleanValueObject();
     private final BooleanValueObject altActive = new BooleanValueObject();
-    private final BooleanValueObject clipLaunchModeQuant = new BooleanValueObject();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
     private final BooleanValueObject muteActionsTaken = new BooleanValueObject();
@@ -89,11 +86,10 @@ public class DrumSequenceMode extends Layer {
     public DrumSequenceMode(final AkaiFireDrumSeqExtension driver) {
 
         super(driver.getLayers(), "DRUM_SEQUENCE_LAYER");
+        this.driver = driver;
         host = driver.getHost();
         oled = driver.getOled();
         app = host.createApplication();
-
-        SettableEnumValue secondRowFuncPref = driver.getSecondRowFuncPref();
         mainLayer = new Layer(getLayers(), getName() + "_MAIN");
         shiftLayer = new Layer(getLayers(), getName() + "_SHIFT");
         muteLayer = new Layer(getLayers(), getName() + "_MUTE");
@@ -126,14 +122,7 @@ public class DrumSequenceMode extends Layer {
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
 
         padHandler = new PadHandler(driver, this, mainLayer, muteLayer, soloLayer);
-
-        if (secondRowFuncPref.get().equals("Mute-Row")) {
-            padRowMuteHandler = new PadRowMuteHandler(driver, this, mainLayer);
-            clipHandler = null;
-        } else {
-            clipHandler = new SeqClipHandler(driver, this, mainLayer);
-            padRowMuteHandler = null;
-        }
+        clipHandler = new SeqClipHandler(driver, this, mainLayer);
         recurrenceEditor = new RecurrenceEditor(driver, this);
 
         initSequenceSection(driver);
@@ -214,8 +203,8 @@ public class DrumSequenceMode extends Layer {
 
     private void initButtonBehaviour(final AkaiFireDrumSeqExtension driver) {
 
-        final BiColorButton accentButton = driver.getButton(NoteAssign.STEP_SEQ); // TODO combine with encoder
-        accentButton.bindPressed(mainLayer, accentHandler::handlePressed, accentHandler::getLightState);
+        final BiColorButton accentButton = driver.getButton(NoteAssign.STEP_SEQ);
+        accentButton.bindPressed(mainLayer, this::handleStepSeqPressed, this::getStepSeqLightState);
 
         final BiColorButton shiftButton = driver.getButton(NoteAssign.SHIFT);
         shiftButton.bind(mainLayer, shiftActive, BiColorLightState.GREEN_HALF, BiColorLightState.OFF);
@@ -223,29 +212,12 @@ public class DrumSequenceMode extends Layer {
         final BiColorButton altButton = driver.getButton(NoteAssign.ALT);
         altButton.bind(mainLayer, altActive, BiColorLightState.GREEN_HALF, BiColorLightState.OFF);
 
-        final BiColorButton clipLaunchModeButton = driver.getButton(NoteAssign.NOTE);
-        clipLaunchModeButton.bindToggle(mainLayer, clipLaunchModeQuant, BiColorLightState.AMBER_FULL,
-                BiColorLightState.AMBER_HALF, oled,
-                new DisplayInfo().addLine("Clip Legato", 2, 0, TextJustification.CENTER)//
-                        .addLine(() -> clipLaunchModeQuant.get() ? "with quant" : "immediate", 2, 3,
-                                TextJustification.CENTER)//
-                        .create());
-
-//        final BiColorButton retrigButton = driver.getButton(NoteAssign.DRUM);
-//        retrigButton.bind(mainLayer, this::retrigger, BiColorLightState.AMBER_FULL, BiColorLightState.AMBER_HALF);
-
-       // final BiColorButton pinButton = driver.getButton(NoteAssign.ALT);
-        //pinButton.bindPressed(mainLayer, this::handleClipPinning, this::getPinnedState);
-
-        final BiColorButton resolutionButton = driver.getButton(NoteAssign.PERFORM);
-        resolutionButton.bindPressed(mainLayer, resolutionHandler::handlePressed, resolutionHandler::getLightState);
-
         final BiColorButton shiftLeftButton = driver.getButton(NoteAssign.BANK_L);
-        shiftLeftButton.bindPressed(mainLayer, p -> movePattern(p, -1, shiftActive.get()), BiColorLightState.HALF,
+        shiftLeftButton.bindPressed(mainLayer, p -> handleBankButton(p, -1), BiColorLightState.HALF,
                 BiColorLightState.OFF);
 
         final BiColorButton shiftRightButton = driver.getButton(NoteAssign.BANK_R);
-        shiftRightButton.bindPressed(mainLayer, p -> movePattern(p, 1, shiftActive.get()), BiColorLightState.HALF,
+        shiftRightButton.bindPressed(mainLayer, p -> handleBankButton(p, 1), BiColorLightState.HALF,
                 BiColorLightState.OFF);
 
         //This is used for a centralized location for pattern buttons
@@ -283,6 +255,8 @@ public class DrumSequenceMode extends Layer {
                 stepActionFixedLength(index);
             } else if (copyHeld.get()) {
                 handleNoteCopyAction(index, note);
+            } else if (accentHandler.isHolding()) {
+                handleAccentStepAction(index, note);
             } else {
                 if (note == null || note.state() == State.Empty || note.state() == State.NoteSustain) {
                     cursorClip.setStep(index, 0, accentHandler.getCurrenVel(),
@@ -525,18 +499,37 @@ public class DrumSequenceMode extends Layer {
     private void handleMainEncoder(final int inc) {
         if (accentHandler.isHolding()) {
             accentHandler.handleMainEncoder(inc);
-        } else if (resolutionHandler.isHolding()) {
-            resolutionHandler.handleMainEncoder(inc);
         } else {
-            padHandler.handleMainEncoder(inc);
+            final String mainEncoderRole = driver.getMainEncoderRolePreference();
+            if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
+                padHandler.handleMainEncoder(inc);
+            } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
+                driver.adjustMainCursorParameter(inc);
+            }
         }
+    }
+
+    private void handleAccentStepAction(final int index, final NoteStep note) {
+        accentHandler.markModified();
+        if (note == null || note.state() == State.Empty || note.state() == State.NoteSustain) {
+            cursorClip.setStep(index, 0, accentHandler.getAccentedVelocity(),
+                    positionHandler.getGridResolution() * gatePercent);
+            addedSteps.add(index);
+            return;
+        }
+
+        final int targetVelocity = accentHandler.isAccented(note)
+                ? accentHandler.getStandardVelocity()
+                : accentHandler.getAccentedVelocity();
+        note.setVelocity(targetVelocity / 127.0);
+        modifiedSteps.add(index);
     }
 
     private void handeMainEncoderPress(final boolean press) {
         if (accentHandler.isHolding()) {
             accentHandler.handeMainEncoderPress(press);
-        } else if (resolutionHandler.isHolding()) {
-            resolutionHandler.handeMainEncoderPress(press);
+        } else if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(driver.getMainEncoderRolePreference())) {
+            padHandler.getNoteRepeaterHandler().handlePressed(press);
         }
     }
 
@@ -791,10 +784,8 @@ public class DrumSequenceMode extends Layer {
     private void adjustMode(final int notes) {
         if (notes % 8 == 0) {
             cursorClip.launchMode().set("default");
-        } else if (clipLaunchModeQuant.get()) {
-            cursorClip.launchMode().set("synced");
         } else {
-            cursorClip.launchMode().set("from_start");
+            cursorClip.launchMode().set(FireControlPreferences.toClipLaunchModeValue(driver.getClipLaunchModePreference()));
         }
     }
 
@@ -931,6 +922,34 @@ public class DrumSequenceMode extends Layer {
 
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
         return activeRemoteControlsPage;
+    }
+
+    private void handleStepSeqPressed(final boolean pressed) {
+        if (shiftActive.get()) {
+            if (pressed) {
+                driver.toggleFillMode();
+                oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
+            }
+            return;
+        }
+        accentHandler.handlePressed(pressed);
+    }
+
+    private BiColorLightState getStepSeqLightState() {
+        if (shiftActive.get()) {
+            return driver.getFillLightState();
+        }
+        return accentHandler.getLightState();
+    }
+
+    private void handleBankButton(final boolean pressed, final int dir) {
+        if (altActive.get()) {
+            if (pressed) {
+                resolutionHandler.adjust(dir);
+            }
+            return;
+        }
+        movePattern(pressed, dir, shiftActive.get());
     }
 
     private void bindPatternButtons(AkaiFireDrumSeqExtension driver) {

@@ -18,3 +18,11 @@ Implementation notes for the next Akai Fire evolution:
 - Apply Euclid immediately when length or pulse values change. Clear and rewrite the target lane only when the effective Euclid values actually change, to avoid duplicate note creation and unnecessary clip churn.
 - Keep grid-button shifting as the practical replacement for Euclid rotation.
 - Rework Accent so it can edit existing notes in place instead of forcing delete-and-reenter behavior.
+
+Current first-pass implementation notes:
+- Drum layout is now fixed to clips on row 1, drum slots on row 2, and 32 steps across rows 3-4. The old `Second Row` preference is removed from the Fire extension.
+- Clip launch behavior moved into extension preferences: non-default launch mode is selected as `Synced` or `From Start`, and launch quantization is selected in preferences instead of on the NOTE button.
+- `DRUM`, `NOTE`, and `PERFORM` are now reserved as top-level mode selectors. Only Drum sequencing is implemented in this pass; Note and Perform are placeholder selectors for the later dedicated modes.
+- In Drum mode, `STEP SEQ` is now the accent gesture, `SHIFT + STEP SEQ` toggles Fill, and `ALT + BANK LEFT/RIGHT` adjusts grid resolution. Plain `BANK LEFT/RIGHT` keeps the shift and nudge workflow.
+- `PATTERN` is now preference-driven with `Clip Launcher Automation Write` as the default action, and `SHIFT + PATTERN` toggles the metronome.
+- The main encoder role is now preference-driven with `Note Repeat`, `Last Touched Parameter`, and `Disabled` options. The current `Last Touched Parameter` slot uses the first available remote on the main cursor device as a temporary control target until a true last-touched tracker is added.

@@ -25,6 +25,7 @@ import java.util.Set;
 public class PadHandler {
 
     final DrumSequenceMode parent;
+    private final AkaiFireDrumSeqExtension driver;
     private final PinnableCursorClip cursorClip;
     private final NoteInput noteInput;
     private final DrumPadBank padBank;
@@ -52,6 +53,7 @@ public class PadHandler {
 
     public PadHandler(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
                       final Layer muteLayer, final Layer soloLayer) {
+        this.driver = driver;
         this.parent = parent;
         cursorClip = parent.getCursorClip();
         noteInput = driver.getNoteInput();
@@ -71,7 +73,7 @@ public class PadHandler {
 
         final RgbButton[] rgbButtons = driver.getRgbButtons();
         for (int i = 0; i < 16; i++) {
-            final RgbButton button = rgbButtons[i];
+            final RgbButton button = rgbButtons[i + 16];
             final PadContainer pad = new PadContainer(this, i, control.getDrumPadBank().getItemAt(i), playing[i]);
 
             bindMain(button, mainLayer, pad);
@@ -133,9 +135,22 @@ public class PadHandler {
                 }
             } else {
                 pad.pad.selectInEditor();
+                if (driver.isAuditionOnDrumSelectEnabled()) {
+                    auditionPad(pad.index, 100);
+                }
                 padsHeld.add(pad.index);
             }
         }
+    }
+
+    private void auditionPad(final int padIndex, final int velocity) {
+        final int midiNote = drumScrollOffset + padIndex;
+        if (midiNote < 0 || midiNote > 127) {
+            return;
+        }
+        final int appliedVelocity = velocity > 0 ? 100 : 0;
+        noteInput.sendRawMidiEvent(0x90, midiNote, appliedVelocity);
+        noteInput.sendRawMidiEvent(0x80, midiNote, 0);
     }
 
     private Color getPadColor(DrumPad pad) {

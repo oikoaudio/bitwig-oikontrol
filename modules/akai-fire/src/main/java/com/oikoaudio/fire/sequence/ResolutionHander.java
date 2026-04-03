@@ -42,16 +42,20 @@ public class ResolutionHander {
 		return buttonHeld;
 	}
 
-	public void handleMainEncoder(final int inc) {
-		if (!buttonHeld) {
-			return;
-		}
+	public void adjust(final int inc) {
 		final int index = resValue();
 		final int newValue = index + inc;
 		if (newValue >= 0 && newValue < GRID_RATES.length) {
 			parent.getPositionHandler().setGridResolution(GRID_RATES[newValue]);
 			parent.getOled().valueInfo("Grid", GRID_RATES_STR[newValue]);
 		}
+	}
+
+	public void handleMainEncoder(final int inc) {
+		if (!buttonHeld) {
+			return;
+		}
+		adjust(inc);
 	}
 
 	public void handeMainEncoderPress(final boolean press) {

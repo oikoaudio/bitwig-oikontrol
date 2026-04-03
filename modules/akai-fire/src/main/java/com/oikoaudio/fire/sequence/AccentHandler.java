@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
+import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 
 public class AccentHandler {
@@ -19,6 +20,25 @@ public class AccentHandler {
 
 	public int getCurrenVel() {
 		return accentActive.get() ? velAccented : velStandard;
+	}
+
+	public int getStandardVelocity() {
+		return velStandard;
+	}
+
+	public int getAccentedVelocity() {
+		return velAccented;
+	}
+
+	public boolean isAccented(final NoteStep noteStep) {
+		final int velocity = (int) Math.round(noteStep.velocity() * 127);
+		final int distanceToAccent = Math.abs(velocity - velAccented);
+		final int distanceToStandard = Math.abs(velocity - velStandard);
+		return distanceToAccent <= distanceToStandard;
+	}
+
+	public void markModified() {
+		modified = true;
 	}
 
 	BiColorLightState getLightState() {

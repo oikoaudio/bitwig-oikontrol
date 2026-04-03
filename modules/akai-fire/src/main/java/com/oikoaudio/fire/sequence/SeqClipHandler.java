@@ -32,7 +32,7 @@ public class SeqClipHandler {
     private void initClipControlButtons(final Layer clipLayer, final AkaiFireDrumSeqExtension driver) {
         final RgbButton[] rgbButtons = driver.getRgbButtons();
         for (int i = 0; i < 16; i++) {
-            final RgbButton button = rgbButtons[i + 16];
+            final RgbButton button = rgbButtons[i];
             final int index = i;
 
             final ClipLauncherSlot cs = slotBank.getItemAt(index);

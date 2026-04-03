@@ -14,9 +14,15 @@ Bitwig Oikontrol currently provides two controller extensions:
 [https://github.com/ericahrens/rhbitwig/]
 
 **Akai Fire:** A fork of the rhbitwig Akai Fire extension. Differences from the original:
-* Euclid mode: User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift=preview placeholder; patterns tile across clip length. Per-pad mixer controls moved from User2 to the Mixer mode
-* Nudging of step timing with code from Wim Van den Borre [https://github.com/wimvandenborre/AkaiFireNudger/]: Grid+arrow buttons left/right for coarse 16th shift of the selected `pad`. Shift+Grid = fine nudge of the selected pad. Held-step micro-nudge disabled for stability for now. 
-- Play button: Alt+Play retriggers current clip; regular Play toggles transport and retriggers on start.
+* Drum layout is fixed: row 1 = clips, row 2 = drum slots, rows 3-4 = 32 visible steps.
+* Clip launch behavior moved into extension preferences: non-default launch mode is `Synced` or `From Start`, and launch quantization is chosen in preferences instead of on the NOTE button.
+* `DRUM`, `NOTE`, and `PERFORM` are reserved as top-level mode buttons. Drum sequencing is implemented in this pass; Note and Perform are kept free for later dedicated modes.
+* `STEP SEQ` is now the accent gesture in Drum mode, `SHIFT + STEP SEQ` toggles Fill, and `ALT + BANK LEFT/RIGHT` adjusts grid resolution. Plain bank arrows keep pattern shift and fine nudge behavior.
+* `PATTERN` defaults to Clip Launcher Automation Write, with `SHIFT + PATTERN` fixed to metronome.
+* The main encoder role is configurable between `Note Repeat`, `Last Touched Parameter`, and `Disabled`.
+* Euclid mode still uses User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift = preview placeholder; per-pad mixer controls moved from User2 to the Mixer mode.
+* Nudging of step timing with code from Wim Van den Borre [https://github.com/wimvandenborre/AkaiFireNudger/]: Grid+arrow buttons left/right for coarse 16th shift of the selected `pad`. Shift+Grid = fine nudge of the selected pad. Held-step micro-nudge disabled for stability for now.
+* Play button: Alt+Play retriggers current clip; regular Play toggles transport and retriggers on start.
 
 ## Requirements
 
@@ -28,13 +34,41 @@ Bitwig Oikontrol currently provides two controller extensions:
 
 All sources, including the Bitwig framework helpers, live inside this repository. 
 
+If you use [`just`](https://github.com/casey/just), the common tasks are:
+
+```bash
+just fire-compile
+just fire-test
+just fire-extension
+just launchcontrol-build
+just launchcontrol-test
+just launchcontrol-extension
+just artifacts
+```
+
+The `Justfile` defaults `GRADLE_USER_HOME` to `/tmp/gradle-home`, which works well in WSL and avoids polluting the home directory during wrapper downloads.
+
 ```bash
 cd /path/to/bitwig-oikontrol
 ./gradlew clean build --no-daemon \
   -Dorg.gradle.java.home="$JAVA_HOME"
 ```
 
-The resulting `.bwextension` artifact is placed under `bitwig-oikontrol/build/libs`. Unit tests are located in `src/test/java`. `NoteInputConfiguratorTest` is an example of using Mockito to (thinly) mock Bitwig APIs.
+The built controller artifacts are placed under each module’s `build/libs` directory, for example `modules/akai-fire/build/libs`. Unit tests are located in `src/test/java`. `NoteInputConfiguratorTest` is an example of using Mockito to (thinly) mock Bitwig APIs.
+
+Module-specific Gradle commands:
+
+```bash
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:akai-fire:build --no-daemon
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:akai-fire:jar --no-daemon
+
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:build --no-daemon
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daemon
+```
+
+Current artifact names:
+- `modules/akai-fire/build/libs/AkaiFireOiko-0.1.2.bwextension`
+- `modules/launchcontrol/build/libs/LaunchControlXlOikontrol-1.1.1.bwextension`
 
 ## Documentation
 - Architecural Decision Record (ADR) under `doc/adr/` e.g. `0000-use-adrs.md` (process) and `0001-architecture-summary.md` (factory/user modes, Template 8 arp, Java/API targets).

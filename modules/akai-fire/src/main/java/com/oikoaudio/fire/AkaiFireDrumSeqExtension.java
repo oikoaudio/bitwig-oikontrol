@@ -56,11 +56,44 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private OledDisplay oled;
     private ControllerHost host;
     private TouchEncoder mainEncoder;
+    private CursorRemoteControlsPage mainRemoteControlsPage;
 
     private Preferences preferences;
-    private SettableEnumValue secondRowFuncPref;
+    private SettableEnumValue clipLaunchModePref;
+    private SettableEnumValue clipLaunchQuantizationPref;
+    private SettableEnumValue patternActionPref;
+    private SettableEnumValue mainEncoderRolePref;
+    private SettableBooleanValue auditionOnDrumSelectPref;
 
     private PatternButtons patternButtons;
+    private Layer noteModeLayer;
+    private Layer performModeLayer;
+    private TopLevelMode activeMode = TopLevelMode.DRUM;
+    private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
+
+    private enum TopLevelMode {
+        DRUM,
+        NOTE,
+        PERFORM
+    }
+
+    private enum DrumSubMode {
+        STANDARD(BiColorLightState.GREEN_FULL);
+
+        private final BiColorLightState lightState;
+
+        DrumSubMode(final BiColorLightState lightState) {
+            this.lightState = lightState;
+        }
+
+        public BiColorLightState getLightState() {
+            return lightState;
+        }
+
+        public DrumSubMode next() {
+            return STANDARD;
+        }
+    }
 
     protected AkaiFireDrumSeqExtension(final AkaiFireDrumSeqDefinition definition, final ControllerHost host) {
         super(definition, host);
@@ -73,8 +106,17 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         Arrays.fill(lastCcValue, -1);
 
         MainCursor mainCursor = new MainCursor(host, 0, 0);
+        mainRemoteControlsPage = mainCursor.remoteControlsPage();
+        for (int index = 0; index < mainRemoteControlsPage.getParameterCount(); index++) {
+            final Parameter parameter = mainRemoteControlsPage.getParameter(index);
+            parameter.name().markInterested();
+            parameter.displayedValue().markInterested();
+            parameter.value().markInterested();
+        }
 
         layers = new Layers(this);
+        noteModeLayer = new Layer(layers, "NOTE_MODE_LAYER");
+        performModeLayer = new Layer(layers, "PERFORM_MODE_LAYER");
         midiIn = host.getMidiInPort(0);
         midiIn.setMidiCallback((ShortMidiMessageReceivedCallback) this::onMidi0);
         midiIn.setSysexCallback(this::onSysEx);
@@ -126,14 +168,38 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     }
 
     private void setUpPreferences() {
-        preferences = getHost().getPreferences(); // THIS
-//        final SettableEnumValue padStyle = preferences.getEnumSetting("Pad Coloring", //
-//                "Visuals", new String[]{"TR-Style", "Bitwig-Colors"}, "TR-Style");
-//        padStyle.markInterested();
+        preferences = getHost().getPreferences();
 
-        secondRowFuncPref = preferences.getEnumSetting("Second Row", //
-                "Functionalities", new String[]{"Mute-Row", "ClipLaunch-Row"}, "Mute-Row");
-        secondRowFuncPref.markInterested();
+        clipLaunchModePref = preferences.getEnumSetting("Clip Launch Mode",
+                FireControlPreferences.CATEGORY_CLIP_LAUNCH,
+                FireControlPreferences.CLIP_LAUNCH_MODES,
+                FireControlPreferences.CLIP_LAUNCH_MODE_SYNCED);
+        clipLaunchModePref.markInterested();
+
+        clipLaunchQuantizationPref = preferences.getEnumSetting("Clip Launch Quantization",
+                FireControlPreferences.CATEGORY_CLIP_LAUNCH,
+                FireControlPreferences.CLIP_LAUNCH_QUANTIZATIONS,
+                FireControlPreferences.QUANTIZATION_1);
+        clipLaunchQuantizationPref.markInterested();
+        clipLaunchQuantizationPref.addValueObserver(this::applyLaunchQuantizationPreference);
+        applyLaunchQuantizationPreference(clipLaunchQuantizationPref.get());
+
+        patternActionPref = preferences.getEnumSetting("Pattern Button",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.PATTERN_ACTIONS,
+                FireControlPreferences.PATTERN_ACTION_AUTOMATION_WRITE);
+        patternActionPref.markInterested();
+
+        mainEncoderRolePref = preferences.getEnumSetting("Main Encoder",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.MAIN_ENCODER_ROLES,
+                FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED);
+        mainEncoderRolePref.markInterested();
+
+        auditionOnDrumSelectPref = preferences.getBooleanSetting("Audition on drum slot select",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                true);
+        auditionOnDrumSelectPref.markInterested();
     }
 
     private void setUpTransportControl() {
@@ -141,9 +207,10 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         transport.tempo().markInterested();
         transport.playPosition().markInterested();
         transport.isClipLauncherOverdubEnabled().markInterested();
-        //transport.isMetronomeEnabled().markInterested();
+        transport.isMetronomeEnabled().markInterested();
         transport.isClipLauncherAutomationWriteEnabled().markInterested();
         transport.isFillModeActive().markInterested();
+        transport.defaultLaunchQuantization().markInterested();
         final BiColorButton playButton = addButton(NoteAssign.PLAY);
         playButton.bindPressed(mainLayer, this::togglePlay, this::getPlayState);
         final BiColorButton recButton = addButton(NoteAssign.REC);
@@ -173,11 +240,14 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         addButton(NoteAssign.PATTERN_DOWN);
         addButton(NoteAssign.BANK_L);
         addButton(NoteAssign.BANK_R);
-        final BiColorButton metronomeButton = addButton(NoteAssign.PATTERN);
+        final BiColorButton patternButton = addButton(NoteAssign.PATTERN);
         final BiColorButton drumButton = addButton(NoteAssign.DRUM);
-       // metronomeButton.bindPressed(mainLayer, this::toggleMetronome, this::getMetronomeState);
-        metronomeButton.bindPressed(mainLayer, this::toggleClipLauncherAutomationWriteEnabled, this::getClipLauncherAutomationWriteEnabledState);
-        drumButton.bindPressed(mainLayer, this::toggleDrumFill, this::getDrumFillState);
+        final BiColorButton noteButton = getButton(NoteAssign.NOTE);
+        final BiColorButton performButton = getButton(NoteAssign.PERFORM);
+        patternButton.bindPressed(mainLayer, this::handlePatternPressed, this::getPatternState);
+        drumButton.bindPressed(mainLayer, this::handleDrumPressed, this::getDrumState);
+        noteButton.bindPressed(mainLayer, this::handleNotePressed, this::getNoteState);
+        performButton.bindPressed(mainLayer, this::handlePerformPressed, this::getPerformState);
         addButton(NoteAssign.BROWSER);
         stateLights[0] = createLight(NoteAssign.TRACK_SELECT_1);
         stateLights[1] = createLight(NoteAssign.TRACK_SELECT_2);
@@ -219,16 +289,33 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
     }
 
-//    private BiColorLightState getMetronomeState() {
-//        return transport.isMetronomeEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
-//    }
-
     private BiColorLightState getClipLauncherAutomationWriteEnabledState() {
         return transport.isClipLauncherAutomationWriteEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
     }
 
-    private BiColorLightState getDrumFillState() {
-        return transport.isFillModeActive().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+    private BiColorLightState getPatternState() {
+        if (patternActionPref == null) {
+            return BiColorLightState.OFF;
+        }
+        if (getButton(NoteAssign.SHIFT).isPressed()) {
+            return transport.isMetronomeEnabled().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        }
+        if (FireControlPreferences.PATTERN_ACTION_AUTOMATION_WRITE.equals(patternActionPref.get())) {
+            return getClipLauncherAutomationWriteEnabledState();
+        }
+        return BiColorLightState.OFF;
+    }
+
+    private BiColorLightState getDrumState() {
+        return activeMode == TopLevelMode.DRUM ? activeDrumSubMode.getLightState() : BiColorLightState.OFF;
+    }
+
+    private BiColorLightState getNoteState() {
+        return activeMode == TopLevelMode.NOTE ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+    }
+
+    private BiColorLightState getPerformState() {
+        return activeMode == TopLevelMode.PERFORM ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
     }
 
     private void dummyAction(final boolean pressed) {
@@ -248,13 +335,6 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         transport.isClipLauncherOverdubEnabled().toggle();
     }
 
-//    private void toggleMetronome(final boolean pressed) {
-//        if (!pressed) {
-//            return;
-//        }
-//        transport.isMetronomeEnabled().toggle();
-//    }
-
     private void toggleClipLauncherAutomationWriteEnabled(final boolean pressed) {
         if (!pressed) {
             return;
@@ -262,11 +342,52 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         transport.isClipLauncherAutomationWriteEnabled().toggle();
     }
 
-    private void toggleDrumFill(final boolean pressed) {
+    private void handlePatternPressed(final boolean pressed) {
         if (!pressed) {
             return;
         }
-        transport.isFillModeActive().toggle();
+        if (getButton(NoteAssign.SHIFT).isPressed()) {
+            transport.isMetronomeEnabled().toggle();
+            oled.valueInfo("Metronome", transport.isMetronomeEnabled().get() ? "On" : "Off");
+            return;
+        }
+        if (FireControlPreferences.PATTERN_ACTION_AUTOMATION_WRITE.equals(patternActionPref.get())) {
+            toggleClipLauncherAutomationWriteEnabled(true);
+            oled.valueInfo("Pattern", transport.isClipLauncherAutomationWriteEnabled().get() ? "Automation Write On" : "Automation Write Off");
+            return;
+        }
+        oled.valueInfo("Pattern", "Disabled");
+    }
+
+    private void handleDrumPressed(final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        if (activeMode == TopLevelMode.DRUM) {
+            activeDrumSubMode = activeDrumSubMode.next();
+        } else {
+            activeMode = TopLevelMode.DRUM;
+            switchActiveMode();
+        }
+        oled.valueInfo("Mode", "Drum");
+    }
+
+    private void handleNotePressed(final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        activeMode = TopLevelMode.NOTE;
+        switchActiveMode();
+        oled.valueInfo("Mode", "Note");
+    }
+
+    private void handlePerformPressed(final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        activeMode = TopLevelMode.PERFORM;
+        switchActiveMode();
+        oled.valueInfo("Mode", "Perform");
     }
 
     private void togglePlay(final boolean pressed) {
@@ -368,7 +489,80 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         return stateLights;
     }
 
-    public SettableEnumValue getSecondRowFuncPref() { return secondRowFuncPref; }
+    private void switchActiveMode() {
+        drumSequenceMode.deactivate();
+        noteModeLayer.deactivate();
+        performModeLayer.deactivate();
+        if (activeMode == TopLevelMode.DRUM) {
+            drumSequenceMode.activate();
+            return;
+        }
+        clearPads();
+        if (activeMode == TopLevelMode.NOTE) {
+            noteModeLayer.activate();
+        } else {
+            performModeLayer.activate();
+        }
+    }
+
+    private void clearPads() {
+        for (int index = 0; index < rgbButtons.length; index++) {
+            updateRgbPad(index, RgbLigthState.OFF);
+        }
+    }
+
+    private void applyLaunchQuantizationPreference(final String preferenceValue) {
+        transport.defaultLaunchQuantization().set(FireControlPreferences.toLaunchQuantizationValue(preferenceValue));
+    }
+
+    public void toggleFillMode() {
+        transport.isFillModeActive().toggle();
+    }
+
+    public BiColorLightState getFillLightState() {
+        return transport.isFillModeActive().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+    }
+
+    public String getClipLaunchModePreference() {
+        return clipLaunchModePref == null
+                ? FireControlPreferences.CLIP_LAUNCH_MODE_SYNCED
+                : clipLaunchModePref.get();
+    }
+
+    public String getMainEncoderRolePreference() {
+        return mainEncoderRolePref == null
+                ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
+                : mainEncoderRolePref.get();
+    }
+
+    public boolean isAuditionOnDrumSelectEnabled() {
+        return auditionOnDrumSelectPref != null && auditionOnDrumSelectPref.get();
+    }
+
+    public void adjustMainCursorParameter(final int inc) {
+        final Parameter parameter = findMainCursorParameter();
+        if (parameter == null) {
+            return;
+        }
+        final SettableRangedValue value = parameter.value();
+        final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * 0.01)));
+        value.setImmediately(nextValue);
+        oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+    }
+
+    private Parameter findMainCursorParameter() {
+        if (mainRemoteControlsPage == null) {
+            return null;
+        }
+        for (int index = 0; index < mainRemoteControlsPage.getParameterCount(); index++) {
+            final Parameter parameter = mainRemoteControlsPage.getParameter(index);
+            final String name = parameter.name().get();
+            if (name != null && !name.isBlank()) {
+                return parameter;
+            }
+        }
+        return null;
+    }
 
     public static AkaiFireDrumSeqExtension getInstance() {
         return instance;
