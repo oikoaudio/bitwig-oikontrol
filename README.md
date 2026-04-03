@@ -18,6 +18,8 @@ Bitwig Oikontrol currently provides two controller extensions:
 * Clip launch behavior moved into extension preferences: clip launch mode is selected in preferences (`Synced` or `From Start`), and launch quantization is also chosen there instead of on the NOTE button.
 * `DRUM`, `NOTE`, and `PERFORM` are top-level mode buttons. Drum sequencing and a first-pass Note mode are implemented; Perform remains reserved for a later dedicated mode.
 * Note mode now provides a 16x4 isomorphic note grid with `Chromatic` and `In Key` layouts, local root note / scale / octave controls, and LED/OLED feedback for note-state and layout changes.
+* Inside `NOTE`, plain note mode remains live play. `STEP SEQ` toggles between live play and the selected note-step sub-mode, while `SHIFT + STEP SEQ` cycles the current note-step sub-mode between `Oikord Step` and `Clip Step Record`.
+* `Oikord Step` uses the upper two pad rows as 32 curated Oikord slots and the lower two rows as 32 visible steps. `PATTERN` up/down pages the curated Oikord bank across two pages, with Barker and Plaits first, and step assignment writes literal notes directly into the current clip.
 * `STEP SEQ` is now the accent gesture in Drum mode, `SHIFT + STEP SEQ` toggles Fill, and `ALT +` the `GRID` left/right arrow buttons adjusts grid resolution. The `GRID` left/right arrow buttons keep pattern shift and fine nudge behavior.
 * `PATTERN` defaults to Clip Launcher Automation Write, with `SHIFT + PATTERN` fixed to metronome.
 * The main encoder role is configurable between `Last Touched Parameter`, `Shuffle`, and `Note Repeat`.

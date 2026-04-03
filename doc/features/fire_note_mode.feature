@@ -34,11 +34,15 @@ Feature: Akai Fire note mode
     And I can switch between chromatic and scale-aware behavior
     And I can see which note mode options are currently active
 
-  Scenario: Step Seq is reserved while note step-entry is deferred
+  Scenario: Step Seq opens note step sub-modes while NOTE stays live play
     Given Note mode is active
     When I press STEP SEQ
-    Then the controller toggles between chromatic and in-key note layout
-    And note step-entry remains explicitly deferred in this first pass
+    Then the controller enters the last-used note step sub-mode
+    And NOTE mode itself remains the live note-play surface
+    When I press STEP SEQ again
+    Then the controller returns to live note play
+    When I hold SHIFT and press STEP SEQ
+    Then the controller cycles the current note step sub-mode
 
   Scenario: Main encoder can target the last touched parameter
     Given the main encoder role preference is set to last touched
