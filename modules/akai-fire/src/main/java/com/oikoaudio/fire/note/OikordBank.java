@@ -30,10 +30,18 @@ public final class OikordBank {
 
     public record Slot(String family, String sourcePack, String sourceFamily, String name, String shortLabel,
                        int[] degrees) {
-        public int[] render(final MusicalScale scale, final int rootNote) {
+        public int[] renderCast(final MusicalScale scale, final int rootNote) {
             final int[] notes = new int[degrees.length];
             for (int i = 0; i < degrees.length; i++) {
                 notes[i] = scale.computeNote(rootNote, MID_REGISTER_OCTAVE, degrees[i]);
+            }
+            return notes;
+        }
+
+        public int[] renderAsIs(final int rootMidi) {
+            final int[] notes = new int[degrees.length];
+            for (int i = 0; i < degrees.length; i++) {
+                notes[i] = rootMidi + degrees[i];
             }
             return notes;
         }

@@ -66,6 +66,7 @@ public class NoteMode extends Layer {
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
+    private OikordInterpretation oikordInterpretation = OikordInterpretation.AS_IS;
     private int oikordPage = 0;
     private int selectedOikordSlot = 0;
     private double oikordGateRatio = 0.92;
@@ -98,6 +99,25 @@ public class NoteMode extends Layer {
         }
 
         public NoteStepSubMode next() {
+            return values()[(ordinal() + 1) % values().length];
+        }
+    }
+
+    private enum OikordInterpretation {
+        AS_IS("As Is"),
+        CAST("Cast");
+
+        private final String displayName;
+
+        OikordInterpretation(final String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+
+        public OikordInterpretation next() {
             return values()[(ordinal() + 1) % values().length];
         }
     }
@@ -171,7 +191,7 @@ public class NoteMode extends Layer {
         encoders[2].bindTouched(this, pressed -> showTouchedState(pressed, "Octave"));
 
         encoders[3].bindEncoder(this, this::handleEncoder3);
-        encoders[3].bindTouched(this, pressed -> showTouchedState(pressed, "Layout"));
+        encoders[3].bindTouched(this, pressed -> showTouchedState(pressed, "Interpretation"));
 
         final TouchEncoder mainEncoder = driver.getMainEncoder();
         mainEncoder.bindEncoder(this, this::handleMainEncoder);
@@ -205,7 +225,7 @@ public class NoteMode extends Layer {
     private void handleEncoder3(final int inc) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
             if (inc != 0) {
-                showCurrentOikord();
+                toggleOikordInterpretation();
             }
             return;
         }
@@ -320,14 +340,14 @@ public class NoteMode extends Layer {
 
     private void assignSelectedOikordToHeldSteps() {
         final OikordBank.Slot slot = oikordBank.slot(oikordPage, selectedOikordSlot);
-        final int[] notes = slot.render(getScale(), getRootNote());
+        final int[] notes = renderSelectedOikord(slot);
         for (final int stepIndex : heldStepPads) {
             noteStepClip.clearStepsAtX(0, stepIndex);
             for (final int midiNote : notes) {
                 noteStepClip.setStep(stepIndex, midiNote, HELD_NOTE_VELOCITY, STEP_LENGTH * oikordGateRatio);
             }
         }
-        oled.valueInfo(slot.family(), slot.name());
+        oled.valueInfo(slot.family(), "%s | %s".formatted(slot.name(), oikordInterpretation.displayName()));
     }
 
     private void browseSelectedOikord(final int amount) {
@@ -356,6 +376,11 @@ public class NoteMode extends Layer {
         }
         oikordGateRatio = Math.max(MIN_GATE_RATIO, Math.min(MAX_GATE_RATIO, oikordGateRatio + amount * 0.05));
         oled.valueInfo("Gate", "%d%%".formatted((int) Math.round(oikordGateRatio * 100)));
+    }
+
+    private void toggleOikordInterpretation() {
+        oikordInterpretation = oikordInterpretation.next();
+        oled.valueInfo("Oikord Mode", oikordInterpretation.displayName());
     }
 
     private void handleOctaveButton(final boolean pressed, final int amount) {
@@ -639,6 +664,10 @@ public class NoteMode extends Layer {
             oled.valueInfo("Layout", inKey ? "In Key" : "Chromatic");
             return;
         }
+        if ("Interpretation".equals(focus) && noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
+            oled.valueInfo("Oikord Mode", oikordInterpretation.displayName());
+            return;
+        }
         oled.lineInfo("Root %s%d".formatted(NoteGridLayout.noteName(getRootNote()), getOctave()),
                 noteStepActive
                         ? "Step: %s\n%s".formatted(currentStepSubMode.displayName(),
@@ -660,12 +689,27 @@ public class NoteMode extends Layer {
 
     private void showCurrentOikord() {
         final OikordBank.Slot slot = oikordBank.slot(oikordPage, selectedOikordSlot);
-        oled.valueInfo(slot.family(), "%s P%d".formatted(slot.name(), oikordPage + 1));
+        oled.valueInfo(slot.family(), "%s %s".formatted(slot.name(), oikordInterpretationSuffix()));
     }
 
     private String currentOikordDisplay() {
         final OikordBank.Slot slot = oikordBank.slot(oikordPage, selectedOikordSlot);
-        return "%s P%d".formatted(slot.shortLabel(), oikordPage + 1);
+        return "%s %s".formatted(slot.shortLabel(), oikordInterpretationSuffix());
+    }
+
+    private String oikordInterpretationSuffix() {
+        return "P%d %s".formatted(oikordPage + 1, oikordInterpretation == OikordInterpretation.AS_IS ? "Raw" : "Cast");
+    }
+
+    private int[] renderSelectedOikord(final OikordBank.Slot slot) {
+        if (oikordInterpretation == OikordInterpretation.CAST) {
+            return slot.renderCast(getScale(), getRootNote());
+        }
+        return slot.renderAsIs(getOikordRootMidi());
+    }
+
+    private int getOikordRootMidi() {
+        return (OikordBank.MID_REGISTER_OCTAVE + 1) * 12 + getRootNote();
     }
 
     private void showHeldStepInfo(final int stepIndex) {

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,5 +54,17 @@ class OikordBankTest {
         assertArrayEquals(new int[]{0, 2, 4, 6}, barker);
         assertArrayEquals(new int[]{0, 4, 1, 6}, plaits);
         assertTrue(plaits[1] > plaits[2]);
+    }
+
+    @Test
+    void canRenderSlotsAsIsOrCastThroughScale() {
+        final OikordBank bank = new OikordBank();
+        final OikordBank.Slot slot = bank.slot(0, 0);
+        final int[] asIs = slot.renderAsIs(48);
+        final int[] cast = slot.renderCast(MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0);
+
+        assertArrayEquals(new int[]{48, 50, 52, 54}, asIs);
+        assertEquals(asIs.length, cast.length);
+        assertTrue(java.util.Arrays.mismatch(asIs, cast) >= 0);
     }
 }

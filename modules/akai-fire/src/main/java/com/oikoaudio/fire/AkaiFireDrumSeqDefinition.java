@@ -25,7 +25,7 @@ public class AkaiFireDrumSeqDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getVersion() {
-        return "0.2.0";
+        return "0.3.0";
     }
 
     @Override
