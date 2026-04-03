@@ -75,6 +75,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private SettableEnumValue patternActionPref;
     private SettableEnumValue mainEncoderRolePref;
     private SettableBooleanValue auditionOnDrumSelectPref;
+    private SettableBooleanValue auditionOikordsPref;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -165,6 +166,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         noteMode = new NoteMode(this, noteRepeatHandler);
+        oled.setIdleAction(this::showIdleOledInfo);
         midiOut.sendSysex(DEV_INQ);
 
         oled.showLogo();
@@ -228,6 +230,11 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 true);
         auditionOnDrumSelectPref.markInterested();
+
+        auditionOikordsPref = preferences.getBooleanSetting("Audition Oikords",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                true);
+        auditionOikordsPref.markInterested();
     }
 
     private void setUpTransportControl() {
@@ -309,6 +316,10 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
     private BiColorLightState getPlayState() {
         return transport.isPlaying().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+    }
+
+    public boolean isTransportPlaying() {
+        return transport != null && transport.isPlaying().get();
     }
 
     private BiColorLightState getOverdubState() {
@@ -406,6 +417,11 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
             return;
         }
         if (activeMode == TopLevelMode.NOTE) {
+            if (noteMode.isNoteStepActive()) {
+                noteMode.returnToLivePlayFromStepMode();
+                oled.valueInfo("Mode", "Note");
+                return;
+            }
             noteMode.cycleLayout();
             return;
         }
@@ -583,6 +599,10 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         return auditionOnDrumSelectPref != null && auditionOnDrumSelectPref.get();
     }
 
+    public boolean isAuditionOikordsEnabled() {
+        return auditionOikordsPref != null && auditionOikordsPref.get();
+    }
+
     public void adjustMainCursorParameter(final int inc, final boolean fine) {
         final Parameter parameter = getLastClickedParameter();
         if (parameter == null) {
@@ -603,6 +623,20 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
             return;
         }
         oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+    }
+
+    private void showIdleOledInfo() {
+        final Parameter parameter = getLastClickedParameter();
+        if (parameter != null) {
+            oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+            return;
+        }
+        final String modeLabel = switch (activeMode) {
+            case DRUM -> "Drum";
+            case NOTE -> "Note";
+            case PERFORM -> "Perform";
+        };
+        oled.valueInfo("Mode", modeLabel);
     }
 
     public void resetMainCursorParameter() {

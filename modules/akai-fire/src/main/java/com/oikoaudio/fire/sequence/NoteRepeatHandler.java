@@ -43,6 +43,8 @@ public class NoteRepeatHandler {
 		arp.octaves().set(0);
 		arp.humanize().set(0);
 		arp.isFreeRunning().set(false);
+		arp.isEnabled().set(false);
+		noteRepeatActive.set(false);
 	}
 
 	BiColorLightState getLightState() {
@@ -119,6 +121,8 @@ public class NoteRepeatHandler {
 	}
 
 	public void deactivate() {
+		noteRepeatActive.set(false);
+		repeatButtonHeld = false;
 		arp.isEnabled().set(false);
 	}
 

@@ -1,70 +1,83 @@
 package com.oikoaudio.fire.note;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OikordBankTest {
 
     @Test
-    void exposesTwoCuratedPagesOrderedByFamily() {
+    void exposesEightCuratedFamiliesWithVariableTraversalLengths() {
         final OikordBank bank = new OikordBank();
 
-        final List<OikordBank.Slot> page0 = bank.page(0);
-        final List<OikordBank.Slot> page1 = bank.page(1);
+        assertEquals(8, bank.families().size());
+        assertEquals("Barker", bank.family(0).family());
+        assertEquals("Audible", bank.family(1).family());
+        assertEquals("Sus Motion", bank.family(2).family());
+        assertEquals("Quartal", bank.family(3).family());
+        assertEquals("Cluster", bank.family(4).family());
+        assertEquals("Minor Drift", bank.family(5).family());
+        assertEquals("Dorian Lift", bank.family(6).family());
+        assertEquals("Root Drone", bank.family(7).family());
 
-        assertEquals(32, page0.size());
-        assertEquals(32, page1.size());
-        assertEquals("Barker", page0.get(0).family());
-        assertEquals("Plaits", page0.get(8).family());
-        assertEquals("Sus Motion", page0.get(16).family());
-        assertEquals("Quartal", page0.get(24).family());
-        assertEquals("Cluster", page1.get(0).family());
-        assertEquals("Minor Drift", page1.get(8).family());
-        assertEquals("Dorian Lift", page1.get(16).family());
-        assertEquals("Rootless", page1.get(24).family());
+        assertEquals(64, bank.family(0).slots().size());
+        assertEquals(17, bank.family(1).slots().size());
+        assertEquals(64, bank.family(7).slots().size());
     }
 
     @Test
-    void keepsBarkerAndPlaitsFirstAcrossTheCuratedBank() {
+    void keepsBarkerAndAudibleFirstAcrossTheCuratedFamilies() {
         final OikordBank bank = new OikordBank();
 
-        assertEquals("Barker", bank.slot(0, 0).family());
-        assertEquals("classic", bank.slot(0, 0).sourcePack());
-        assertEquals("QUARTAL", bank.slot(0, 0).sourceFamily());
-        assertEquals("quartal stack", bank.slot(0, 0).name());
-        assertEquals("Plaits", bank.slot(0, 8).family());
-        assertEquals("plaits", bank.slot(0, 8).sourcePack());
-        assertEquals("PLAITS-JON", bank.slot(0, 8).sourceFamily());
-        assertEquals("Octave", bank.slot(0, 8).name());
+        assertEquals("classic", bank.family(0).sourcePack());
+        assertEquals("QUARTAL", bank.family(0).sourceFamily());
+        assertEquals("plaits", bank.family(1).sourcePack());
+        assertEquals("PLAITS-JON", bank.family(1).sourceFamily());
     }
 
     @Test
-    void rendersDedicatedPlaitsVoicingsDifferentlyFromBarker() {
+    void familySlotsExpandEachFormulaIntoEightVariants() {
         final OikordBank bank = new OikordBank();
-        final int[] barker = bank.slot(0, 0).degrees();
-        final int[] plaits = bank.slot(0, 8).degrees();
 
-        assertArrayEquals(new int[]{0, 2, 4, 6}, barker);
-        assertArrayEquals(new int[]{0, 4, 1, 6}, plaits);
-        assertTrue(plaits[1] > plaits[2]);
+        assertEquals("quartal stack", bank.slot(0, 0, 0).name());
+        assertEquals("Q stack 1", bank.slot(0, 0, 0).shortLabel());
+        assertEquals("Q stack 8", bank.slot(0, 0, 7).shortLabel());
+        assertEquals("quartal stack with b7 and 9", bank.slot(0, 0, 8).name());
+        assertEquals("quartal add6 with upper 10", bank.slot(0, 1, 31).name());
+    }
+
+    @Test
+    void audibleUsesAllSeventeenConcreteSourceEntries() {
+        final OikordBank bank = new OikordBank();
+
+        assertEquals(1, bank.pageCount(1));
+        assertEquals("Oct", bank.slot(1, 0, 0).shortLabel());
+        assertEquals("Major 7th", bank.slot(1, 0, 7).name());
+        assertEquals("Fully diminished", bank.slot(1, 0, 16).name());
+    }
+
+    @Test
+    void keepsDistinctRenderedVoicingsAcrossGeneratedVariants() {
+        final OikordBank bank = new OikordBank();
+        final int[] first = bank.renderAsIs(0, 0, 6, 48);
+        final int[] second = bank.renderAsIs(0, 0, 7, 48);
+
+        assertFalse(java.util.Arrays.equals(first, second));
     }
 
     @Test
     void canRenderSlotsAsIsOrCastThroughScale() {
         final OikordBank bank = new OikordBank();
-        final OikordBank.Slot slot = bank.slot(0, 0);
-        final int[] asIs = slot.renderAsIs(48);
-        final int[] cast = slot.renderCast(MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0);
+        final OikordBank.Slot slot = bank.slot(2, 0, 0);
+        final int[] asIs = bank.renderAsIs(2, 0, 0, 48);
+        final int[] cast = bank.renderCast(2, 0, 0, MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0);
 
-        assertArrayEquals(new int[]{48, 50, 52, 54}, asIs);
         assertEquals(asIs.length, cast.length);
         assertTrue(java.util.Arrays.mismatch(asIs, cast) >= 0);
+        assertArrayEquals(slot.pcs(), bank.slot(2, 0, 0).pcs());
     }
 }

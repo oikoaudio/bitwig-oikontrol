@@ -14,6 +14,7 @@ import com.bitwig.extension.controller.api.MidiOut;
 
 public class OledDisplay {
 	private static final int GENERAL_BAR_WIDTH = 126;
+	private static final long CLEAR_DELAY_MS = 3000;
 	private final byte[] oledBar = new byte[] { SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, 0x09, 0x00, 0x08, //
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, SE_EN };
 	private final byte[] oledCmd = new byte[] { SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, SE_OLED_RGB, 00 };
@@ -23,6 +24,7 @@ public class OledDisplay {
 	private boolean inGraphicsMode = false;
 	private long clearTask = -1;
 	private long logoBlock;
+	private Runnable idleAction;
 
 	public enum Fill {
 		Empty, Solid, Fifty, Hatch;
@@ -58,6 +60,10 @@ public class OledDisplay {
 
 	public void clearScreenDelayed() {
 		clearTask = System.currentTimeMillis();
+	}
+
+	public void setIdleAction(final Runnable idleAction) {
+		this.idleAction = idleAction;
 	}
 
 	public void clearScreen() {
@@ -274,8 +280,12 @@ public class OledDisplay {
 	}
 
 	public void notifyBlink(final int blinkTicks) {
-		if (clearTask > 0 && System.currentTimeMillis() - clearTask > 1500) {
-			clearScreen();
+		if (clearTask > 0 && System.currentTimeMillis() - clearTask > CLEAR_DELAY_MS) {
+			if (idleAction != null) {
+				idleAction.run();
+			} else {
+				clearScreen();
+			}
 			clearTask = -1;
 		}
 		if (logoBlock > 0 && System.currentTimeMillis() - logoBlock > 3000) {

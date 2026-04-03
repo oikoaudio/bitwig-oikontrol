@@ -167,9 +167,11 @@ Design notes:
 
 ## Note Mode
 
-`NOTE` is now a first-pass note-input mode rather than a clip-legato toggle.
+`NOTE` is now split into live note play plus note-step sub-modes.
 
-Current first-pass behavior:
+### Live Note Play
+
+Default `NOTE` behavior:
 
 | Control area | Role |
 | --- | --- |
@@ -177,7 +179,9 @@ Current first-pass behavior:
 | Pad LEDs | Root, in-scale, and out-of-scale note highlighting |
 | `DRUM` | Return to Drum mode |
 | `PERFORM` | Switch to Perform mode placeholder |
-| `STEP SEQ` | Toggle `Chromatic` / `In Key` layout |
+| `NOTE` | Toggle `Chromatic` / `In Key` layout |
+| `STEP SEQ` | Enter the current note-step sub-mode |
+| `SHIFT + STEP SEQ` | Cycle note-step sub-mode and enter it |
 | `PATTERN` up / down | Root note up / down |
 | `BANK` left / right | Octave down / up |
 | `MUTE_1` / `MUTE_2` | Previous / next scale |
@@ -185,11 +189,57 @@ Current first-pass behavior:
 
 OLED feedback shows the current layout, root, octave, and scale whenever one of those values changes.
 
+### Note Step Sub-Modes
+
+Available sub-modes:
+
+| Sub-mode | Status | Purpose |
+| --- | --- | --- |
+| `Oikord Step` | Implemented first pass | Curated harmonic step assignment |
+| `Clip Step Record` | Deferred placeholder | Future ordinary note-into-clip step mode |
+
+`STEP SEQ` enters the current note-step sub-mode from live note play.
+While a note-step sub-mode is active, `NOTE` returns to live note play.
+
+### Oikord Step
+
+`Oikord Step` repurposes the pad grid and several nearby controls:
+
+| Control | Role |
+| --- | --- |
+| Upper two pad rows | 32 visible curated Oikord slots |
+| Lower two pad rows | 32 visible steps |
+| Hold lower-row step(s) + tap upper-row Oikord | Assign selected Oikord to those steps |
+| Tap upper-row Oikord with no held steps | Audition the Oikord if the preference is enabled |
+| `STEP SEQ` while already in `Oikord Step` | Toggle `As Is` / `Cast` rendering |
+| `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
+| `PATTERN` up / down | Page within the active Oikord family across two pages |
+| `GRID` left / right (`BANK_L` / `BANK_R`) | Oikord octave offset down / up |
+| `SHIFT + GRID` left / right | Oikord root offset down / up |
+| Encoder 1 | Oikord root offset |
+| Encoder 2 | Oikord gate / note length amount |
+| Encoder 3 | Select active Oikord family |
+| Encoder 4 | Show current Oikord / family context |
+| `MUTE_3` | Show current Oikord / mode context on OLED |
+
+Behavior notes:
+
+- Eight curated families are exposed: `Barker`, `Audible`, `SUSMOTION`, `QUARTALCOLOR`, `CLUSTERLIGHT`, `MINORDRIFT`, `DORIANLIFT`, and `ROOTDRONE`
+- Each curated family preserves its full 64-chord traversal
+- The upper rows show 32 visible slots at a time, grouped visually in blocks of 8 for recognition
+- Oikord assignment writes literal notes directly into the clip
+- `As Is` keeps the source voicing literally transposed
+- `Cast` renders the Oikord through the Fire's local note-scale state
+- Oikord root and octave offsets persist until changed and affect new assignments and auditions
+- Oikord audition is controlled by a preference: `Audition Oikords`
+- Oikord selection OLED text shows family, chosen voicing name, page, rendering mode, and current root/octave offsets
+
 Explicitly deferred from this first pass:
 
 - piano layout
 - Bitwig host-scale follow
-- note step-entry workflow on `STEP SEQ`
+- full Clip Step Record behavior
+- encoder-page harmonization between Drum and Note Step modes
 - broader performance-note features
 
 ## Perform Mode

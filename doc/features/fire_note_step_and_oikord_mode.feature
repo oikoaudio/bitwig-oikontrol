@@ -64,8 +64,8 @@ Feature: Akai Fire note step modes and Oikord sequencing
     And the initial subset contains at most eight harmonic families
     And each family exposes a small, hardware-browsable set of variants
     And the selected families are chosen for modal usefulness, sparse voicing quality, and clear differentiation
-    And the curated family order starts with Barker and then Plaits before the more overtly modal color families
-    And the curation favors a shortlist such as Barker, Plaits, Sus Motion, Quartal, Cluster, Minor Drift, Dorian Lift, and Rootless or Pedal
+    And the curated family order starts with Barker and then Audible before the more overtly modal color families
+    And the curation favors a shortlist such as Barker, Audible, Sus Motion, Quartal, Cluster, Minor Drift, Dorian Lift, and Rootless or Pedal
     And the final shortlist is documented together with its source packs
 
   Scenario: Barker is the first family and maps to the classic source set
@@ -74,10 +74,10 @@ Feature: Akai Fire note step modes and Oikord sequencing
     And Barker is sourced from the classic reference material rather than exposing the raw classic pack name
     And Barker acts as the primary familiar harmonic anchor for the rest of the Oikord bank
 
-  Scenario: Plaits keeps its own voicing identity
-    Given the Plaits family is included in the first Oikord implementation
-    Then Plaits is sourced from the Plaits-derived reference material
-    And Plaits uses its dedicated Plaits-style voicing rotation rather than the generic voicing path
+  Scenario: Audible keeps its own voicing identity
+    Given the Audible family is included in the first Oikord implementation
+    Then Audible is sourced from the Plaits-derived reference material
+    And Audible uses its dedicated Plaits-style voicing rotation rather than the generic voicing path
     And the implementation preserves the recognisable identity of the original module behavior
 
   Scenario: Default rendering choices are fixed for the first pass
@@ -85,7 +85,7 @@ Feature: Akai Fire note step modes and Oikord sequencing
     Then the first Fire Oikord implementation uses the controlled-envelope traversal that keeps bass and top contours developing predictably
     And the default register is MID
     And those rendering choices are fixed in the first pass rather than exposed as hardware parameters
-    And the exception is that Plaits still uses its own dedicated voicing rotation behavior
+    And the exception is that Audible still uses its own dedicated voicing rotation behavior
 
   Scenario: Oikord Step works as harmonic sequencing rather than pop-chord memory
     Given Oikord Step mode is active
