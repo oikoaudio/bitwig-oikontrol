@@ -52,13 +52,13 @@ These mappings should remain consistent across the top-level modes unless noted 
 
 The large select encoder defaults to controlling the real last clicked/touched Bitwig parameter via `LastClickedParameter`.
 
-Planned preference:
+Preference:
 
 | Preference | Options |
 | --- | --- |
 | `Main Encoder Role` | `Last Touched Parameter`, `Shuffle`, `Note Repeat` |
 
-Expected behavior:
+Behavior:
 
 | Action | Result |
 | --- | --- |
