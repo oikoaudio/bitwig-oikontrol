@@ -20,7 +20,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DrumSequenceMode extends Layer {
-
     private final ControllerHost host;
     private final AkaiFireDrumSeqExtension driver;
     private Application app;
@@ -80,6 +79,8 @@ public class DrumSequenceMode extends Layer {
     private NoteStep copyNote = null;
     private int blinkState;
     private final List<Integer> pendingBankHeldSteps = new ArrayList<>();
+    private final Map<Integer, Integer> heldStepFineStarts = new HashMap<>();
+    private final Map<Integer, Integer> pendingBankHeldFineStarts = new HashMap<>();
     private int pendingBankDir = 0;
     private boolean pendingBankForceFractional = false;
     private boolean pendingBankWasAlt = false;
@@ -243,6 +244,7 @@ public class DrumSequenceMode extends Layer {
         final NoteStep note = assignments[index];
         if (!pressed) {
             heldSteps.remove(index);
+            heldStepFineStarts.remove(index);
             if (copyHeld.get() || fixedLengthHeld.get()) {
                 // do nothing
             } else if (note != null && note.state() == State.NoteOn && !addedSteps.contains(index)) {
@@ -255,6 +257,7 @@ public class DrumSequenceMode extends Layer {
             addedSteps.remove(index);
         } else {
             heldSteps.add(index);
+            primeHeldStepFineStart(index, note);
             if (fixedLengthHeld.get()) {
                 stepActionFixedLength(index);
             } else if (copyHeld.get()) {
@@ -266,6 +269,7 @@ public class DrumSequenceMode extends Layer {
                     cursorClip.setStep(index, 0, accentHandler.getCurrenVel(),
                             positionHandler.getGridResolution() * gatePercent);
                     addedSteps.add(index);
+                    heldStepFineStarts.put(index, coarseLower(index));
                 }
             }
         }
@@ -280,6 +284,7 @@ public class DrumSequenceMode extends Layer {
             final double duration = copyNote.duration();
             expectedNoteChanges.put(index, copyNote);
             cursorClip.setStep(index, 0, vel, duration);
+            heldStepFineStarts.put(index, coarseLower(index));
         } else if (note != null && note.state() == State.NoteOn) {
             copyNote = note;
         }
@@ -332,12 +337,13 @@ public class DrumSequenceMode extends Layer {
     // private final double originalStepSize = 1.0 / 16.0; // one grid step = 1/16 beat (a 64th note)
 
     // Modify your movePattern method to choose between whole and fractional shifting:
-    private void movePattern(final int dir, final boolean forceFractional, final List<Integer> heldStepSnapshot) {
+    private void movePattern(final int dir, final boolean forceFractional, final List<Integer> heldStepSnapshot,
+                             final Map<Integer, Integer> heldFineStartSnapshot) {
         final boolean heldOnly = !heldStepSnapshot.isEmpty();
         final boolean fractional = forceFractional || heldOnly;
         oled.paramInfo(heldOnly ? "STEP NUDGE" : fractional ? "NUDGE" : "SHIFT", dir > 0 ? "+1" : "-1");
         if (fractional) {
-            movePatternFractional(bigCursorClip, dir, heldOnly, heldStepSnapshot);
+            movePatternFractional(bigCursorClip, dir, heldOnly, heldStepSnapshot, heldFineStartSnapshot);
         } else {
             movePatternWhole(dir);
         }
@@ -387,6 +393,31 @@ public class DrumSequenceMode extends Layer {
         return coarseLower(coarseIndex) + finePerStep() - 1;
     }
 
+    private Integer resolveHeldFineStart(final int coarseIndex, final int targetMidi) {
+        if (targetMidi < 0 || coarseIndex < 0 || coarseIndex >= positionHandler.getAvailableSteps()) {
+            return null;
+        }
+        for (int fineX = coarseLower(coarseIndex); fineX <= coarseUpper(coarseIndex); fineX++) {
+            final Map<Integer, Integer> notes = currentNotesInClip.get(fineX);
+            if (notes != null && notes.containsKey(targetMidi)) {
+                return fineX;
+            }
+        }
+        return null;
+    }
+
+    private void primeHeldStepFineStart(final int index, final NoteStep note) {
+        final int targetMidi = padHandler.getSelectedPadMidi();
+        final Integer resolved = resolveHeldFineStart(index, targetMidi);
+        if (resolved != null) {
+            heldStepFineStarts.put(index, resolved);
+        } else if (note != null && note.state() == State.NoteOn) {
+            heldStepFineStarts.put(index, coarseLower(index));
+        } else {
+            heldStepFineStarts.remove(index);
+        }
+    }
+
 
     /**
      * Nudges (moves) notes in the fine grid while keeping them within the allowed
@@ -395,7 +426,8 @@ public class DrumSequenceMode extends Layer {
      * that have a state of 2 (in our filtered inner map) and only if their normal note is held.
      */
 
-    private void movePatternFractional(Clip clip, int dir, boolean heldOnly, List<Integer> heldStepSnapshot) {
+    private void movePatternFractional(Clip clip, int dir, boolean heldOnly, List<Integer> heldStepSnapshot,
+                                       Map<Integer, Integer> heldFineStartSnapshot) {
         // Prevent held pads from being toggled off on release after a nudge.
         heldStepSnapshot.forEach(modifiedSteps::add);
 
@@ -412,17 +444,23 @@ public class DrumSequenceMode extends Layer {
 
         // Build explicit targets instead of sweeping the entire fine grid.
         List<Integer> targets = new ArrayList<>();
+        Map<Integer, Integer> heldTargets = new HashMap<>();
         if (heldOnly) {
             heldStepSnapshot.stream()
                     .filter(idx -> idx >= 0 && idx < positionHandler.getAvailableSteps())
                     .distinct()
+                    .sorted()
                     .forEach(coarse -> {
-                        for (int fineX = coarse * finePerStep; fineX < coarse * finePerStep + finePerStep; fineX++) {
-                            Map<Integer, Integer> notes = currentNotesInClip.get(fineX);
-                            if (notes != null && notes.containsKey(targetMidi)) {
-                                targets.add(fineX);
-                                break; // only the first fine slot in this coarse step
+                        Integer fineX = heldFineStartSnapshot.get(coarse);
+                        if (fineX == null) {
+                            fineX = resolveHeldFineStart(coarse, targetMidi);
+                            if (fineX != null) {
+                                heldStepFineStarts.put(coarse, fineX);
                             }
+                        }
+                        if (fineX != null && fineX >= 0 && fineX < maxFine) {
+                            targets.add(fineX);
+                            heldTargets.put(fineX, coarse);
                         }
                     });
         } else {
@@ -446,16 +484,18 @@ public class DrumSequenceMode extends Layer {
 
         for (Integer fineX : targets) {
             Map<Integer, Integer> stepNotes = currentNotesInClip.get(fineX);
-            if (stepNotes == null) {
+            if (stepNotes == null && !heldOnly) {
                 continue;
             }
-            Integer state = stepNotes.get(targetMidi);
-            if (state == null || state == State.Empty.ordinal()) {
+            Integer state = stepNotes == null ? null : stepNotes.get(targetMidi);
+            if (!heldOnly && (state == null || state == State.Empty.ordinal())) {
                 continue;
+            }
+            if (heldOnly && (state == null || state == State.Empty.ordinal())) {
+                state = State.NoteOn.ordinal();
             }
 
             int newFineX = fineX + dir;
-            // Wrap within loop bounds.
             if (newFineX < 0) {
                 newFineX += maxFine;
             } else if (newFineX >= maxFine) {
@@ -470,15 +510,24 @@ public class DrumSequenceMode extends Layer {
                 clip.moveStep(fineX, targetMidi, delta, 0);
             } catch (Exception e) {
                 host.errorln("Error moving note at fineX " + fineX + " y = " + targetMidi + ": " + e.getMessage());
+                continue;
             }
 
             // Update local cache: remove old, add new.
-            stepNotes.remove(targetMidi);
-            if (stepNotes.isEmpty()) {
+            if (stepNotes != null) {
+                stepNotes.remove(targetMidi);
+            }
+            if (stepNotes != null && stepNotes.isEmpty()) {
                 currentNotesInClip.remove(fineX);
             }
             Map<Integer, Integer> newMap = currentNotesInClip.computeIfAbsent(newFineX, k -> new HashMap<>());
             newMap.put(targetMidi, state);
+            if (heldOnly) {
+                final Integer coarseIndex = heldTargets.get(fineX);
+                if (coarseIndex != null) {
+                    heldStepFineStarts.put(coarseIndex, newFineX);
+                }
+            }
 
         }
     }
@@ -516,6 +565,7 @@ public class DrumSequenceMode extends Layer {
             cursorClip.setStep(index, 0, accentHandler.getAccentedVelocity(),
                     positionHandler.getGridResolution() * gatePercent);
             addedSteps.add(index);
+            heldStepFineStarts.put(index, coarseLower(index));
             return;
         }
 
@@ -949,7 +999,21 @@ public class DrumSequenceMode extends Layer {
             pendingBankForceFractional = shiftActive.get();
             pendingBankWasAlt = altActive.get();
             pendingBankHeldSteps.clear();
-            heldSteps.stream().sorted().forEach(pendingBankHeldSteps::add);
+            pendingBankHeldFineStarts.clear();
+            final int targetMidi = padHandler.getSelectedPadMidi();
+            heldSteps.stream().sorted().forEach(index -> {
+                pendingBankHeldSteps.add(index);
+                Integer fineX = heldStepFineStarts.get(index);
+                if (fineX == null) {
+                    fineX = resolveHeldFineStart(index, targetMidi);
+                    if (fineX != null) {
+                        heldStepFineStarts.put(index, fineX);
+                    }
+                }
+                if (fineX != null) {
+                    pendingBankHeldFineStarts.put(index, fineX);
+                }
+            });
             if (pendingBankWasAlt) {
                 resolutionHandler.adjust(dir);
             }
@@ -958,10 +1022,13 @@ public class DrumSequenceMode extends Layer {
         if (pendingBankWasAlt) {
             pendingBankWasAlt = false;
             pendingBankHeldSteps.clear();
+            pendingBankHeldFineStarts.clear();
             return;
         }
-        movePattern(pendingBankDir, pendingBankForceFractional, new ArrayList<>(pendingBankHeldSteps));
+        movePattern(pendingBankDir, pendingBankForceFractional, new ArrayList<>(pendingBankHeldSteps),
+                new HashMap<>(pendingBankHeldFineStarts));
         pendingBankHeldSteps.clear();
+        pendingBankHeldFineStarts.clear();
     }
 
     private void bindPatternButtons(AkaiFireDrumSeqExtension driver) {
