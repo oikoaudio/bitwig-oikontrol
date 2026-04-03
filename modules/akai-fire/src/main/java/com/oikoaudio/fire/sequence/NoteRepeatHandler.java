@@ -41,12 +41,15 @@ public class NoteRepeatHandler {
 
 	void handlePressed(final boolean pressed) {
 		if (pressed) {
+			parent.getOled().valueInfo("Note Repeat",
+					noteRepeatActive.get() ? GRID_RATES_STR[selectedArpIndex] : "Off");
+		} else {
 			noteRepeatActive.toggle();
 			if (noteRepeatActive.get()) {
 				parent.getOled().valueInfo("Note Repeat", GRID_RATES_STR[selectedArpIndex]);
+			} else {
+				parent.getOled().valueInfo("Note Repeat", "Off");
 			}
-		} else {
-			parent.getOled().clearScreenDelayed();
 		}
 		repeatButtonHeld = pressed;
 	}

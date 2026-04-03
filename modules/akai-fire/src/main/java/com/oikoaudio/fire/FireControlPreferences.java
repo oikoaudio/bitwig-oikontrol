@@ -40,12 +40,12 @@ public final class FireControlPreferences {
     };
 
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
+    public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_NOTE_REPEAT = "Note Repeat";
-    public static final String MAIN_ENCODER_DISABLED = "Disabled";
     public static final String[] MAIN_ENCODER_ROLES = {
             MAIN_ENCODER_LAST_TOUCHED,
-            MAIN_ENCODER_NOTE_REPEAT,
-            MAIN_ENCODER_DISABLED
+            MAIN_ENCODER_SHUFFLE,
+            MAIN_ENCODER_NOTE_REPEAT
     };
 
     private FireControlPreferences() {
@@ -68,5 +68,24 @@ public final class FireControlPreferences {
             }
         }
         return QUANTIZATION_1_16;
+    }
+
+    public static String normalizeMainEncoderRole(final String preferenceValue) {
+        for (final String value : MAIN_ENCODER_ROLES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return MAIN_ENCODER_LAST_TOUCHED;
+    }
+
+    public static String nextMainEncoderRole(final String currentRole) {
+        final String normalizedRole = normalizeMainEncoderRole(currentRole);
+        for (int index = 0; index < MAIN_ENCODER_ROLES.length; index++) {
+            if (MAIN_ENCODER_ROLES[index].equals(normalizedRole)) {
+                return MAIN_ENCODER_ROLES[(index + 1) % MAIN_ENCODER_ROLES.length];
+            }
+        }
+        return MAIN_ENCODER_LAST_TOUCHED;
     }
 }

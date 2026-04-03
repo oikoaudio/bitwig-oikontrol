@@ -44,35 +44,40 @@ These mappings should remain consistent across the top-level modes unless noted 
 | `REC` | Toggle clip launcher overdub | Existing behavior |
 | `SHIFT` | Global modifier | Used for alternate actions |
 | `ALT` | Global modifier | Used for alternate actions |
-| Main select encoder | Last touched parameter | Planned preference-backed behavior, similar to DrivenByMoss |
-| Main encoder press | Commit / alternate parameter action when required | Only if needed by the controlled parameter |
+| `BROWSER` | Global popup browser | Available in all top-level modes |
+| Main select encoder | Preference-backed main encoder | `Last Touched Parameter`, `Shuffle`, or `Note Repeat` |
+| Main encoder press | Role-specific action | Reset last-touched parameter, toggle groove, toggle note repeat, or commit browser selection |
 
 ## Main Select Encoder
 
-The large select encoder should default to controlling the last touched Bitwig parameter, assuming the API lookup confirms the expected access path in controller API 25.
+The large select encoder defaults to controlling the real last clicked/touched Bitwig parameter via `LastClickedParameter`.
 
 Planned preference:
 
 | Preference | Options |
 | --- | --- |
-| `Main Encoder Role` | `Last Touched Parameter`, `Note Repeat`, `Disabled` |
+| `Main Encoder Role` | `Last Touched Parameter`, `Shuffle`, `Note Repeat` |
 
 Expected behavior:
 
 | Action | Result |
 | --- | --- |
 | Turn main encoder | Change last touched parameter |
-| Press main encoder | Commit or trigger alternate action only when the parameter requires it |
+| Press main encoder | Reset the current last touched parameter to its default value |
 
-If `Main Encoder Role = Note Repeat`, then:
+Additional encoder-role behavior:
+
+| Role | Turn | Press | OLED |
+| --- | --- | --- | --- |
+| `Shuffle` | Adjust global groove shuffle amount | Toggle groove on/off | Shuffle amount or on/off |
+| `Note Repeat` | Change note repeat value while active | Toggle note repeat on/off | Current note repeat value |
+Role management:
 
 | Action | Result |
 | --- | --- |
-| Press main encoder | Toggle note repeat on or off |
-| Turn main encoder | Change note repeat value while active |
-| OLED | Shows the current note repeat value |
-
-The older note-repeat-centered use of the main encoder should be demoted into this optional setting.
+| `SHIFT + press SELECT` | Cycle the persistent main encoder role |
+| `SHIFT + turn SELECT` | Fine adjustment for continuous roles |
+| Accent hold | Temporarily overrides the encoder for accent velocity editing |
 
 ## Drum Mode Layout
 
@@ -107,7 +112,7 @@ These may be refined further once the row-oriented polyrhythm mode is implemente
 | `SHIFT + STEP SEQ` | Fill | Secondary action while Accent gets the prime gesture |
 | `PATTERN` | Configurable utility | Default should be Clip Launcher Automation Write |
 | `SHIFT + PATTERN` | Metronome | Fixed default matching the printed controller label |
-| `BROWSER` | `TBD` utility button | Note repeat should be moved away from this central button |
+| `BROWSER` | Global popup browser | Plain = replace/current context, `SHIFT` = insert before, `ALT` = insert after |
 
 ### Grid Arrows
 
@@ -126,6 +131,22 @@ Implementation note:
 - Holding one or more step pads while pressing the `GRID` left / right arrows fine-nudges those held notes directly, without needing `SHIFT`.
 - While the pad remains held, repeated nudges stay attached to that same note start rather than re-targeting by nearest grid match.
 - After release, ownership returns to the currently visible coarse grid. A note nudged earlier can therefore appear to belong to the previous step until the grid resolution is increased.
+
+## Popup Browser Controls
+
+When the popup browser is open in any top-level mode, the main select encoder takes over popup-browser result navigation:
+
+| Control | Browser action |
+| --- | --- |
+| `SELECT` turn | Move through the popup browser results |
+| `SELECT` press | Commit the selected result |
+| `BROWSER` | Close the popup browser |
+
+Behavior notes:
+
+- The OLED shows the currently selected browser result while turning `SELECT`.
+- `PATTERN` and the `GRID` arrows keep their normal Drum-mode functions; they no longer add extra popup-browser navigation state.
+- The Browser button and popup result browsing are global controller functions, not Drum-mode-only behavior.
 
 ## Euclid Controls
 
@@ -188,14 +209,7 @@ The exact preference names are still open, but pinning should be controlled by s
 
 ## Note Repeat
 
-Note repeat is no longer considered important enough to occupy the most central hardware controls.
-
-Recommended direction:
-
-- remove it from the default main encoder behavior
-- remove it from the central `BROWSER` role
-- reintroduce it only if it has a clearly useful placement
-- consider making it optional, mode-specific, or preference-controlled
+Note repeat no longer occupies the `BROWSER` button. It remains available as an optional main encoder role.
 
 ## Open Decisions
 
@@ -203,8 +217,6 @@ These points are still intentionally open:
 
 - exact LED colors for Drum sub-modes
 - exact left-side button behavior once polyrhythm mode is implemented
-- final supported options for `PATTERN`
-- final use of `BROWSER`
 - exact pin preferences
 - exact Note-mode step-input behavior
 - whether solo remains part of the row workflow or is dropped

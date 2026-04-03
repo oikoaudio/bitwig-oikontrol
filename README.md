@@ -19,7 +19,7 @@ Bitwig Oikontrol currently provides two controller extensions:
 * `DRUM`, `NOTE`, and `PERFORM` are reserved as top-level mode buttons. Drum sequencing is implemented in this pass; Note and Perform are kept free for later dedicated modes.
 * `STEP SEQ` is now the accent gesture in Drum mode, `SHIFT + STEP SEQ` toggles Fill, and `ALT +` the `GRID` left/right arrow buttons adjusts grid resolution. The `GRID` left/right arrow buttons keep pattern shift and fine nudge behavior.
 * `PATTERN` defaults to Clip Launcher Automation Write, with `SHIFT + PATTERN` fixed to metronome.
-* The main encoder role is configurable between `Note Repeat`, `Last Touched Parameter`, and `Disabled`.
+* The main encoder role is configurable between `Last Touched Parameter`, `Shuffle`, and `Note Repeat`.
 * Euclid mode uses User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift = preview placeholder; per-pad mixer controls moved from User2 to the Mixer mode.
 * Fine-grid step nudging builds on Wim Van den Borre's Akai Fire Nudger work [https://github.com/wimvandenborre/AkaiFireNudger/]. I took his fine-grid approach: a separate `1/64` note grid, note observation on that finer grid, and moving note starts with Bitwig's `moveStep(...)` API. In this repo, the current user-facing behavior around lane nudge, held-step nudge, repeated retarget-safe nudging, and the interaction with the rest of the Fire layout was adapted further here, so any remaining rough edges in that behavior are on me.
 

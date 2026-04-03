@@ -7,7 +7,6 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
-import com.oikoaudio.fire.utils.MainCursor;
 import com.oikoaudio.fire.utils.PatternButtons;
 import com.bitwig.extension.api.util.midi.ShortMidiMessage;
 import com.bitwig.extension.callback.ShortMidiMessageReceivedCallback;
@@ -23,6 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AkaiFireDrumSeqExtension extends ControllerExtension {
+    private static final double MAIN_ENCODER_STEP = 0.01;
+    private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
+
     private static AkaiFireDrumSeqExtension instance;
     private HardwareSurface surface;
     private Transport transport;
@@ -56,7 +58,11 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private OledDisplay oled;
     private ControllerHost host;
     private TouchEncoder mainEncoder;
-    private CursorRemoteControlsPage mainRemoteControlsPage;
+    private LastClickedParameter lastClickedParameter;
+    private Groove groove;
+    private final BooleanValueObject altActive = new BooleanValueObject();
+    private PopupBrowser popupBrowser;
+    private BrowserResultsItem browserResultsCursor;
 
     private Preferences preferences;
     private SettableEnumValue clipLaunchModePref;
@@ -105,14 +111,25 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         host = getHost();
         Arrays.fill(lastCcValue, -1);
 
-        MainCursor mainCursor = new MainCursor(host, 0, 0);
-        mainRemoteControlsPage = mainCursor.remoteControlsPage();
-        for (int index = 0; index < mainRemoteControlsPage.getParameterCount(); index++) {
-            final Parameter parameter = mainRemoteControlsPage.getParameter(index);
-            parameter.name().markInterested();
-            parameter.displayedValue().markInterested();
-            parameter.value().markInterested();
-        }
+        lastClickedParameter = host.createLastClickedParameter("FIRE_LAST_CLICKED_PARAMETER", "Fire Last Clicked Parameter");
+        final Parameter focusedParameter = lastClickedParameter.parameter();
+        lastClickedParameter.isLocked().markInterested();
+        focusedParameter.exists().markInterested();
+        focusedParameter.name().markInterested();
+        focusedParameter.displayedValue().markInterested();
+        focusedParameter.value().markInterested();
+        groove = host.createGroove();
+        groove.getEnabled().name().markInterested();
+        groove.getEnabled().displayedValue().markInterested();
+        groove.getEnabled().value().markInterested();
+        groove.getShuffleAmount().name().markInterested();
+        groove.getShuffleAmount().displayedValue().markInterested();
+        groove.getShuffleAmount().value().markInterested();
+        popupBrowser = host.createPopupBrowser();
+        popupBrowser.exists().markInterested();
+        browserResultsCursor = popupBrowser.resultsColumn().createCursorItem();
+        browserResultsCursor.exists().markInterested();
+        browserResultsCursor.name().markInterested();
 
         layers = new Layers(this);
         noteModeLayer = new Layer(layers, "NOTE_MODE_LAYER");
@@ -220,10 +237,8 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
         final BiColorButton shiftButton = addButton(NoteAssign.SHIFT);
         shiftButton.bind(mainLayer, shiftActive, BiColorLightState.RED_HALF, BiColorLightState.OFF);
-
-
-
-
+        final BiColorButton altButton = addButton(NoteAssign.ALT);
+        altButton.bind(mainLayer, altActive, BiColorLightState.RED_HALF, BiColorLightState.OFF);
 
         final BiColorButton m1Button = addButton(NoteAssign.MUTE_1);
         m1Button.bindPressed(mainLayer, this::dummyAction, BiColorLightState.RED_FULL);
@@ -235,7 +250,6 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         addButton(NoteAssign.NOTE);
         //addButton(NoteAssign.DRUM);
         addButton(NoteAssign.PERFORM);
-        addButton(NoteAssign.ALT);
         addButton(NoteAssign.PATTERN_UP);
         addButton(NoteAssign.PATTERN_DOWN);
         addButton(NoteAssign.BANK_L);
@@ -248,7 +262,8 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         drumButton.bindPressed(mainLayer, this::handleDrumPressed, this::getDrumState);
         noteButton.bindPressed(mainLayer, this::handleNotePressed, this::getNoteState);
         performButton.bindPressed(mainLayer, this::handlePerformPressed, this::getPerformState);
-        addButton(NoteAssign.BROWSER);
+        final BiColorButton browserButton = addButton(NoteAssign.BROWSER);
+        browserButton.bindPressed(mainLayer, this::handleBrowserPressed, this::getBrowserLightState);
         stateLights[0] = createLight(NoteAssign.TRACK_SELECT_1);
         stateLights[1] = createLight(NoteAssign.TRACK_SELECT_2);
         stateLights[2] = createLight(NoteAssign.TRACK_SELECT_3);
@@ -414,6 +429,8 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
             encoders[index] = new TouchEncoder(controlId, controlId, this);
         }
         mainEncoder = new TouchEncoder(0x76, 0x19, this);
+        mainEncoder.bindEncoder(mainLayer, this::handleGlobalMainEncoder);
+        mainEncoder.bindTouched(mainLayer, this::handleGlobalMainEncoderPress);
 
         for (int i = 0; i < rgbButtons.length; i++) {
             rgbButtons[i] = new RgbButton(i, this);
@@ -532,36 +549,174 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     public String getMainEncoderRolePreference() {
         return mainEncoderRolePref == null
                 ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
-                : mainEncoderRolePref.get();
+                : FireControlPreferences.normalizeMainEncoderRole(mainEncoderRolePref.get());
+    }
+
+    public String cycleMainEncoderRolePreference() {
+        final String nextRole = FireControlPreferences.nextMainEncoderRole(getMainEncoderRolePreference());
+        if (mainEncoderRolePref != null) {
+            mainEncoderRolePref.set(nextRole);
+        }
+        oled.valueInfo("Encoder Role", nextRole);
+        return nextRole;
     }
 
     public boolean isAuditionOnDrumSelectEnabled() {
         return auditionOnDrumSelectPref != null && auditionOnDrumSelectPref.get();
     }
 
-    public void adjustMainCursorParameter(final int inc) {
-        final Parameter parameter = findMainCursorParameter();
+    public void adjustMainCursorParameter(final int inc, final boolean fine) {
+        final Parameter parameter = getLastClickedParameter();
         if (parameter == null) {
+            oled.valueInfo("Last Touched", "No Target");
             return;
         }
         final SettableRangedValue value = parameter.value();
-        final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * 0.01)));
+        final double stepSize = fine ? MAIN_ENCODER_FINE_STEP : MAIN_ENCODER_STEP;
+        final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * stepSize)));
         value.setImmediately(nextValue);
         oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
     }
 
-    private Parameter findMainCursorParameter() {
-        if (mainRemoteControlsPage == null) {
+    public void showMainCursorParameterInfo() {
+        final Parameter parameter = getLastClickedParameter();
+        if (parameter == null) {
+            oled.valueInfo("Last Touched", "No Target");
+            return;
+        }
+        oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+    }
+
+    public void resetMainCursorParameter() {
+        final Parameter parameter = getLastClickedParameter();
+        if (parameter == null) {
+            return;
+        }
+        parameter.reset();
+        oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+    }
+
+    private Parameter getLastClickedParameter() {
+        if (lastClickedParameter == null) {
             return null;
         }
-        for (int index = 0; index < mainRemoteControlsPage.getParameterCount(); index++) {
-            final Parameter parameter = mainRemoteControlsPage.getParameter(index);
-            final String name = parameter.name().get();
-            if (name != null && !name.isBlank()) {
-                return parameter;
+        final Parameter parameter = lastClickedParameter.parameter();
+        if (parameter == null || !parameter.exists().get()) {
+            return null;
+        }
+        final String name = parameter.name().get();
+        return name == null || name.isBlank() ? null : parameter;
+    }
+
+    public void adjustGrooveShuffleAmount(final int inc, final boolean fine) {
+        if (groove == null) {
+            return;
+        }
+        final Parameter shuffleAmount = groove.getShuffleAmount();
+        final SettableRangedValue value = shuffleAmount.value();
+        final double stepSize = fine ? MAIN_ENCODER_FINE_STEP : MAIN_ENCODER_STEP;
+        final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * stepSize)));
+        value.setImmediately(nextValue);
+        oled.valueInfo("Shuffle", shuffleAmount.displayedValue().get());
+    }
+
+    public void toggleGrooveEnabled() {
+        if (groove == null) {
+            return;
+        }
+        final SettableRangedValue value = groove.getEnabled().value();
+        final boolean enableGroove = value.get() < 0.5;
+        value.setImmediately(enableGroove ? 1.0 : 0.0);
+        oled.valueInfo("Shuffle", enableGroove ? "On" : "Off");
+    }
+
+    public void showGrooveShuffleInfo() {
+        if (groove == null) {
+            return;
+        }
+        oled.valueInfo("Shuffle", groove.getShuffleAmount().displayedValue().get());
+    }
+
+    public boolean isPopupBrowserActive() {
+        return popupBrowser != null && popupBrowser.exists().get();
+    }
+
+    public BiColorLightState getBrowserLightState() {
+        return isPopupBrowserActive() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+    }
+
+    public boolean isGlobalAltHeld() {
+        return altActive.get();
+    }
+
+    private void handleBrowserPressed(final boolean pressed) {
+        if (!pressed) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        if (isPopupBrowserActive()) {
+            popupBrowser.cancel();
+            oled.valueInfo("Browser", "Closed");
+            return;
+        }
+        openPopupBrowser();
+    }
+
+    private void openPopupBrowser() {
+        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        final boolean shiftHeld = getButton(NoteAssign.SHIFT).isPressed();
+        final boolean altHeld = getButton(NoteAssign.ALT).isPressed();
+        if (shiftHeld) {
+            if (primaryDevice.exists().get()) {
+                primaryDevice.beforeDeviceInsertionPoint().browse();
+            } else {
+                viewControl.getCursorTrack().startOfDeviceChainInsertionPoint().browse();
+            }
+            oled.valueInfo("Browser", "Before");
+            return;
+        }
+        if (altHeld) {
+            if (primaryDevice.exists().get()) {
+                primaryDevice.afterDeviceInsertionPoint().browse();
+            } else {
+                viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
+            }
+            oled.valueInfo("Browser", "After");
+            return;
+        }
+        if (primaryDevice.exists().get()) {
+            primaryDevice.replaceDeviceInsertionPoint().browse();
+            oled.valueInfo("Browser", "Replace");
+        } else {
+            viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
+            oled.valueInfo("Browser", "Add");
+        }
+    }
+
+    private void handleGlobalMainEncoder(final int inc) {
+        if (!isPopupBrowserActive()) {
+            return;
+        }
+        if (inc > 0) {
+            for (int i = 0; i < inc; i++) {
+                popupBrowser.selectNextFile();
+            }
+        } else if (inc < 0) {
+            for (int i = 0; i < -inc; i++) {
+                popupBrowser.selectPreviousFile();
             }
         }
-        return null;
+        oled.valueInfo("Browser", browserResultsCursor.exists().get() ? browserResultsCursor.name().get() : "No Results");
+    }
+
+    private void handleGlobalMainEncoderPress(final boolean press) {
+        if (!isPopupBrowserActive()) {
+            return;
+        }
+        if (press) {
+            popupBrowser.commit();
+            oled.valueInfo("Browser", "Commit");
+        }
     }
 
     public static AkaiFireDrumSeqExtension getInstance() {

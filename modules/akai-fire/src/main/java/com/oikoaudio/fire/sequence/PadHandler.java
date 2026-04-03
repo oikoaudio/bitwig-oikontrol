@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 
 public class PadHandler {
+    private static final int DRUM_PAD_BUTTON_OFFSET = 16;
+    private static final int PAD_NOTE_BASE = 0x36;
 
     final DrumSequenceMode parent;
     private final AkaiFireDrumSeqExtension driver;
@@ -58,7 +60,7 @@ public class PadHandler {
         cursorClip = parent.getCursorClip();
         noteInput = driver.getNoteInput();
         for (int i = 0; i < padNotes.length; i++) {
-            padNotes[i] = 0x36 + i;
+            padNotes[i] = PAD_NOTE_BASE + DRUM_PAD_BUTTON_OFFSET + i;
         }
         final ViewCursorControl control = driver.getViewControl();
 
@@ -73,7 +75,7 @@ public class PadHandler {
 
         final RgbButton[] rgbButtons = driver.getRgbButtons();
         for (int i = 0; i < 16; i++) {
-            final RgbButton button = rgbButtons[i + 16];
+            final RgbButton button = rgbButtons[i + DRUM_PAD_BUTTON_OFFSET];
             final PadContainer pad = new PadContainer(this, i, control.getDrumPadBank().getItemAt(i), playing[i]);
 
             bindMain(button, mainLayer, pad);
@@ -112,10 +114,6 @@ public class PadHandler {
     }
 
     private void initButtons(final Layer mainLayer, final AkaiFireDrumSeqExtension driver) {
-
-        final BiColorButton browserNrButton = driver.getButton(NoteAssign.BROWSER);
-        browserNrButton.bindPressed(mainLayer, parent::handleBrowserPressed, noteRepeatHandler::getLightState);
-
     }
 
     private void handlePadSelection(final PadContainer pad, final boolean pressed) {

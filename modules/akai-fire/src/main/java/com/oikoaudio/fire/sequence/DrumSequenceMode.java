@@ -84,7 +84,7 @@ public class DrumSequenceMode extends Layer {
     private int pendingBankDir = 0;
     private boolean pendingBankForceFractional = false;
     private boolean pendingBankWasAlt = false;
-
+    private boolean mainEncoderPressConsumed = false;
     private CursorRemoteControlsPage activeRemoteControlsPage;
 
 
@@ -547,14 +547,20 @@ public class DrumSequenceMode extends Layer {
     }
 
     private void handleMainEncoder(final int inc) {
+        if (driver.isPopupBrowserActive()) {
+            return;
+        }
         if (accentHandler.isHolding()) {
             accentHandler.handleMainEncoder(inc);
         } else {
             final String mainEncoderRole = driver.getMainEncoderRolePreference();
+            final boolean fine = isShiftHeld();
             if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
                 padHandler.handleMainEncoder(inc);
+            } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
+                driver.adjustGrooveShuffleAmount(inc, fine);
             } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
-                driver.adjustMainCursorParameter(inc);
+                driver.adjustMainCursorParameter(inc, fine);
             }
         }
     }
@@ -577,10 +583,37 @@ public class DrumSequenceMode extends Layer {
     }
 
     private void handeMainEncoderPress(final boolean press) {
+        if (driver.isPopupBrowserActive()) {
+            return;
+        }
         if (accentHandler.isHolding()) {
             accentHandler.handeMainEncoderPress(press);
-        } else if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(driver.getMainEncoderRolePreference())) {
+            return;
+        }
+        if (press && isShiftHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.cycleMainEncoderRolePreference();
+            return;
+        }
+        if (!press && mainEncoderPressConsumed) {
+            mainEncoderPressConsumed = false;
+            return;
+        }
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
+            if (press) {
+                driver.showMainCursorParameterInfo();
+            } else {
+                driver.resetMainCursorParameter();
+            }
+        } else if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
             padHandler.getNoteRepeaterHandler().handlePressed(press);
+        } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
+            if (press) {
+                driver.showGrooveShuffleInfo();
+            } else {
+                driver.toggleGrooveEnabled();
+            }
         }
     }
 
@@ -600,24 +633,6 @@ public class DrumSequenceMode extends Layer {
 
     public OledDisplay getOled() {
         return oled;
-    }
-
-    public void handleBrowserPressed(final boolean pressed) {
-        if (!pressed) {
-            oled.clearScreenDelayed();
-            return;
-        }
-        if (encoderLayer.getEncoderMode() == EncoderMode.USER_2) {
-            boolean clear = altActive.get();
-            boolean preview = shiftActive.get();
-            if (preview) {
-                oled.detailInfo("EUCLID", "Preview");
-            } else {
-                applyEuclid(clear);
-            }
-        } else {
-            padHandler.getNoteRepeaterHandler().handlePressed(true);
-        }
     }
 
     private void handleEuclidAdjust(int index, int inc, boolean shift) {
