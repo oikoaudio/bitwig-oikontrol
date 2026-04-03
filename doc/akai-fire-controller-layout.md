@@ -111,15 +111,21 @@ These may be refined further once the row-oriented polyrhythm mode is implemente
 
 ### Grid Arrows
 
-`BANK_L` and `BANK_R` stay as the main timing-edit pair:
+The two top-right buttons with `GRID` printed between them and left/right arrows on the button caps stay as the main timing-edit pair. In code these are `BANK_L` and `BANK_R`.
 
 | Action | Result |
 | --- | --- |
-| `BANK_L` / `BANK_R` | Coarse pattern shift |
-| `SHIFT + BANK_L` / `SHIFT + BANK_R` | Fine nudge |
-| `ALT + BANK_L` / `ALT + BANK_R` | Grid resolution down / up |
+| `GRID` left / right arrows | Coarse pattern shift |
+| `SHIFT + GRID` left / right arrows | Fine nudge |
+| `ALT + GRID` left / right arrows | Grid resolution down / up |
 
 This keeps timing-related actions grouped on one pair of buttons.
+
+Implementation note:
+
+- Holding one or more step pads while pressing the `GRID` left / right arrows fine-nudges those held notes directly, without needing `SHIFT`.
+- While the pad remains held, repeated nudges stay attached to that same note start rather than re-targeting by nearest grid match.
+- After release, ownership returns to the currently visible coarse grid. A note nudged earlier can therefore appear to belong to the previous step until the grid resolution is increased.
 
 ## Euclid Controls
 
@@ -221,8 +227,8 @@ And within Drum mode:
 | `SHIFT + STEP SEQ` | Fill |
 | `PATTERN` | Configurable utility |
 | `SHIFT + PATTERN` | Metronome |
-| `BANK_L/BANK_R` | Shift pattern |
-| `SHIFT + BANK_L/BANK_R` | Fine nudge |
-| `ALT + BANK_L/BANK_R` | Grid resolution |
+| `GRID` left / right arrows | Shift pattern |
+| `SHIFT + GRID` left / right arrows | Fine nudge |
+| `ALT + GRID` left / right arrows | Grid resolution |
 
 This is the layout to refer back to while implementing the next Fire iterations.
