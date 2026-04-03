@@ -72,4 +72,11 @@ public final class NoteGridLayout {
             default -> "B";
         };
     }
+
+    public static boolean isBlackKey(final int noteClass) {
+        return switch (Math.floorMod(noteClass, 12)) {
+            case 1, 3, 6, 8, 10 -> true;
+            default -> false;
+        };
+    }
 }

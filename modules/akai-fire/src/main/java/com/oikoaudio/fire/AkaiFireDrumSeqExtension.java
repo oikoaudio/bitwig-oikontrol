@@ -80,7 +80,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private NoteMode noteMode;
     private Layer performModeLayer;
     private NoteRepeatHandler noteRepeatHandler;
-    private TopLevelMode activeMode = TopLevelMode.DRUM;
+    private TopLevelMode activeMode = TopLevelMode.NOTE;
     private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
 
     private enum TopLevelMode {
@@ -169,9 +169,9 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
         oled.showLogo();
         mainLayer.activate();
-        drumSequenceMode.activate();
+        switchActiveMode();
         host.scheduleTask(this::handlePing, 100);
-        getHost().showPopupNotification("Init Akai Fire: Drum Sequencer");
+        getHost().showPopupNotification("Init Akai Fire: Note Mode");
 
     }
 
@@ -337,7 +337,10 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     }
 
     private BiColorLightState getNoteState() {
-        return activeMode == TopLevelMode.NOTE ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+        if (activeMode != TopLevelMode.NOTE || noteMode == null) {
+            return BiColorLightState.OFF;
+        }
+        return noteMode.getModeButtonLightState();
     }
 
     private BiColorLightState getPerformState() {
@@ -400,6 +403,10 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
     private void handleNotePressed(final boolean pressed) {
         if (!pressed) {
+            return;
+        }
+        if (activeMode == TopLevelMode.NOTE) {
+            noteMode.cycleLayout();
             return;
         }
         activeMode = TopLevelMode.NOTE;

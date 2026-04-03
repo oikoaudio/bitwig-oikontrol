@@ -4,6 +4,7 @@ import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import com.bitwig.extensions.framework.values.Midi;
 import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -15,14 +16,22 @@ import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.utils.PatternButtons;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class NoteMode extends Layer {
+    private static final int PIANO_HIGHLIGHT_INDEX = -1;
     private static final int MIN_OCTAVE = 0;
     private static final int MAX_OCTAVE = 7;
+    private static final int MIN_TRANSPOSE = 0;
+    private static final int MAX_TRANSPOSE = MAX_OCTAVE * 12 + 11;
+    private static final int HELD_NOTE_VELOCITY = 100;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
+    private static final RgbLigthState PIANO_BLACK_KEY_COLOR = new RgbLigthState(0, 56, 120, true);
+    private static final RgbLigthState PIANO_WHITE_KEY_COLOR = RgbLigthState.GRAY_2;
     private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
 
     private final AkaiFireDrumSeqExtension driver;
@@ -34,9 +43,8 @@ public class NoteMode extends Layer {
     private final Integer[] noteTranslationTable = new Integer[128];
     private final Set<Integer> heldPads = new HashSet<>();
 
-    private int scaleIndex = 1;
-    private int rootNote = 0;
-    private int octave = 3;
+    private int scaleIndex = PIANO_HIGHLIGHT_INDEX;
+    private int transposeBase = 36;
     private boolean inKey = false;
 
     public NoteMode(final AkaiFireDrumSeqExtension driver, final NoteRepeatHandler noteRepeatHandler) {
@@ -66,7 +74,7 @@ public class NoteMode extends Layer {
 
     private void bindButtons() {
         final BiColorButton stepSeqButton = driver.getButton(NoteAssign.STEP_SEQ);
-        stepSeqButton.bindPressed(this, this::handleStepSeqPressed, this::getStepSeqLightState);
+        stepSeqButton.bindPressed(this, pressed -> { }, () -> BiColorLightState.OFF);
 
         final BiColorButton bankLeftButton = driver.getButton(NoteAssign.BANK_L);
         bankLeftButton.bindPressed(this, pressed -> handleOctaveButton(pressed, -1), this::getBankLeftLightState);
@@ -81,16 +89,10 @@ public class NoteMode extends Layer {
         scaleNextButton.bindPressed(this, pressed -> handleScaleButton(pressed, 1), () -> BiColorLightState.AMBER_HALF);
 
         final BiColorButton infoButton = driver.getButton(NoteAssign.MUTE_3);
-        infoButton.bindPressed(this, this::handleInfoPressed, () -> BiColorLightState.GREEN_HALF);
+        infoButton.bindPressed(this, pressed -> { }, () -> BiColorLightState.OFF);
 
         final BiColorButton spareButton = driver.getButton(NoteAssign.MUTE_4);
-        spareButton.bindPressed(this, pressed -> {
-            if (pressed) {
-                showState("Note Mode");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        }, () -> BiColorLightState.OFF);
+        spareButton.bindPressed(this, pressed -> { }, () -> BiColorLightState.OFF);
     }
 
     private void bindEncoders() {
@@ -124,14 +126,6 @@ public class NoteMode extends Layer {
         }
     }
 
-    private void handleStepSeqPressed(final boolean pressed) {
-        if (!pressed) {
-            oled.clearScreenDelayed();
-            return;
-        }
-        toggleLayout();
-    }
-
     private void handleOctaveButton(final boolean pressed, final int amount) {
         if (!pressed) {
             return;
@@ -146,14 +140,6 @@ public class NoteMode extends Layer {
         adjustScale(amount);
     }
 
-    private void handleInfoPressed(final boolean pressed) {
-        if (pressed) {
-            showState("State");
-        } else {
-            oled.clearScreenDelayed();
-        }
-    }
-
     private void showTouchedState(final boolean pressed, final String label) {
         if (pressed) {
             showState(label);
@@ -162,30 +148,41 @@ public class NoteMode extends Layer {
         }
     }
 
-    private BiColorLightState getStepSeqLightState() {
-        return inKey ? BiColorLightState.GREEN_FULL : BiColorLightState.AMBER_HALF;
-    }
-
     private BiColorLightState getBankLeftLightState() {
-        return octave > MIN_OCTAVE ? BiColorLightState.HALF : BiColorLightState.OFF;
+        return getOctave() > MIN_OCTAVE ? BiColorLightState.HALF : BiColorLightState.OFF;
     }
 
     private BiColorLightState getBankRightLightState() {
-        return octave < MAX_OCTAVE ? BiColorLightState.HALF : BiColorLightState.OFF;
+        return getOctave() < MAX_OCTAVE ? BiColorLightState.HALF : BiColorLightState.OFF;
     }
 
     private void toggleLayout() {
-        inKey = !inKey;
-        applyLayout();
+        applyLayoutChange(() -> {
+            inKey = !inKey;
+            if (inKey && scaleIndex == PIANO_HIGHLIGHT_INDEX) {
+                scaleIndex = 1;
+            }
+        });
         showState("Layout");
+    }
+
+    public void cycleLayout() {
+        toggleLayout();
+    }
+
+    public BiColorLightState getModeButtonLightState() {
+        return inKey ? BiColorLightState.RED_FULL : BiColorLightState.AMBER_FULL;
     }
 
     private void adjustRoot(final int amount) {
         if (amount == 0) {
             return;
         }
-        rootNote = Math.floorMod(rootNote + amount, 12);
-        applyLayout();
+        final int nextRoot = getRootNote() + amount;
+        if (nextRoot < 0 || nextRoot > 11) {
+            return;
+        }
+        applyLayoutChange(() -> transposeBase = getOctave() * 12 + nextRoot);
         showState("Root");
     }
 
@@ -193,11 +190,12 @@ public class NoteMode extends Layer {
         if (amount == 0) {
             return;
         }
-        scaleIndex = Math.floorMod(scaleIndex + amount, scaleLibrary.getMusicalScalesCount());
-        if (scaleIndex == 0) {
-            scaleIndex = 1;
+        final int minScale = inKey ? 1 : PIANO_HIGHLIGHT_INDEX;
+        final int nextScale = scaleIndex + amount;
+        if (nextScale < minScale || nextScale >= scaleLibrary.getMusicalScalesCount()) {
+            return;
         }
-        applyLayout();
+        applyLayoutChange(() -> scaleIndex = nextScale);
         showState("Scale");
     }
 
@@ -205,9 +203,24 @@ public class NoteMode extends Layer {
         if (amount == 0) {
             return;
         }
-        octave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE, octave + amount));
-        applyLayout();
+        final int nextOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE, getOctave() + amount));
+        if (nextOctave == getOctave()) {
+            return;
+        }
+        applyLayoutChange(() -> transposeBase = nextOctave * 12 + getRootNote());
         showState("Octave");
+    }
+
+    private void adjustTransposeSemitone(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        final int nextBase = transposeBase + amount;
+        if (nextBase < MIN_TRANSPOSE || nextBase > MAX_TRANSPOSE) {
+            return;
+        }
+        applyLayoutChange(() -> transposeBase = nextBase);
+        showState("Root");
     }
 
     private void handleMainEncoder(final int inc) {
@@ -250,7 +263,7 @@ public class NoteMode extends Layer {
     }
 
     private void applyLayout() {
-        final NoteGridLayout layout = new NoteGridLayout(getScale(), rootNote, octave, inKey);
+        final NoteGridLayout layout = createLayout();
         for (int i = 0; i < noteTranslationTable.length; i++) {
             noteTranslationTable[i] = -1;
         }
@@ -261,30 +274,127 @@ public class NoteMode extends Layer {
         noteInput.setKeyTranslationTable(noteTranslationTable);
     }
 
+    private void applyLayoutChange(final Runnable stateChange) {
+        final Map<Integer, Integer> oldHeldNotes = collectHeldNotes(createLayout());
+        sendHeldNotes(oldHeldNotes, false);
+        stateChange.run();
+        applyLayout();
+        sendHeldNotes(collectHeldNotes(createLayout()), true);
+    }
+
+    private Map<Integer, Integer> collectHeldNotes(final NoteGridLayout layout) {
+        final Map<Integer, Integer> heldNotes = new HashMap<>();
+        for (final int padIndex : heldPads) {
+            final int midiNote = layout.noteForPad(padIndex);
+            if (midiNote >= 0) {
+                heldNotes.merge(midiNote, 1, Integer::sum);
+            }
+        }
+        return heldNotes;
+    }
+
+    private void sendHeldNotes(final Map<Integer, Integer> notes, final boolean noteOn) {
+        final int status = noteOn ? Midi.NOTE_ON : Midi.NOTE_OFF;
+        final int velocity = noteOn ? HELD_NOTE_VELOCITY : 0;
+        for (final int midiNote : notes.keySet()) {
+            noteInput.sendRawMidiEvent(status, midiNote, velocity);
+        }
+    }
+
     private RgbLigthState getPadLight(final int padIndex) {
-        final NoteGridLayout layout = new NoteGridLayout(getScale(), rootNote, octave, inKey);
-        final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
-        final RgbLigthState base = switch (role) {
-            case ROOT -> ROOT_COLOR;
-            case IN_SCALE -> IN_SCALE_COLOR;
-            case OUT_OF_SCALE -> OUT_OF_SCALE_COLOR;
-            case UNAVAILABLE -> RgbLigthState.OFF;
-        };
+        final NoteGridLayout layout = createLayout();
+        final int midiNote = layout.noteForPad(padIndex);
+        final RgbLigthState base;
+        if (midiNote < 0) {
+            base = RgbLigthState.OFF;
+        } else if (!inKey && scaleIndex == PIANO_HIGHLIGHT_INDEX) {
+            if (layout.roleForPad(padIndex) == NoteGridLayout.PadRole.ROOT) {
+                base = ROOT_COLOR;
+            } else if (NoteGridLayout.isBlackKey(midiNote)) {
+                base = PIANO_BLACK_KEY_COLOR;
+            } else {
+                base = PIANO_WHITE_KEY_COLOR;
+            }
+        } else {
+            final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
+            base = switch (role) {
+                case ROOT -> ROOT_COLOR;
+                case IN_SCALE -> IN_SCALE_COLOR;
+                case OUT_OF_SCALE -> OUT_OF_SCALE_COLOR;
+                case UNAVAILABLE -> RgbLigthState.OFF;
+            };
+        }
         return heldPads.contains(padIndex) ? base.getBrightest() : base;
     }
 
     private void showState(final String focus) {
-        oled.lineInfo("Note Mode",
-                "%s %s\n%s%d\n%s".formatted(
-                        focus,
-                        inKey ? "In Key" : "Chromatic",
-                        NoteGridLayout.noteName(rootNote),
-                        octave,
-                        getScale().getName()));
+        if ("Scale".equals(focus)) {
+            oled.valueInfo("Scale", getScaleDisplayName());
+            return;
+        }
+        if ("Root".equals(focus)) {
+            oled.valueInfo("Root", "%s%d".formatted(NoteGridLayout.noteName(getRootNote()), getOctave()));
+            return;
+        }
+        if ("Octave".equals(focus)) {
+            oled.valueInfo("Octave", Integer.toString(getOctave()));
+            return;
+        }
+        if ("Layout".equals(focus)) {
+            oled.valueInfo("Layout", inKey ? "In Key" : "Chromatic");
+            return;
+        }
+        oled.lineInfo("Root %s%d".formatted(NoteGridLayout.noteName(getRootNote()), getOctave()),
+                "Scale: %s\n%s".formatted(getScaleDisplayName(), inKey ? "In Key" : "Chromatic"));
     }
 
     private MusicalScale getScale() {
-        return scaleLibrary.getMusicalScale(scaleIndex);
+        final int effectiveScaleIndex = scaleIndex == PIANO_HIGHLIGHT_INDEX ? 1 : scaleIndex;
+        return scaleLibrary.getMusicalScale(effectiveScaleIndex);
+    }
+
+    private String getScaleName() {
+        return scaleIndex == PIANO_HIGHLIGHT_INDEX ? "Piano" : getScale().getName();
+    }
+
+    private String getScaleDisplayName() {
+        if (scaleIndex == PIANO_HIGHLIGHT_INDEX) {
+            return "Piano";
+        }
+        return switch (getScale().getName()) {
+            case "Ionan (Major)" -> "Major";
+            case "Aeolian (Minor)" -> "Minor";
+            case "Phrygian Dominant" -> "Phryg Dom";
+            case "Double Harmonic" -> "Dbl Harm";
+            case "Harmonic Minor" -> "Harm Min";
+            case "Melodic Minor (ascending)" -> "Mel Min";
+            case "Hungarian Minor" -> "Hung Min";
+            case "Ukranian Dorian" -> "Ukr Dor";
+            case "Super Locrian" -> "Sup Loc";
+            case "Half-Whole Diminished" -> "Half-Whole";
+            case "Major Pentatonic" -> "Maj Pent";
+            case "Minor Pentatonic" -> "Min Pent";
+            case "Major Blues" -> "Maj Blues";
+            case "Whole Tone" -> "Whole";
+            case "Whole Half" -> "WholeHalf";
+            case "BeBop Major" -> "Bebop Maj";
+            case "BeBop Dorian" -> "Bebop Dor";
+            case "BeBop Mixolydian" -> "Bebop Mix";
+            case "BeBop Minor" -> "Bebop Min";
+            default -> getScale().getName();
+        };
+    }
+
+    private int getRootNote() {
+        return Math.floorMod(transposeBase, 12);
+    }
+
+    private int getOctave() {
+        return transposeBase / 12;
+    }
+
+    private NoteGridLayout createLayout() {
+        return new NoteGridLayout(getScale(), getRootNote(), getOctave(), inKey);
     }
 
     private void clearTranslation() {
@@ -299,12 +409,12 @@ public class NoteMode extends Layer {
     protected void onActivate() {
         patternButtons.setUpCallback(pressed -> {
             if (pressed) {
-                adjustRoot(1);
+                adjustTransposeSemitone(1);
             }
         }, () -> BiColorLightState.HALF);
         patternButtons.setDownCallback(pressed -> {
             if (pressed) {
-                adjustRoot(-1);
+                adjustTransposeSemitone(-1);
             }
         }, () -> BiColorLightState.HALF);
         applyLayout();
