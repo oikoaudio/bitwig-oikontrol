@@ -35,8 +35,12 @@ class OikordBankTest {
 
         assertEquals("Barker", bank.slot(0, 0).family());
         assertEquals("classic", bank.slot(0, 0).sourcePack());
+        assertEquals("QUARTAL", bank.slot(0, 0).sourceFamily());
+        assertEquals("quartal stack", bank.slot(0, 0).name());
         assertEquals("Plaits", bank.slot(0, 8).family());
         assertEquals("plaits", bank.slot(0, 8).sourcePack());
+        assertEquals("PLAITS-JON", bank.slot(0, 8).sourceFamily());
+        assertEquals("Octave", bank.slot(0, 8).name());
     }
 
     @Test
