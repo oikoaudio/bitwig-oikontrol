@@ -79,6 +79,10 @@ public class DrumSequenceMode extends Layer {
     private NoteAction pendingAction;
     private NoteStep copyNote = null;
     private int blinkState;
+    private final List<Integer> pendingBankHeldSteps = new ArrayList<>();
+    private int pendingBankDir = 0;
+    private boolean pendingBankForceFractional = false;
+    private boolean pendingBankWasAlt = false;
 
     private CursorRemoteControlsPage activeRemoteControlsPage;
 
@@ -328,14 +332,12 @@ public class DrumSequenceMode extends Layer {
     // private final double originalStepSize = 1.0 / 16.0; // one grid step = 1/16 beat (a 64th note)
 
     // Modify your movePattern method to choose between whole and fractional shifting:
-    private void movePattern(final boolean pressed, final int dir, final boolean forceFractional) {
-        if (pressed) {
-            return;
-        }
-        final boolean fractional = forceFractional;
-        oled.paramInfo(fractional ? "NUDGE" : "SHIFT", dir > 0 ? "+1" : "-1");
+    private void movePattern(final int dir, final boolean forceFractional, final List<Integer> heldStepSnapshot) {
+        final boolean heldOnly = !heldStepSnapshot.isEmpty();
+        final boolean fractional = forceFractional || heldOnly;
+        oled.paramInfo(heldOnly ? "STEP NUDGE" : fractional ? "NUDGE" : "SHIFT", dir > 0 ? "+1" : "-1");
         if (fractional) {
-            movePatternFractional(bigCursorClip, dir, false);
+            movePatternFractional(bigCursorClip, dir, heldOnly, heldStepSnapshot);
         } else {
             movePatternWhole(dir);
         }
@@ -393,9 +395,9 @@ public class DrumSequenceMode extends Layer {
      * that have a state of 2 (in our filtered inner map) and only if their normal note is held.
      */
 
-    private void movePatternFractional(Clip clip, int dir, boolean heldOnly) {
+    private void movePatternFractional(Clip clip, int dir, boolean heldOnly, List<Integer> heldStepSnapshot) {
         // Prevent held pads from being toggled off on release after a nudge.
-        heldSteps.stream().forEach(modifiedSteps::add);
+        heldStepSnapshot.forEach(modifiedSteps::add);
 
         final int targetMidi = padHandler.getSelectedPadMidi();
         if (targetMidi < 0) {
@@ -411,8 +413,9 @@ public class DrumSequenceMode extends Layer {
         // Build explicit targets instead of sweeping the entire fine grid.
         List<Integer> targets = new ArrayList<>();
         if (heldOnly) {
-            heldSteps.stream()
+            heldStepSnapshot.stream()
                     .filter(idx -> idx >= 0 && idx < positionHandler.getAvailableSteps())
+                    .distinct()
                     .forEach(coarse -> {
                         for (int fineX = coarse * finePerStep; fineX < coarse * finePerStep + finePerStep; fineX++) {
                             Map<Integer, Integer> notes = currentNotesInClip.get(fineX);
@@ -439,6 +442,7 @@ public class DrumSequenceMode extends Layer {
                 }
             }
         }
+        targets.sort(dir > 0 ? Comparator.reverseOrder() : Comparator.naturalOrder());
 
         for (Integer fineX : targets) {
             Map<Integer, Integer> stepNotes = currentNotesInClip.get(fineX);
@@ -476,9 +480,6 @@ public class DrumSequenceMode extends Layer {
             Map<Integer, Integer> newMap = currentNotesInClip.computeIfAbsent(newFineX, k -> new HashMap<>());
             newMap.put(targetMidi, state);
 
-            if (heldOnly) {
-                break;
-            }
         }
     }
 
@@ -943,13 +944,24 @@ public class DrumSequenceMode extends Layer {
     }
 
     private void handleBankButton(final boolean pressed, final int dir) {
-        if (altActive.get()) {
-            if (pressed) {
+        if (pressed) {
+            pendingBankDir = dir;
+            pendingBankForceFractional = shiftActive.get();
+            pendingBankWasAlt = altActive.get();
+            pendingBankHeldSteps.clear();
+            heldSteps.stream().sorted().forEach(pendingBankHeldSteps::add);
+            if (pendingBankWasAlt) {
                 resolutionHandler.adjust(dir);
             }
             return;
         }
-        movePattern(pressed, dir, shiftActive.get());
+        if (pendingBankWasAlt) {
+            pendingBankWasAlt = false;
+            pendingBankHeldSteps.clear();
+            return;
+        }
+        movePattern(pendingBankDir, pendingBankForceFractional, new ArrayList<>(pendingBankHeldSteps));
+        pendingBankHeldSteps.clear();
     }
 
     private void bindPatternButtons(AkaiFireDrumSeqExtension driver) {
