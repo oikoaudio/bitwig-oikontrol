@@ -22,7 +22,9 @@ Implementation notes for the next Akai Fire evolution:
 Current first-pass implementation notes:
 - Drum layout is now fixed to clips on row 1, drum slots on row 2, and 32 steps across rows 3-4. The old `Second Row` preference is removed from the Fire extension.
 - Clip launch behavior moved into extension preferences: non-default launch mode is selected as `Synced` or `From Start`, and launch quantization is selected in preferences instead of on the NOTE button.
-- `DRUM`, `NOTE`, and `PERFORM` are now reserved as top-level mode selectors. Only Drum sequencing is implemented in this pass; Note and Perform are placeholder selectors for the later dedicated modes.
+- `DRUM`, `NOTE`, and `PERFORM` are top-level mode selectors. Drum sequencing and a first-pass Note mode are implemented; Perform remains a placeholder selector for the later dedicated mode.
+- Note mode now provides a 16x4 isomorphic note grid with local `Chromatic` / `In Key` layout switching, root note, scale, and octave control from hardware, plus root/in-scale/out-of-scale LED feedback and OLED state feedback.
 - In Drum mode, `STEP SEQ` is now the accent gesture, `SHIFT + STEP SEQ` toggles Fill, and `ALT + BANK LEFT/RIGHT` adjusts grid resolution. Plain `BANK LEFT/RIGHT` keeps the shift and nudge workflow.
 - `PATTERN` is now preference-driven with `Clip Launcher Automation Write` as the default action, and `SHIFT + PATTERN` toggles the metronome.
 - The main encoder role is now preference-driven with `Note Repeat`, `Last Touched Parameter`, and `Disabled` options. The current `Last Touched Parameter` slot uses the first available remote on the main cursor device as a temporary control target until a true last-touched tracker is added.
+- Host-scale follow and Note-mode step entry remain deferred because the current local API references do not expose dependable global scale state and the note-entry interaction still needs a clearer design.

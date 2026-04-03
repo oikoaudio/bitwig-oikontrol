@@ -22,12 +22,10 @@ Feature: Akai Fire note mode
     And I can use a scale-aware layout
     And the current root note and octave are visible on the display when changed
 
-  Scenario: Note mode can follow Bitwig 6 scale when supported
-    Given Bitwig 6 global scale information is available through the API in use
-    When follow-host-scale is enabled
-    Then the Fire note layout follows the Bitwig root note and scale
-    When follow-host-scale is unavailable or disabled
-    Then the Fire falls back to its local root-note and scale settings
+  Scenario: First pass uses local scale state
+    Given Note mode is active
+    Then the Fire uses its local root-note and scale settings
+    And host-scale follow is explicitly deferred until the API exposes dependable global scale state
 
   Scenario: Note mode keeps setup controls on the hardware
     Given Note mode is active
@@ -36,13 +34,11 @@ Feature: Akai Fire note mode
     And I can switch between chromatic and scale-aware behavior
     And I can see which note mode options are currently active
 
-  Scenario: Step Seq can become note step-entry control in Note mode
+  Scenario: Step Seq is reserved while note step-entry is deferred
     Given Note mode is active
     When I press STEP SEQ
-    Then the controller can enter or advance a note step-entry workflow as designed for Note mode
-    When I hold SHIFT and press STEP SEQ
-    Then the alternate note step-entry action is available if this workflow is included
-    And the exact step-entry interaction is documented as a Note-mode-specific behavior
+    Then the controller toggles between chromatic and in-key note layout
+    And note step-entry remains explicitly deferred in this first pass
 
   Scenario: Main encoder can target the last touched parameter
     Given the main encoder role preference is set to last touched
@@ -56,16 +52,15 @@ Feature: Akai Fire note mode
     And PERFORM can switch from Note mode into Perform mode
     And Note mode supports at least chromatic and one scale-aware layout
     And root note, octave, and scale selection are controllable and visible
-    And the role of STEP SEQ inside Note mode is documented if step-entry behavior is included
+    And the current role of STEP SEQ inside Note mode is documented clearly
     And the main encoder can use the last touched Bitwig parameter when that preference is enabled
     And the OLED shows note-mode setup values and last-touched parameter feedback where available
-    And host-scale follow is implemented if API 25 exposes the required state, otherwise the fallback is documented clearly
+    And host-scale follow is documented as deferred until the API exposes the required state
     And the README and change notes describe Note mode and its limitations
 
   Scenario: Testing
     When the feature is verified
     Then automated tests cover any extracted note-mapping logic for chromatic and scale-aware layouts
-    And automated tests cover host-scale fallback behavior when API state is absent
     And manual testing confirms notes are transmitted correctly in Drum mode versus Note mode
     And manual testing confirms octave and scale changes update the played notes as shown on the display
     And manual testing confirms the main encoder can adjust the last touched Bitwig parameter when the preference is enabled

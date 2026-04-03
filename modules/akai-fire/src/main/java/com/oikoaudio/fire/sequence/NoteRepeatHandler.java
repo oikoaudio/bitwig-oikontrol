@@ -1,15 +1,18 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.bitwig.extension.controller.api.Arpeggiator;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
+
 public class NoteRepeatHandler {
 
-	private final DrumSequenceMode parent;
+	private final OledDisplay oled;
 	private final BooleanValueObject noteRepeatActive = new BooleanValueObject();
 	private boolean repeatButtonHeld = false;
 	private double currentArpRate = ARP_RATES[1];
@@ -19,12 +22,19 @@ public class NoteRepeatHandler {
 			"1/32T", "1/16T", "1/8T", "1/4T" };
 	private final Arpeggiator arp;
 	private final NoteInput noteInput;
+	private final Supplier<CursorRemoteControlsPage> remotePageSupplier;
+	private final IntSupplier velocitySupplier;
 	private int selectedArpIndex;
 
-	public NoteRepeatHandler(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode drumSequenceMode) {
-		this.parent = drumSequenceMode;
-		this.noteInput = driver.getNoteInput();
-		this.setNoteInputVelocity(parent.getAccentHandler().getCurrenVel());
+	public NoteRepeatHandler(final NoteInput noteInput,
+			final OledDisplay oled,
+			final Supplier<CursorRemoteControlsPage> remotePageSupplier,
+			final IntSupplier velocitySupplier) {
+		this.oled = oled;
+		this.noteInput = noteInput;
+		this.remotePageSupplier = remotePageSupplier;
+		this.velocitySupplier = velocitySupplier;
+		this.setNoteInputVelocity(velocitySupplier.getAsInt());
 		this.selectedArpIndex = 1;
 		arp = noteInput.arpeggiator();
 		arp.usePressureToVelocity().set(true);
@@ -39,16 +49,17 @@ public class NoteRepeatHandler {
 		return noteRepeatActive.get() ? BiColorLightState.HALF : BiColorLightState.OFF;
 	}
 
-	void handlePressed(final boolean pressed) {
+	public void handlePressed(final boolean pressed) {
 		if (pressed) {
-			parent.getOled().valueInfo("Note Repeat",
+			oled.valueInfo("Note Repeat",
 					noteRepeatActive.get() ? GRID_RATES_STR[selectedArpIndex] : "Off");
 		} else {
 			noteRepeatActive.toggle();
 			if (noteRepeatActive.get()) {
-				parent.getOled().valueInfo("Note Repeat", GRID_RATES_STR[selectedArpIndex]);
+				setNoteInputVelocity(velocitySupplier.getAsInt());
+				oled.valueInfo("Note Repeat", GRID_RATES_STR[selectedArpIndex]);
 			} else {
-				parent.getOled().valueInfo("Note Repeat", "Off");
+				oled.valueInfo("Note Repeat", "Off");
 			}
 		}
 		repeatButtonHeld = pressed;
@@ -64,9 +75,9 @@ public class NoteRepeatHandler {
 
 	//BUG Pagename is not updated correctly
 
-	void handleMainEncoder(final int inc, final boolean altHeld) {
+	public void handleMainEncoder(final int inc, final boolean altHeld) {
 		if (altHeld) {
-			CursorRemoteControlsPage remotePage = parent.getActiveRemoteControlsPage();
+			CursorRemoteControlsPage remotePage = remotePageSupplier.get();
 			if (remotePage != null) {
 				int pageCount = remotePage.pageCount().getAsInt();
 				int currentPage = remotePage.selectedPageIndex().get();
@@ -75,7 +86,7 @@ public class NoteRepeatHandler {
 				if (newPage >= 0 && newPage < pageCount) {
 					remotePage.selectedPageIndex().set(newPage);
 					String pageName = remotePage.pageNames().get(newPage);
-					parent.getOled().valueInfo("Remote Page", pageName);
+					oled.valueInfo("Remote Page", pageName);
 				}
 			}
 		} else {
@@ -94,10 +105,11 @@ public class NoteRepeatHandler {
 		this.selectedArpIndex = index;
 		this.currentArpRate = ARP_RATES[index];
 		arp.rate().set(currentArpRate);
-		parent.getOled().valueInfo("Note Repeat", GRID_RATES_STR[index]);
+		oled.valueInfo("Note Repeat", GRID_RATES_STR[index]);
 	}
 
 	public void activate() {
+		setNoteInputVelocity(velocitySupplier.getAsInt());
 		arp.isEnabled().set(true);
 		arp.mode().set("all"); // that's the note repeat way
 		arp.octaves().set(0);

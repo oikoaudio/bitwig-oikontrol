@@ -75,6 +75,7 @@ public class DrumSequenceMode extends Layer {
     private final double gatePercent = 0.48;
     private boolean markIgnoreOrigLen = false;
     private final AccentHandler accentHandler;
+    private final NoteRepeatHandler noteRepeatHandler;
     private NoteAction pendingAction;
     private NoteStep copyNote = null;
     private int blinkState;
@@ -88,10 +89,11 @@ public class DrumSequenceMode extends Layer {
     private CursorRemoteControlsPage activeRemoteControlsPage;
 
 
-    public DrumSequenceMode(final AkaiFireDrumSeqExtension driver) {
+    public DrumSequenceMode(final AkaiFireDrumSeqExtension driver, final NoteRepeatHandler noteRepeatHandler) {
 
         super(driver.getLayers(), "DRUM_SEQUENCE_LAYER");
         this.driver = driver;
+        this.noteRepeatHandler = noteRepeatHandler;
         host = driver.getHost();
         oled = driver.getOled();
         app = host.createApplication();
@@ -126,7 +128,7 @@ public class DrumSequenceMode extends Layer {
 
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
 
-        padHandler = new PadHandler(driver, this, mainLayer, muteLayer, soloLayer);
+        padHandler = new PadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
         clipHandler = new SeqClipHandler(driver, this, mainLayer);
         recurrenceEditor = new RecurrenceEditor(driver, this);
 

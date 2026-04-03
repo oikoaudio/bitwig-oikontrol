@@ -54,7 +54,7 @@ public class PadHandler {
     private final DisplayInfo padDisplayInfo;
 
     public PadHandler(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
-                      final Layer muteLayer, final Layer soloLayer) {
+                      final Layer muteLayer, final Layer soloLayer, final NoteRepeatHandler noteRepeatHandler) {
         this.driver = driver;
         this.parent = parent;
         cursorClip = parent.getCursorClip();
@@ -91,7 +91,7 @@ public class PadHandler {
             button.bindLight(soloLayer, pad::soloingColors);
         }
 
-        noteRepeatHandler = new NoteRepeatHandler(driver, parent);
+        this.noteRepeatHandler = noteRepeatHandler;
         noteRepeatHandler.getNoteRepeatActive().addValueObserver(this::handleNoteRepeatChanged);
 
         notePlayingActive.addValueObserver(active -> {

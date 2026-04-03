@@ -167,18 +167,30 @@ Design notes:
 
 ## Note Mode
 
-`NOTE` becomes a proper note-input mode rather than a clip-legato toggle.
+`NOTE` is now a first-pass note-input mode rather than a clip-legato toggle.
 
-Planned Note mode behavior:
+Current first-pass behavior:
 
 | Control area | Role |
 | --- | --- |
-| Pad matrix | Chromatic or scale-aware note input |
+| Pad matrix | 16x4 isomorphic note grid |
+| Pad LEDs | Root, in-scale, and out-of-scale note highlighting |
 | `DRUM` | Return to Drum mode |
-| `STEP SEQ` | Likely note step-input function |
-| `SHIFT + STEP SEQ` | Likely alternate step-input function |
+| `PERFORM` | Switch to Perform mode placeholder |
+| `STEP SEQ` | Toggle `Chromatic` / `In Key` layout |
+| `PATTERN` up / down | Root note up / down |
+| `BANK` left / right | Octave down / up |
+| `MUTE_1` / `MUTE_2` | Previous / next scale |
+| User encoders 1-4 | Root, scale, octave, layout toggle |
 
-Detailed note-step behavior is intentionally left open until the Note mode interaction is designed more carefully.
+OLED feedback shows the current layout, root, octave, and scale whenever one of those values changes.
+
+Explicitly deferred from this first pass:
+
+- piano layout
+- Bitwig host-scale follow
+- note step-entry workflow on `STEP SEQ`
+- broader performance-note features
 
 ## Perform Mode
 

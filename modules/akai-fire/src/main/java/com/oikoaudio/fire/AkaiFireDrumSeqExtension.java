@@ -6,7 +6,9 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.note.NoteMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
+import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.utils.PatternButtons;
 import com.bitwig.extension.api.util.midi.ShortMidiMessage;
 import com.bitwig.extension.callback.ShortMidiMessageReceivedCallback;
@@ -24,6 +26,9 @@ import java.util.Map;
 public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_STEP = 0.01;
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
+    public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
+    public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
+    public static final String MAIN_ENCODER_NOTE_REPEAT_ROLE = FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT;
 
     private static AkaiFireDrumSeqExtension instance;
     private HardwareSurface surface;
@@ -72,8 +77,9 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private SettableBooleanValue auditionOnDrumSelectPref;
 
     private PatternButtons patternButtons;
-    private Layer noteModeLayer;
+    private NoteMode noteMode;
     private Layer performModeLayer;
+    private NoteRepeatHandler noteRepeatHandler;
     private TopLevelMode activeMode = TopLevelMode.DRUM;
     private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
 
@@ -132,7 +138,6 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         browserResultsCursor.name().markInterested();
 
         layers = new Layers(this);
-        noteModeLayer = new Layer(layers, "NOTE_MODE_LAYER");
         performModeLayer = new Layer(layers, "PERFORM_MODE_LAYER");
         midiIn = host.getMidiInPort(0);
         midiIn.setMidiCallback((ShortMidiMessageReceivedCallback) this::onMidi0);
@@ -146,6 +151,11 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
         mainLayer = new Layer(layers, "Main");
         oled = new OledDisplay(midiOut);
+        noteRepeatHandler = new NoteRepeatHandler(
+                noteInput,
+                oled,
+                () -> drumSequenceMode != null ? drumSequenceMode.getActiveRemoteControlsPage() : null,
+                () -> drumSequenceMode != null ? drumSequenceMode.getAccentHandler().getCurrenVel() : 100);
 
 
         setUpHardware();
@@ -153,7 +163,8 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         setUpPreferences();
 
         patternButtons = new PatternButtons(this, mainLayer);
-        drumSequenceMode = new DrumSequenceMode(this);
+        drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
+        noteMode = new NoteMode(this, noteRepeatHandler);
         midiOut.sendSysex(DEV_INQ);
 
         oled.showLogo();
@@ -508,7 +519,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
     private void switchActiveMode() {
         drumSequenceMode.deactivate();
-        noteModeLayer.deactivate();
+        noteMode.deactivate();
         performModeLayer.deactivate();
         if (activeMode == TopLevelMode.DRUM) {
             drumSequenceMode.activate();
@@ -516,7 +527,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         }
         clearPads();
         if (activeMode == TopLevelMode.NOTE) {
-            noteModeLayer.activate();
+            noteMode.activate();
         } else {
             performModeLayer.activate();
         }
@@ -647,6 +658,10 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
     public boolean isGlobalAltHeld() {
         return altActive.get();
+    }
+
+    public boolean isGlobalShiftHeld() {
+        return shiftActive.get();
     }
 
     private void handleBrowserPressed(final boolean pressed) {
