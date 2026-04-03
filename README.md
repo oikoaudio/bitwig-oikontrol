@@ -20,8 +20,13 @@ Bitwig Oikontrol currently provides two controller extensions:
 * `STEP SEQ` is now the accent gesture in Drum mode, `SHIFT + STEP SEQ` toggles Fill, and `ALT +` the `GRID` left/right arrow buttons adjusts grid resolution. The `GRID` left/right arrow buttons keep pattern shift and fine nudge behavior.
 * `PATTERN` defaults to Clip Launcher Automation Write, with `SHIFT + PATTERN` fixed to metronome.
 * The main encoder role is configurable between `Note Repeat`, `Last Touched Parameter`, and `Disabled`.
-* Euclid mode still uses User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift = preview placeholder; per-pad mixer controls moved from User2 to the Mixer mode.
-* Nudging of step timing with code from Wim Van den Borre [https://github.com/wimvandenborre/AkaiFireNudger/]: the `GRID` left/right arrow buttons shift the selected lane, `SHIFT +` the `GRID` left/right arrow buttons fine-nudges the selected lane, and holding one or more step pads while pressing the `GRID` left/right arrow buttons fine-nudges those held notes directly. While a step is held, repeated nudges keep targeting that same note. After release, step ownership falls back to the current visible grid, so a note nudged earlier may appear under the previous step unless the grid resolution is increased.
+* Euclid mode uses User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift = preview placeholder; per-pad mixer controls moved from User2 to the Mixer mode.
+* Fine-grid step nudging builds on Wim Van den Borre's Akai Fire Nudger work [https://github.com/wimvandenborre/AkaiFireNudger/]. I took his fine-grid approach: a separate `1/64` note grid, note observation on that finer grid, and moving note starts with Bitwig's `moveStep(...)` API. In this repo, the current user-facing behavior around lane nudge, held-step nudge, repeated retarget-safe nudging, and the interaction with the rest of the Fire layout was adapted further here, so any remaining rough edges in that behavior are on me.
+
+  Current behavior:
+  + the `GRID` left/right arrow buttons shift the selected lane
+  + `SHIFT +` the `GRID` left/right arrow buttons fine-nudges the selected lane, and holding one or more step pads
+  + pressing the `GRID` left/right arrow buttons fine-nudges those held notes only. While a step is held, repeated nudges keep targeting that same note. After release, step ownership falls back to the current visible grid. NB! After releasing that held note, if nudged to earlier that note may appear under the previous step (together with any note existing earlier on that step) unless the grid resolution is increased.
 * Play button: Alt+Play retriggers current clip; regular Play toggles transport and retriggers on start.
 
 ## Requirements
