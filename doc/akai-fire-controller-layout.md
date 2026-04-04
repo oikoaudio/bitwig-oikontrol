@@ -255,10 +255,11 @@ Current layout:
 | Filled slot pad | Select and launch the clip |
 | Empty slot pad | Create a new `4`-bar clip and launch it |
 | Pad LEDs | Clip color plus queued / playing / recording indication |
-| `MUTE_1` | Select modifier |
-| `MUTE_2` | Duplicate selected visible clip and double its length |
-| `MUTE_3` | Copy from the selected visible clip |
-| `MUTE_4` | Delete clip |
+| Hold `MUTE_1` + pad press | Select clip without launching |
+| `MUTE_2` | Duplicate content and double selected visible clip length |
+| `SHIFT + MUTE_2` | Halve selected visible clip length |
+| Hold `MUTE_3` + pad press | Copy from the selected visible clip |
+| Hold `MUTE_4` + pad press | Delete clip |
 | `BANK_L` / `BANK_R` | Scroll tracks by visible page |
 | `SHIFT + BANK_L` / `SHIFT + BANK_R` | Scroll tracks by `1` |
 | `PATTERN` up / down | Scroll scenes by visible page |
@@ -277,6 +278,7 @@ Perform encoder pages:
 Behavior notes:
 
 - Touching any bound top encoder resets that parameter to its default value.
+- `MUTE_2` length changes are bounded to `1`..`256` bars.
 - `Perform` currently focuses on clip launch, slot selection, copy/delete, and fast remote access rather than scene launch, stop rows, or deeper transport workflows.
 - This replaces the previous temporary use of `PERFORM` as a grid-resolution modifier.
 

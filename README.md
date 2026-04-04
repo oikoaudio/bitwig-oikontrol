@@ -20,7 +20,8 @@ Bitwig Oikontrol currently provides two controller extensions:
 * `Oikord Step` uses the upper two pad rows for 32 curated Oikord slots and the lower two rows for 32 visible steps. It uses the same shared `Channel`, `Mixer`, and `User 1` step pages as Drum, with Oikord-specific controls on `User 2`.
 * In `Oikord Step`, `MUTE_1..4` set chord octave/root offsets, `PATTERN` pages the active Oikord family, and `BANK_L/BANK_R` move or fine-nudge step content.
 * `PERFORM` provides a global `16x4` clip launcher. Pads launch clips, create a new `4`-bar clip on empty slots, and show clip color plus queued / playing / recording state.
-* In `PERFORM`, `MUTE_1` selects, `MUTE_2` duplicates and doubles the selected visible clip, `MUTE_3` copies from the selected visible clip, and `MUTE_4` deletes.
+* In `PERFORM`, hold `MUTE_1` and press a pad to select a clip without launching it, hold `MUTE_3` and press a pad to copy from the selected visible clip, and hold `MUTE_4` and press a pad to delete a clip.
+* In `PERFORM`, `MUTE_2` changes selected visible clip length: plain press duplicates content and doubles the loop length up to `256` bars, while `SHIFT + MUTE_2` halves loop length down to `1` bar.
 * In `PERFORM`, `BANK_L/BANK_R` scroll tracks, `PATTERN` up/down scroll scenes, and holding `SHIFT` makes those controls move by `1` instead of paging.
 * `PERFORM` encoder pages are `Channel = project remotes`, `Mixer = selected track volume/pan/send1/send2`, `User 1 = selected track remotes`, and `User 2 = selected device remotes`. Touching an encoder resets that parameter to its default.
 * Clip launch behavior is configured in preferences: launch mode is `Synced` or `From Start`, and clip launch quantization is also selected there.

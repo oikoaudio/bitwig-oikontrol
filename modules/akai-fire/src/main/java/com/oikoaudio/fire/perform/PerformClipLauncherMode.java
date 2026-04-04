@@ -32,6 +32,8 @@ public class PerformClipLauncherMode extends Layer {
     private static final int TRACKS = 16;
     private static final int SCENES = 4;
     private static final int DEFAULT_CLIP_LENGTH = 4;
+    private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
+    private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
     private static final double PARAM_COARSE_INC = 0.01;
     private static final double PARAM_FINE_INC = 0.0025;
 
@@ -208,17 +210,29 @@ public class PerformClipLauncherMode extends Layer {
                 () -> canScrollScenes(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
 
         final BiColorButton selectButton = driver.getButton(NoteAssign.MUTE_1);
-        selectButton.bind(this, selectHeld, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
+        bindModifierButton(selectButton, selectHeld, "Select Clip", BiColorLightState.GREEN_FULL);
 
         final BiColorButton duplicateButton = driver.getButton(NoteAssign.MUTE_2);
         duplicateButton.bindPressed(this, this::handleDuplicatePressed,
                 () -> duplicateButton.isPressed() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF);
 
         final BiColorButton copyButton = driver.getButton(NoteAssign.MUTE_3);
-        copyButton.bind(this, copyHeld, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
+        bindModifierButton(copyButton, copyHeld, "Copy Clip", BiColorLightState.GREEN_FULL);
 
         final BiColorButton deleteButton = driver.getButton(NoteAssign.MUTE_4);
-        deleteButton.bind(this, deleteHeld, BiColorLightState.RED_FULL, BiColorLightState.OFF);
+        bindModifierButton(deleteButton, deleteHeld, "Delete Clip", BiColorLightState.RED_FULL);
+    }
+
+    private void bindModifierButton(final BiColorButton button, final BooleanValueObject heldState,
+                                    final String oledLabel, final BiColorLightState activeColor) {
+        button.bindPressed(this, pressed -> {
+            heldState.set(pressed);
+            if (pressed) {
+                oled.valueInfo("Perform", oledLabel);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        }, () -> button.isPressed() ? activeColor : BiColorLightState.OFF);
     }
 
     private void handleSlotPressed(final Track track, final ClipLauncherSlot slot, final int visibleTrackIndex,
@@ -296,9 +310,24 @@ public class PerformClipLauncherMode extends Layer {
             oled.valueInfo("Duplicate Clip", "No clip length");
             return;
         }
+        if (isShiftHeld()) {
+            if (currentLength <= MIN_DUPLICATE_CLIP_LENGTH) {
+                oled.valueInfo("Clip Length", formatBars(MIN_DUPLICATE_CLIP_LENGTH));
+                return;
+            }
+            final double newLength = Math.max(currentLength / 2.0, MIN_DUPLICATE_CLIP_LENGTH);
+            performCursorClip.getLoopLength().set(newLength);
+            oled.valueInfo("Clip Length", formatBars(newLength));
+            return;
+        }
+        if (currentLength >= MAX_DUPLICATE_CLIP_LENGTH) {
+            oled.valueInfo("Clip Length", formatBars(MAX_DUPLICATE_CLIP_LENGTH));
+            return;
+        }
+        final double newLength = Math.min(currentLength * 2.0, MAX_DUPLICATE_CLIP_LENGTH);
         performCursorClip.duplicateContent();
-        performCursorClip.getLoopLength().set(currentLength * 2.0);
-        oled.valueInfo("Clip Length", formatBars(currentLength * 2.0));
+        performCursorClip.getLoopLength().set(newLength);
+        oled.valueInfo("Clip Length", formatBars(newLength));
     }
 
     private void handleTrackScroll(final boolean pressed, final int direction) {
