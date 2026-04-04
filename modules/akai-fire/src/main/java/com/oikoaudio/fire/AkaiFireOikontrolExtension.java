@@ -429,18 +429,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        if (isGlobalShiftHeld()) {
+            return;
+        }
         if (isGlobalAltHeld()) {
+            final boolean nextState = !transport.isArrangerAutomationWriteEnabled().get();
             transport.isArrangerAutomationWriteEnabled().toggle();
-            notifyAction("Arranger Write", transport.isArrangerAutomationWriteEnabled().get() ? "On" : "Off");
+            notifyAction("Arranger Write", nextState ? "On" : "Off");
             return;
         }
         if (activeMode == TopLevelMode.DRUM) {
+            final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
             transport.isClipLauncherOverdubEnabled().toggle();
-            notifyAction("Clip Record", transport.isClipLauncherOverdubEnabled().get() ? "On" : "Off");
+            notifyAction("Clip Record", nextState ? "On" : "Off");
             return;
         }
+        final boolean nextState = !transport.isArrangerRecordEnabled().get();
         transport.isArrangerRecordEnabled().toggle();
-        notifyAction("Record", transport.isArrangerRecordEnabled().get() ? "On" : "Off");
+        notifyAction("Record", nextState ? "On" : "Off");
     }
 
     private void toggleClipLauncherAutomationWriteEnabled(final boolean pressed) {
