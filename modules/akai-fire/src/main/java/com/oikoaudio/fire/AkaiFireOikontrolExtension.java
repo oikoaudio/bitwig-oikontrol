@@ -27,6 +27,7 @@ import java.util.Map;
 public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_STEP = 0.01;
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
+    private static final int DEVICE_DISCOVERY_WIDTH = 128;
     public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
     public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
@@ -60,6 +61,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private NoteInput noteInput;
     private DrumSequenceMode drumSequenceMode;
     private ViewCursorControl viewControl;
+    private FireDeviceLocator deviceLocator;
 
     private final BooleanValueObject shiftActive = new BooleanValueObject();
     private OledDisplay oled;
@@ -77,11 +79,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue patternActionPref;
     private SettableEnumValue mainEncoderRolePref;
     private SettableEnumValue euclidScopePref;
+    private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue auditionOnDrumSelectPref;
     private SettableBooleanValue auditionOikordsPref;
     private String tempoDisplayValue = "";
     private boolean tempoDisplayPending = false;
+    private boolean drumAutoPinApplied = false;
+    private boolean drumTrackPinnedBeforeAutoPin = false;
+    private boolean drumDevicePinnedBeforeAutoPin = false;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -154,6 +160,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         noteInput = midiIn.createNoteInput("MIDI", "80????", "90????", "A0????", "D0????");
         noteInput.setShouldConsumeEvents(false);
         viewControl = new ViewCursorControl(host, 16);
+        deviceLocator = new FireDeviceLocator(host, DEVICE_DISCOVERY_WIDTH);
 
         mainLayer = new Layer(layers, "Main");
         oled = new OledDisplay(midiOut);
@@ -238,6 +245,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.EUCLID_SCOPES,
                 FireControlPreferences.EUCLID_SCOPE_FULL_CLIP);
         euclidScopePref.markInterested();
+
+        drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
+                FireControlPreferences.CATEGORY_PINNING,
+                FireControlPreferences.DRUM_PIN_MODES,
+                FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION);
+        drumPinModePref.markInterested();
+        drumPinModePref.addValueObserver(value -> syncDrumPinningForActiveMode());
 
         // Deferred for now: the current live NOTE implementation still relies on
         // Bitwig key-translation updates, so "New Notes Only" does not preserve
@@ -579,10 +593,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void switchActiveMode() {
+        releaseAutoPinnedDrumContext();
         drumSequenceMode.deactivate();
         noteMode.deactivate();
         performMode.deactivate();
         if (activeMode == TopLevelMode.DRUM) {
+            applyDrumPinningIfEnabled();
             drumSequenceMode.activate();
             return;
         }
@@ -651,6 +667,52 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return livePitchOffsetBehaviorPref != null
                 && FireControlPreferences.LIVE_PITCH_OFFSET_RETUNE_HELD.equals(
                 FireControlPreferences.normalizeLivePitchOffsetBehavior(livePitchOffsetBehaviorPref.get()));
+    }
+
+    public boolean shouldAutoPinFirstDrumMachine() {
+        return drumPinModePref != null
+                && FireControlPreferences.shouldAutoPinFirstDrumMachine(drumPinModePref.get());
+    }
+
+    private void syncDrumPinningForActiveMode() {
+        if (activeMode == TopLevelMode.DRUM) {
+            if (shouldAutoPinFirstDrumMachine()) {
+                applyDrumPinningIfEnabled();
+            } else {
+                releaseAutoPinnedDrumContext();
+            }
+            return;
+        }
+        releaseAutoPinnedDrumContext();
+    }
+
+    private void applyDrumPinningIfEnabled() {
+        if (!shouldAutoPinFirstDrumMachine() || drumAutoPinApplied || deviceLocator == null || viewControl == null) {
+            return;
+        }
+
+        final CursorTrack cursorTrack = viewControl.getCursorTrack();
+        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        drumTrackPinnedBeforeAutoPin = cursorTrack.isPinned().get();
+        drumDevicePinnedBeforeAutoPin = primaryDevice.isPinned().get();
+
+        if (!deviceLocator.focusFirstDrumMachine(viewControl)) {
+            return;
+        }
+
+        cursorTrack.isPinned().set(true);
+        primaryDevice.isPinned().set(true);
+        drumAutoPinApplied = true;
+    }
+
+    private void releaseAutoPinnedDrumContext() {
+        if (!drumAutoPinApplied || viewControl == null) {
+            return;
+        }
+
+        viewControl.getCursorTrack().isPinned().set(drumTrackPinnedBeforeAutoPin);
+        viewControl.getPrimaryDevice().isPinned().set(drumDevicePinnedBeforeAutoPin);
+        drumAutoPinApplied = false;
     }
 
     public void adjustMainCursorParameter(final int inc, final boolean fine) {

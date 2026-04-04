@@ -15,6 +15,7 @@ Bitwig Oikontrol currently provides two controller extensions:
 * `DRUM` uses a fixed 4-row layout: row 1 = clips, row 2 = drum slots, rows 3-4 = 32 visible steps.
 * Drum mode uses `STEP SEQ` for Accent, `SHIFT + STEP SEQ` for Fill, and the `GRID` left/right buttons for pattern shift and fine nudge. `ALT + GRID` left/right changes grid resolution.
 * Drum step encoder pages use `Channel`, `Mixer`, `User 1`, and `User 2`, with Euclid controls on Drum `User 2`.
+* Drum mode pinning is configured in preferences: it can either follow the current Bitwig selection or auto-pin to the first `Drum Machine` in the project when `DRUM` mode is entered.
 * `NOTE` provides a 16x4 isomorphic note grid with `Chromatic` and `In Key` layouts, local root note / scale / octave controls, and OLED / LED note feedback.
 * In `NOTE`, `STEP SEQ` enters the current note-step sub-mode and `SHIFT + STEP SEQ` cycles the selected sub-mode. Current note-step sub-modes are `Oikord Step` and the deferred `Clip Step Record` placeholder.
 * `Oikord Step` uses the upper two pad rows for 32 curated Oikord slots and the lower two rows for 32 visible steps. It uses the same shared `Channel`, `Mixer`, and `User 1` step pages as Drum, with Oikord-specific controls on `User 2`.

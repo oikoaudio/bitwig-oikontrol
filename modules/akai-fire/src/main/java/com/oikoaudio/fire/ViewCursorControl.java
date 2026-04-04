@@ -24,6 +24,7 @@ public class ViewCursorControl {
 
 		this.trackBank = host.createTrackBank(8, 8, sends);
 		this.cursorTrack = host.createCursorTrack("View Control", "view Control", 8, sends, true);
+		cursorTrack.isPinned().markInterested();
 
 		cursorTrack.clipLauncherSlotBank().cursorIndex().addValueObserver(index -> {
 			// RemoteConsole.out.println(" => {}", index);
@@ -34,6 +35,7 @@ public class ViewCursorControl {
 				CursorDeviceFollowMode.FIRST_INSTRUMENT);
 		primaryDevice.hasDrumPads().markInterested();
 		primaryDevice.exists().markInterested();
+		primaryDevice.isPinned().markInterested();
 		final DeviceMatcher drumMatcher = host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
 		drumBank = cursorTrack.createDeviceBank(1);
 		drumBank.setDeviceMatcher(drumMatcher);

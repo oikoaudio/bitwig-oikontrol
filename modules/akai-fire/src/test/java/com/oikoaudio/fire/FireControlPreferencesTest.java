@@ -49,4 +49,26 @@ class FireControlPreferencesTest {
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
                 FireControlPreferences.nextMainEncoderRole("unexpected"));
     }
+
+    @Test
+    void normalizesDrumPinModes() {
+        assertEquals(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION,
+                FireControlPreferences.normalizeDrumPinMode(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));
+        assertEquals(FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE,
+                FireControlPreferences.normalizeDrumPinMode(FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE));
+        assertEquals(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION,
+                FireControlPreferences.normalizeDrumPinMode("unexpected"));
+    }
+
+    @Test
+    void detectsWhenDrumModeShouldAutoPinFirstDrumMachine() {
+        assertEquals(true,
+                FireControlPreferences.shouldAutoPinFirstDrumMachine(
+                        FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE));
+        assertEquals(false,
+                FireControlPreferences.shouldAutoPinFirstDrumMachine(
+                        FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));
+        assertEquals(false,
+                FireControlPreferences.shouldAutoPinFirstDrumMachine("unexpected"));
+    }
 }

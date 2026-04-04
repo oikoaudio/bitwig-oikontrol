@@ -3,6 +3,7 @@ package com.oikoaudio.fire;
 public final class FireControlPreferences {
     public static final String CATEGORY_FUNCTIONALITIES = "Functionalities";
     public static final String CATEGORY_CLIP_LAUNCH = "Clip Launch";
+    public static final String CATEGORY_PINNING = "Pinning";
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
     public static final String CLIP_LAUNCH_MODE_FROM_START = "From Start";
@@ -64,6 +65,13 @@ public final class FireControlPreferences {
             LIVE_PITCH_OFFSET_RETUNE_HELD
     };
 
+    public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
+    public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "First Drum Machine";
+    public static final String[] DRUM_PIN_MODES = {
+            DRUM_PIN_MODE_FOLLOW_SELECTION,
+            DRUM_PIN_MODE_FIRST_DRUM_MACHINE
+    };
+
     private FireControlPreferences() {
     }
 
@@ -121,5 +129,18 @@ public final class FireControlPreferences {
             }
         }
         return LIVE_PITCH_OFFSET_NEW_NOTES;
+    }
+
+    public static String normalizeDrumPinMode(final String preferenceValue) {
+        for (final String value : DRUM_PIN_MODES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DRUM_PIN_MODE_FOLLOW_SELECTION;
+    }
+
+    public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {
+        return DRUM_PIN_MODE_FIRST_DRUM_MACHINE.equals(normalizeDrumPinMode(preferenceValue));
     }
 }
