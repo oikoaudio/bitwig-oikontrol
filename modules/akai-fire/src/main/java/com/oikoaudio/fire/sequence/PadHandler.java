@@ -133,7 +133,7 @@ public class PadHandler {
                 }
             } else {
                 pad.pad.selectInEditor();
-                if (driver.isAuditionOnDrumSelectEnabled()) {
+                if (driver.isStepSeqPadAuditionEnabled()) {
                     auditionPad(pad.index, 100);
                 }
                 padsHeld.add(pad.index);

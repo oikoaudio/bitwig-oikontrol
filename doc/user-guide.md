@@ -139,18 +139,17 @@ Encoder pages:
 Preferences that matter:
 
 - `Drum Mode Pinning`
-- `Audition on drum slot select`
+- `Step Seq Pad Audition`
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
 - `Euclid Scope`
-- `Main Encoder`
 
 Quick start:
 
 1. Load a Drum Machine on a Bitwig track.
 2. Enter `DRUM` mode.
-3. If `Drum Mode Pinning` is set to `First Drum Machine`, the script will focus and pin the first Drum Machine it finds.
-4. Press `ALT + DRUM` at any time to manually re-pin the drum context if Bitwig selection drifts to the master track, an FX send, or another non-drum target.
+3. If `Drum Mode Pinning` is set to `Auto-select First Drum Machine`, the script will focus and pin the first Drum Machine it finds.
+4. If `Drum Mode Pinning` is set to `Follow Selection + Manual Pin`, press `ALT + DRUM` to pin the currently selected drum machine explicitly.
 5. Select a lane on row 2.
 6. Program steps on the lower two rows.
 7. Hold `STEP SEQ` to accent notes or add accented hits quickly.
@@ -222,7 +221,7 @@ Encoder pages:
 
 ### Main encoder and transport
 
-The main encoder can be assigned in preferences to:
+Press `SHIFT + SELECT` to cycle the `SELECT` encoder role between:
 
 - `Last Touched Parameter`
 - `Shuffle`
@@ -255,11 +254,10 @@ Both controllers rely on Bitwig extension preferences for behavior that should b
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
-- `Main Encoder`
+- `SELECT Encoder`
 - `Euclid Scope`
 - `Drum Mode Pinning`
-- `Audition on drum slot select`
-- `Audition Oikords`
+- `Step Seq Pad Audition`
 - `On-screen action notifications`
 
 ## Troubleshooting
@@ -271,7 +269,7 @@ Remove duplicate controller entries in Bitwig and keep only the Oiko extension f
 ### The wrong device is being controlled
 
 - Check the relevant auto-attach or pinning preferences.
-- In Fire `DRUM` mode, press `ALT + DRUM` to manually re-pin the drum context if needed.
+- In Fire `DRUM` mode with `Follow Selection + Manual Pin`, press `ALT + DRUM` to pin the currently selected drum machine explicitly.
 - Re-select the target track or device in Bitwig.
 - Re-enter the relevant mode or template after changing focus.
 

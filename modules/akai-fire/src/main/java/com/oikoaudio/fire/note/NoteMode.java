@@ -524,7 +524,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             if (pressed) {
                 selectedOikordSlot = padIndex;
                 final boolean hasHeldSteps = !heldStepPads.isEmpty();
-                final boolean auditionEnabled = driver.isAuditionOikordsEnabled();
+                final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
                 final boolean transportStopped = !driver.isTransportPlaying();
                 if (auditionEnabled && (!hasHeldSteps || transportStopped)) {
                     startAuditionSelectedOikord();

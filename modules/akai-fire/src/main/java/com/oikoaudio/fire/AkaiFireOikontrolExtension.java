@@ -76,12 +76,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private Preferences preferences;
     private SettableEnumValue clipLaunchModePref;
     private SettableEnumValue clipLaunchQuantizationPref;
-    private SettableEnumValue mainEncoderRolePref;
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
-    private SettableBooleanValue auditionOnDrumSelectPref;
-    private SettableBooleanValue auditionOikordsPref;
+    private SettableBooleanValue stepSeqPadAuditionPref;
     private SettableBooleanValue screenNotificationsPref;
     private String tempoDisplayValue = "";
     private boolean tempoDisplayPending = false;
@@ -95,6 +93,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private NoteRepeatHandler noteRepeatHandler;
     private TopLevelMode activeMode = TopLevelMode.NOTE;
     private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
+    private String currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
 
     private enum TopLevelMode {
         DRUM,
@@ -229,12 +228,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         clipLaunchQuantizationPref.addValueObserver(this::applyLaunchQuantizationPreference);
         applyLaunchQuantizationPreference(clipLaunchQuantizationPref.get());
 
-        mainEncoderRolePref = preferences.getEnumSetting("Main Encoder",
-                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
-                FireControlPreferences.MAIN_ENCODER_ROLES,
-                FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED);
-        mainEncoderRolePref.markInterested();
-
         euclidScopePref = preferences.getEnumSetting("Euclid Scope",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 FireControlPreferences.EUCLID_SCOPES,
@@ -263,15 +256,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         //         FireControlPreferences.LIVE_PITCH_OFFSET_NEW_NOTES);
         // livePitchOffsetBehaviorPref.markInterested();
 
-        auditionOnDrumSelectPref = preferences.getBooleanSetting("Audition on drum slot select",
+        stepSeqPadAuditionPref = preferences.getBooleanSetting("Step Seq Pad Audition",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 true);
-        auditionOnDrumSelectPref.markInterested();
-
-        auditionOikordsPref = preferences.getBooleanSetting("Audition Oikords",
-                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
-                true);
-        auditionOikordsPref.markInterested();
+        stepSeqPadAuditionPref.markInterested();
 
         screenNotificationsPref = preferences.getBooleanSetting("On-screen action notifications",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -490,6 +478,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (isGlobalAltHeld()) {
+            if (shouldAutoPinFirstDrumMachine()) {
+                return;
+            }
             if (activeMode != TopLevelMode.DRUM) {
                 activeMode = TopLevelMode.DRUM;
                 switchActiveMode();
@@ -645,7 +636,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void switchActiveMode() {
-        releaseAutoPinnedDrumContext();
+        releaseAutoPinnedDrumContext(true);
         drumSequenceMode.deactivate();
         noteMode.deactivate();
         performMode.deactivate();
@@ -688,26 +679,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public String getMainEncoderRolePreference() {
-        return mainEncoderRolePref == null
-                ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
-                : FireControlPreferences.normalizeMainEncoderRole(mainEncoderRolePref.get());
+        return FireControlPreferences.normalizeMainEncoderRole(currentMainEncoderRole);
     }
 
     public String cycleMainEncoderRolePreference() {
         final String nextRole = FireControlPreferences.nextMainEncoderRole(getMainEncoderRolePreference());
-        if (mainEncoderRolePref != null) {
-            mainEncoderRolePref.set(nextRole);
-        }
+        currentMainEncoderRole = nextRole;
         notifyAction("Encoder Role", nextRole);
         return nextRole;
     }
 
-    public boolean isAuditionOnDrumSelectEnabled() {
-        return auditionOnDrumSelectPref != null && auditionOnDrumSelectPref.get();
-    }
-
-    public boolean isAuditionOikordsEnabled() {
-        return auditionOikordsPref != null && auditionOikordsPref.get();
+    public boolean isStepSeqPadAuditionEnabled() {
+        return stepSeqPadAuditionPref != null && stepSeqPadAuditionPref.get();
     }
 
     public boolean isEuclidFullClipEnabled() {
@@ -732,11 +715,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             if (shouldAutoPinFirstDrumMachine()) {
                 applyDrumPinningIfEnabled();
             } else {
-                releaseAutoPinnedDrumContext();
+                releaseAutoPinnedDrumContext(false);
             }
             return;
         }
-        releaseAutoPinnedDrumContext();
+        releaseAutoPinnedDrumContext(true);
     }
 
     private void applyDrumPinningIfEnabled() {
@@ -766,7 +749,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final CursorTrack cursorTrack = viewControl.getCursorTrack();
         final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
         if (!primaryDevice.exists().get() || !primaryDevice.hasDrumPads().get()) {
-            deviceLocator.focusFirstDrumMachine(viewControl);
+            notifyAction("Drum Pin", "No Selected Drum Machine");
+            return;
         }
 
         cursorTrack.isPinned().set(true);
@@ -795,13 +779,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
     }
 
-    private void releaseAutoPinnedDrumContext() {
+    private void releaseAutoPinnedDrumContext(final boolean restorePreviousState) {
         if (!drumAutoPinApplied || viewControl == null) {
             return;
         }
 
-        viewControl.getCursorTrack().isPinned().set(drumTrackPinnedBeforeAutoPin);
-        viewControl.getPrimaryDevice().isPinned().set(drumDevicePinnedBeforeAutoPin);
+        if (restorePreviousState) {
+            viewControl.getCursorTrack().isPinned().set(drumTrackPinnedBeforeAutoPin);
+            viewControl.getPrimaryDevice().isPinned().set(drumDevicePinnedBeforeAutoPin);
+        } else {
+            viewControl.getCursorTrack().isPinned().set(false);
+            viewControl.getPrimaryDevice().isPinned().set(false);
+        }
         drumAutoPinApplied = false;
     }
 

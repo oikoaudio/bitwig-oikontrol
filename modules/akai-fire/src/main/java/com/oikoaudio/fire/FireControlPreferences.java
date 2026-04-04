@@ -58,8 +58,8 @@ public final class FireControlPreferences {
             LIVE_PITCH_OFFSET_RETUNE_HELD
     };
 
-    public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
-    public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "First Drum Machine";
+    public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection + Manual Pin";
+    public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
     public static final String[] DRUM_PIN_MODES = {
             DRUM_PIN_MODE_FOLLOW_SELECTION,
             DRUM_PIN_MODE_FIRST_DRUM_MACHINE
