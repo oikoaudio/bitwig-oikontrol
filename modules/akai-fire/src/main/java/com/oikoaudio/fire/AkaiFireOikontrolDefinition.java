@@ -25,7 +25,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getVersion() {
-        return "0.5.1";
+        return "0.5.2";
     }
 
     @Override

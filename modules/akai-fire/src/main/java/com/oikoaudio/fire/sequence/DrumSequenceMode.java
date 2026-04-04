@@ -553,6 +553,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             final boolean fine = isShiftHeld();
             if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
                 padHandler.handleMainEncoder(inc);
+            } else if (FireControlPreferences.MAIN_ENCODER_TEMPO.equals(mainEncoderRole)) {
+                driver.adjustTempo(inc, fine);
             } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
                 driver.adjustGrooveShuffleAmount(inc, fine);
             } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
@@ -601,6 +603,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
                 driver.showMainCursorParameterInfo();
             } else {
                 driver.resetMainCursorParameter();
+            }
+        } else if (FireControlPreferences.MAIN_ENCODER_TEMPO.equals(mainEncoderRole)) {
+            if (press) {
+                driver.showTempoInfo();
+            } else {
+                oled.clearScreenDelayed();
             }
         } else if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
             padHandler.getNoteRepeaterHandler().handlePressed(press);

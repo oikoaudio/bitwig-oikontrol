@@ -41,10 +41,12 @@ public final class FireControlPreferences {
 
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
+    public static final String MAIN_ENCODER_TEMPO = "Tempo";
     public static final String MAIN_ENCODER_NOTE_REPEAT = "Note Repeat";
     public static final String[] MAIN_ENCODER_ROLES = {
             MAIN_ENCODER_LAST_TOUCHED,
             MAIN_ENCODER_SHUFFLE,
+            MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT
     };
 

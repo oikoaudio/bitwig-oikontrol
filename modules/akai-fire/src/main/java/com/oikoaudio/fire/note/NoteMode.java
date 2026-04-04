@@ -71,6 +71,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
     private static final int DEFAULT_LIVE_VELOCITY = 100;
+    private static final int DEFAULT_OIKORD_STANDARD_VELOCITY = 100;
+    private static final int DEFAULT_OIKORD_ACCENTED_VELOCITY = 127;
     private static final int DEFAULT_TIMBRE = 64;
     private static final int MIDI_CC_MOD = 1;
     private static final int MIDI_CC_TIMBRE = 74;
@@ -121,6 +123,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int transposeBase = 36;
     private boolean inKey = false;
     private boolean noteStepActive = false;
+    private boolean oikordAccentActive = false;
+    private boolean oikordAccentButtonHeld = false;
+    private boolean oikordAccentModified = false;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
     private OikordInterpretation oikordInterpretation = OikordInterpretation.AS_IS;
     private int selectedOikordFamily = 0;
@@ -132,6 +137,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int livePressure = MIN_MIDI_VALUE;
     private int liveTimbre = DEFAULT_TIMBRE;
     private int liveModulation = MIN_MIDI_VALUE;
+    private int playingStep = -1;
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
     private EncoderMode liveEncoderMode = EncoderMode.CHANNEL;
     private Layer currentLiveEncoderLayer;
@@ -216,6 +222,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         this.noteStepClip.scrollToKey(0);
         this.noteStepClip.addStepDataObserver(this::handleStepData);
         this.noteStepClip.addNoteStepObserver(this::handleNoteStepObject);
+        this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
         this.stepEncoderLayer = new SequencEncoderHandler(this, driver);
         this.currentLiveEncoderLayer = liveChannelLayer;
 
@@ -469,6 +476,17 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
+        if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
+            if (driver.isGlobalShiftHeld()) {
+                if (pressed) {
+                    driver.toggleFillMode();
+                    oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
+                }
+                return;
+            }
+            handleOikordAccentPressed(pressed);
+            return;
+        }
         if (pressed) {
             oled.valueInfo("Step Seq", "Reserved");
         }
@@ -518,6 +536,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
+        if (oikordAccentButtonHeld) {
+            if (pressed) {
+                toggleOikordAccentForStep(stepIndex);
+            }
+            return;
+        }
         if (pressed) {
             heldStepPads.add(stepIndex);
             showHeldStepInfo(stepIndex);
@@ -568,6 +592,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (pending != null) {
             applySnapshot(noteStep, pending);
         }
+    }
+
+    private void handlePlayingStep(final int playingStep) {
+        if (playingStep < 0 || playingStep >= STEP_COUNT) {
+            this.playingStep = -1;
+            return;
+        }
+        this.playingStep = playingStep;
     }
 
     private String moveKey(final int x, final int y) {
@@ -689,7 +721,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         for (final int stepIndex : heldStepPads) {
             noteStepClip.clearStepsAtX(0, stepIndex);
             for (final int midiNote : notes) {
-                noteStepClip.setStep(stepIndex, midiNote, HELD_NOTE_VELOCITY, STEP_LENGTH);
+                noteStepClip.setStep(stepIndex, midiNote, currentOikordVelocity(), STEP_LENGTH);
             }
         }
         oled.valueInfo(oledFamilyLabel(slot.family()), "%s | %s".formatted(slot.name(), oikordInterpretation.displayName()));
@@ -866,7 +898,51 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private BiColorLightState getStepSeqLightState() {
-        return BiColorLightState.OFF;
+        if (!(noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP)) {
+            return BiColorLightState.OFF;
+        }
+        if (driver.isGlobalShiftHeld()) {
+            return driver.getFillLightState();
+        }
+        return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+    }
+
+    private void handleOikordAccentPressed(final boolean pressed) {
+        oikordAccentButtonHeld = pressed;
+        if (!pressed) {
+            if (!oikordAccentModified) {
+                oikordAccentActive = !oikordAccentActive;
+                oled.valueInfo("Accent", oikordAccentActive ? "On" : "Off");
+            } else {
+                oled.clearScreenDelayed();
+            }
+            oikordAccentModified = false;
+            return;
+        }
+        oled.valueInfo("Accent", oikordAccentActive ? "On" : "Off");
+    }
+
+    private int currentOikordVelocity() {
+        return oikordAccentActive ? DEFAULT_OIKORD_ACCENTED_VELOCITY : DEFAULT_OIKORD_STANDARD_VELOCITY;
+    }
+
+    private void toggleOikordAccentForStep(final int stepIndex) {
+        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
+        if (notesAtStep == null || notesAtStep.isEmpty()) {
+            return;
+        }
+        final boolean accented = notesAtStep.values().stream().allMatch(this::isOikordAccented);
+        final double targetVelocity = (accented ? DEFAULT_OIKORD_STANDARD_VELOCITY : DEFAULT_OIKORD_ACCENTED_VELOCITY) / 127.0;
+        notesAtStep.values().forEach(note -> note.setVelocity(targetVelocity));
+        oikordAccentModified = true;
+        oled.valueInfo("Accent", accented ? "Normal" : "Accented");
+    }
+
+    private boolean isOikordAccented(final NoteStep noteStep) {
+        final int velocity = (int) Math.round(noteStep.velocity() * 127);
+        final int distanceToAccent = Math.abs(velocity - DEFAULT_OIKORD_ACCENTED_VELOCITY);
+        final int distanceToStandard = Math.abs(velocity - DEFAULT_OIKORD_STANDARD_VELOCITY);
+        return distanceToAccent <= distanceToStandard;
     }
 
     private void toggleLayout() {
@@ -954,6 +1030,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
             noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            driver.adjustTempo(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
             driver.adjustGrooveShuffleAmount(inc, fine);
         } else {
@@ -972,6 +1050,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
             noteRepeatHandler.handlePressed(pressed);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showTempoInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showGrooveShuffleInfo();
@@ -1088,7 +1172,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 : clipNotesByStep.containsKey(stepIndex)
                 ? OCCUPIED_STEP
                 : (stepIndex / 4) % 2 == 0 ? EMPTY_STEP_A : EMPTY_STEP_B;
-        return heldStepPads.contains(stepIndex) ? base.getBrightest() : base;
+        if (heldStepPads.contains(stepIndex)) {
+            return base.getBrightest();
+        }
+        if (stepIndex == playingStep) {
+            return clipNotesByStep.containsKey(stepIndex) ? base.getBrightend() : RgbLigthState.WHITE;
+        }
+        return base;
     }
 
     private RgbLigthState getClipStepRecordPadLight(final int padIndex) {

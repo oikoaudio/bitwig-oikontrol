@@ -30,6 +30,8 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_SHUFFLE));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_TEMPO,
+                FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED,
                 FireControlPreferences.normalizeMainEncoderRole("unexpected"));
     }
@@ -38,8 +40,10 @@ class FireControlPreferencesTest {
     void cyclesMainEncoderRolesInConfiguredOrder() {
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
                 FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED));
-        assertEquals(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT,
+        assertEquals(FireControlPreferences.MAIN_ENCODER_TEMPO,
                 FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_SHUFFLE));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT,
+                FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED,
                 FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,

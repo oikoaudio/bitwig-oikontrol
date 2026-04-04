@@ -29,6 +29,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
+    public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
     public static final String MAIN_ENCODER_NOTE_REPEAT_ROLE = FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT;
 
     private static AkaiFireOikontrolExtension instance;
@@ -424,6 +425,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        if (isGlobalShiftHeld()) {
+            transport.tapTempo();
+            oled.valueInfo("Tempo", transport.tempo().displayedValue().get());
+            return;
+        }
         if (activeMode == TopLevelMode.DRUM) {
             activeDrumSubMode = activeDrumSubMode.next();
         } else {
@@ -702,6 +708,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * stepSize)));
         value.setImmediately(nextValue);
         oled.valueInfo("Shuffle", shuffleAmount.displayedValue().get());
+    }
+
+    public void adjustTempo(final int inc, final boolean fine) {
+        if (inc == 0) {
+            return;
+        }
+        transport.tempo().inc(inc * (fine ? MAIN_ENCODER_FINE_STEP : MAIN_ENCODER_STEP));
+        oled.valueInfo("Tempo", transport.tempo().displayedValue().get());
+    }
+
+    public void showTempoInfo() {
+        oled.valueInfo("Tempo", transport.tempo().displayedValue().get());
     }
 
     public void toggleGrooveEnabled() {

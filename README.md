@@ -73,7 +73,7 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 ```
 
 Current artifact names:
-- `modules/akai-fire/build/libs/AkaiFireOiko-0.5.1.bwextension`
+- `modules/akai-fire/build/libs/AkaiFireOiko-0.5.2.bwextension`
 - `modules/launchcontrol/build/libs/LaunchControlXlOikontrol-1.1.1.bwextension`
 
 ## Documentation
