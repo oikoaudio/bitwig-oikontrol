@@ -14,6 +14,12 @@ This pass is primarily a **remap/reuse** pass:
 - live `NOTE` input and `Oikord Step` share the same pitch-context buttons
 - clip-grid unification is **deferred** to a future global `PERFORM` mode
 
+Navigation assumption for this plan:
+
+- plain `NOTE` switches between live Note and `Oikord Step`
+- `ALT + NOTE` switches the current surface's two-state variant
+- `STEP SEQ` is no longer part of `Oikord Step` entry
+
 ## Key Changes
 
 ### 1. Shared Encoder Pages Across Step Sequencers
@@ -119,7 +125,7 @@ Recurrence detail remains handled by the existing recurrence editor:
 
 Existing Oikord-specific button behavior remains:
 
-- `STEP SEQ` re-press in `Oikord Step` toggles `As Is` / `Cast`
+- `ALT + NOTE` in `Oikord Step` toggles `As Is` / `Cast`
 - `PATTERN` pages within the current Oikord family
 
 ### 6. Clip Grid and Copying Are Explicitly Deferred
@@ -167,6 +173,9 @@ Implementation note:
 - `SequencEncoderHandler` is reused in note-step modes, not only Drum
 - `BANK_L/BANK_R` become shared step-move buttons in all step sequencers
 - `MUTE_1..4` in `NOTE` top-level mode become shared pitch/range controls
+- plain `NOTE` switches between live Note and `Oikord Step`
+- `ALT + NOTE` switches the active surface variant
+- `SHIFT + NOTE` remains available for `SNAP` or another labeled utility
 - Oikord-specific `gate` control is removed
 - Drum `User 2` Euclid page shrinks from 4 Euclid controls to 2 Euclid controls plus `Occurrence` / `Recurrence Length`
 - clip/copy pad partition remains different between Drum and note/chord step modes in this pass
@@ -183,7 +192,9 @@ Implementation note:
 - `Oikord Step` `User 2` edits root offset, octave offset, and family select
 - `BANK_L/BANK_R` move/nudge behavior matches Drum across Drum and `Oikord Step`
 - `MUTE_1..4` change octave/root in live `NOTE` and root/octave offsets in `Oikord Step`
-- `STEP SEQ` still toggles `As Is` / `Cast` inside `Oikord Step`
+- plain `NOTE` switches between live `NOTE` and `Oikord Step`
+- `ALT + NOTE` toggles `chromatic` / `in-key` in live `NOTE`
+- `ALT + NOTE` toggles `As Is` / `Cast` inside `Oikord Step`
 - `PATTERN` still pages Oikord families correctly
 - Drum top-row clip workflow remains unchanged in this pass
 - note/chord step modes do not gain shared clip-row behavior in this pass
@@ -195,5 +206,6 @@ Implementation note:
 - `Mixer` remains a mixer page in this pass; no held-note retargeting is added there yet.
 - `Occurrence` / `Recurrence` live on Drum `User 2`, with the existing recurrence editor retained for mask selection.
 - `Oikord Step` `User 2` leaves one encoder intentionally unused/reserved rather than inventing a fourth chord-specific control prematurely.
+- `Clip Step Record` is not part of the near-term Note-family navigation grammar and remains deferred.
 - shared clip-grid behavior is deferred to future `PERFORM`, not folded into this consistency pass.
 - `Oikord Step` playhead indication is deferred even though the same general approach used in Drum Sequence should work there.

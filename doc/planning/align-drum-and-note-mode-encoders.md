@@ -4,6 +4,13 @@ This note captures a follow-up cleanup that is intentionally deferred from the
 first `Oikord Step` landing. The goal is to align Drum and Note Step encoder
 pages without mixing that remap into the same branch as the new note-step mode.
 
+Navigation assumption for this note:
+
+- `NOTE` switches between live Note and `Oikord Step`
+- `ALT + NOTE` switches the current surface's two-state variant
+- `STEP SEQ` remains free for mode-dependent behavior and is not required for
+  `Oikord Step` entry
+
 ## Intent
 
 - Keep the current Oikord branch focused on landing `Oikord Step`
@@ -87,3 +94,23 @@ user 2: mode specific functions. euclidean for drums.. i mean euclidean COULD al
 Note on mixer: if a note step is held, the values should be updated for those notes in the clip if encoder values are changed. perhaps  Mixer: Volume become "gain expression", pan "pan expression", send 1 and 2 become.. ??
 
 can we improve the plan for button/knob mapping consistency along these lines? what collisions do you see? right now Channel is used for the controls for chord seq mode but those could be moved to user 2 or we rely more on buttons that aren't taken to shift chord family, octave and note offset.
+
+## Navigation Collision Update
+
+With the revised Note-family grammar, the cleaner split is:
+
+- `NOTE` = switch between live Note and `Oikord Step`
+- `ALT + NOTE` = switch the active surface's two-state variant
+- `SHIFT + NOTE` = available for `SNAP` or another labeled utility rather than
+  carrying note-family variant switching
+- `STEP SEQ` = available for mode-dependent use elsewhere rather than carrying
+  note-family entry
+
+That removes one earlier collision from the encoder-planning discussion:
+
+- Oikord interpretation no longer needs to live on `STEP SEQ`
+- live Note layout no longer needs to own plain `NOTE` by itself
+
+It also means chord-specific controls still belong on encoders or other
+dedicated buttons, but the main note-family surface switch should stay off the
+encoder pages.

@@ -1,7 +1,7 @@
 Feature: Akai Fire note step modes and Oikord sequencing
   As the primary user of the Akai Fire script
-  I want STEP SEQ inside Note mode to open deliberate note-edit sub-modes
-  So I can sequence harmonic movement with curated Oikord voicings or record notes into a clip without leaving the controller.
+  I want NOTE and ALT plus NOTE to own the note-family navigation grammar
+  So I can switch cleanly between live note input and harmonic step input without colliding with Drum controls.
 
   # Planning note:
   # This document is intentionally a design and handoff spec for the next pass.
@@ -11,26 +11,22 @@ Feature: Akai Fire note step modes and Oikord sequencing
     Given the Akai Fire is connected
     And the controller is running the Oikontrol extension
     And NOTE mode already supports live note input with chromatic and in-key layouts
-    And NOTE itself remains responsible for switching note layout state
+    And Drum mode already uses STEP SEQ for Accent and SHIFT plus STEP SEQ for Fill
 
-  Scenario: Note mode remains live play until STEP SEQ is entered
+  Scenario: NOTE switches between live note input and Oikord Step
     Given NOTE mode is active
     Then NOTE mode itself means live note play
     And the pad grid plays notes immediately in the selected note layout
-    When I press STEP SEQ in NOTE mode
-    Then NOTE mode enters the last-used note step sub-mode
+    When I press NOTE in live Note mode
+    Then NOTE mode enters Oikord Step
     And the pad grid is repurposed for note editing instead of direct note play
-    When I hold SHIFT and press STEP SEQ in NOTE mode
-    Then the next note step sub-mode is selected and entered
-    And the available note step sub-modes are Oikord Step and Clip Step Record
-    When I press STEP SEQ again from a note step sub-mode
+    When I press NOTE again from Oikord Step
     Then NOTE mode returns to live note play
-    And NOTE mode is not itself treated as a third peer step sub-mode
+    And NOTE mode is not treated as a third peer step sub-mode alongside step-entry states
 
   Scenario: Oikord Step is the first dedicated harmonic sequencer mode
     Given NOTE mode is active
-    And Oikord Step is selected as the current STEP sub-mode
-    When I enter STEP SEQ
+    When I press NOTE to enter Oikord Step
     Then the Fire enters Oikord Step mode
     And the lower two pad rows represent 32 visible note steps
     And the upper two pad rows represent 32 visible concrete Oikord variants
@@ -94,38 +90,36 @@ Feature: Akai Fire note step modes and Oikord sequencing
     And transposition and scale context from NOTE mode continue to affect how those voicings are heard
     And the surface language avoids presenting them as conventional songwriter chord presets
 
-  Scenario: Clip Step Record is the second STEP sub-mode
+  Scenario: ALT plus NOTE switches the two-state variant of the active note-family surface
     Given NOTE mode is active
-    And Clip Step Record is selected as the current STEP sub-mode
-    When I enter STEP SEQ
-    Then the Fire enters Clip Step Record mode
-    And the mode is optimized for writing ordinary notes into the current clip
-    And the mode is distinct from Oikord Step rather than merged with it
-    And the role of pads, held notes, and encoder editing is documented separately from Oikord Step
+    When I hold ALT and press NOTE in live Note mode
+    Then the note layout toggles between chromatic and in-key
+    When I press NOTE to enter Oikord Step
+    And I hold ALT and press NOTE
+    Then the Oikord interpretation toggles between As Is and Cast
 
-  Scenario: NOTE mode keeps one clear owner for layout versus step behavior
+  Scenario: STEP SEQ stays Drum-owned while NOTE owns note-family navigation
     Given NOTE mode is active
-    Then NOTE continues to toggle the note layout state between chromatic and in-key
-    And STEP SEQ owns entry into the note step sub-mode family
-    And this partition avoids making NOTE play, Oikord sequencing, and clip step record compete for the same button
-    And this partition keeps live note play as the default surface meaning of NOTE mode
+    Then NOTE owns switching between live Note and Oikord Step
+    And ALT plus NOTE owns switching the current note-surface variant
+    And SHIFT plus NOTE remains available for SNAP or another labeled utility rather than carrying Oikord interpretation
+    And STEP SEQ is no longer required for Oikord Step access
+    And this partition avoids making Drum Accent and Fill compete with note-family entry
 
   Scenario: Recommended UI partition for the next implementation pass
     Then the preferred NOTE partition is:
-      | Area                | Purpose                                  |
-      | NOTE mode           | Immediate live note performance          |
-      | STEP sub-mode 1     | Oikord Step                              |
-      | STEP sub-mode 2     | Clip Step Record                         |
-    And STEP SEQ toggles between NOTE live play and the current STEP sub-mode
-    And SHIFT plus STEP SEQ cycles the current STEP sub-mode selection
-    And NOTE itself remains the visible layout toggle
+      | Surface             | Plain NOTE                               | ALT plus NOTE                            |
+      | Live Note           | switch to Oikord Step                    | toggle chromatic versus in-key           |
+      | Oikord Step         | return to Live Note                      | toggle As Is versus Cast                 |
+    And NOTE keeps one consistent cross-surface meaning
+    And ALT plus NOTE keeps one consistent within-surface meaning
 
   Scenario: Definition of done
     Then NOTE mode still supports regular note play as its default meaning
-    And STEP SEQ can enter a dedicated Oikord Step mode without breaking the existing NOTE controls
+    And NOTE can enter a dedicated Oikord Step mode without breaking the existing NOTE controls
     And Oikord Step can assign curated harmonic states to 32 visible steps using direct hardware gestures
     And the first Oikord pass writes literal notes into the clip instead of maintaining a hidden symbolic playback layer
-    And a distinct Clip Step Record mode exists or is explicitly deferred with its intended interaction documented
+    And Clip Step Record is either explicitly deferred or reintroduced later with a clean third-surface navigation rule
     And the curated Oikord subset and its source packs are documented clearly
     And OLED and LED feedback remain legible and mode-specific
     And the README and controller-layout documentation describe the final NOTE and STEP partition
@@ -134,6 +128,7 @@ Feature: Akai Fire note step modes and Oikord sequencing
     When the feature is verified
     Then automated tests cover any extracted Oikord-bank paging or step-assignment logic
     And automated tests cover any extracted curated-family selection mapping
-    And manual testing confirms Live Note Play remains intact when returning from either STEP sub-mode
+    And manual testing confirms Live Note Play remains intact when returning from Oikord Step
     And manual testing confirms Oikord assignment gestures do not leave stuck notes or corrupt clip data
-    And manual testing confirms STEP SEQ reliably toggles the intended note step sub-mode
+    And manual testing confirms NOTE reliably switches between Live Note and Oikord Step
+    And manual testing confirms ALT plus NOTE reliably toggles the correct two-state variant in each surface
