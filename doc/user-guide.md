@@ -149,7 +149,7 @@ Quick start:
 1. Load a Drum Machine on a Bitwig track.
 2. Enter `DRUM` mode.
 3. If `Drum Mode Pinning` is set to `Auto-select First Drum Machine`, the script will focus and pin the first Drum Machine it finds.
-4. If `Drum Mode Pinning` is set to `Follow Selection + Manual Pin`, press `ALT + DRUM` to pin the currently selected drum machine explicitly.
+4. If `Drum Mode Pinning` is set to `Follow Selection`, the drum sequencer follows the currently selected drum track/device context.
 5. Select a lane on row 2.
 6. Program steps on the lower two rows.
 7. Hold `STEP SEQ` to accent notes or add accented hits quickly.
@@ -269,7 +269,7 @@ Remove duplicate controller entries in Bitwig and keep only the Oiko extension f
 ### The wrong device is being controlled
 
 - Check the relevant auto-attach or pinning preferences.
-- In Fire `DRUM` mode with `Follow Selection + Manual Pin`, press `ALT + DRUM` to pin the currently selected drum machine explicitly.
+- In Fire `DRUM` mode, use `Follow Selection` to work on the currently selected drum track/device, or `Auto-select First Drum Machine` for a dedicated first-drum-machine workflow.
 - Re-select the target track or device in Bitwig.
 - Re-enter the relevant mode or template after changing focus.
 

@@ -86,6 +86,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumAutoPinApplied = false;
     private boolean drumTrackPinnedBeforeAutoPin = false;
     private boolean drumDevicePinnedBeforeAutoPin = false;
+    private int drumTrackIndexBeforeAutoPin = -1;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -478,15 +479,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (isGlobalAltHeld()) {
-            if (shouldAutoPinFirstDrumMachine()) {
-                return;
-            }
-            if (activeMode != TopLevelMode.DRUM) {
-                activeMode = TopLevelMode.DRUM;
-                switchActiveMode();
-                notifyAction("Mode", "Drum");
-            }
-            pinDrumContextNow();
             return;
         }
         if (isGlobalShiftHeld()) {
@@ -731,6 +723,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
         drumTrackPinnedBeforeAutoPin = cursorTrack.isPinned().get();
         drumDevicePinnedBeforeAutoPin = primaryDevice.isPinned().get();
+        drumTrackIndexBeforeAutoPin = cursorTrack.position().get();
 
         if (!deviceLocator.focusFirstDrumMachine(viewControl)) {
             return;
@@ -739,23 +732,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         cursorTrack.isPinned().set(true);
         primaryDevice.isPinned().set(true);
         drumAutoPinApplied = true;
-    }
-
-    private void pinDrumContextNow() {
-        if (viewControl == null || deviceLocator == null) {
-            return;
-        }
-
-        final CursorTrack cursorTrack = viewControl.getCursorTrack();
-        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
-        if (!primaryDevice.exists().get() || !primaryDevice.hasDrumPads().get()) {
-            notifyAction("Drum Pin", "No Selected Drum Machine");
-            return;
-        }
-
-        cursorTrack.isPinned().set(true);
-        primaryDevice.isPinned().set(true);
-        notifyAction("Drum Pin", "Pinned");
     }
 
     private void ensureDrumPinningStillValid() {
@@ -787,11 +763,31 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (restorePreviousState) {
             viewControl.getCursorTrack().isPinned().set(drumTrackPinnedBeforeAutoPin);
             viewControl.getPrimaryDevice().isPinned().set(drumDevicePinnedBeforeAutoPin);
+            restoreTrackSelection(drumTrackIndexBeforeAutoPin);
         } else {
             viewControl.getCursorTrack().isPinned().set(false);
             viewControl.getPrimaryDevice().isPinned().set(false);
         }
         drumAutoPinApplied = false;
+    }
+
+    private void restoreTrackSelection(final int trackIndex) {
+        if (viewControl == null || trackIndex < 0) {
+            return;
+        }
+
+        final TrackBank trackBank = viewControl.getTrackBank();
+        if (trackBank == null || trackIndex >= trackBank.getSizeOfBank()) {
+            return;
+        }
+
+        final Track track = trackBank.getItemAt(trackIndex);
+        if (track == null || !track.exists().get()) {
+            return;
+        }
+
+        track.selectInMixer();
+        track.selectInEditor();
     }
 
     public void adjustMainCursorParameter(final int inc, final boolean fine) {

@@ -11,6 +11,7 @@ import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extensions.framework.values.SpecialDevices;
 
 public class ViewCursorControl {
+	private static final int TRACK_RESTORE_WIDTH = 128;
 	private final CursorTrack cursorTrack;
 	private final DeviceBank deviceBank;
 	private final PinnableCursorDevice primaryDevice;
@@ -22,9 +23,14 @@ public class ViewCursorControl {
 	public ViewCursorControl(final ControllerHost host, final int sends) {
 		super();
 
-		this.trackBank = host.createTrackBank(8, 8, sends);
+		this.trackBank = host.createMainTrackBank(TRACK_RESTORE_WIDTH, 8, sends);
+		for (int index = 0; index < TRACK_RESTORE_WIDTH; index++) {
+			this.trackBank.getItemAt(index).exists().markInterested();
+		}
 		this.cursorTrack = host.createCursorTrack("View Control", "view Control", 8, sends, true);
 		cursorTrack.isPinned().markInterested();
+		cursorTrack.position().markInterested();
+		cursorTrack.name().markInterested();
 
 		cursorTrack.clipLauncherSlotBank().cursorIndex().addValueObserver(index -> {
 			// RemoteConsole.out.println(" => {}", index);

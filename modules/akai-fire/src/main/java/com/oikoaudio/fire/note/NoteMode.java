@@ -2,6 +2,7 @@ package com.oikoaudio.fire.note;
 
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
+import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteOccurrence;
@@ -218,7 +219,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
         this.liveUser1Layer = new Layer(driver.getLayers(), "NOTE_MODE_LIVE_USER1");
         this.liveUser2Layer = new Layer(driver.getLayers(), "NOTE_MODE_LIVE_USER2");
 
-        this.cursorTrack = driver.getViewControl().getCursorTrack();
+        final ControllerHost host = driver.getHost();
+        this.cursorTrack = host.createCursorTrack("NOTE_VIEW", "Note View", 8, 8, true);
+        this.cursorTrack.name().markInterested();
         this.liveCursorDevice = cursorTrack.createCursorDevice("NOTE_LIVE_DEVICE", "Note Live Device", 8,
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
