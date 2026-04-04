@@ -84,15 +84,6 @@ public final class OikordBank {
 
     private static List<Family> createFamilies() {
         return List.of(
-                createFamily("Barker", "classic", "QUARTAL", Style.CLASSIC, List.of(
-                        formula("quartal stack", "Q stack", 0, 5, 10, 15),
-                        formula("quartal stack with b7 and 9", "Q b7/9", 0, 5, 10, 14),
-                        formula("quartal stack with Maj7 and 10", "Q Maj7/10", 0, 5, 11, 16),
-                        formula("quartal add6 color", "Q add6", 0, 5, 9, 14),
-                        formula("open fifth with quartal top", "5th+Q", 0, 7, 10, 15),
-                        formula("quartal stack with upper 11", "Q +11", 0, 5, 10, 17),
-                        formula("quartal stack with octave support", "Q oct", 0, 5, 12, 17),
-                        formula("quartal add6 with upper 10", "Q 6/10", 0, 5, 9, 16))),
                 // "Audible" is the public-facing label for the family that uses a Plaits-derived voicing rotation.
                 createFamily("Audible", "plaits", "PLAITS-JON", Style.PLAITS, List.of(
                         formula("Octave", "Oct", 0, 0, 12, 12),
@@ -112,6 +103,15 @@ public final class OikordBank {
                         formula("Dominant 7th (b9)", "7b9", 0, 7, 10, 13),
                         formula("Half-diminished", "m7b5", 0, 3, 6, 10),
                         formula("Fully diminished", "dim7", 0, 3, 6, 9))),
+                createFamily("Barker", "classic", "QUARTAL", Style.CLASSIC, List.of(
+                        formula("quartal stack", "Q stack", 0, 5, 10, 15),
+                        formula("quartal stack with b7 and 9", "Q b7/9", 0, 5, 10, 14),
+                        formula("quartal stack with Maj7 and 10", "Q Maj7/10", 0, 5, 11, 16),
+                        formula("quartal add6 color", "Q add6", 0, 5, 9, 14),
+                        formula("open fifth with quartal top", "5th+Q", 0, 7, 10, 15),
+                        formula("quartal stack with upper 11", "Q +11", 0, 5, 10, 17),
+                        formula("quartal stack with octave support", "Q oct", 0, 5, 12, 17),
+                        formula("quartal add6 with upper 10", "Q 6/10", 0, 5, 9, 16))),
                 createFamily("Sus Motion", "color", "SUSMOTION", Style.COLOR, List.of(
                         formula("7sus4", "7sus4", 0, 5, 7, 10),
                         formula("7sus2", "7sus2", 0, 2, 7, 10),

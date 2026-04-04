@@ -89,6 +89,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumDevicePinnedBeforeAutoPin = false;
     private int drumTrackIndexBeforeAutoPin = -1;
     private boolean mainEncoderPressed = false;
+    private boolean drumPinPreferenceObserved = false;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -244,6 +245,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         drumPinModePref.markInterested();
         drumPinModePref.addValueObserver(value -> {
             syncDrumPinningForActiveMode();
+            if (!drumPinPreferenceObserved) {
+                drumPinPreferenceObserved = true;
+                return;
+            }
             notifyAction("Drum Pin",
                     FireControlPreferences.shouldAutoPinFirstDrumMachine(value) ? "Automatic" : "Follow Selected");
         });
