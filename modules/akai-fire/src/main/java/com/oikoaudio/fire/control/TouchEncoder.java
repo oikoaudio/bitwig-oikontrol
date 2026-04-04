@@ -3,7 +3,7 @@ package com.oikoaudio.fire.control;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.HardwareButton;
 import com.bitwig.extension.controller.api.HardwareSurface;
@@ -17,7 +17,7 @@ public class TouchEncoder {
 	private final RelativeHardwareKnob encoder;
 	private final HardwareButton touchButton;
 
-	public TouchEncoder(final int controlId, final int buttonId, final AkaiFireDrumSeqExtension driver) {
+	public TouchEncoder(final int controlId, final int buttonId, final AkaiFireOikontrolExtension driver) {
 		this.host = driver.getHost();
 		final int noteValue = controlId;
 		final HardwareSurface surface = driver.getSurface();

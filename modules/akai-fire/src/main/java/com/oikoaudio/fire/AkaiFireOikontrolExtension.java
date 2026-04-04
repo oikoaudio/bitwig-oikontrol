@@ -23,14 +23,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AkaiFireDrumSeqExtension extends ControllerExtension {
+public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_STEP = 0.01;
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
     public static final String MAIN_ENCODER_NOTE_REPEAT_ROLE = FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT;
 
-    private static AkaiFireDrumSeqExtension instance;
+    private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
     private Transport transport;
     private MidiIn midiIn;
@@ -75,6 +75,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private SettableEnumValue patternActionPref;
     private SettableEnumValue mainEncoderRolePref;
     private SettableEnumValue euclidScopePref;
+    private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue auditionOnDrumSelectPref;
     private SettableBooleanValue auditionOikordsPref;
 
@@ -109,7 +110,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         }
     }
 
-    protected AkaiFireDrumSeqExtension(final AkaiFireDrumSeqDefinition definition, final ControllerHost host) {
+    protected AkaiFireOikontrolExtension(final AkaiFireOikontrolDefinition definition, final ControllerHost host) {
         super(definition, host);
         instance = this;
     }
@@ -232,6 +233,17 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
                 FireControlPreferences.EUCLID_SCOPES,
                 FireControlPreferences.EUCLID_SCOPE_FULL_CLIP);
         euclidScopePref.markInterested();
+
+        // Deferred for now: the current live NOTE implementation still relies on
+        // Bitwig key-translation updates, so "New Notes Only" does not preserve
+        // already-held notes correctly when the pitch offset changes. Keep the
+        // preference plumbing in code so it can be reintroduced once live notes
+        // are driven by explicit per-pad note tracking instead.
+        // livePitchOffsetBehaviorPref = preferences.getEnumSetting("Live Pitch Offset",
+        //         FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+        //         FireControlPreferences.LIVE_PITCH_OFFSET_BEHAVIORS,
+        //         FireControlPreferences.LIVE_PITCH_OFFSET_NEW_NOTES);
+        // livePitchOffsetBehaviorPref.markInterested();
 
         auditionOnDrumSelectPref = preferences.getBooleanSetting("Audition on drum slot select",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -616,6 +628,12 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
                 FireControlPreferences.normalizeEuclidScope(euclidScopePref.get()));
     }
 
+    public boolean shouldRetuneHeldLiveNotes() {
+        return livePitchOffsetBehaviorPref != null
+                && FireControlPreferences.LIVE_PITCH_OFFSET_RETUNE_HELD.equals(
+                FireControlPreferences.normalizeLivePitchOffsetBehavior(livePitchOffsetBehaviorPref.get()));
+    }
+
     public void adjustMainCursorParameter(final int inc, final boolean fine) {
         final Parameter parameter = getLastClickedParameter();
         if (parameter == null) {
@@ -788,7 +806,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
         }
     }
 
-    public static AkaiFireDrumSeqExtension getInstance() {
+    public static AkaiFireOikontrolExtension getInstance() {
         return instance;
     }
 

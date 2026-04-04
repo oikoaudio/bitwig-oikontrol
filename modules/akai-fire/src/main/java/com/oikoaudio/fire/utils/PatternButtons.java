@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.utils;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -19,7 +19,7 @@ public class PatternButtons {
     private Supplier<BiColorLightState> upLightSupplier = () -> BiColorLightState.OFF;
     private Supplier<BiColorLightState> downLightSupplier = () -> BiColorLightState.OFF;
 
-    public PatternButtons(AkaiFireDrumSeqExtension driver, Layer layer) {
+    public PatternButtons(AkaiFireOikontrolExtension driver, Layer layer) {
         upButton = driver.getButton(NoteAssign.PATTERN_UP);
         downButton = driver.getButton(NoteAssign.PATTERN_DOWN);
 

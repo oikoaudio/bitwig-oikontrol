@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.ViewCursorControl;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -27,7 +27,7 @@ public class PadHandler {
     private static final int PAD_NOTE_BASE = 0x36;
 
     final DrumSequenceMode parent;
-    private final AkaiFireDrumSeqExtension driver;
+    private final AkaiFireOikontrolExtension driver;
     private final PinnableCursorClip cursorClip;
     private final NoteInput noteInput;
     private final DrumPadBank padBank;
@@ -53,7 +53,7 @@ public class PadHandler {
     private final DisplayTarget displayTarget;
     private final DisplayInfo padDisplayInfo;
 
-    public PadHandler(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
+    public PadHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
                       final Layer muteLayer, final Layer soloLayer, final NoteRepeatHandler noteRepeatHandler) {
         this.driver = driver;
         this.parent = parent;
@@ -113,7 +113,7 @@ public class PadHandler {
         button.bindPressed(mainLayer, p -> handlePadSelection(pad, p), pad::getColor);
     }
 
-    private void initButtons(final Layer mainLayer, final AkaiFireDrumSeqExtension driver) {
+    private void initButtons(final Layer mainLayer, final AkaiFireOikontrolExtension driver) {
     }
 
     private void handlePadSelection(final PadContainer pad, final boolean pressed) {

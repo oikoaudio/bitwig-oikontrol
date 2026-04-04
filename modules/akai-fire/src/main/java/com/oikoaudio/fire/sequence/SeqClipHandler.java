@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -21,7 +21,7 @@ public class SeqClipHandler {
     private final CursorTrack cursorTrack;
     private int blinkState = 0;
 
-    public SeqClipHandler(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode parent, final Layer clipLayer) {
+    public SeqClipHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer clipLayer) {
         this.parent = parent;
         this.cursorClip = parent.getCursorClip();
         cursorTrack = driver.getViewControl().getCursorTrack();
@@ -29,7 +29,7 @@ public class SeqClipHandler {
         initClipControlButtons(clipLayer, driver);
     }
 
-    private void initClipControlButtons(final Layer clipLayer, final AkaiFireDrumSeqExtension driver) {
+    private void initClipControlButtons(final Layer clipLayer, final AkaiFireOikontrolExtension driver) {
         final RgbButton[] rgbButtons = driver.getRgbButtons();
         for (int i = 0; i < 16; i++) {
             final RgbButton button = rgbButtons[i];

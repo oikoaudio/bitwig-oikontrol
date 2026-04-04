@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.display;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.bitwig.extension.api.Host;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.IntegerValue;
@@ -10,7 +10,7 @@ import com.bitwig.extensions.framework.Binding;
 
 public class ParameterDisplayBinding extends Binding<Parameter, DisplayTarget> {
 
-	ControllerHost host = AkaiFireDrumSeqExtension.getGlobalHost();
+	ControllerHost host = AkaiFireOikontrolExtension.getGlobalHost();
 	private double rawValue;
 	private String displayValue;
 	private final int index;

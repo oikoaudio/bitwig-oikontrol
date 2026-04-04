@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -16,7 +16,7 @@ public class PadRowMuteHandler {
     private final DrumPadBank padBank;
     private final RgbLigthState[] slotColors = new RgbLigthState[16];
 
-    public PadRowMuteHandler(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode parent, final Layer muteLayer) {
+    public PadRowMuteHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer muteLayer) {
         this.parent = parent;
         padBank = driver.getViewControl().getDrumPadBank();
         final RgbButton[] rgbButtons = driver.getRgbButtons();

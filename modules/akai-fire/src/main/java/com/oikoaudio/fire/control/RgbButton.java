@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.control;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.controller.api.HardwareButton;
 import com.bitwig.extension.controller.api.MidiIn;
@@ -11,7 +11,7 @@ import com.bitwig.extensions.framework.Layer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.*;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.*;
 
 public class RgbButton {
     private final byte[] sysExCmd = new byte[]{SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, SE_CMD_RGB, 0, 4, 0, 0, 0, 0, SE_EN};
@@ -19,7 +19,7 @@ public class RgbButton {
     private final HardwareButton hwButton;
     private final MultiStateHardwareLight light;
 
-    public RgbButton(final int pad, final AkaiFireDrumSeqExtension driver) {
+    public RgbButton(final int pad, final AkaiFireOikontrolExtension driver) {
         index = pad;
         sysExCmd[7] = (byte) pad;
         final MidiIn midiIn = driver.getMidiIn();

@@ -7,10 +7,10 @@ import com.bitwig.extension.controller.api.ControllerHost;
 
 import java.util.UUID;
 
-public class AkaiFireDrumSeqDefinition extends ControllerExtensionDefinition {
+public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
     private static final UUID DRIVER_ID = UUID.fromString("c1f8d20a-3da4-4d2c-8ce1-8b2aa6a8e5b6");
 
-    public AkaiFireDrumSeqDefinition() {
+    public AkaiFireOikontrolDefinition() {
     }
 
     @Override
@@ -25,7 +25,7 @@ public class AkaiFireDrumSeqDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getVersion() {
-        return "0.4.0";
+        return "0.4.1";
     }
 
     @Override
@@ -81,7 +81,7 @@ public class AkaiFireDrumSeqDefinition extends ControllerExtensionDefinition {
     }
 
     @Override
-    public AkaiFireDrumSeqExtension createInstance(final ControllerHost host) {
-        return new AkaiFireDrumSeqExtension(this, host);
+    public AkaiFireOikontrolExtension createInstance(final ControllerHost host) {
+        return new AkaiFireOikontrolExtension(this, host);
     }
 }

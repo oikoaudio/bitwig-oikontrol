@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private final ControllerHost host;
-    private final AkaiFireDrumSeqExtension driver;
+    private final AkaiFireOikontrolExtension driver;
     private Application app;
 
     private final IntSetValue heldSteps = new IntSetValue();
@@ -94,7 +94,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private final EncoderStepAccumulator euclidAccentEncoder = new EncoderStepAccumulator(3);
 
 
-    public DrumSequenceMode(final AkaiFireDrumSeqExtension driver, final NoteRepeatHandler noteRepeatHandler) {
+    public DrumSequenceMode(final AkaiFireOikontrolExtension driver, final NoteRepeatHandler noteRepeatHandler) {
 
         super(driver.getLayers(), "DRUM_SEQUENCE_LAYER");
         this.driver = driver;
@@ -190,7 +190,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     }
 
 
-    private void initModeButtons(final AkaiFireDrumSeqExtension driver) {
+    private void initModeButtons(final AkaiFireOikontrolExtension driver) {
         final MultiStateHardwareLight[] stateLights = driver.getStateLights();
         bindEditButton(driver.getButton(NoteAssign.MUTE_1), "Select", selectHeld, stateLights[0], muteMode,
                 muteActionsTaken);
@@ -202,7 +202,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         deleteButton.bind(mainLayer, deleteHeld, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
     }
 
-    private void initButtonBehaviour(final AkaiFireDrumSeqExtension driver) {
+    private void initButtonBehaviour(final AkaiFireOikontrolExtension driver) {
 
         final BiColorButton accentButton = driver.getButton(NoteAssign.STEP_SEQ);
         accentButton.bindPressed(mainLayer, this::handleStepSeqPressed, this::getStepSeqLightState);
@@ -227,7 +227,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     }
 
     //TODO DOGGY
-    private void initSequenceSection(final AkaiFireDrumSeqExtension driver) {
+    private void initSequenceSection(final AkaiFireOikontrolExtension driver) {
         final RgbButton[] rgbButtons = driver.getRgbButtons();
         for (int i = 0; i < 32; i++) {
             final RgbButton button = rgbButtons[i + 32];
@@ -1248,7 +1248,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         pendingBankHeldFineStarts.clear();
     }
 
-    private void bindPatternButtons(AkaiFireDrumSeqExtension driver) {
+    private void bindPatternButtons(AkaiFireOikontrolExtension driver) {
         // Get the shared PatternButtons instance (make sure it’s created during init)
         PatternButtons patternButtons = driver.getPatternButtons();
         if (patternButtons == null) {

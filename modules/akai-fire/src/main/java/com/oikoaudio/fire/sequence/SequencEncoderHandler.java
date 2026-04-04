@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
@@ -49,7 +49,7 @@ public class SequencEncoderHandler extends Layer {
 		void set(NoteStep step, int value);
 	}
 
-	public SequencEncoderHandler(final StepSequencerHost host, final AkaiFireDrumSeqExtension driver) {
+	public SequencEncoderHandler(final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
 		super(driver.getLayers(), "Encoder_layer");
 		this.parent = host;
         this.oled = driver.getOled();

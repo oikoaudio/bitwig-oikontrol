@@ -2,7 +2,7 @@ package com.oikoaudio.fire.sequence;
 
 import java.util.List;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.controller.api.NoteStep;
@@ -15,7 +15,7 @@ public class RecurrenceEditor {
 	private final Layer layer;
 	private boolean pendingRelease;
 
-	public RecurrenceEditor(final AkaiFireDrumSeqExtension driver, final DrumSequenceMode parent) {
+	public RecurrenceEditor(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent) {
 		layer = new Layer(driver.getLayers(), parent.getName() + "_RECURRENCE");
 		initClipControlButtons(layer, driver);
 		final IntSetValue heldSteps = parent.getHeldSteps();
@@ -30,7 +30,7 @@ public class RecurrenceEditor {
 		}
 	}
 
-	private void initClipControlButtons(final Layer clipLayer, final AkaiFireDrumSeqExtension driver) {
+	private void initClipControlButtons(final Layer clipLayer, final AkaiFireOikontrolExtension driver) {
 		final RgbButton[] rgbButtons = driver.getRgbButtons();
 		for (int i = 0; i < 16; i++) {
 			final RgbButton button = rgbButtons[i + 16];

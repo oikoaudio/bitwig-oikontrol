@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.utils;
 
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
@@ -15,7 +16,8 @@ public class MainCursor {
 
     public MainCursor(ControllerHost host, int numSends, int numScenes){
         cursorTrack = host.createCursorTrack(numSends, numScenes);
-        cursorDevice = cursorTrack.createCursorDevice();
+        cursorDevice = cursorTrack.createCursorDevice("MAIN_CURSOR_DEVICE", "Main Cursor Device", 8,
+                CursorDeviceFollowMode.FOLLOW_SELECTION);
         cursorRemoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
     }
 

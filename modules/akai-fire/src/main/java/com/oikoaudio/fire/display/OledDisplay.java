@@ -1,11 +1,11 @@
 package com.oikoaudio.fire.display;
 
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.DEVICE_ID;
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.MAN_ID_AKAI;
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.PRODUCT_ID;
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.SE_EN;
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.SE_OLED_RGB;
-import static com.oikoaudio.fire.AkaiFireDrumSeqExtension.SE_ST;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.DEVICE_ID;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.MAN_ID_AKAI;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.PRODUCT_ID;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.SE_EN;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.SE_OLED_RGB;
+import static com.oikoaudio.fire.AkaiFireOikontrolExtension.SE_ST;
 
 import java.util.List;
 

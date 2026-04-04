@@ -55,6 +55,13 @@ public final class FireControlPreferences {
             EUCLID_SCOPE_FULL_CLIP
     };
 
+    public static final String LIVE_PITCH_OFFSET_NEW_NOTES = "New Notes Only";
+    public static final String LIVE_PITCH_OFFSET_RETUNE_HELD = "Retune Held Notes";
+    public static final String[] LIVE_PITCH_OFFSET_BEHAVIORS = {
+            LIVE_PITCH_OFFSET_NEW_NOTES,
+            LIVE_PITCH_OFFSET_RETUNE_HELD
+    };
+
     private FireControlPreferences() {
     }
 
@@ -103,5 +110,14 @@ public final class FireControlPreferences {
             }
         }
         return EUCLID_SCOPE_FULL_CLIP;
+    }
+
+    public static String normalizeLivePitchOffsetBehavior(final String preferenceValue) {
+        for (final String value : LIVE_PITCH_OFFSET_BEHAVIORS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return LIVE_PITCH_OFFSET_NEW_NOTES;
     }
 }

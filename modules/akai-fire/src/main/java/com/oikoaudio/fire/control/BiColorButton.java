@@ -3,7 +3,7 @@ package com.oikoaudio.fire.control;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -19,7 +19,7 @@ public class BiColorButton {
 	private final MultiStateHardwareLight light;
 	private final NoteAssign noteAssign;
 
-	public BiColorButton(final NoteAssign assignment, final AkaiFireDrumSeqExtension driver, final int ccValue) {
+	public BiColorButton(final NoteAssign assignment, final AkaiFireOikontrolExtension driver, final int ccValue) {
 		final MidiIn midiIn = driver.getMidiIn();
 		this.noteAssign = assignment;
 		hwButton = driver.getSurface().createHardwareButton("BUTTON_" + assignment.toString());
@@ -38,7 +38,7 @@ public class BiColorButton {
 		});
 	}
 
-	public BiColorButton(final NoteAssign assignment, final AkaiFireDrumSeqExtension driver) {
+	public BiColorButton(final NoteAssign assignment, final AkaiFireOikontrolExtension driver) {
 		this(assignment, driver, assignment.getNoteValue());
 	}
 
