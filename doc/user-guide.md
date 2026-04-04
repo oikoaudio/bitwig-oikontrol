@@ -229,6 +229,11 @@ Press `SHIFT + SELECT` to cycle the `SELECT` encoder role between:
 - `Note Repeat`
 - `Track Select`
 
+When `Note Repeat` is active:
+
+- the first encoder position is `Off`
+- turning `SELECT` past `Off` enables repeat at the chosen division
+
 When `Track Select` is active:
 
 - Turn `SELECT` to move to the previous or next track

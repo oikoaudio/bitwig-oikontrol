@@ -42,6 +42,7 @@ public final class FireDeviceLocator {
 
             track.selectInMixer();
             track.selectInEditor();
+            viewControl.getCursorTrack().selectChannel(track);
             viewControl.getPrimaryDevice().selectDevice(drumDevice);
             return true;
         }

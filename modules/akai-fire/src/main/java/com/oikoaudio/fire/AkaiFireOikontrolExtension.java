@@ -923,6 +923,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (inc == 0 || viewControl == null) {
             return;
         }
+        if (activeMode == TopLevelMode.DRUM && shouldAutoPinFirstDrumMachine()) {
+            return;
+        }
         final CursorTrack cursorTrack = viewControl.getCursorTrack();
         final TrackBank trackBank = viewControl.getTrackBank();
         if (trackBank == null) {

@@ -15,10 +15,9 @@ public class NoteRepeatHandler {
 	private final OledDisplay oled;
 	private final BooleanValueObject noteRepeatActive = new BooleanValueObject();
 	private boolean repeatButtonHeld = false;
-	private double currentArpRate = ARP_RATES[1];
 	private static final double[] ARP_RATES = new double[] { 0.125, 0.25, 0.5, 1.0, 1.0 / 12, 1.0 / 6, 1.0 / 3,
 			2.0 / 3 };
-	private static final String[] GRID_RATES_STR = new String[] { "1/32", "1/16", "1/8", "1/4", //
+	private static final String[] GRID_RATES_STR = new String[] { "Off", "1/32", "1/16", "1/8", "1/4", //
 			"1/32T", "1/16T", "1/8T", "1/4T" };
 	private final Arpeggiator arp;
 	private final NoteInput noteInput;
@@ -35,7 +34,7 @@ public class NoteRepeatHandler {
 		this.remotePageSupplier = remotePageSupplier;
 		this.velocitySupplier = velocitySupplier;
 		this.setNoteInputVelocity(velocitySupplier.getAsInt());
-		this.selectedArpIndex = 1;
+		this.selectedArpIndex = 0;
 		arp = noteInput.arpeggiator();
 		arp.usePressureToVelocity().set(true);
 		// arp.shuffle().set(true);
@@ -52,19 +51,12 @@ public class NoteRepeatHandler {
 	}
 
 	public void handlePressed(final boolean pressed) {
-		if (pressed) {
-			oled.valueInfo("Note Repeat",
-					noteRepeatActive.get() ? GRID_RATES_STR[selectedArpIndex] : "Off");
-		} else {
-			noteRepeatActive.toggle();
-			if (noteRepeatActive.get()) {
-				setNoteInputVelocity(velocitySupplier.getAsInt());
-				oled.valueInfo("Note Repeat", GRID_RATES_STR[selectedArpIndex]);
-			} else {
-				oled.valueInfo("Note Repeat", "Off");
-			}
-		}
 		repeatButtonHeld = pressed;
+		if (pressed) {
+			oled.valueInfo("Note Repeat", GRID_RATES_STR[selectedArpIndex]);
+		} else {
+			oled.clearScreenDelayed();
+		}
 	}
 
 	boolean isHolding() {
@@ -94,8 +86,7 @@ public class NoteRepeatHandler {
 		} else {
 			// Regular behavior...
 			final int newValue = selectedArpIndex + inc;
-			if (newValue >= 0 && newValue < ARP_RATES.length) {
-				selectedArpIndex = newValue;
+			if (newValue >= 0 && newValue < GRID_RATES_STR.length) {
 				setNoteRateValue(newValue);
 			}
 		}
@@ -105,19 +96,31 @@ public class NoteRepeatHandler {
 
 	private void setNoteRateValue(final int index) {
 		this.selectedArpIndex = index;
-		this.currentArpRate = ARP_RATES[index];
-		arp.rate().set(currentArpRate);
+		if (index == 0) {
+			noteRepeatActive.set(false);
+			arp.isEnabled().set(false);
+			oled.valueInfo("Note Repeat", "Off");
+			return;
+		}
+		noteRepeatActive.set(true);
+		setNoteInputVelocity(velocitySupplier.getAsInt());
+		arp.isEnabled().set(true);
+		arp.rate().set(ARP_RATES[index - 1]);
 		oled.valueInfo("Note Repeat", GRID_RATES_STR[index]);
 	}
 
 	public void activate() {
-		setNoteInputVelocity(velocitySupplier.getAsInt());
-		arp.isEnabled().set(true);
 		arp.mode().set("all"); // that's the note repeat way
 		arp.octaves().set(0);
 		arp.humanize().set(0);
 		arp.isFreeRunning().set(false);
-		arp.rate().set(currentArpRate);
+		if (noteRepeatActive.get() && selectedArpIndex > 0) {
+			setNoteInputVelocity(velocitySupplier.getAsInt());
+			arp.isEnabled().set(true);
+			arp.rate().set(ARP_RATES[selectedArpIndex - 1]);
+		} else {
+			arp.isEnabled().set(false);
+		}
 	}
 
 	public void deactivate() {
