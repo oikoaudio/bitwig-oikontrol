@@ -619,7 +619,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         if (root) {
-            adjustRoot(amount);
+            adjustTransposeSemitone(amount);
         } else {
             adjustOctave(amount);
         }
@@ -652,10 +652,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
                     : (oikordOctaveOffset < MAX_OIKORD_OCTAVE_OFFSET ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
         }
         if (root) {
-            final int rootNote = getRootNote();
             return amount < 0
-                    ? (rootNote > 0 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
-                    : (rootNote < 11 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+                    ? (transposeBase > MIN_TRANSPOSE ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
+                    : (transposeBase < MAX_TRANSPOSE ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
         }
         return amount < 0
                 ? (getOctave() > MIN_OCTAVE ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
