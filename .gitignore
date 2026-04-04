@@ -1,15 +1,18 @@
 # Gradle / build outputs
-/build/
+build/
 /.gradle/
+/bin
 
 # IDE clutter
 .DS_Store
 /.idea/
 /.vscode/
+.codex
 
 # Local test artifacts
 *.bwextension
 
 # api documentation and implementation notes used during development
 /doc/dev
+/doc/dev/
 /ref/

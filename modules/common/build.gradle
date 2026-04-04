@@ -1,0 +1,15 @@
+plugins {
+    id 'java-library'
+}
+
+version = '2.0.0'
+
+java {
+    withSourcesJar()
+}
+
+dependencies {
+    api 'com.bitwig:extension-api:24'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+}
