@@ -438,12 +438,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (activeMode == TopLevelMode.NOTE) {
-            if (noteMode.isNoteStepActive()) {
-                noteMode.returnToLivePlayFromStepMode();
-                oled.valueInfo("Mode", "Note");
-                return;
+            if (isGlobalAltHeld()) {
+                noteMode.toggleCurrentSurfaceVariant();
+            } else {
+                noteMode.togglePrimarySurface();
             }
-            noteMode.cycleLayout();
             return;
         }
         activeMode = TopLevelMode.NOTE;

@@ -469,25 +469,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
-        if (!pressed) {
-            return;
-        }
-        if (driver.isGlobalShiftHeld()) {
-            currentStepSubMode = currentStepSubMode.next();
-            noteStepActive = true;
-            enterCurrentStepSubMode();
-            oled.valueInfo("Step Mode", currentStepSubMode.displayName());
-            return;
-        }
-        if (noteStepActive) {
-            if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-                toggleOikordInterpretation();
-            } else {
-                oled.valueInfo("Step Mode", currentStepSubMode.displayName());
-            }
-        } else {
-            noteStepActive = true;
-            enterCurrentStepSubMode();
+        if (pressed) {
+            oled.valueInfo("Step Seq", "Reserved");
         }
     }
 
@@ -883,7 +866,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private BiColorLightState getStepSeqLightState() {
-        return noteStepActive ? currentStepSubMode.activeLight() : currentStepSubMode.idleLight();
+        return BiColorLightState.OFF;
     }
 
     private void toggleLayout() {
@@ -896,21 +879,33 @@ public class NoteMode extends Layer implements StepSequencerHost {
         showState("Layout");
     }
 
-    public void cycleLayout() {
+    public void togglePrimarySurface() {
+        if (noteStepActive) {
+            returnToLivePlay();
+            oled.valueInfo("Mode", "Note");
+            return;
+        }
+        currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
+        noteStepActive = true;
+        enterCurrentStepSubMode();
+    }
+
+    public void toggleCurrentSurfaceVariant() {
+        if (noteStepActive) {
+            if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
+                toggleOikordInterpretation();
+            } else {
+                oled.valueInfo("Step Mode", currentStepSubMode.displayName());
+            }
+            return;
+        }
         toggleLayout();
     }
 
-    public boolean isNoteStepActive() {
-        return noteStepActive;
-    }
-
-    public void returnToLivePlayFromStepMode() {
-        if (noteStepActive) {
-            returnToLivePlay();
-        }
-    }
-
     public BiColorLightState getModeButtonLightState() {
+        if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
+            return BiColorLightState.GREEN_FULL;
+        }
         return inKey ? BiColorLightState.RED_FULL : BiColorLightState.AMBER_FULL;
     }
 
