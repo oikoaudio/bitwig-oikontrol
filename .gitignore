@@ -13,4 +13,5 @@ build/
 
 # api documentation and implementation notes used during development
 /doc/dev
+/doc/dev/
 /ref/

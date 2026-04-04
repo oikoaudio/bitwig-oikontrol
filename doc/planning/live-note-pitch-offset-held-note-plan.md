@@ -40,8 +40,8 @@ stable record of what note each held pad originally emitted. The result is:
 - old notes may be dropped when the translation table changes
 - retuning held notes cannot be done deterministically
 
-There is already a hint of the correct direction in
-[`NoteMode.java`](/home/davfre/d/prj/df/audio/bitwig/bitwig-oikontrol/modules/akai-fire/src/main/java/com/oikoaudio/fire/note/NoteMode.java):
+There is already a hint of the correct direction in `NoteMode.java`
+(`modules/akai-fire/src/main/java/com/oikoaudio/fire/note/NoteMode.java`):
 
 - `soundingLiveNotesByPad` exists, but it is not yet the source of truth
 
