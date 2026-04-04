@@ -80,6 +80,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue auditionOnDrumSelectPref;
     private SettableBooleanValue auditionOikordsPref;
+    private String tempoDisplayValue = "";
+    private boolean tempoDisplayPending = false;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -262,6 +264,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void setUpTransportControl() {
         transport.isPlaying().markInterested();
         transport.tempo().markInterested();
+        transport.tempo().name().markInterested();
+        transport.tempo().value().markInterested();
+        transport.tempo().value().displayedValue().markInterested();
+        transport.tempo().value().displayedValue().addValueObserver(value -> {
+            tempoDisplayValue = value;
+            if (tempoDisplayPending) {
+                oled.valueInfo("Tempo", tempoDisplayValue);
+                tempoDisplayPending = false;
+            }
+        });
         transport.playPosition().markInterested();
         transport.isClipLauncherOverdubEnabled().markInterested();
         transport.isMetronomeEnabled().markInterested();
@@ -427,7 +439,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (isGlobalShiftHeld()) {
             transport.tapTempo();
-            oled.valueInfo("Tempo", transport.tempo().displayedValue().get());
+            tempoDisplayPending = true;
             return;
         }
         if (activeMode == TopLevelMode.DRUM) {
@@ -714,12 +726,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (inc == 0) {
             return;
         }
-        transport.tempo().inc(inc * (fine ? MAIN_ENCODER_FINE_STEP : MAIN_ENCODER_STEP));
-        oled.valueInfo("Tempo", transport.tempo().displayedValue().get());
+        tempoDisplayPending = true;
+        transport.tempo().incRaw(inc * (fine ? 0.1 : 1.0));
     }
 
     public void showTempoInfo() {
-        oled.valueInfo("Tempo", transport.tempo().displayedValue().get());
+        oled.valueInfo("Tempo", tempoDisplayValue);
     }
 
     public void toggleGrooveEnabled() {
