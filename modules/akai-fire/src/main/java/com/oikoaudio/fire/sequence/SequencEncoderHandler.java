@@ -7,38 +7,27 @@ import java.util.Map;
 import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.utils.PatternButtons;
-import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 
 public class SequencEncoderHandler extends Layer {
-
-private final static String[] mixerParamNames = { "Volume", "Panning", "Send 1", "Send 2" };
-private final static String[] user2ParamNames = { "LEN", "PULS", "ROT", "INV/PULS" };
-private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "INV/PULS" };
-
-	private final DrumSequenceMode parent;
+    private final StepSequencerHost parent;
 
 	private EncoderMode encoderMode = EncoderMode.CHANNEL;
 	private final Layer channelLayer;
 	private final Layer mixerLayer;
-	private final Layer mixerShiftLayer;
 	private final Layer user1Layer;
 	private final Layer user2Layer;
-	private final Layer user2ShiftLayer;
-	private EuclidAdjuster euclidAdjuster;
 
 	private Layer currentLayer;
 	private final OledDisplay oled;
 	private final Map<EncoderMode, Layer> modeMapping = new HashMap<>();
 	private final TouchEncoder[] encoders;
-
-	private final PadHandler padHandler;
 
 	@FunctionalInterface
 	interface NoteDoubleGetter {
@@ -60,25 +49,21 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 		void set(NoteStep step, int value);
 	}
 
-	public SequencEncoderHandler(final DrumSequenceMode drumMode, final AkaiFireDrumSeqExtension driver,
-                                 final PadHandler padHandler) {
+	public SequencEncoderHandler(final StepSequencerHost host, final AkaiFireDrumSeqExtension driver) {
 		super(driver.getLayers(), "Encoder_layer");
-		this.parent = drumMode;
+		this.parent = host;
         this.oled = driver.getOled();
-		this.padHandler = padHandler;
 		channelLayer = new Layer(driver.getLayers(), "ENC_CHANNEL_LAYER");
 		mixerLayer = new Layer(driver.getLayers(), "ENC_MIXER_LAYER");
-		mixerShiftLayer = new Layer(driver.getLayers(), "ENC_SHIFT_MIXER_LAYER");
 		user1Layer = new Layer(driver.getLayers(), "ENC_USER1_LAYER");
 		user2Layer = new Layer(driver.getLayers(), "ENC_USER2_LAYER");
-		user2ShiftLayer = new Layer(driver.getLayers(), "ENC_USER2SHIFT_LAYER");
 		encoders = driver.getEncoders();
 		assign(EncoderMode.CHANNEL, channelLayer, encoders);
-		assignPadParams(EncoderMode.MIXER, mixerLayer, encoders);
-		assign(EncoderMode.MIXER_SHIFT, mixerShiftLayer, encoders);
+        modeMapping.put(EncoderMode.MIXER, mixerLayer);
+        parent.bindMixerPage(this, mixerLayer, encoders);
 		assign(EncoderMode.USER_1, user1Layer, encoders);
-		assignUser2Params(EncoderMode.USER_2, user2Layer, encoders);
-		assignUser2ShiftParams(EncoderMode.USER_2_SHIFT, user2ShiftLayer, encoders);
+        modeMapping.put(EncoderMode.USER_2, user2Layer);
+        parent.bindUser2Page(this, user2Layer, encoders);
 		currentLayer = channelLayer;
 		final BiColorButton modeButon = driver.getButton(NoteAssign.KNOB_MODE);
 		modeButon.bindPressed(this, this::handleModeAdvance, this::modeToLight);
@@ -91,40 +76,15 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 		final EncoderAccess[] assignments = mode.getAssignments();
 		for (int i = 0; i < assignments.length; i++) {
 			if (assignments[i] instanceof NoteStepAccess) {
-				bindEncoder(layer, encoders[i], (NoteStepAccess) assignments[i]);
+				bindNoteAccess(layer, encoders[i], (NoteStepAccess) assignments[i]);
 			}
-		}
-	}
-
-	private void assignPadParams(final EncoderMode mode, final Layer layer, final TouchEncoder[] encoders) {
-		modeMapping.put(mode, layer);
-		for (int i = 0; i < encoders.length; i++) {
-			bindPadEncoder(i, layer, encoders[i], mixerParamNames[i]);
-		}
-	}
-
-	private void assignUser2Params(final EncoderMode mode, final Layer layer, final TouchEncoder[] encoders) {
-		modeMapping.put(mode, layer);
-		for (int i = 0; i < encoders.length; i++) {
-			final int index = i;
-			encoders[i].setStepSize(0.1);
-			encoders[i].bindEncoder(layer, inc -> handleEuclid(index, inc));
-		}
-	}
-
-	private void assignUser2ShiftParams(final EncoderMode mode, final Layer layer, final TouchEncoder[] encoders) {
-		modeMapping.put(mode, layer);
-		for (int i = 0; i < encoders.length; i++) {
-			final int index = i;
-			encoders[i].setStepSize(0.1);
-			encoders[i].bindEncoder(layer, inc -> handleEuclidShift(index, inc));
 		}
 	}
 
 	public EncoderMode nextMode() {
 		if (encoderMode == EncoderMode.CHANNEL) {
 			return EncoderMode.MIXER;
-		} else if (encoderMode == EncoderMode.MIXER || encoderMode == EncoderMode.MIXER_SHIFT) {
+		} else if (encoderMode == EncoderMode.MIXER) {
 			return EncoderMode.USER_1;
 		} else if (encoderMode == EncoderMode.USER_1) {
 			return EncoderMode.USER_2;
@@ -133,70 +93,25 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 	}
 
 	public void toggleShiftForCurrentMode() {
-		switch (encoderMode) {
-			case MIXER:
-				switchMode(EncoderMode.MIXER_SHIFT);
-				break;
-			case MIXER_SHIFT:
-				switchMode(EncoderMode.MIXER);
-				break;
-			case USER_2:
-				switchMode(EncoderMode.USER_2_SHIFT);
-				break;
-			case USER_2_SHIFT:
-				switchMode(EncoderMode.USER_2);
-				break;
-			default:
-				// For modes that don't have a shift variant, do nothing or add custom behavior
-				break;
-		}
+        // No alternate page variants in the shared step-page model.
 	}
 
-	private void handleEuclid(final int index, final int inc) {
-		if (euclidAdjuster != null) {
-			euclidAdjuster.adjust(index, inc);
-		}
-	}
-
-	private void handleEuclidShift(final int index, final int inc) {
-		if (euclidAdjuster != null) {
-			euclidAdjuster.adjustShift(index, inc);
-		}
-	}
-
-	public interface EuclidAdjuster {
-		void adjust(int index, int inc);
-		void adjustShift(int index, int inc);
-	}
-
-	public void setEuclidAdjuster(EuclidAdjuster adjuster) {
-		this.euclidAdjuster = adjuster;
-	}
-
-
-	private void bindEncoder(final Layer layer, final TouchEncoder encoder, final NoteStepAccess access) {
-		encoder.bindEncoder(layer, inc -> handleMod(inc, access));
-		encoder.bindTouched(layer, touched -> handleTouch(touched, access));
-	}
-
-	private void bindPadEncoder(final int index, final Layer layer, final TouchEncoder encoder,
-			final String parameterName) {
-		encoder.bindEncoder(layer, inc -> handleParam(index, inc));
-		encoder.bindTouched(layer, touched -> handleTouchParam(index, touched, parameterName));
-		padHandler.bindPadParameters(layer);
-	}
-
-	private void handleTouchParam(final int index, final Boolean touched, final String parameterName) {
-		if (touched) {
-			padHandler.activateView(index, parameterName);
-			padHandler.updateDisplay(index);
-		} else {
-			padHandler.deactivateView();
-		}
-	}
-
-	private void handleParam(final int index, final int inc) {
-		padHandler.modifyValue(index, inc);
+	public void bindNoteAccess(final Layer layer, final TouchEncoder encoder, final NoteStepAccess access) {
+        final EncoderStepAccumulator accumulator = access.getStepThreshold() > 1
+                ? new EncoderStepAccumulator(access.getStepThreshold())
+                : null;
+		encoder.bindEncoder(layer, inc -> {
+            final int effectiveInc = accumulator != null ? accumulator.consume(inc) : inc;
+            if (effectiveInc != 0) {
+                handleMod(effectiveInc, access);
+            }
+        });
+		encoder.bindTouched(layer, touched -> {
+            if (!touched && accumulator != null) {
+                accumulator.reset();
+            }
+            handleTouch(touched, access);
+        });
 	}
 
 	private void handleModeAdvance(final boolean pressed) {
@@ -205,15 +120,7 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 			return;
 		}
 		if (parent.isSelectHeld()) { // display encoder details on select + mode
-			String infoToDisplay;
-			// For USER_2 modes, get the dynamic info from the remote controls page.
-			if (encoderMode == EncoderMode.USER_2 || encoderMode == EncoderMode.USER_2_SHIFT) {
-				CursorRemoteControlsPage remotePage = parent.getActiveRemoteControlsPage();
-				infoToDisplay = encoderMode.getDynamicInfo(remotePage);
-			} else {
-				infoToDisplay = encoderMode.getInfo();
-			}
-			oled.detailInfo("Encoder Mode", infoToDisplay);
+			oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
 		} else {
 			switchMode(nextMode());
 		}
@@ -226,16 +133,7 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 		currentLayer = modeMapping.get(encoderMode);
 		currentLayer.activate();
 		applyResolution(encoderMode);
-
-		String infoToDisplay;
-		if (encoderMode == EncoderMode.USER_2 || encoderMode == EncoderMode.USER_2_SHIFT) {
-			// Fetch dynamic parameter names from the active remote controls page.
-			CursorRemoteControlsPage remotePage = parent.getActiveRemoteControlsPage();
-			infoToDisplay = encoderMode.getDynamicInfo(remotePage);
-		} else {
-			infoToDisplay = encoderMode.getInfo();
-		}
-		oled.detailInfo("Encoder Mode", infoToDisplay);
+		oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
 		oled.clearScreenDelayed();
 	}
 
@@ -391,7 +289,11 @@ private final static String[] user2ShiftParamNames = { "LEN", "PULS", "ROT", "IN
 			accessor.applyReset(parent.getOnNotes());
 			oled.paramInfo("Reset:" + accessor.getName(), parent.getPadInfo());
 		} else if (heldNotes.isEmpty()) {
-			oled.paramInfo(accessor.getName(), parent.getPadInfo());
+            if (accessor.getUnit() == NoteValueUnit.OCCURENCE || accessor.getUnit() == NoteValueUnit.RECURRENCE) {
+                oled.valueInfo(accessor.getName(), "Hold Step");
+            } else {
+			    oled.paramInfo(accessor.getName(), parent.getPadInfo());
+            }
 		} else {
 			final NoteStep note = heldNotes.get(0);
 			final String details = parent.getDetails(heldNotes);

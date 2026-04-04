@@ -4,6 +4,7 @@ import com.oikoaudio.fire.AkaiFireDrumSeqExtension;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -19,7 +20,7 @@ import com.bitwig.extensions.framework.values.StepViewPosition;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class DrumSequenceMode extends Layer {
+public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private final ControllerHost host;
     private final AkaiFireDrumSeqExtension driver;
     private Application app;
@@ -87,6 +88,10 @@ public class DrumSequenceMode extends Layer {
     private boolean pendingBankWasAlt = false;
     private boolean mainEncoderPressConsumed = false;
     private CursorRemoteControlsPage activeRemoteControlsPage;
+    private final EncoderStepAccumulator euclidLengthEncoder = new EncoderStepAccumulator(3);
+    private final EncoderStepAccumulator euclidPulsesEncoder = new EncoderStepAccumulator(3);
+    private final EncoderStepAccumulator euclidRotationEncoder = new EncoderStepAccumulator(3);
+    private final EncoderStepAccumulator euclidAccentEncoder = new EncoderStepAccumulator(3);
 
 
     public DrumSequenceMode(final AkaiFireDrumSeqExtension driver, final NoteRepeatHandler noteRepeatHandler) {
@@ -135,18 +140,7 @@ public class DrumSequenceMode extends Layer {
         initSequenceSection(driver);
         initModeButtons(driver);
         initButtonBehaviour(driver);
-        encoderLayer = new SequencEncoderHandler(this, driver, padHandler);
-        encoderLayer.setEuclidAdjuster(new SequencEncoderHandler.EuclidAdjuster() {
-            @Override
-            public void adjust(int index, int inc) {
-                handleEuclidAdjust(index, inc, false);
-            }
-
-            @Override
-            public void adjustShift(int index, int inc) {
-                handleEuclidAdjust(index, inc, true);
-            }
-        });
+        encoderLayer = new SequencEncoderHandler(this, driver);
 
         muteMode.addValueObserver(active -> {
             if (active) {
@@ -637,20 +631,25 @@ public class DrumSequenceMode extends Layer {
         return oled;
     }
 
-    private void handleEuclidAdjust(int index, int inc, boolean shift) {
+    private void handleEuclidAdjust(int index, int inc) {
+        final int oldLength = euclidState.getLength();
+        final int oldPulses = euclidState.getPulses();
+        final int oldRotation = euclidState.getRotation();
+        final int oldAccentPulses = euclidState.getAccentPulses();
         switch (index) {
             case 0 -> euclidState.incLength(inc);
             case 1 -> euclidState.incPulses(inc);
             case 2 -> euclidState.incRotation(inc);
-            case 3 -> {
-                if (shift) {
-                    euclidState.incPulses(inc);
-                } else {
-                    euclidState.toggleInvert();
-                }
-            }
+            case 3 -> euclidState.incAccentPulses(inc);
             default -> {
             }
+        }
+        if ((index == 0 || index == 1 || index == 2 || index == 3)
+                && (oldLength != euclidState.getLength()
+                || oldPulses != euclidState.getPulses()
+                || oldRotation != euclidState.getRotation()
+                || oldAccentPulses != euclidState.getAccentPulses())) {
+            applyEuclid(true);
         }
         oled.paramInfo(valueForIndex(index), infoForIndex(index));
     }
@@ -660,7 +659,7 @@ public class DrumSequenceMode extends Layer {
             case 0 -> "LEN";
             case 1 -> "PULS";
             case 2 -> "ROT";
-            case 3 -> "INV";
+            case 3 -> "ACC";
             default -> "";
         };
     }
@@ -670,40 +669,158 @@ public class DrumSequenceMode extends Layer {
             case 0 -> String.valueOf(euclidState.getLength());
             case 1 -> String.valueOf(euclidState.getPulses());
             case 2 -> String.valueOf(euclidState.getRotation());
-            case 3 -> euclidState.isInverted() ? "ON" : "OFF";
+            case 3 -> String.valueOf(euclidState.getAccentPulses());
             default -> "";
         };
     }
 
+    private void handleOccurrenceAdjust(final int inc) {
+        final List<NoteStep> heldNotes = getHeldNotes();
+        if (heldNotes.isEmpty()) {
+            return;
+        }
+        final NoteOccurrence[] values = NoteOccurrence.values();
+        for (final NoteStep note : heldNotes) {
+            final NoteOccurrence current = note.occurrence();
+            int currentIndex = -1;
+            for (int i = 0; i < values.length; i++) {
+                if (values[i] == current) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+            final int nextIndex = Math.max(0, Math.min(values.length - 1, currentIndex + inc));
+            note.setOccurrence(values[nextIndex]);
+        }
+        registerModifiedSteps(heldNotes);
+    }
+
+    private String currentOccurrenceValue() {
+        final List<NoteStep> heldNotes = getHeldNotes();
+        if (heldNotes.isEmpty()) {
+            return "-";
+        }
+        return heldNotes.get(0).occurrence().toString().replace("_", " ");
+    }
+
     public void applyEuclid(boolean clearFirst) {
+        if (driver.isEuclidFullClipEnabled()) {
+            applyEuclidFullClip();
+        } else {
+            applyEuclidVisiblePage();
+        }
+    }
+
+    private void applyEuclidVisiblePage() {
         int padMidi = padHandler.getSelectedPadMidi();
         if (padMidi < 0) {
             return;
         }
-        int available = positionHandler.getAvailableSteps();
+        final int available = positionHandler.getAvailableSteps();
         if (available <= 0) {
             return;
         }
         int patternLen = Math.max(1, Math.min(euclidState.getLength(), available));
         boolean[] pattern = EuclidUtil.build(patternLen, Math.min(euclidState.getPulses(), patternLen));
         pattern = EuclidUtil.rotate(pattern, euclidState.getRotation());
+        final boolean[] accentPattern = buildAccentPattern(pattern, patternLen);
         if (euclidState.isInverted()) {
             for (int i = 0; i < pattern.length; i++) {
                 pattern[i] = !pattern[i];
             }
         }
-        // Always clear the target lane before writing to avoid stale notes/zero-duration artifacts.
-        cursorClip.clearStepsAtY(0, 0);
         final double grid = positionHandler.getGridResolution();
         final double gateBase = grid > 0 ? grid * 0.48 : FINE_STEP_SIZE;
         final double gate = Math.max(gateBase, 1.0 / 256.0);
+        cursorClip.clearStepsAtY(0, 0);
         for (int i = 0; i < available; i++) {
             if (pattern[i % patternLen]) {
-                cursorClip.setStep(i, 0, accentHandler.getCurrenVel(), gate);
+                final int velocity = accentPattern[i % patternLen]
+                        ? accentHandler.getAccentedVelocity()
+                        : accentHandler.getStandardVelocity();
+                cursorClip.setStep(i, 0, velocity, gate);
             }
         }
-        oled.detailInfo("EUCLID", "Applied");
+        oled.detailInfo("EUCLID", "Applied Page");
         oled.clearScreenDelayed();
+    }
+
+    private void applyEuclidFullClip() {
+        int padMidi = padHandler.getSelectedPadMidi();
+        if (padMidi < 0) {
+            return;
+        }
+        final int totalSteps = positionHandler.getSteps();
+        if (totalSteps <= 0) {
+            return;
+        }
+        int patternLen = Math.max(1, Math.min(euclidState.getLength(), totalSteps));
+        boolean[] pattern = EuclidUtil.build(patternLen, Math.min(euclidState.getPulses(), patternLen));
+        pattern = EuclidUtil.rotate(pattern, euclidState.getRotation());
+        final List<Integer> activeSteps = new ArrayList<>();
+        for (int i = 0; i < patternLen; i++) {
+            if (pattern[i]) {
+                activeSteps.add(i);
+            }
+        }
+        final boolean[] accentPattern = new boolean[patternLen];
+        final int accentCount = Math.min(euclidState.getAccentPulses(), activeSteps.size());
+        if (accentCount > 0 && !activeSteps.isEmpty()) {
+            final boolean[] accentSubset = EuclidUtil.build(activeSteps.size(), accentCount);
+            for (int i = 0; i < activeSteps.size(); i++) {
+                if (accentSubset[i]) {
+                    accentPattern[activeSteps.get(i)] = true;
+                }
+            }
+        }
+        if (euclidState.isInverted()) {
+            for (int i = 0; i < pattern.length; i++) {
+                pattern[i] = !pattern[i];
+            }
+        }
+        final double grid = positionHandler.getGridResolution();
+        final double gateBase = grid > 0 ? grid * 0.48 : FINE_STEP_SIZE;
+        final double gate = Math.max(gateBase, 1.0 / 256.0);
+        final int originalPage = positionHandler.getCurrentPage();
+        final int pages = positionHandler.getPages();
+        cursorClip.clearStepsAtY(0, 0);
+        for (int page = 0; page < pages; page++) {
+            cursorClip.scrollToStep(page * 32);
+            final int pageStart = page * 32;
+            final int pageSteps = Math.min(32, Math.max(0, totalSteps - pageStart));
+            for (int localIndex = 0; localIndex < pageSteps; localIndex++) {
+                final int globalIndex = pageStart + localIndex;
+                if (pattern[globalIndex % patternLen]) {
+                    final int velocity = accentPattern[globalIndex % patternLen]
+                            ? accentHandler.getAccentedVelocity()
+                            : accentHandler.getStandardVelocity();
+                    cursorClip.setStep(localIndex, 0, velocity, gate);
+                }
+            }
+        }
+        cursorClip.scrollToStep(originalPage * 32);
+        oled.detailInfo("EUCLID", "Applied Full Clip");
+        oled.clearScreenDelayed();
+    }
+
+    private boolean[] buildAccentPattern(final boolean[] pattern, final int patternLen) {
+        final List<Integer> activeSteps = new ArrayList<>();
+        for (int i = 0; i < patternLen; i++) {
+            if (pattern[i]) {
+                activeSteps.add(i);
+            }
+        }
+        final boolean[] accentPattern = new boolean[patternLen];
+        final int accentCount = Math.min(euclidState.getAccentPulses(), activeSteps.size());
+        if (accentCount > 0 && !activeSteps.isEmpty()) {
+            final boolean[] accentSubset = EuclidUtil.build(activeSteps.size(), accentCount);
+            for (int i = 0; i < activeSteps.size(); i++) {
+                if (accentSubset[i]) {
+                    accentPattern[activeSteps.get(i)] = true;
+                }
+            }
+        }
+        return accentPattern;
     }
     private void bindEditButton(final BiColorButton button, final String name, final BooleanValueObject value,
                                 final MultiStateHardwareLight stateLight, final BooleanValueObject altValue,
@@ -789,11 +906,13 @@ public class DrumSequenceMode extends Layer {
         }
     }
 
-    double getGridResolution() {
+    @Override
+    public double getGridResolution() {
         return positionHandler.getGridResolution();
     }
 
-    String getDetails(final List<NoteStep> heldNotes) {
+    @Override
+    public String getDetails(final List<NoteStep> heldNotes) {
         return getPadInfo() + " <" + heldNotes.size() + ">";
     }
 
@@ -801,7 +920,8 @@ public class DrumSequenceMode extends Layer {
         notes.forEach(s -> modifiedSteps.add(s.x()));
     }
 
-    List<NoteStep> getHeldNotes() {
+    @Override
+    public List<NoteStep> getHeldNotes() {
         return heldSteps.stream()
                 // Only use indices within 0 to 31.
                 .filter(idx -> idx >= 0 && idx <= 31)
@@ -810,7 +930,8 @@ public class DrumSequenceMode extends Layer {
                 .collect(Collectors.toList());
     }
 
-    List<NoteStep> getOnNotes() {
+    @Override
+    public List<NoteStep> getOnNotes() {
         return Arrays.stream(assignments)
                 .filter(ns -> ns != null && ns.state() == State.NoteOn)
                 .collect(Collectors.toList());
@@ -934,7 +1055,8 @@ public class DrumSequenceMode extends Layer {
         return deleteHeld.get();
     }
 
-    boolean isSelectHeld() {
+    @Override
+    public boolean isSelectHeld() {
         return selectHeld.get();
     }
 
@@ -990,6 +1112,84 @@ public class DrumSequenceMode extends Layer {
 
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
         return activeRemoteControlsPage;
+    }
+
+    @Override
+    public void bindMixerPage(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
+        final String[] mixerParamNames = {"Volume", "Panning", "Send 1", "Send 2"};
+        for (int i = 0; i < encoders.length; i++) {
+            final int index = i;
+            final String name = mixerParamNames[i];
+            encoders[i].bindEncoder(layer, inc -> padHandler.modifyValue(index, inc));
+            encoders[i].bindTouched(layer, touched -> {
+                if (touched) {
+                    padHandler.activateView(index, name);
+                    padHandler.updateDisplay(index);
+                } else {
+                    padHandler.deactivateView();
+                }
+            });
+        }
+        padHandler.bindPadParameters(layer);
+    }
+
+    @Override
+    public void bindUser2Page(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
+        encoders[0].setStepSize(0.1);
+        encoders[1].setStepSize(0.1);
+        encoders[0].bindEncoder(layer, inc -> {
+            final int effective = euclidLengthEncoder.consume(inc);
+            if (effective != 0) {
+                handleEuclidAdjust(0, effective);
+            }
+        });
+        encoders[1].bindEncoder(layer, inc -> {
+            final int effective = euclidPulsesEncoder.consume(inc);
+            if (effective != 0) {
+                handleEuclidAdjust(1, effective);
+            }
+        });
+        encoders[2].bindEncoder(layer, inc -> {
+            final int effective = euclidRotationEncoder.consume(inc);
+            if (effective != 0) {
+                handleEuclidAdjust(2, effective);
+            }
+        });
+        encoders[0].bindTouched(layer, touched -> handleUser2Touch(touched, 0));
+        encoders[1].bindTouched(layer, touched -> handleUser2Touch(touched, 1));
+        encoders[2].bindTouched(layer, touched -> handleUser2Touch(touched, 2));
+        encoders[3].bindEncoder(layer, inc -> {
+            final int effective = euclidAccentEncoder.consume(inc);
+            if (effective != 0) {
+                handleEuclidAdjust(3, effective);
+            }
+        });
+        encoders[3].bindTouched(layer, touched -> handleUser2Touch(touched, 3));
+    }
+
+    private void handleUser2Touch(final boolean touched, final int index) {
+        if (!touched) {
+            if (index == 0) {
+                euclidLengthEncoder.reset();
+            } else if (index == 1) {
+                euclidPulsesEncoder.reset();
+            } else if (index == 2) {
+                euclidRotationEncoder.reset();
+            } else if (index == 3) {
+                euclidAccentEncoder.reset();
+            }
+            oled.clearScreenDelayed();
+            return;
+        }
+        oled.valueInfo(infoForIndex(index), valueForIndex(index));
+    }
+
+    @Override
+    public String getModeInfo(final EncoderMode mode) {
+        if (mode == EncoderMode.USER_2) {
+            return "1: Euclid Len\n2: Euclid Pulses\n3: Euclid Rotation\n4: Accent Density";
+        }
+        return StepSequencerHost.super.getModeInfo(mode);
     }
 
     private void handleStepSeqPressed(final boolean pressed) {

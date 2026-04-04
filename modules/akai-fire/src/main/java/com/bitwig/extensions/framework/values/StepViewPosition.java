@@ -66,7 +66,7 @@ public class StepViewPosition {
     }
     
     public int getAvailableSteps() {
-        return Math.max(0, steps - pagePosition * stepsPerPage);
+        return Math.min(stepsPerPage, Math.max(0, steps - pagePosition * stepsPerPage));
     }
     
     public int getPages() {

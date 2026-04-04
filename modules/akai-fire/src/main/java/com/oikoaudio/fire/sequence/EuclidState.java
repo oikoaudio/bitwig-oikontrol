@@ -4,6 +4,7 @@ class EuclidState {
     private int length = 16;
     private int pulses = 4;
     private int rotation = 0;
+    private int accentPulses = 0;
     private boolean inverted = false;
 
     int getLength() {
@@ -18,6 +19,10 @@ class EuclidState {
         return rotation;
     }
 
+    int getAccentPulses() {
+        return accentPulses;
+    }
+
     boolean isInverted() {
         return inverted;
     }
@@ -30,6 +35,7 @@ class EuclidState {
 
     void incPulses(int delta) {
         pulses = Math.max(0, Math.min(length, pulses + delta));
+        accentPulses = Math.min(accentPulses, pulses);
     }
 
     void incRotation(int delta) {
@@ -38,6 +44,10 @@ class EuclidState {
             return;
         }
         rotation = ((rotation + delta) % length + length) % length;
+    }
+
+    void incAccentPulses(int delta) {
+        accentPulses = Math.max(0, Math.min(pulses, accentPulses + delta));
     }
 
     void toggleInvert() {

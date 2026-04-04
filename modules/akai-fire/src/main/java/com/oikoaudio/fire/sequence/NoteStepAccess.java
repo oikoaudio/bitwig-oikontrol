@@ -12,41 +12,41 @@ public enum NoteStepAccess implements EncoderAccess {
 
 	VELOCITY("Velocity", ns -> ns.velocity(), //
 			(final NoteStep ns, final double v) -> ns.setVelocity(v), //
-			NoteValueUnit.MIDI, 0, 127, 1, 0.25), //
+			NoteValueUnit.MIDI, 0, 127, 1, 0.25, 1), //
 	CHANCE("Chance", ns -> ns.chance(), //
 			(final NoteStep ns, final double v) -> ns.setChance(v), //
-			NoteValueUnit.PERCENT, 0, 1, 0.05, 1, 1.0),
+			NoteValueUnit.PERCENT, 0, 1, 0.05, 1, 1.0, 1),
 	REPEATS("Repeats", ns -> ns.repeatCount(), //
 			(final NoteStep ns, final int v) -> ns.setRepeatCount(v), //
-			NoteValueUnit.NONE, 0, 16, 1, 2, 0.0),
+			NoteValueUnit.NONE, 0, 16, 1, 2, 0.0, 3),
 	TIMBRE("Timbre", ns -> ns.timbre(), //
 			(final NoteStep ns, final double v) -> ns.setTimbre(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0),
+			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
 	VELOCITY_SPREAD("Vel.Spread", ns -> ns.velocitySpread(), //
 			(final NoteStep ns, final double v) -> ns.setVelocitySpread(v), //
-			NoteValueUnit.PERCENT, 0, 1, 0.01, 0.25, 0.0),
+			NoteValueUnit.PERCENT, 0, 1, 0.01, 0.25, 0.0, 1),
 	PRESSURE("Pressure", ns -> ns.pressure(), //
 			(final NoteStep ns, final double v) -> ns.setPressure(v), //
-			NoteValueUnit.PERCENT, 0, 1, 0.01, 0.25),
+			NoteValueUnit.PERCENT, 0, 1, 0.01, 0.25, 1),
 	DURATION("N.Length", ns -> ns.duration(), //
 			(final NoteStep ns, final double v) -> ns.setDuration(v), //
-			NoteValueUnit.NOTE_LEN, 0, 1, 0.01, 0.5),
-	OCCURENCE("IF:", NoteValueUnit.OCCURENCE, 1, 4), //
-	RECURRENCE("Recurr.len", ns -> ns.recurrenceLength(), //
+			NoteValueUnit.NOTE_LEN, 0, 1, 0.01, 0.5, 2),
+	OCCURENCE("Occurence", NoteValueUnit.OCCURENCE, 1, 4, 2), //
+	RECURRENCE("Recurrence", ns -> ns.recurrenceLength(), //
 			(final NoteStep ns, final int v) -> ns.setRecurrence(v, ns.recurrenceMask()), //
-			NoteValueUnit.RECURRENCE, 1, 8, 1, 2, 0.0),
+			NoteValueUnit.RECURRENCE, 1, 8, 1, 2, 0.0, 2),
 	REPEATCURVE("Repeat Curve", ns -> ns.repeatCurve(), //
 			(final NoteStep ns, final double v) -> ns.setRepeatCurve(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0),
+			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
 	REPEAT_VEL_CRV("Rpt.Vel.Crv", ns -> ns.repeatVelocityCurve(), //
 			(final NoteStep ns, final double v) -> ns.setRepeatVelocityCurve(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0),
+			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
 	REPEAT_VEL_END("Rpt.Vel.End", ns -> ns.repeatVelocityEnd(), //
 			(final NoteStep ns, final double v) -> ns.setRepeatVelocityEnd(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0),
+			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
 	PITCH("Pitch", ns -> ns.transpose(), //
 			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
-			NoteValueUnit.PERCENT, -96, 96, 1, 1, 0.0);
+			NoteValueUnit.PERCENT, -96, 96, 1, 1, 0.0, 2);
 
 //	TRANSPOSE("Transpose", ns -> ns.transpose(), //
 //			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
@@ -63,33 +63,37 @@ public enum NoteStepAccess implements EncoderAccess {
 	private final double incStep;
 	private final double resolution;
 	private final Double resetValue;
+    private final int stepThreshold;
 
 	NoteStepAccess(final String name, final NoteValueUnit unit, final double increment,
-			final double encoderResolution) {
-		this(name, null, null, null, null, unit, 0.0, 1.0, increment, encoderResolution, null);
+			final double encoderResolution, final int stepThreshold) {
+		this(name, null, null, null, null, unit, 0.0, 1.0, increment, encoderResolution, null, stepThreshold);
 	}
 
 	NoteStepAccess(final String name, final NoteDoubleGetter getterDoubl, final NoteDoubleSetter setterDoubl,
 			final NoteValueUnit unit, final double min, final double max, final double increment,
-			final double encoderResolution) {
-		this(name, getterDoubl, setterDoubl, unit, min, max, increment, encoderResolution, null);
+			final double encoderResolution, final int stepThreshold) {
+		this(name, getterDoubl, setterDoubl, unit, min, max, increment, encoderResolution, null, stepThreshold);
 	}
 
 	NoteStepAccess(final String name, final NoteDoubleGetter getterDoubl, final NoteDoubleSetter setterDoubl,
 			final NoteValueUnit unit, final double min, final double max, final double increment,
-			final double encoderResolution, final Double resetValue) {
-		this(name, getterDoubl, setterDoubl, null, null, unit, min, max, increment, encoderResolution, resetValue);
+			final double encoderResolution, final Double resetValue, final int stepThreshold) {
+		this(name, getterDoubl, setterDoubl, null, null, unit, min, max, increment, encoderResolution, resetValue,
+                stepThreshold);
 	}
 
 	NoteStepAccess(final String name, final NoteIntGetter intGetter, final NoteIntSetter intSetter,
 			final NoteValueUnit unit, final double min, final double max, final double increment,
-			final double encoderResolution, final Double resetValue) {
-		this(name, null, null, intGetter, intSetter, unit, min, max, increment, encoderResolution, resetValue);
+			final double encoderResolution, final Double resetValue, final int stepThreshold) {
+		this(name, null, null, intGetter, intSetter, unit, min, max, increment, encoderResolution, resetValue,
+                stepThreshold);
 	}
 
 	NoteStepAccess(final String name, final NoteDoubleGetter getterDoubl, final NoteDoubleSetter setterDoubl,
 			final NoteIntGetter intGetter, final NoteIntSetter intSetter, final NoteValueUnit unit, final double min,
-			final double max, final double increment, final double encoderResolution, final Double resetValue) {
+			final double max, final double increment, final double encoderResolution, final Double resetValue,
+            final int stepThreshold) {
 		this.name = name;
 		this.doubleGetter = getterDoubl;
 		this.doubleSetter = setterDoubl;
@@ -101,6 +105,7 @@ public enum NoteStepAccess implements EncoderAccess {
 		this.incStep = increment;
 		this.resolution = encoderResolution;
 		this.resetValue = resetValue;
+        this.stepThreshold = stepThreshold;
 	}
 
 	public String getName() {
@@ -115,6 +120,10 @@ public enum NoteStepAccess implements EncoderAccess {
 	public double getResolution() {
 		return resolution;
 	}
+
+    public int getStepThreshold() {
+        return stepThreshold;
+    }
 
 	public double getDouble(final NoteStep step) {
 		return doubleGetter.get(step);

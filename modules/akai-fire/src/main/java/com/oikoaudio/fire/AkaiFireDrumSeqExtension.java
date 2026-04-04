@@ -74,6 +74,7 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
     private SettableEnumValue clipLaunchQuantizationPref;
     private SettableEnumValue patternActionPref;
     private SettableEnumValue mainEncoderRolePref;
+    private SettableEnumValue euclidScopePref;
     private SettableBooleanValue auditionOnDrumSelectPref;
     private SettableBooleanValue auditionOikordsPref;
 
@@ -225,6 +226,12 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
                 FireControlPreferences.MAIN_ENCODER_ROLES,
                 FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED);
         mainEncoderRolePref.markInterested();
+
+        euclidScopePref = preferences.getEnumSetting("Euclid Scope",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.EUCLID_SCOPES,
+                FireControlPreferences.EUCLID_SCOPE_FULL_CLIP);
+        euclidScopePref.markInterested();
 
         auditionOnDrumSelectPref = preferences.getBooleanSetting("Audition on drum slot select",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -601,6 +608,12 @@ public class AkaiFireDrumSeqExtension extends ControllerExtension {
 
     public boolean isAuditionOikordsEnabled() {
         return auditionOikordsPref != null && auditionOikordsPref.get();
+    }
+
+    public boolean isEuclidFullClipEnabled() {
+        return euclidScopePref != null
+                && FireControlPreferences.EUCLID_SCOPE_FULL_CLIP.equals(
+                FireControlPreferences.normalizeEuclidScope(euclidScopePref.get()));
     }
 
     public void adjustMainCursorParameter(final int inc, final boolean fine) {

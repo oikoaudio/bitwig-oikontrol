@@ -48,6 +48,13 @@ public final class FireControlPreferences {
             MAIN_ENCODER_NOTE_REPEAT
     };
 
+    public static final String EUCLID_SCOPE_VISIBLE_PAGE = "Visible Page";
+    public static final String EUCLID_SCOPE_FULL_CLIP = "Full Clip";
+    public static final String[] EUCLID_SCOPES = {
+            EUCLID_SCOPE_VISIBLE_PAGE,
+            EUCLID_SCOPE_FULL_CLIP
+    };
+
     private FireControlPreferences() {
     }
 
@@ -87,5 +94,14 @@ public final class FireControlPreferences {
             }
         }
         return MAIN_ENCODER_LAST_TOUCHED;
+    }
+
+    public static String normalizeEuclidScope(final String preferenceValue) {
+        for (final String value : EUCLID_SCOPES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return EUCLID_SCOPE_FULL_CLIP;
     }
 }
