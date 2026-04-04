@@ -150,9 +150,10 @@ Quick start:
 1. Load a Drum Machine on a Bitwig track.
 2. Enter `DRUM` mode.
 3. If `Drum Mode Pinning` is set to `First Drum Machine`, the script will focus and pin the first Drum Machine it finds.
-4. Select a lane on row 2.
-5. Program steps on the lower two rows.
-6. Hold `STEP SEQ` to accent notes or add accented hits quickly.
+4. Press `ALT + DRUM` at any time to manually re-pin the drum context if Bitwig selection drifts to the master track, an FX send, or another non-drum target.
+5. Select a lane on row 2.
+6. Program steps on the lower two rows.
+7. Hold `STEP SEQ` to accent notes or add accented hits quickly.
 
 ### NOTE mode
 
@@ -164,7 +165,7 @@ Quick start:
 
 The current note-step sub-modes are:
 
-- `Oikord Step`
+- `Chord Step`
 - `Clip Step Record` placeholder
 
 Quick start:
@@ -174,20 +175,24 @@ Quick start:
 3. Press `NOTE` again to move between the primary note-family surfaces.
 4. Use the current note layout controls to change scale, root, and octave.
 
-### Oikord / note-step workflow
+### Chord Step workflow
 
-`Oikord Step` is the current chord-oriented note-step workflow.
+`Chord Step` is the current chord-oriented note-step workflow.
 
-- Upper two rows: curated Oikord slots
-- Lower two rows: 32 visible steps
-- Shared `Channel`, `Mixer`, and `User 1` pages align it with Drum step editing
-- `User 2` holds Oikord-specific controls
+- Upper two rows: curated chord slots
+- Lower two rows: 16 visible steps
+- The default workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
+- Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord
 
 Important gestures:
 
 - `MUTE_1..4`: chord octave and root offsets
-- `PATTERN`: page the active Oikord family
-- `BANK LEFT/RIGHT`: move or fine-nudge written step content
+- `PATTERN DOWN/UP`: next/previous chord family
+- `ALT + PATTERN DOWN/UP`: next/previous page within the current family
+- tap an empty step pad: place the selected chord
+- tap a lit step pad: remove the chord from that step
+- `BANK LEFT/RIGHT`: move written step content left or right
+- `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
 
 ### PERFORM mode
 
@@ -266,6 +271,7 @@ Remove duplicate controller entries in Bitwig and keep only the Oiko extension f
 ### The wrong device is being controlled
 
 - Check the relevant auto-attach or pinning preferences.
+- In Fire `DRUM` mode, press `ALT + DRUM` to manually re-pin the drum context if needed.
 - Re-select the target track or device in Bitwig.
 - Re-enter the relevant mode or template after changing focus.
 

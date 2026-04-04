@@ -186,13 +186,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         mainLayer.activate();
         switchActiveMode();
         host.scheduleTask(this::handlePing, 100);
-        getHost().showPopupNotification("Init Akai Fire: Note Mode");
+        notifyAction("Init", "Note Mode");
 
     }
 
     private void handlePing() {
         // sections.forEach(section -> section.notifyBlink(blinkTicks));
         blinkTicks++;
+        ensureDrumPinningStillValid();
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
         performMode.notifyBlink(blinkTicks);
@@ -245,7 +246,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DRUM_PIN_MODES,
                 FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION);
         drumPinModePref.markInterested();
-        drumPinModePref.addValueObserver(value -> syncDrumPinningForActiveMode());
+        drumPinModePref.addValueObserver(value -> {
+            syncDrumPinningForActiveMode();
+            notifyAction("Drum Pin",
+                    FireControlPreferences.shouldAutoPinFirstDrumMachine(value) ? "Automatic" : "Follow Selected");
+        });
 
         // Deferred for now: the current live NOTE implementation still relies on
         // Bitwig key-translation updates, so "New Notes Only" does not preserve
@@ -467,8 +472,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notifyAction("Clip Write", transport.isClipLauncherAutomationWriteEnabled().get() ? "On" : "Off");
     }
 
-    private void notifyAction(final String title, final String value) {
+    public void notifyAction(final String title, final String value) {
         oled.valueInfo(title, value);
+        if (screenNotificationsPref != null && screenNotificationsPref.get()) {
+            host.showPopupNotification(title + ": " + value);
+        }
+    }
+
+    public void notifyPopup(final String title, final String value) {
         if (screenNotificationsPref != null && screenNotificationsPref.get()) {
             host.showPopupNotification(title + ": " + value);
         }
@@ -476,6 +487,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleDrumPressed(final boolean pressed) {
         if (!pressed) {
+            return;
+        }
+        if (isGlobalAltHeld()) {
+            if (activeMode != TopLevelMode.DRUM) {
+                activeMode = TopLevelMode.DRUM;
+                switchActiveMode();
+                notifyAction("Mode", "Drum");
+            }
+            pinDrumContextNow();
             return;
         }
         if (isGlobalShiftHeld()) {
@@ -488,8 +508,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         } else {
             activeMode = TopLevelMode.DRUM;
             switchActiveMode();
+            notifyAction("Mode", "Drum");
         }
-        oled.valueInfo("Mode", "Drum");
     }
 
     private void handleNotePressed(final boolean pressed) {
@@ -506,16 +526,19 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         activeMode = TopLevelMode.NOTE;
         switchActiveMode();
-        oled.valueInfo("Mode", "Note");
+        notifyAction("Mode", "Note");
     }
 
     private void handlePerformPressed(final boolean pressed) {
         if (!pressed) {
             return;
         }
+        if (activeMode == TopLevelMode.PERFORM) {
+            return;
+        }
         activeMode = TopLevelMode.PERFORM;
         switchActiveMode();
-        oled.valueInfo("Mode", "Perform");
+        notifyAction("Mode", "Perform");
     }
 
     private void togglePlay(final boolean pressed) {
@@ -530,9 +553,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         // Regular behavior: toggle play/stop, retrigger on start.
         if (transport.isPlaying().get()) {
             transport.isPlaying().set(false);
+            notifyAction("Transport", "Stop");
         } else {
             drumSequenceMode.retrigger();
             transport.restart();
+            notifyAction("Transport", "Play");
         }
     }
 
@@ -596,7 +621,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     @Override
     public void exit() {
-        getHost().showPopupNotification("Exit Akai Fire Drum Seq");
+        notifyAction("Exit", "Akai Fire");
     }
 
     @Override
@@ -649,6 +674,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void toggleFillMode() {
         transport.isFillModeActive().toggle();
+        notifyAction("Fill", transport.isFillModeActive().get() ? "On" : "Off");
     }
 
     public BiColorLightState getFillLightState() {
@@ -672,7 +698,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (mainEncoderRolePref != null) {
             mainEncoderRolePref.set(nextRole);
         }
-        oled.valueInfo("Encoder Role", nextRole);
+        notifyAction("Encoder Role", nextRole);
         return nextRole;
     }
 
@@ -730,6 +756,43 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         cursorTrack.isPinned().set(true);
         primaryDevice.isPinned().set(true);
         drumAutoPinApplied = true;
+    }
+
+    private void pinDrumContextNow() {
+        if (viewControl == null || deviceLocator == null) {
+            return;
+        }
+
+        final CursorTrack cursorTrack = viewControl.getCursorTrack();
+        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        if (!primaryDevice.exists().get() || !primaryDevice.hasDrumPads().get()) {
+            deviceLocator.focusFirstDrumMachine(viewControl);
+        }
+
+        cursorTrack.isPinned().set(true);
+        primaryDevice.isPinned().set(true);
+        notifyAction("Drum Pin", "Pinned");
+    }
+
+    private void ensureDrumPinningStillValid() {
+        if (activeMode != TopLevelMode.DRUM || !shouldAutoPinFirstDrumMachine() || !drumAutoPinApplied
+                || viewControl == null || deviceLocator == null) {
+            return;
+        }
+
+        final CursorTrack cursorTrack = viewControl.getCursorTrack();
+        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        final boolean invalidTrackPin = !cursorTrack.isPinned().get();
+        final boolean invalidDevicePin = !primaryDevice.isPinned().get();
+        final boolean invalidDrumContext = !primaryDevice.exists().get() || !primaryDevice.hasDrumPads().get();
+        if (!invalidTrackPin && !invalidDevicePin && !invalidDrumContext) {
+            return;
+        }
+
+        if (deviceLocator.focusFirstDrumMachine(viewControl)) {
+            cursorTrack.isPinned().set(true);
+            primaryDevice.isPinned().set(true);
+        }
     }
 
     private void releaseAutoPinnedDrumContext() {
@@ -830,7 +893,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final SettableRangedValue value = groove.getEnabled().value();
         final boolean enableGroove = value.get() < 0.5;
         value.setImmediately(enableGroove ? 1.0 : 0.0);
-        oled.valueInfo("Shuffle", enableGroove ? "On" : "Off");
+        notifyAction("Shuffle", enableGroove ? "On" : "Off");
     }
 
     public void showGrooveShuffleInfo() {
@@ -863,7 +926,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (isPopupBrowserActive()) {
             popupBrowser.cancel();
-            oled.valueInfo("Browser", "Closed");
+            notifyAction("Browser", "Closed");
             return;
         }
         openPopupBrowser();
@@ -879,7 +942,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             } else {
                 viewControl.getCursorTrack().startOfDeviceChainInsertionPoint().browse();
             }
-            oled.valueInfo("Browser", "Before");
+            notifyAction("Browser", "Before");
             return;
         }
         if (altHeld) {
@@ -888,15 +951,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             } else {
                 viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
             }
-            oled.valueInfo("Browser", "After");
+            notifyAction("Browser", "After");
             return;
         }
         if (primaryDevice.exists().get()) {
             primaryDevice.replaceDeviceInsertionPoint().browse();
-            oled.valueInfo("Browser", "Replace");
+            notifyAction("Browser", "Replace");
         } else {
             viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
-            oled.valueInfo("Browser", "Add");
+            notifyAction("Browser", "Add");
         }
     }
 
@@ -922,7 +985,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (press) {
             popupBrowser.commit();
-            oled.valueInfo("Browser", "Commit");
+            notifyAction("Browser", "Commit");
         }
     }
 

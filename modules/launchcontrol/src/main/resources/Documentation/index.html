@@ -222,6 +222,7 @@
         <li>Load a Drum Machine on a Bitwig track.</li>
         <li>Enter <code>DRUM</code> mode.</li>
         <li>If <code>Drum Mode Pinning</code> is set to <code>First Drum Machine</code>, the script will focus and pin the first Drum Machine it finds.</li>
+        <li>Press <code>ALT + DRUM</code> at any time to manually re-pin the drum context if Bitwig selection drifts to the master track, an FX send, or another non-drum target.</li>
         <li>Select a lane on row 2.</li>
         <li>Program steps on the lower two rows.</li>
         <li>Hold <code>STEP SEQ</code> to accent notes or add accented hits quickly.</li>
@@ -236,7 +237,7 @@
       </ul>
       <p>The current note-step sub-modes are:</p>
       <ul>
-        <li><code>Oikord Step</code></li>
+        <li><code>Chord Step</code></li>
         <li><code>Clip Step Record</code> placeholder</li>
       </ul>
       <p>Quick start:</p>
@@ -247,19 +248,23 @@
         <li>Use the current note layout controls to change scale, root, and octave.</li>
       </ol>
 
-      <h3>Oikord / note-step workflow</h3>
-      <p><code>Oikord Step</code> is the current chord-oriented note-step workflow.</p>
+      <h3>Chord Step workflow</h3>
+      <p><code>Chord Step</code> is the current chord-oriented note-step workflow.</p>
       <ul>
-        <li>Upper two rows: curated Oikord slots</li>
-        <li>Lower two rows: 32 visible steps</li>
-        <li>Shared <code>Channel</code>, <code>Mixer</code>, and <code>User 1</code> pages align it with Drum step editing</li>
-        <li><code>User 2</code> holds Oikord-specific controls</li>
+        <li>Upper two rows: curated chord slots</li>
+        <li>Lower two rows: 16 visible steps</li>
+        <li>The default workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like</li>
+        <li>Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord</li>
       </ul>
       <p>Important gestures:</p>
       <ul>
         <li><code>MUTE_1..4</code>: chord octave and root offsets</li>
-        <li><code>PATTERN</code>: page the active Oikord family</li>
-        <li><code>BANK LEFT/RIGHT</code>: move or fine-nudge written step content</li>
+        <li><code>PATTERN DOWN/UP</code>: next/previous chord family</li>
+        <li><code>ALT + PATTERN DOWN/UP</code>: next/previous page within the current family</li>
+        <li>tap an empty step pad: place the selected chord</li>
+        <li>tap a lit step pad: remove the chord from that step</li>
+        <li><code>BANK LEFT/RIGHT</code>: move written step content left or right</li>
+        <li><code>SHIFT + BANK LEFT/RIGHT</code>: adjust held chord-step note duration</li>
       </ul>
 
       <h3>PERFORM mode</h3>
@@ -339,7 +344,7 @@
       <p>Remove duplicate controller entries in Bitwig and keep only the Oiko extension for the hardware you are using.</p>
 
       <h3>The wrong device is being controlled</h3>
-      <p>Check the relevant auto-attach or pinning preferences, then re-enter the relevant mode or user template after selecting the target track or device in Bitwig.</p>
+      <p>Check the relevant auto-attach or pinning preferences. In Fire <code>DRUM</code> mode, press <code>ALT + DRUM</code> to manually re-pin the drum context if needed, then re-select the target track or device in Bitwig and re-enter the relevant mode or user template after changing focus.</p>
 
       <h3>LEDs or mode state do not match what you expect</h3>
       <p>Re-open the matching mode or user template, then power-cycle the controller if Bitwig previously attached another script to the hardware.</p>
