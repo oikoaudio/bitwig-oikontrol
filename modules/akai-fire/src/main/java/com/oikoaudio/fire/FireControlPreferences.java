@@ -33,13 +33,6 @@ public final class FireControlPreferences {
             QUANTIZATION_1_16
     };
 
-    public static final String PATTERN_ACTION_AUTOMATION_WRITE = "Clip Launcher Automation Write";
-    public static final String PATTERN_ACTION_DISABLED = "Disabled";
-    public static final String[] PATTERN_ACTIONS = {
-            PATTERN_ACTION_AUTOMATION_WRITE,
-            PATTERN_ACTION_DISABLED
-    };
-
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";

@@ -1,0 +1,283 @@
+# Bitwig Oikontrol User Guide
+
+Bitwig Oikontrol is a pair of controller extensions for Bitwig Studio:
+
+- Novation Launch Control XL Mk2
+- Akai Fire
+
+This guide is the user-facing reference for setup, modes, preferences, and common workflows. The bundled Help entry in each extension should open the same guide content.
+
+## Installation and setup
+
+1. Build or install the `.bwextension` for the controller you want to use.
+2. In Bitwig Studio, open **Settings > Controllers**.
+3. Add the Oiko controller entry for your hardware:
+   - `Launch Control XL by Oiko Audio`
+   - `Akai Fire by Oiko Audio`
+4. Use the extension preferences if you want to change launch, pinning, or controller-specific behavior.
+
+## Launch Control XL
+
+The Launch Control XL extension keeps the Bitwig factory templates intact while adding deeper user-template workflows for:
+
+- device remote pages
+- drum machine control
+- arpeggiator performance
+
+### Controller assumptions
+
+For the custom user-mode workflows, the factory-default user template mappings are assumed.
+
+- All controls send on the MIDI channel that matches the selected template number.
+- All buttons are configured as momentary.
+
+User template note and CC assumptions:
+
+- Top row knobs: `CC 13-20`
+- Middle row knobs: `CC 29-36`
+- Bottom row knobs: `CC 49-56`
+- Faders: `CC 77-84`
+- Send Up/Down: `CC 104/105`
+- Track Left/Right: `CC 106/107`
+- Right-side mode buttons: `105-108`
+
+### Factory templates
+
+Factory templates keep the same general role as the Bitwig factory script:
+
+- Template 1: 2 sends and selected device controls
+- Template 2: 2 sends and per-track device page 1
+- Template 3: 2 sends and project remotes
+- Template 4: 3 sends
+- Template 5: 1 send and 2 per-track device controls
+- Template 6: 3 per-track device controls
+- Template 7: not supported
+- Template 8: 3 track remote controls
+
+### User Template 6: Device pages
+
+User Template 6 turns the controller into a fixed page remote-control surface.
+
+- Each hardware row maps to a fixed page of the selected device's preset remotes.
+- This is useful when one patch exposes several remote pages and you want a stable one-template layout.
+
+Quick start:
+
+1. Select a device in Bitwig.
+2. Switch the controller to User Template 6.
+3. Adjust the rows, faders, and buttons as the current device pages require.
+
+### User Template 7: Drum machine
+
+User Template 7 is the drum workflow.
+
+- Faders control chain volume.
+- Knobs map to the first device on each visible drum pad chain.
+- The upper pad row selects and can audition drum pads.
+- The lower pad row controls pad remote 4 by default, or mute/solo depending on the active sub-mode.
+
+Preferences that matter:
+
+- `Auto-attach to first Drum Machine and Arpeggiator`
+- `Audition on drum pad select`
+- `Drum accent buttons momentary`
+
+Quick start:
+
+1. Load a Drum Machine on a track.
+2. Switch the controller to User Template 7.
+3. If auto-attach is enabled, the script will focus the first Drum Machine it finds.
+4. Use Track Left/Right to move across pad banks.
+5. Use the upper pad row to select pads and the knobs/faders to shape each sound.
+
+### User Template 8: Arpeggiator
+
+User Template 8 adapts the Richie Hawtin / Eric Ahrens rhbitwig arp workflow.
+
+- The arp layer controls the focused Bitwig Arpeggiator.
+- Pitch offset, velocity, gate, and step behavior are spread across the rows and mode buttons.
+- Auto-attach can focus the first Arpeggiator in the project when enabled.
+
+Quick start:
+
+1. Add an Arpeggiator device in Bitwig.
+2. Switch the controller to User Template 8.
+3. Use the row controls for pitch, velocity, and gate shaping.
+4. Use the side mode buttons to access the arp sub-modes inherited from rhbitwig.
+
+## Akai Fire
+
+The Akai Fire extension is a clip, note, and sequencer workflow built around three top-level modes:
+
+- `DRUM`
+- `NOTE`
+- `PERFORM`
+
+### DRUM mode
+
+`DRUM` is the default sequencer-oriented workflow.
+
+- Row 1: clip slots
+- Row 2: visible drum slots
+- Rows 3-4: 32 visible steps for the selected lane
+
+Main gestures:
+
+- `STEP SEQ`: accent entry and accent editing
+- `SHIFT + STEP SEQ`: Fill
+- `BANK LEFT/RIGHT`: pattern shift and movement
+- `SHIFT + BANK LEFT/RIGHT`: fine nudge
+- `ALT + BANK LEFT/RIGHT`: grid resolution
+
+Encoder pages:
+
+- `Channel`: shared step expression editing
+- `Mixer`: volume, pan, and sends
+- `User 1`: step behavior page
+- `User 2`: Euclid controls
+
+Preferences that matter:
+
+- `Drum Mode Pinning`
+- `Audition on drum slot select`
+- `Clip Launch Mode`
+- `Clip Launch Quantization`
+- `Euclid Scope`
+- `Main Encoder`
+
+Quick start:
+
+1. Load a Drum Machine on a Bitwig track.
+2. Enter `DRUM` mode.
+3. If `Drum Mode Pinning` is set to `First Drum Machine`, the script will focus and pin the first Drum Machine it finds.
+4. Select a lane on row 2.
+5. Program steps on the lower two rows.
+6. Hold `STEP SEQ` to accent notes or add accented hits quickly.
+
+### NOTE mode
+
+`NOTE` provides a 16x4 isomorphic playing surface.
+
+- `Chromatic` and `In Key` layouts
+- local root note, scale, and octave controls
+- LED and OLED note feedback
+
+The current note-step sub-modes are:
+
+- `Oikord Step`
+- `Clip Step Record` placeholder
+
+Quick start:
+
+1. Enter `NOTE`.
+2. Play notes directly on the pad grid.
+3. Press `NOTE` again to move between the primary note-family surfaces.
+4. Use the current note layout controls to change scale, root, and octave.
+
+### Oikord / note-step workflow
+
+`Oikord Step` is the current chord-oriented note-step workflow.
+
+- Upper two rows: curated Oikord slots
+- Lower two rows: 32 visible steps
+- Shared `Channel`, `Mixer`, and `User 1` pages align it with Drum step editing
+- `User 2` holds Oikord-specific controls
+
+Important gestures:
+
+- `MUTE_1..4`: chord octave and root offsets
+- `PATTERN`: page the active Oikord family
+- `BANK LEFT/RIGHT`: move or fine-nudge written step content
+
+### PERFORM mode
+
+`PERFORM` is the clip-launch and performance surface.
+
+- pads show clip color and launch state
+- empty slots can create a new 4-bar clip
+- quick select, copy, delete, and clip-length gestures live on the `MUTE` buttons
+
+Important gestures:
+
+- hold `MUTE_1` + pad: select without launching
+- hold `MUTE_3` + pad: copy
+- hold `MUTE_4` + pad: delete
+- `MUTE_2`: double visible clip length
+- `SHIFT + MUTE_2`: halve visible clip length
+- `BANK LEFT/RIGHT`: scroll tracks
+- `PATTERN` up/down: scroll scenes
+- hold `SHIFT` while scrolling for single-step movement
+
+Encoder pages:
+
+- `Channel`: project remotes
+- `Mixer`: selected track volume, pan, send 1, send 2
+- `User 1`: selected track remotes
+- `User 2`: selected device remotes
+
+### Main encoder and transport
+
+The main encoder can be assigned in preferences to:
+
+- `Last Touched Parameter`
+- `Shuffle`
+- `Tempo`
+- `Note Repeat`
+
+Shared transport behavior:
+
+- `PLAY`: transport toggle with retrigger-on-start behavior
+- `ALT + PLAY`: retrigger the current clip
+- `REC`: clip recording in `DRUM`, arranger record in `NOTE` and `PERFORM`
+- `ALT + REC`: arranger automation write
+- `PATTERN`: clip launcher automation write
+- `SHIFT + PATTERN`: metronome
+- `ALT + PATTERN`: clip launcher overdub
+
+## Preferences
+
+### Shared ideas
+
+Both controllers rely on Bitwig extension preferences for behavior that should be stable and discoverable, rather than hidden behind one-off hardware gestures.
+
+### Launch Control XL preferences
+
+- `Auto-attach to first Drum Machine and Arpeggiator`
+- `Audition on drum pad select`
+- `Drum accent buttons momentary`
+
+### Akai Fire preferences
+
+- `Clip Launch Mode`
+- `Clip Launch Quantization`
+- `Main Encoder`
+- `Euclid Scope`
+- `Drum Mode Pinning`
+- `Audition on drum slot select`
+- `Audition Oikords`
+- `On-screen action notifications`
+
+## Troubleshooting
+
+### Controls seem doubled or unstable
+
+Remove duplicate controller entries in Bitwig and keep only the Oiko extension for the hardware you are using.
+
+### The wrong device is being controlled
+
+- Check the relevant auto-attach or pinning preferences.
+- Re-select the target track or device in Bitwig.
+- Re-enter the relevant mode or template after changing focus.
+
+### LEDs or mode state do not match what you expect
+
+- Re-open the matching mode or user template.
+- Power-cycle the controller if Bitwig started with another script attached first.
+- Make sure the controller is using the expected template or default mapping.
+
+## Attribution
+
+- Based on Bitwig's original Launch Control XL controller script from `bitwig-extensions`.
+- LCXL User Template 8 adapts Richie Hawtin and Eric Ahrens' `rhbitwig` arp workflow.
+- The Akai Fire extension started as a fork of the drum sequencer work in `rhbitwig`.
+- Fine-grid step nudging is based on Wim Van den Borre's `AkaiFireNudger`, adapted further here.

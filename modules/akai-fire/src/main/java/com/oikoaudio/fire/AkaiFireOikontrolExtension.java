@@ -76,13 +76,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private Preferences preferences;
     private SettableEnumValue clipLaunchModePref;
     private SettableEnumValue clipLaunchQuantizationPref;
-    private SettableEnumValue patternActionPref;
     private SettableEnumValue mainEncoderRolePref;
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue auditionOnDrumSelectPref;
     private SettableBooleanValue auditionOikordsPref;
+    private SettableBooleanValue screenNotificationsPref;
     private String tempoDisplayValue = "";
     private boolean tempoDisplayPending = false;
     private boolean drumAutoPinApplied = false;
@@ -228,12 +228,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         clipLaunchQuantizationPref.addValueObserver(this::applyLaunchQuantizationPreference);
         applyLaunchQuantizationPreference(clipLaunchQuantizationPref.get());
 
-        patternActionPref = preferences.getEnumSetting("Pattern Button",
-                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
-                FireControlPreferences.PATTERN_ACTIONS,
-                FireControlPreferences.PATTERN_ACTION_AUTOMATION_WRITE);
-        patternActionPref.markInterested();
-
         mainEncoderRolePref = preferences.getEnumSetting("Main Encoder",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 FireControlPreferences.MAIN_ENCODER_ROLES,
@@ -273,6 +267,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 true);
         auditionOikordsPref.markInterested();
+
+        screenNotificationsPref = preferences.getBooleanSetting("On-screen action notifications",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                true);
+        screenNotificationsPref.markInterested();
     }
 
     private void setUpTransportControl() {
@@ -289,6 +288,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             }
         });
         transport.playPosition().markInterested();
+        transport.isArrangerRecordEnabled().markInterested();
+        transport.isArrangerAutomationWriteEnabled().markInterested();
         transport.isClipLauncherOverdubEnabled().markInterested();
         transport.isMetronomeEnabled().markInterested();
         transport.isClipLauncherAutomationWriteEnabled().markInterested();
@@ -297,7 +298,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final BiColorButton playButton = addButton(NoteAssign.PLAY);
         playButton.bindPressed(mainLayer, this::togglePlay, this::getPlayState);
         final BiColorButton recButton = addButton(NoteAssign.REC);
-        recButton.bindPressed(mainLayer, this::toggleRec, this::getOverdubState);
+        recButton.bindPressed(mainLayer, this::toggleRec, this::getRecordState);
         final BiColorButton stopButton = addButton(NoteAssign.STOP);
         stopButton.bindPressed(mainLayer, this::stopAction, BiColorLightState.RED_FULL);
 
@@ -370,25 +371,32 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return transport != null && transport.isPlaying().get();
     }
 
-    private BiColorLightState getOverdubState() {
-        return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+    private BiColorLightState getRecordState() {
+        if (isGlobalAltHeld()) {
+            return transport.isArrangerAutomationWriteEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        }
+        if (activeMode == TopLevelMode.DRUM) {
+            return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+        }
+        return transport.isArrangerRecordEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
     }
 
     private BiColorLightState getClipLauncherAutomationWriteEnabledState() {
         return transport.isClipLauncherAutomationWriteEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
     }
 
+    private BiColorLightState getArrangerAutomationWriteEnabledState() {
+        return transport.isArrangerAutomationWriteEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+    }
+
     private BiColorLightState getPatternState() {
-        if (patternActionPref == null) {
-            return BiColorLightState.OFF;
-        }
         if (getButton(NoteAssign.SHIFT).isPressed()) {
             return transport.isMetronomeEnabled().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
         }
-        if (FireControlPreferences.PATTERN_ACTION_AUTOMATION_WRITE.equals(patternActionPref.get())) {
-            return getClipLauncherAutomationWriteEnabledState();
+        if (isGlobalAltHeld()) {
+            return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
-        return BiColorLightState.OFF;
+        return getClipLauncherAutomationWriteEnabledState();
     }
 
     private BiColorLightState getDrumState() {
@@ -420,7 +428,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        transport.isClipLauncherOverdubEnabled().toggle();
+        if (isGlobalAltHeld()) {
+            transport.isArrangerAutomationWriteEnabled().toggle();
+            notifyAction("Arranger Write", transport.isArrangerAutomationWriteEnabled().get() ? "On" : "Off");
+            return;
+        }
+        if (activeMode == TopLevelMode.DRUM) {
+            transport.isClipLauncherOverdubEnabled().toggle();
+            notifyAction("Clip Record", transport.isClipLauncherOverdubEnabled().get() ? "On" : "Off");
+            return;
+        }
+        transport.isArrangerRecordEnabled().toggle();
+        notifyAction("Record", transport.isArrangerRecordEnabled().get() ? "On" : "Off");
     }
 
     private void toggleClipLauncherAutomationWriteEnabled(final boolean pressed) {
@@ -436,15 +455,23 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (getButton(NoteAssign.SHIFT).isPressed()) {
             transport.isMetronomeEnabled().toggle();
-            oled.valueInfo("Metronome", transport.isMetronomeEnabled().get() ? "On" : "Off");
+            notifyAction("Metronome", transport.isMetronomeEnabled().get() ? "On" : "Off");
             return;
         }
-        if (FireControlPreferences.PATTERN_ACTION_AUTOMATION_WRITE.equals(patternActionPref.get())) {
-            toggleClipLauncherAutomationWriteEnabled(true);
-            oled.valueInfo("Pattern", transport.isClipLauncherAutomationWriteEnabled().get() ? "Automation Write On" : "Automation Write Off");
+        if (isGlobalAltHeld()) {
+            transport.isClipLauncherOverdubEnabled().toggle();
+            notifyAction("Launcher Overdub", transport.isClipLauncherOverdubEnabled().get() ? "On" : "Off");
             return;
         }
-        oled.valueInfo("Pattern", "Disabled");
+        toggleClipLauncherAutomationWriteEnabled(true);
+        notifyAction("Clip Write", transport.isClipLauncherAutomationWriteEnabled().get() ? "On" : "Off");
+    }
+
+    private void notifyAction(final String title, final String value) {
+        oled.valueInfo(title, value);
+        if (screenNotificationsPref != null && screenNotificationsPref.get()) {
+            host.showPopupNotification(title + ": " + value);
+        }
     }
 
     private void handleDrumPressed(final boolean pressed) {

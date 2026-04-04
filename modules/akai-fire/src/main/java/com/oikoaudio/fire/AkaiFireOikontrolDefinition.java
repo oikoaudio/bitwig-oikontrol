@@ -45,7 +45,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getHelpFilePath() {
-        return "Controllers/Akai/Hawtin AKAI Fire.pdf";
+        return "Documentation/index.html";
     }
 
     @Override
