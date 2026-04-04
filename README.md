@@ -73,13 +73,12 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 ```
 
 Current artifact names:
-- `modules/akai-fire/build/libs/AkaiFireOiko-0.5.2.bwextension`
-- `modules/launchcontrol/build/libs/LaunchControlXlOikontrol-1.1.1.bwextension`
+- `modules/akai-fire/build/libs/AkaiFireOiko-2.0.0.bwextension`
+- `modules/launchcontrol/build/libs/LaunchControlXlOikontrol-2.0.0.bwextension`
 
 ## Documentation
 - Architecural Decision Record (ADR) under `doc/adr/` e.g. `0000-use-adrs.md` (process) and `0001-architecture-summary.md` (factory/user modes, Template 8 arp, Java/API targets).
 - `CHANGES.md`: running changelog of code edits.
-- `BUILD.md`: more detail on local builds and installation.
 - `vscode-debug.md`: how to attach VS Code’s debugger to Bitwig (JDWP).
 
 ## Attribution

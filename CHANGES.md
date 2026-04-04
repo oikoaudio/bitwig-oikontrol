@@ -2,17 +2,17 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
-## 1.1.0 - Akai Fire
-Adds an Akai Fire control surface based on the rhbitwig fork with Oiko tweaks:
-- Separate Gradle module (`modules/akai-fire`) with new UUID and name “Akai Fire by Oiko Audio” to avoid collision with the rhbitwig extension on which is it based
-- Nudge: held-step micro-nudge disabled; Grid = coarse 16th shift, Shift+Grid = fine nudge on selected pad
-- Euclid mode: User2 encoders = LEN/PULS/ROT/INV with gentler steps; Browser applies (Alt clears+applies); patterns tile across clip length; gate tightened to avoid insertDuration errors
-- Play: Alt+Play retriggers current clip; Play toggles transport and retriggers on start
-- OLED encoder info strings updated
-
-Novation Launch control XL addition:
-- User template 7: Drum Machine Mode
-- User template 6: Device Remotes mode (6 pages of remotes)
+## 2.0.0 - Akai Fire and multi-controller repo
+Adds a full Akai Fire extension and promotes `bitwig-oikontrol` into a multi-controller repository:
+- Added a full Akai Fire extension under `modules/akai-fire`
+- Added Fire `DRUM`, `NOTE`, and `PERFORM` workflows
+- Added drum step sequencing with fine nudge, accent/fill handling, and Euclid controls
+- Added note mode with isomorphic layout, scale/root/octave controls, and note-step access
+- Added Oikord chord-step sequencing and performance clip launching
+- Added Fire OLED feedback, encoder pages, transport/tempo control, and preferences
+- Restructured the repository into a multi-module `bitwig-oikontrol` project for Akai Fire and Launch Control XL
+- Continued Launch Control XL improvements, including device remote pages and drum-mode refinements
+- Updated docs, tests, and build tooling
 
 ## 1.0.0 — Novation Launch Control XL Oikontrol script
 Mirrors the extension for the Novation Launch Control XL mk2 that ships with Bitwig, with the following additions:
