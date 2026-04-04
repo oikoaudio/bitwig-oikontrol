@@ -227,6 +227,12 @@ Press `SHIFT + SELECT` to cycle the `SELECT` encoder role between:
 - `Shuffle`
 - `Tempo`
 - `Note Repeat`
+- `Track Select`
+
+When `Track Select` is active:
+
+- Turn `SELECT` to move to the previous or next track
+- Hold `SELECT` while turning to jump by track pages
 
 Shared transport behavior:
 

@@ -32,6 +32,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
     public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
     public static final String MAIN_ENCODER_NOTE_REPEAT_ROLE = FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT;
+    public static final String MAIN_ENCODER_TRACK_SELECT_ROLE = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
@@ -87,6 +88,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumTrackPinnedBeforeAutoPin = false;
     private boolean drumDevicePinnedBeforeAutoPin = false;
     private int drumTrackIndexBeforeAutoPin = -1;
+    private boolean mainEncoderPressed = false;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -902,6 +904,50 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isGlobalShiftHeld() {
         return shiftActive.get();
+    }
+
+    public void setMainEncoderPressed(final boolean pressed) {
+        mainEncoderPressed = pressed;
+    }
+
+    public boolean isMainEncoderPressed() {
+        return mainEncoderPressed;
+    }
+
+    public void adjustSelectedTrack(final int inc, final boolean pageStep) {
+        if (inc == 0 || viewControl == null) {
+            return;
+        }
+        final CursorTrack cursorTrack = viewControl.getCursorTrack();
+        final TrackBank trackBank = viewControl.getTrackBank();
+        if (trackBank == null) {
+            return;
+        }
+        final int currentIndex = viewControl.getSelectedTrackIndex();
+        final int delta = inc * (pageStep ? 8 : 1);
+        final int targetIndex = Math.max(0, Math.min(trackBank.getSizeOfBank() - 1, currentIndex + delta));
+        final Track targetTrack = trackBank.getItemAt(targetIndex);
+        if (targetTrack == null || !targetTrack.exists().get()) {
+            return;
+        }
+        targetTrack.selectInMixer();
+        targetTrack.selectInEditor();
+        cursorTrack.selectChannel(targetTrack);
+        final String trackName = targetTrack.name().get();
+        showSelectedTrackInfo(pageStep, trackName);
+    }
+
+    public void showSelectedTrackInfo(final boolean pageStep) {
+        if (viewControl == null) {
+            return;
+        }
+        final String trackName = viewControl.getCursorTrack().name().get();
+        showSelectedTrackInfo(pageStep, trackName);
+    }
+
+    private void showSelectedTrackInfo(final boolean pageStep, final String trackName) {
+        oled.valueInfo(pageStep ? "Track Page" : "Track Select",
+                trackName == null || trackName.isBlank() ? "Unnamed" : trackName);
     }
 
     private void handleBrowserPressed(final boolean pressed) {

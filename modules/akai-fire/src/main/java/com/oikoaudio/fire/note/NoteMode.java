@@ -1070,6 +1070,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
             driver.adjustTempo(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
             driver.adjustGrooveShuffleAmount(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
         } else {
             driver.adjustMainCursorParameter(inc, fine);
         }
@@ -1079,6 +1081,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (driver.isPopupBrowserActive()) {
             return;
         }
+        driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalShiftHeld()) {
             driver.cycleMainEncoderRolePreference();
             return;
@@ -1097,6 +1100,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 driver.showGrooveShuffleInfo();
             } else {
                 driver.toggleGrooveEnabled();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
             }
         } else if (pressed) {
             driver.showMainCursorParameterInfo();

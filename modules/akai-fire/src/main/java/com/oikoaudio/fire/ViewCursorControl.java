@@ -18,6 +18,7 @@ public class ViewCursorControl {
 	private final DeviceBank drumBank;
 	private final DrumPadBank drumPadBank;
 	private final TrackBank trackBank;
+	private int selectedTrackIndex = -1;
 	// private final Device drumDevice;
 
 	public ViewCursorControl(final ControllerHost host, final int sends) {
@@ -26,6 +27,18 @@ public class ViewCursorControl {
 		this.trackBank = host.createMainTrackBank(TRACK_RESTORE_WIDTH, 8, sends);
 		for (int index = 0; index < TRACK_RESTORE_WIDTH; index++) {
 			this.trackBank.getItemAt(index).exists().markInterested();
+			this.trackBank.getItemAt(index).name().markInterested();
+			final int trackIndex = index;
+			this.trackBank.getItemAt(index).addIsSelectedInMixerObserver(selected -> {
+				if (selected) {
+					selectedTrackIndex = trackIndex;
+				}
+			});
+			this.trackBank.getItemAt(index).addIsSelectedInEditorObserver(selected -> {
+				if (selected) {
+					selectedTrackIndex = trackIndex;
+				}
+			});
 		}
 		this.cursorTrack = host.createCursorTrack("View Control", "view Control", 8, sends, true);
 		cursorTrack.isPinned().markInterested();
@@ -55,6 +68,10 @@ public class ViewCursorControl {
 
 	public CursorTrack getCursorTrack() {
 		return cursorTrack;
+	}
+
+	public int getSelectedTrackIndex() {
+		return selectedTrackIndex >= 0 ? selectedTrackIndex : cursorTrack.position().get();
 	}
 
 	public DeviceBank getDeviceBank() {

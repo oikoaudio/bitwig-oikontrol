@@ -37,11 +37,13 @@ public final class FireControlPreferences {
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
     public static final String MAIN_ENCODER_NOTE_REPEAT = "Note Repeat";
+    public static final String MAIN_ENCODER_TRACK_SELECT = "Track Select";
     public static final String[] MAIN_ENCODER_ROLES = {
             MAIN_ENCODER_LAST_TOUCHED,
             MAIN_ENCODER_SHUFFLE,
             MAIN_ENCODER_TEMPO,
-            MAIN_ENCODER_NOTE_REPEAT
+            MAIN_ENCODER_NOTE_REPEAT,
+            MAIN_ENCODER_TRACK_SELECT
     };
 
     public static final String EUCLID_SCOPE_VISIBLE_PAGE = "Visible Page";

@@ -289,7 +289,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private RgbLigthState stepState(final int index) {
         final int steps = positionHandler.getAvailableSteps();
         if (index < steps) {
-            final State state = assignments[index] == null ? State.Empty : assignments[index].state();
+            final NoteStep noteStep = assignments[index];
+            final State state = noteStep == null ? State.Empty : noteStep.state();
 
             if (state == State.Empty) {
                 return emptyNoteState(index);
@@ -310,12 +311,28 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
                 return padHandler.getCurrentPadColor();
             }
             if (index == playingStep) {
-                return padHandler.getCurrentPadColor().getBrightend();
+                return velocityLitStepState(noteStep, true);
             }
-            return padHandler.getCurrentPadColor();
+            return velocityLitStepState(noteStep, false);
 
         }
         return RgbLigthState.OFF;
+    }
+
+    private RgbLigthState velocityLitStepState(final NoteStep noteStep, final boolean playing) {
+        final RgbLigthState base = padHandler.getCurrentPadColor();
+        if (noteStep == null) {
+            return playing ? base.getBrightend() : base;
+        }
+
+        final int velocity = (int) Math.round(noteStep.velocity() * 127);
+        if (velocity >= accentHandler.getAccentedVelocity()) {
+            return base.getBrightest();
+        }
+        if (playing) {
+            return base.getBrightend();
+        }
+        return base;
     }
 
     private RgbLigthState emptyNoteState(final int index) {
@@ -557,6 +574,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
                 driver.adjustTempo(inc, fine);
             } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
                 driver.adjustGrooveShuffleAmount(inc, fine);
+            } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
+                driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
             } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
                 driver.adjustMainCursorParameter(inc, fine);
             }
@@ -584,6 +603,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         if (driver.isPopupBrowserActive()) {
             return;
         }
+        driver.setMainEncoderPressed(press);
         if (accentHandler.isHolding()) {
             accentHandler.handeMainEncoderPress(press);
             return;
@@ -617,6 +637,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
                 driver.showGrooveShuffleInfo();
             } else {
                 driver.toggleGrooveEnabled();
+            }
+        } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
+            if (press) {
+                driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
             }
         }
     }
