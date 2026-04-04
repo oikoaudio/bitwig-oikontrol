@@ -64,6 +64,9 @@ Likely candidates:
 
 - Oikord audition preference, analogous to drum audition
 - any Drum-mode encoder remap work on the Oikord landing branch
+- Drum-style running-position indication on the lower 32 pads in `Oikord Step`
+  should be added later, but is deferred until after `PERFORM` mode is
+  finished
 
 # My current idea:
 The step of making the modes behave consistently. that means moving some functions to other buttons, and maybe some shared functionality

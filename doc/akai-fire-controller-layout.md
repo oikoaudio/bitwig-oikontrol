@@ -178,7 +178,7 @@ Default `NOTE` behavior:
 | Pad matrix | 16x4 isomorphic note grid |
 | Pad LEDs | Root, in-scale, and out-of-scale note highlighting |
 | `DRUM` | Return to Drum mode |
-| `PERFORM` | Switch to Perform mode placeholder |
+| `PERFORM` | Switch to Perform mode |
 | `NOTE` | Toggle `Chromatic` / `In Key` layout |
 | `STEP SEQ` | Enter the current note-step sub-mode |
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode and enter it |
@@ -214,13 +214,14 @@ While a note-step sub-mode is active, `NOTE` returns to live note play.
 | `STEP SEQ` while already in `Oikord Step` | Toggle `As Is` / `Cast` rendering |
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN` up / down | Page within the active Oikord family across two pages |
-| `GRID` left / right (`BANK_L` / `BANK_R`) | Oikord octave offset down / up |
-| `SHIFT + GRID` left / right | Oikord root offset down / up |
+| `MUTE_1` / `MUTE_2` | Oikord octave offset down / up |
+| `MUTE_3` / `MUTE_4` | Oikord root offset down / up |
+| `GRID` left / right (`BANK_L` / `BANK_R`) | Move step content left / right |
+| `SHIFT + GRID` left / right | Fine nudge held or selected notes |
 | Encoder 1 | Oikord root offset |
-| Encoder 2 | Oikord gate / note length amount |
+| Encoder 2 | Oikord octave offset |
 | Encoder 3 | Select active Oikord family |
-| Encoder 4 | Show current Oikord / family context |
-| `MUTE_3` | Show current Oikord / mode context on OLED |
+| Encoder 4 | Reserved / no-op for now |
 
 Behavior notes:
 
@@ -233,28 +234,51 @@ Behavior notes:
 - Oikord root and octave offsets persist until changed and affect new assignments and auditions
 - Oikord audition is controlled by a preference: `Audition Oikords`
 - Oikord selection OLED text shows family, chosen voicing name, page, rendering mode, and current root/octave offsets
+- Shared step encoder pages now apply in `Oikord Step`: `Channel = Velocity/Pressure/Timbre/Pitch Expression`, `Mixer = Volume/Pan/Send 1/Send 2`, `User 1 = Note Length/Chance/Velocity Spread/Repeat`, `User 2 = Oikord-specific root/octave/family`
 
 Explicitly deferred from this first pass:
 
 - piano layout
 - Bitwig host-scale follow
 - full Clip Step Record behavior
-- encoder-page harmonization between Drum and Note Step modes
 - broader performance-note features
 
 ## Perform Mode
 
-`PERFORM` should become a third top-level mode dedicated to clip launching and performance actions.
+`PERFORM` is now a top-level `16x4` clip launcher and performance mode.
 
-Intended direction:
+Current layout:
 
-| Area | Role |
+| Area / Control | Role |
 | --- | --- |
-| Pad matrix | Clip / scene / performance view |
-| Transport row | Performance-friendly transport actions |
-| Mode button LEDs | Clear indication of active top-level mode |
+| Pad matrix | Global `16x4` clip grid |
+| Filled slot pad | Select and launch the clip |
+| Empty slot pad | Create a new `4`-bar clip and launch it |
+| Pad LEDs | Clip color plus queued / playing / recording indication |
+| `MUTE_1` | Select modifier |
+| `MUTE_2` | Duplicate selected visible clip and double its length |
+| `MUTE_3` | Copy from the selected visible clip |
+| `MUTE_4` | Delete clip |
+| `BANK_L` / `BANK_R` | Scroll tracks by visible page |
+| `SHIFT + BANK_L` / `SHIFT + BANK_R` | Scroll tracks by `1` |
+| `PATTERN` up / down | Scroll scenes by visible page |
+| `SHIFT + PATTERN` up / down | Scroll scenes by `1` |
+| `KNOB_MODE` | Cycle Perform encoder pages |
 
-This is intended to replace the current use of `PERFORM` as a temporary grid-resolution modifier.
+Perform encoder pages:
+
+| Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Project Remote 1 | Project Remote 2 | Project Remote 3 | Project Remote 4 |
+| `Mixer` | Selected Track Volume | Selected Track Pan | Selected Track Send 1 | Selected Track Send 2 |
+| `User 1` | Selected Track Remote 1 | Selected Track Remote 2 | Selected Track Remote 3 | Selected Track Remote 4 |
+| `User 2` | Selected Device Remote 1 | Selected Device Remote 2 | Selected Device Remote 3 | Selected Device Remote 4 |
+
+Behavior notes:
+
+- Touching any bound top encoder resets that parameter to its default value.
+- `Perform` currently focuses on clip launch, slot selection, copy/delete, and fast remote access rather than scene launch, stop rows, or deeper transport workflows.
+- This replaces the previous temporary use of `PERFORM` as a grid-resolution modifier.
 
 ## Pinning
 

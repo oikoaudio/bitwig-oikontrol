@@ -1,8 +1,6 @@
 # Bitwig Oikontrol
 
-These are extensions for Bitwig Studio v5.3+. They are Work In Progress primarily for my own use and not (yet) polished for broader release. With that said, feel free to test, use and modify them.
-
-The Novation Launch Ctrl XL extends the factory extension with new user modes. The Akai Fire extension is a fork of the `rhbitwig` extension (attributions below) with small amounts of functionality added. The "rebranding" is a bit unfortunate currently, the intention was/is to allow for sharing of code between the two extensions and adding additional modes that would take it away from purely being a dedicated drum sequencer.
+These are controller extensions for Bitwig Studio v5.3+. The repo currently contains one extension for the Novation Launch Control XL Mk2 and one for the Akai Fire.
 
 Bitwig Oikontrol currently provides two controller extensions:
 **Novation Launch Control XL (Mk2):**
@@ -13,24 +11,23 @@ Bitwig Oikontrol currently provides two controller extensions:
 * User Template 8 is the Richie Hawtin / Eric Ahrens arp workflow taken from
 [https://github.com/ericahrens/rhbitwig/]
 
-**Akai Fire:** A fork of the rhbitwig Akai Fire extension. Differences from the original:
-* Drum layout is fixed: row 1 = clips, row 2 = drum slots, rows 3-4 = 32 visible steps.
-* Clip launch behavior moved into extension preferences: clip launch mode is selected in preferences (`Synced` or `From Start`), and launch quantization is also chosen there instead of on the NOTE button.
-* `DRUM`, `NOTE`, and `PERFORM` are top-level mode buttons. Drum sequencing and a first-pass Note mode are implemented; Perform remains reserved for a later dedicated mode.
-* Note mode now provides a 16x4 isomorphic note grid with `Chromatic` and `In Key` layouts, local root note / scale / octave controls, and LED/OLED feedback for note-state and layout changes.
-* Inside `NOTE`, plain note mode remains live play. `STEP SEQ` toggles between live play and the selected note-step sub-mode, while `SHIFT + STEP SEQ` cycles the current note-step sub-mode between `Oikord Step` and `Clip Step Record`.
-* `Oikord Step` uses the upper two pad rows as 32 curated Oikord slots and the lower two rows as 32 visible steps. `PATTERN` up/down pages the curated Oikord bank across two pages, with Barker and Audible first, and step assignment writes literal notes directly into the current clip.
-* `STEP SEQ` is now the accent gesture in Drum mode, `SHIFT + STEP SEQ` toggles Fill, and `ALT +` the `GRID` left/right arrow buttons adjusts grid resolution. The `GRID` left/right arrow buttons keep pattern shift and fine nudge behavior.
-* `PATTERN` defaults to Clip Launcher Automation Write, with `SHIFT + PATTERN` fixed to metronome.
+**Akai Fire:** The Fire script uses three top-level modes: `DRUM`, `NOTE`, and `PERFORM`.
+* `DRUM` uses a fixed 4-row layout: row 1 = clips, row 2 = drum slots, rows 3-4 = 32 visible steps.
+* Drum mode uses `STEP SEQ` for Accent, `SHIFT + STEP SEQ` for Fill, and the `GRID` left/right buttons for pattern shift and fine nudge. `ALT + GRID` left/right changes grid resolution.
+* Drum step encoder pages use `Channel`, `Mixer`, `User 1`, and `User 2`, with Euclid controls on Drum `User 2`.
+* `NOTE` provides a 16x4 isomorphic note grid with `Chromatic` and `In Key` layouts, local root note / scale / octave controls, and OLED / LED note feedback.
+* In `NOTE`, `STEP SEQ` enters the current note-step sub-mode and `SHIFT + STEP SEQ` cycles the selected sub-mode. Current note-step sub-modes are `Oikord Step` and the deferred `Clip Step Record` placeholder.
+* `Oikord Step` uses the upper two pad rows for 32 curated Oikord slots and the lower two rows for 32 visible steps. It uses the same shared `Channel`, `Mixer`, and `User 1` step pages as Drum, with Oikord-specific controls on `User 2`.
+* In `Oikord Step`, `MUTE_1..4` set chord octave/root offsets, `PATTERN` pages the active Oikord family, and `BANK_L/BANK_R` move or fine-nudge step content.
+* `PERFORM` provides a global `16x4` clip launcher. Pads launch clips, create a new `4`-bar clip on empty slots, and show clip color plus queued / playing / recording state.
+* In `PERFORM`, `MUTE_1` selects, `MUTE_2` duplicates and doubles the selected visible clip, `MUTE_3` copies from the selected visible clip, and `MUTE_4` deletes.
+* In `PERFORM`, `BANK_L/BANK_R` scroll tracks, `PATTERN` up/down scroll scenes, and holding `SHIFT` makes those controls move by `1` instead of paging.
+* `PERFORM` encoder pages are `Channel = project remotes`, `Mixer = selected track volume/pan/send1/send2`, `User 1 = selected track remotes`, and `User 2 = selected device remotes`. Touching an encoder resets that parameter to its default.
+* Clip launch behavior is configured in preferences: launch mode is `Synced` or `From Start`, and clip launch quantization is also selected there.
 * The main encoder role is configurable between `Last Touched Parameter`, `Shuffle`, and `Note Repeat`.
-* Euclid mode uses User2 encoders = LEN/PULS/ROT/INV, Browser = apply, Shift = preview placeholder; per-pad mixer controls moved from User2 to the Mixer mode.
-* Fine-grid step nudging builds on Wim Van den Borre's Akai Fire Nudger work [https://github.com/wimvandenborre/AkaiFireNudger/]. I took his fine-grid approach: a separate `1/64` note grid, note observation on that finer grid, and moving note starts with Bitwig's `moveStep(...)` API. In this repo, the current user-facing behavior around lane nudge, held-step nudge, repeated retarget-safe nudging, and the interaction with the rest of the Fire layout was adapted further here, so any remaining rough edges in that behavior are on me.
-
-  Current behavior:
-  + the `GRID` left/right arrow buttons shift the selected lane
-  + `SHIFT +` the `GRID` left/right arrow buttons fine-nudges the selected lane, and holding one or more step pads
-  + pressing the `GRID` left/right arrow buttons fine-nudges those held notes only. While a step is held, repeated nudges keep targeting that same note. After release, step ownership falls back to the current visible grid. NB! After releasing that held note, if nudged to earlier that note may appear under the previous step (together with any note existing earlier on that step) unless the grid resolution is increased.
-* Play button: Alt+Play retriggers current clip; regular Play toggles transport and retriggers on start.
+* `PATTERN` defaults to Clip Launcher Automation Write, with `SHIFT + PATTERN` fixed to metronome.
+* `ALT + PLAY` retriggers the current clip; plain `PLAY` toggles transport and retriggers on start.
+* Fine-grid step nudging is based on Wim Van den Borre's Akai Fire Nudger work [https://github.com/wimvandenborre/AkaiFireNudger/], adapted here for the current Fire sequencer workflow.
 
 ## Requirements
 
@@ -75,7 +72,7 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 ```
 
 Current artifact names:
-- `modules/akai-fire/build/libs/AkaiFireOiko-0.3.1.bwextension`
+- `modules/akai-fire/build/libs/AkaiFireOiko-0.5.bwextension`
 - `modules/launchcontrol/build/libs/LaunchControlXlOikontrol-1.1.1.bwextension`
 
 ## Documentation

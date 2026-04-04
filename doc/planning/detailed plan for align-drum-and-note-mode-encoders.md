@@ -144,6 +144,21 @@ Future direction:
 - after `PERFORM` exists, an optional note/chord layout variant with top-row clips can be reconsidered
 - that optional variant should not be the default in this pass
 
+### 7. Deferred Oikord Running-Position Indicator
+
+Add a Drum-style running-position indicator to the lower 32 step pads in
+`Oikord Step`, so the currently playing step is visible during playback.
+
+Decision:
+
+- this is feasible and should be implemented later
+- it is explicitly deferred until after `PERFORM` mode is finished
+
+Implementation note:
+
+- the likely approach is to mirror Drum Sequence’s `playingStep()` observer and
+  local-step pad-light overlay behavior inside `NoteMode`
+
 ## Important Interface / Behavior Changes
 
 - `EncoderMode` page meanings change:
@@ -155,6 +170,7 @@ Future direction:
 - Oikord-specific `gate` control is removed
 - Drum `User 2` Euclid page shrinks from 4 Euclid controls to 2 Euclid controls plus `Occurrence` / `Recurrence Length`
 - clip/copy pad partition remains different between Drum and note/chord step modes in this pass
+- Drum-style running-position display in `Oikord Step` is deferred to a later pass
 
 ## Test Plan
 
@@ -171,6 +187,7 @@ Future direction:
 - `PATTERN` still pages Oikord families correctly
 - Drum top-row clip workflow remains unchanged in this pass
 - note/chord step modes do not gain shared clip-row behavior in this pass
+- `Oikord Step` does not yet show a Drum-style running-position indicator in this pass
 
 ## Assumptions
 
@@ -179,3 +196,4 @@ Future direction:
 - `Occurrence` / `Recurrence` live on Drum `User 2`, with the existing recurrence editor retained for mask selection.
 - `Oikord Step` `User 2` leaves one encoder intentionally unused/reserved rather than inventing a fourth chord-specific control prematurely.
 - shared clip-grid behavior is deferred to future `PERFORM`, not folded into this consistency pass.
+- `Oikord Step` playhead indication is deferred even though the same general approach used in Drum Sequence should work there.

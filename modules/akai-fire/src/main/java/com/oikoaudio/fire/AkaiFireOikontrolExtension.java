@@ -7,6 +7,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.note.NoteMode;
+import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.utils.PatternButtons;
@@ -81,7 +82,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
-    private Layer performModeLayer;
+    private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
     private TopLevelMode activeMode = TopLevelMode.NOTE;
     private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
@@ -141,7 +142,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         browserResultsCursor.name().markInterested();
 
         layers = new Layers(this);
-        performModeLayer = new Layer(layers, "PERFORM_MODE_LAYER");
         midiIn = host.getMidiInPort(0);
         midiIn.setMidiCallback((ShortMidiMessageReceivedCallback) this::onMidi0);
         midiIn.setSysexCallback(this::onSysEx);
@@ -168,6 +168,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         noteMode = new NoteMode(this, noteRepeatHandler);
+        performMode = new PerformClipLauncherMode(this);
         oled.setIdleAction(this::showIdleOledInfo);
         midiOut.sendSysex(DEV_INQ);
 
@@ -184,6 +185,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         blinkTicks++;
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
+        performMode.notifyBlink(blinkTicks);
         host.scheduleTask(this::handlePing, 100);
     }
 
@@ -562,7 +564,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void switchActiveMode() {
         drumSequenceMode.deactivate();
         noteMode.deactivate();
-        performModeLayer.deactivate();
+        performMode.deactivate();
         if (activeMode == TopLevelMode.DRUM) {
             drumSequenceMode.activate();
             return;
@@ -571,7 +573,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (activeMode == TopLevelMode.NOTE) {
             noteMode.activate();
         } else {
-            performModeLayer.activate();
+            performMode.activate();
         }
     }
 
