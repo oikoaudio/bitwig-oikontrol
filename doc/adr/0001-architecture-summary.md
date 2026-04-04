@@ -4,7 +4,7 @@
 
 - We start from Bitwig’s Launch Control XL Mk2 sources (MIT licence) because the factory modes expose flexible mixer/device layers (track remotes, track focus, etc.) that we want to preserve while adding user-mode capabilities. We copy Bitwig’s `framework`, `controllers/novation/common`, and `util` packages into this repo so the build is self-contained.
 - rhbitwig’s Richie Hawtin arp (MIT licence) provides the behaviour for User Template 8.
-- Hosts must run Bitwig Studio 6.0+ (API 25). Bitwig 6 itself runs on JDK 21, so we build against Java 21 to stay aligned with the shipping runtime while keeping an LTS toolchain.
+- Hosts must run Bitwig Studio 5.3+ (API 24+). Bitwig 6 runs on JDK 25, but we build against Java 21 to keep an LTS toolchain.
 - The Launch Control XL exposes eight factory templates (MIDI channels 8–15) and eight user templates (channels 0–7). Bitwig’s stock script consumes all channels, preventing user mappings.
 
 ## Decision
