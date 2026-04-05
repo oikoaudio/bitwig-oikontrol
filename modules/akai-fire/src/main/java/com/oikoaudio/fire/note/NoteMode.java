@@ -760,7 +760,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 noteStepClip.setStep(stepIndex, midiNote, currentOikordVelocity(), STEP_LENGTH);
             }
         }
-        oled.valueInfo(oledFamilyLabel(slot.family()), "%s | %s".formatted(slot.name(), oikordInterpretation.displayName()));
+        oled.valueInfo(oledFamilyLabel(slot.family()), oledOikordName(slot));
     }
 
     private void adjustOikordPage(final int amount) {
@@ -832,7 +832,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, AUDITION_VELOCITY);
             auditioningNotes.add(midiNote);
         }
-        oled.valueInfo(oledFamilyLabel(slot.family()), "%s | %s".formatted(slot.name(), oikordInterpretation.displayName()));
+        oled.valueInfo(oledFamilyLabel(slot.family()), oledOikordName(slot));
     }
 
     private void stopAuditionNotes() {
@@ -1348,12 +1348,49 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final OikordBank.Slot slot = currentOikordSlot();
         oled.valueInfo("%s %d/%d".formatted(oledFamilyLabel(slot.family()), oikordPage + 1,
                         oikordBank.pageCount(selectedOikordFamily)),
-                "%s %s".formatted(slot.name(), oikordInterpretationSuffix()));
+                "%s %s".formatted(oledOikordName(slot), oikordInterpretationSuffix()));
     }
 
     private String currentOikordDisplay() {
         final OikordBank.Slot slot = currentOikordSlot();
-        return "%s %s".formatted(slot.shortLabel(), oikordInterpretationSuffix());
+        return "%s %s".formatted(oledOikordName(slot), oikordInterpretationSuffix());
+    }
+
+    private String oledOikordName(final OikordBank.Slot slot) {
+        if ("Barker".equals(slot.family())) {
+            return switch (slot.formulaIndex()) {
+                case 0 -> "Q stack";
+                case 1 -> "Q b7/9";
+                case 2 -> "Q Maj7";
+                case 3 -> "Q add6";
+                case 4 -> "5th+Q";
+                case 5 -> "Q +11";
+                case 6 -> "Q oct";
+                case 7 -> "Q 6/10";
+                default -> "Barker";
+            };
+        }
+        if ("Root Drone".equals(slot.family())) {
+            return switch (slot.formulaIndex()) {
+                case 0 -> "9/11";
+                case 1 -> "sus";
+                case 2 -> "6/9";
+                case 3 -> "#11";
+                case 4 -> "5/10";
+                case 5 -> "add9";
+                case 6 -> "sus69";
+                case 7 -> "Maj7";
+                default -> "Drone";
+            };
+        }
+        return switch (slot.name()) {
+            case "Fully diminished" -> "Fully dim";
+            case "Half-diminished" -> "Half dim";
+            case "Dominant 7th" -> "Dom 7th";
+            case "Dominant 7th (b9)" -> "Dom 7b9";
+            case "10th (Spread maj7)" -> "10th sprd";
+            default -> slot.name();
+        };
     }
 
     private String oledFamilyLabel(final String family) {

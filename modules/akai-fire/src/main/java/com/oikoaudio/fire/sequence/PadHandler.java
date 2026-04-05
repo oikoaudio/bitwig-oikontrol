@@ -209,6 +209,8 @@ public class PadHandler {
             parent.registerPendingAction(new NoteAction(selectedPadIndex, pad.index, Type.COPY_PAD, notes));
             cursorClip.scrollToKey(drumScrollOffset + pad.index);
             pad.pad.selectInEditor();
+            parent.getOled().valueInfo("Copy Pad", "Select target");
+            parent.notifyPopup("Copy Pad", selectedPadLabel() + " -> " + pad.getName());
         }
     }
 
@@ -245,6 +247,10 @@ public class PadHandler {
             return selectedPad.getName();
         }
         return "";
+    }
+
+    private String selectedPadLabel() {
+        return selectedPad != null ? selectedPad.getName() : "Pad " + (selectedPadIndex + 1);
     }
 
     public boolean isPadBeingHeld() {

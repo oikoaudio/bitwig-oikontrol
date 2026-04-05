@@ -287,8 +287,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             expectedNoteChanges.put(index, copyNote);
             cursorClip.setStep(index, 0, vel, duration);
             heldStepFineStarts.put(index, coarseLower(index));
+            oled.valueInfo("Copy Step", "Select target");
+            notifyPopup("Copy Step", stepLabel(copyNote.x()) + " -> " + stepLabel(index));
         } else if (note != null && note.state() == State.NoteOn) {
             copyNote = note;
+            oled.valueInfo("Copy Step", stepLabel(index));
         }
     }
 
@@ -671,6 +674,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         return oled;
     }
 
+    public void notifyPopup(final String title, final String value) {
+        driver.notifyPopup(title, value);
+    }
+
     private void handleEuclidAdjust(int index, int inc) {
         final int oldLength = euclidState.getLength();
         final int oldPulses = euclidState.getPulses();
@@ -910,8 +917,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             altValue.set(alternateFunctionActive.get());
 
             actionTakenFlag.set(true);
-            oled.functionInfo(
-                    getPadInfo(),
+            oled.valueInfo(
                     isAlternateFunctionActive ? info2.getName(false) : info1.getName(false),
                     isAlternateFunctionActive ? info2.getDetail() : info1.getDetail()
             );
@@ -937,7 +943,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             if (padHandler.notePlayingEnabled()) {
                 padHandler.disableNotePlaying();
             }
-            oled.functionInfo(getPadInfo(), info.getName(shiftActive.get()), info.getDetail());
+            oled.valueInfo(info.getName(shiftActive.get()), info.getDetail());
         } else {
             oled.clearScreenDelayed();
             if (padHandler.notePlayingEnabled()) {
@@ -987,6 +993,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
 
     public void clearPendingAction() {
         pendingAction = null;
+    }
+
+    private String stepLabel(final int index) {
+        return "Step " + (index + 1);
     }
 
     private void stepActionFixedLength(final int index) {

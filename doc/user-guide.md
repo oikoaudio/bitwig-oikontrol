@@ -131,6 +131,12 @@ Main gestures:
 - `SHIFT + BANK LEFT/RIGHT`: fine nudge
 - `ALT + BANK LEFT/RIGHT`: grid resolution
 
+In `DRUM`, hold `Paste` and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:
+
+- clip-row paste uses the currently selected clip slot as the source to copy from
+- drum-pad paste uses the currently selected drum pad as the source to copy from
+- step paste uses the currently selected step as the source to copy from
+
 Encoder pages:
 
 - `Channel`: shared step expression editing
@@ -195,6 +201,8 @@ Important gestures:
 - `BANK LEFT/RIGHT`: move written step content left or right
 - `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
 
+In `Chord Step`, hold `Paste` and press a step. The currently selected step is used as the source to copy from.
+
 ### PERFORM mode
 
 `PERFORM` is the clip-launch and performance surface.
@@ -208,7 +216,7 @@ Pad colors in `PERFORM` also follow Bitwig track and clip color context rather t
 Important gestures:
 
 - hold `MUTE_1` + pad: select without launching
-- hold `MUTE_3` + pad: copy
+- hold `MUTE_3` + pad: paste the currently selected clip to the target slot
 - hold `MUTE_4` + pad: delete
 - `MUTE_2`: double visible clip length
 - `SHIFT + MUTE_2`: halve visible clip length
