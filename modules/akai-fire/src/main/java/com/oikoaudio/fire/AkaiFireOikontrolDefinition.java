@@ -15,12 +15,12 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getName() {
-        return "Akai Fire by Oiko Audio";
+        return "Oikontrol Fire";
     }
 
     @Override
     public String getAuthor() {
-        return "David Fredman / Oiko Audio";
+        return "";
     }
 
     @Override

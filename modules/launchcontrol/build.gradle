@@ -1,7 +1,8 @@
 version = '2.0.0'
 
 jar {
-    archiveBaseName.set('LaunchControlXlOikontrol')
+    archiveBaseName.set('OikontrolLCXL')
+    archiveVersion.set('')
     archiveExtension.set('bwextension')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(project(':modules:common').sourceSets.main.output)

@@ -4,6 +4,18 @@ public final class FireControlPreferences {
     public static final String CATEGORY_FUNCTIONALITIES = "Functionalities";
     public static final String CATEGORY_CLIP_LAUNCH = "Clip Launch";
     public static final String CATEGORY_PINNING = "Pinning";
+    public static final String CATEGORY_HARDWARE = "Hardware";
+
+    public static final double PAD_BRIGHTNESS_MIN = 20.0;
+    public static final double PAD_BRIGHTNESS_MAX = 100.0;
+    public static final double PAD_BRIGHTNESS_STEP = 5.0;
+    public static final double PAD_BRIGHTNESS_DEFAULT = 60.0;
+    public static final double PAD_BRIGHTNESS_SCALE_MIN = 0.70;
+    public static final double PAD_BRIGHTNESS_SCALE_MAX = 2.50;
+    public static final double PAD_SATURATION_MIN = 0.0;
+    public static final double PAD_SATURATION_MAX = 150.0;
+    public static final double PAD_SATURATION_STEP = 5.0;
+    public static final double PAD_SATURATION_DEFAULT = 100.0;
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
     public static final String CLIP_LAUNCH_MODE_FROM_START = "From Start";
@@ -137,5 +149,51 @@ public final class FireControlPreferences {
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {
         return DRUM_PIN_MODE_FIRST_DRUM_MACHINE.equals(normalizeDrumPinMode(preferenceValue));
+    }
+
+    public static double normalizePadBrightness(final double preferenceValue) {
+        if (Double.isNaN(preferenceValue) || Double.isInfinite(preferenceValue)) {
+            return PAD_BRIGHTNESS_DEFAULT;
+        }
+        return Math.max(PAD_BRIGHTNESS_MIN, Math.min(PAD_BRIGHTNESS_MAX, preferenceValue));
+    }
+
+    public static double toPadBrightnessScale(final double preferenceValue) {
+        final double normalizedBrightness = normalizePadBrightness(preferenceValue);
+        final double rangePosition = (normalizedBrightness - PAD_BRIGHTNESS_MIN)
+                / (PAD_BRIGHTNESS_MAX - PAD_BRIGHTNESS_MIN);
+        return PAD_BRIGHTNESS_SCALE_MIN
+                + rangePosition * (PAD_BRIGHTNESS_SCALE_MAX - PAD_BRIGHTNESS_SCALE_MIN);
+    }
+
+    public static int scalePadColorComponent(final int component, final double brightnessPreference) {
+        if (component <= 0) {
+            return 0;
+        }
+        final double scale = toPadBrightnessScale(brightnessPreference);
+        return Math.max(0, Math.min(127, (int) Math.round(component * scale)));
+    }
+
+    public static double normalizePadSaturation(final double preferenceValue) {
+        if (Double.isNaN(preferenceValue) || Double.isInfinite(preferenceValue)) {
+            return PAD_SATURATION_DEFAULT;
+        }
+        return Math.max(PAD_SATURATION_MIN, Math.min(PAD_SATURATION_MAX, preferenceValue));
+    }
+
+    public static int scalePadColorComponent(final int component,
+                                             final int red,
+                                             final int green,
+                                             final int blue,
+                                             final double brightnessPreference,
+                                             final double saturationPreference) {
+        if (component <= 0 && red <= 0 && green <= 0 && blue <= 0) {
+            return 0;
+        }
+        final double saturation = normalizePadSaturation(saturationPreference) / 100.0;
+        final double gray = (red + green + blue) / 3.0;
+        final double saturatedComponent = gray + (component - gray) * saturation;
+        final double brightness = toPadBrightnessScale(brightnessPreference);
+        return Math.max(0, Math.min(127, (int) Math.round(saturatedComponent * brightness)));
     }
 }

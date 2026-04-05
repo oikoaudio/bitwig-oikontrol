@@ -522,7 +522,7 @@ public class PerformClipLauncherMode extends Layer {
             return slot.isSelected().get() ? blinkSlow(baseColor.getBrightest(), baseColor)
                     : blinkSlow(baseColor, baseColor.getDimmed());
         }
-        return slot.isSelected().get() ? baseColor.getBrightend() : baseColor.getDimmed();
+        return slot.isSelected().get() ? baseColor.getBrightend() : baseColor.getSoftDimmed();
     }
 
     private RgbLigthState blinkSlow(final RgbLigthState on, final RgbLigthState off) {
