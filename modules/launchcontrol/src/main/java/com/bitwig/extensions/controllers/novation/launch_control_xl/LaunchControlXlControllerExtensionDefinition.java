@@ -92,8 +92,7 @@ public class LaunchControlXlControllerExtensionDefinition extends ControllerExte
    @Override
    public String getHelpFilePath()
    {
-      // Served from src/main/resources/Documentation/index.html inside the bwextension.
-      return "Documentation/index.html";
+      return "index.html";
    }
 
    public static LaunchControlXlControllerExtensionDefinition getInstance()
