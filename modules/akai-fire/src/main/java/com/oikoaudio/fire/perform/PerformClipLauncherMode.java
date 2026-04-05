@@ -218,25 +218,38 @@ public class PerformClipLauncherMode extends Layer {
                 () -> canScrollScenes(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
 
         final BiColorButton selectButton = driver.getButton(NoteAssign.MUTE_1);
-        bindModifierButton(selectButton, selectHeld, "Select Clip", BiColorLightState.GREEN_FULL);
+        bindModifierButton(selectButton, selectHeld, "Select", "Pad select", BiColorLightState.GREEN_FULL);
 
         final BiColorButton duplicateButton = driver.getButton(NoteAssign.MUTE_2);
         duplicateButton.bindPressed(this, this::handleDuplicatePressed,
                 () -> duplicateButton.isPressed() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF);
 
         final BiColorButton copyButton = driver.getButton(NoteAssign.MUTE_3);
-        bindModifierButton(copyButton, copyHeld, "Copy Clip", BiColorLightState.GREEN_FULL);
+        copyButton.bindPressed(this, pressed -> {
+            copyHeld.set(pressed);
+            if (!pressed) {
+                oled.clearScreenDelayed();
+                return;
+            }
+            final ClipLauncherSlot source = getSelectedVisibleSlot();
+            if (source == null || !source.exists().get() || !source.hasContent().get()) {
+                oled.valueInfo("Copy Clip", "Select source first");
+                return;
+            }
+            oled.valueInfo("Paste sel", "Pad target");
+        }, () -> copyButton.isPressed() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
 
         final BiColorButton deleteButton = driver.getButton(NoteAssign.MUTE_4);
-        bindModifierButton(deleteButton, deleteHeld, "Delete Clip", BiColorLightState.RED_FULL);
+        bindModifierButton(deleteButton, deleteHeld, "Delete", "Pad delete", BiColorLightState.RED_FULL);
     }
 
     private void bindModifierButton(final BiColorButton button, final BooleanValueObject heldState,
-                                    final String oledLabel, final BiColorLightState activeColor) {
+                                    final String functionName, final String detail,
+                                    final BiColorLightState activeColor) {
         button.bindPressed(this, pressed -> {
             heldState.set(pressed);
             if (pressed) {
-                oled.valueInfo("Perform", oledLabel);
+                oled.valueInfo(functionName, detail);
             } else {
                 oled.clearScreenDelayed();
             }
@@ -265,7 +278,10 @@ public class PerformClipLauncherMode extends Layer {
             final ClipLauncherSlot source = getSelectedVisibleSlot();
             if (source != null && (selectedTrackIndex != absoluteTrackIndex || selectedSceneIndex != absoluteSceneIndex)) {
                 slot.replaceInsertionPoint().copySlotsOrScenes(source);
-                oled.valueInfo("Copy Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+                final String sourceLabel = selectedSlotLabel();
+                final String destinationLabel = slotLabel(absoluteTrackIndex, absoluteSceneIndex);
+                oled.valueInfo("Copy Clip", "Select target");
+                driver.notifyPopup("Copy Clip", sourceLabel + " -> " + destinationLabel);
             } else {
                 oled.valueInfo("Copy Clip", "Select source first");
             }
@@ -569,6 +585,13 @@ public class PerformClipLauncherMode extends Layer {
                 ? nameOrFallback(sceneNames[visibleSceneIndex], "Scene " + (absoluteSceneIndex + 1))
                 : "Scene " + (absoluteSceneIndex + 1);
         return trackName + " / " + sceneName;
+    }
+
+    private String selectedSlotLabel() {
+        if (selectedTrackIndex < 0 || selectedSceneIndex < 0) {
+            return "None";
+        }
+        return slotLabel(selectedTrackIndex, selectedSceneIndex);
     }
 
     private String offsetLabel(final int offset, final int total, final int visibleCount) {

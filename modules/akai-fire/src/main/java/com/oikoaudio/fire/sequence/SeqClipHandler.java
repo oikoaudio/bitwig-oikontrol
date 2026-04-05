@@ -121,6 +121,8 @@ public class SeqClipHandler {
             } else if (parent.isCopyHeld()) { // copies note
                 if (selectedSlotIndex != -1 && selectedSlotIndex != index) {
                     slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(selectedSlotIndex));
+                    parent.getOled().valueInfo("Copy Clip", "Select target");
+                    parent.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
                 }
             } else if (parent.isSelectHeld()) {
                 slot.select();
@@ -134,11 +136,17 @@ public class SeqClipHandler {
             if (parent.isCopyHeld()) {
                 if (selectedSlotIndex != -1 && selectedSlotIndex != index) {
                     slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(selectedSlotIndex));
+                    parent.getOled().valueInfo("Copy Clip", "Select target");
+                    parent.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
                 }
             } else {
                 slot.createEmptyClip(4);
             }
         }
+    }
+
+    private String slotLabel(final int index) {
+        return "Clip " + (index + 1);
     }
 
     public void notifyBlink(final int blinkState) {

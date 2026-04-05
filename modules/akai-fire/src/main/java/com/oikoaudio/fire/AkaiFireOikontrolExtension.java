@@ -465,6 +465,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         transport.stop();
+        notifyAction("Transport", "Stop");
+        oled.clearScreenDelayed();
     }
 
     private void toggleRec(final boolean pressed) {
@@ -585,17 +587,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         // Alt+Play: retrigger the current clip without transport state change.
         if (drumSequenceMode.isAltHeld()) {
+            final boolean wasPlaying = transport.isPlaying().get();
             drumSequenceMode.retrigger();
+            notifyAction(wasPlaying ? "Clip" : "Transport", wasPlaying ? "Retrigger" : "Play");
+            oled.clearScreenDelayed();
             return;
         }
         // Regular behavior: toggle play/stop, retrigger on start.
         if (transport.isPlaying().get()) {
             transport.isPlaying().set(false);
             notifyAction("Transport", "Stop");
+            oled.clearScreenDelayed();
         } else {
             drumSequenceMode.retrigger();
             transport.restart();
             notifyAction("Transport", "Play");
+            oled.clearScreenDelayed();
         }
     }
 
