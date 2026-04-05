@@ -11,8 +11,8 @@ The project now ships one shared user guide for both controllers.
 
 - Canonical guide source: `doc/user-guide.md`
 - Bundled help inside Bitwig:
-  - `Launch Control XL by Oiko Audio` opens `Documentation/index.html`
-  - `Akai Fire by Oiko Audio` opens `Documentation/index.html`
+  - `Launch Control XL by Oiko Audio` opens `index.html`
+  - `Akai Fire by Oiko Audio` opens `index.html`
 
 High-level controller summary:
 
@@ -62,7 +62,7 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 ```
 
 Current artifact names:
-- `modules/akai-fire/build/libs/AkaiFireOiko-2.0.0.bwextension`
+- `modules/akai-fire/build/libs/AkaiFireOiko-2.0.1.bwextension`
 - `modules/launchcontrol/build/libs/LaunchControlXlOikontrol-2.0.0.bwextension`
 
 ## Documentation
