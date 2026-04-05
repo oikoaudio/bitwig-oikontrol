@@ -23,6 +23,7 @@ import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -75,6 +76,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_STANDARD_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_ACCENTED_VELOCITY = 127;
+    private static final long TOUCH_RESET_HOLD_MS = 250L;
+    private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
+    private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int DEFAULT_TIMBRE = 64;
     private static final int MIDI_CC_MOD = 1;
     private static final int MIDI_CC_TIMBRE = 74;
@@ -154,7 +158,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final EncoderStepAccumulator oikordRootEncoder = new EncoderStepAccumulator(OIKORD_ROOT_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator oikordOctaveEncoder = new EncoderStepAccumulator(OIKORD_OCTAVE_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator oikordFamilyEncoder = new EncoderStepAccumulator(OIKORD_FAMILY_ENCODER_THRESHOLD);
-
+    private final TouchResetGesture touchResetGesture =
+            new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
+                    TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
     private enum NoteStepSubMode {
         OIKORD_STEP("Chord Step", BiColorLightState.GREEN_HALF, BiColorLightState.GREEN_FULL),
         CLIP_STEP_RECORD("Clip Step Record", BiColorLightState.AMBER_HALF, BiColorLightState.AMBER_FULL);
@@ -352,6 +358,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (steps == 0) {
             return;
         }
+        markEncoderAdjusted(0);
         final int nextVelocity = Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, liveVelocity + steps));
         if (nextVelocity == liveVelocity) {
             return;
@@ -362,15 +369,24 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleEncoder1(final int inc) {
-        adjustScale(liveScaleEncoder.consume(inc));
+        final int steps = liveScaleEncoder.consume(inc);
+        if (steps != 0) {
+            markEncoderAdjusted(1);
+            adjustScale(steps);
+        }
     }
 
     private void handleEncoder2(final int inc) {
-        adjustOctave(liveOctaveEncoder.consume(inc));
+        final int steps = liveOctaveEncoder.consume(inc);
+        if (steps != 0) {
+            markEncoderAdjusted(2);
+            adjustOctave(steps);
+        }
     }
 
     private void handleEncoder3(final int inc) {
         if (liveLayoutEncoder.consume(inc) != 0) {
+            markEncoderAdjusted(3);
             toggleLayout();
         }
     }
@@ -418,6 +434,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (nextIndex == livePitchOffsetIndex) {
             return;
         }
+        markEncoderAdjusted(0);
         final Map<Integer, Integer> oldHeldNotes = collectHeldNotes(createLayout());
         final boolean retuneHeld = driver.shouldRetuneHeldLiveNotes();
         if (retuneHeld) {
@@ -432,12 +449,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleLivePitchOffsetTouch(final boolean touched) {
-        if (!touched) {
-            livePitchOffsetEncoder.reset();
-            oled.clearScreenDelayed();
-            return;
-        }
-        oled.valueInfo("Pitch Offset", formatSignedValue(getLivePitchOffset()));
+        handleResettableTouch(0, touched,
+                () -> oled.valueInfo("Pitch Offset", formatSignedValue(getLivePitchOffset())),
+                livePitchOffsetEncoder::reset);
     }
 
     private int getLivePitchOffset() {
@@ -453,33 +467,21 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleLiveVelocityTouch(final boolean pressed) {
-        if (!pressed) {
-            liveVelocityEncoder.reset();
-            oled.clearScreenDelayed();
-            return;
-        }
-        oled.valueInfo("Velocity", Integer.toString(liveVelocity));
+        handleResettableTouch(0, pressed,
+                () -> oled.valueInfo("Velocity", Integer.toString(liveVelocity)),
+                liveVelocityEncoder::reset);
     }
 
     private void handleEncoder1Touch(final boolean pressed) {
-        if (!pressed) {
-            liveScaleEncoder.reset();
-        }
-        showTouchedState(pressed, "Scale");
+        handleResettableTouch(1, pressed, () -> showState("Scale"), liveScaleEncoder::reset);
     }
 
     private void handleEncoder2Touch(final boolean pressed) {
-        if (!pressed) {
-            liveOctaveEncoder.reset();
-        }
-        showTouchedState(pressed, "Octave");
+        handleResettableTouch(2, pressed, () -> showState("Octave"), liveOctaveEncoder::reset);
     }
 
     private void handleEncoder3Touch(final boolean pressed) {
-        if (!pressed) {
-            liveLayoutEncoder.reset();
-        }
-        showTouchedState(pressed, "Layout");
+        handleResettableTouch(3, pressed, () -> showState("Layout"), liveLayoutEncoder::reset);
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
@@ -901,6 +903,30 @@ public class NoteMode extends Layer implements StepSequencerHost {
             showState(label);
         } else {
             oled.clearScreenDelayed();
+        }
+    }
+
+    private void handleResettableTouch(final int encoderIndex, final boolean touched,
+                                       final Runnable showInfo, final Runnable resetAction) {
+        if (touched) {
+            if (driver.isEncoderTouchResetEnabled()) {
+                touchResetGesture.onTouchStart(encoderIndex);
+            }
+            showInfo.run();
+            return;
+        }
+        if (driver.isEncoderTouchResetEnabled()
+                && touchResetGesture.shouldResetOnTouchRelease(encoderIndex)) {
+            resetAction.run();
+            showInfo.run();
+            return;
+        }
+        oled.clearScreenDelayed();
+    }
+
+    private void markEncoderAdjusted(final int encoderIndex) {
+        if (driver.isEncoderTouchResetEnabled()) {
+            touchResetGesture.onAdjusted(encoderIndex, 1);
         }
     }
 
@@ -1619,35 +1645,31 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     @Override
     public void bindUser2Page(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
-        encoders[0].bindEncoder(layer, inc -> adjustOikordRoot(oikordRootEncoder.consume(inc)));
-        encoders[0].bindTouched(layer, touched -> {
-            if (!touched) {
-                oikordRootEncoder.reset();
-                oled.clearScreenDelayed();
-            } else {
-                showOikordRootInfo();
+        encoders[0].bindEncoder(layer, inc -> {
+            final int amount = oikordRootEncoder.consume(inc);
+            if (amount != 0) {
+                markEncoderAdjusted(0);
+                adjustOikordRoot(amount);
             }
         });
-        encoders[1].bindEncoder(layer, inc -> adjustOikordOctave(oikordOctaveEncoder.consume(inc)));
-        encoders[1].bindTouched(layer, touched -> {
-            if (!touched) {
-                oikordOctaveEncoder.reset();
-                oled.clearScreenDelayed();
-            } else {
-                showOikordOctaveInfo();
+        encoders[0].bindTouched(layer, touched -> handleResettableTouch(0, touched,
+                this::showOikordRootInfo, oikordRootEncoder::reset));
+        encoders[1].bindEncoder(layer, inc -> {
+            final int amount = oikordOctaveEncoder.consume(inc);
+            if (amount != 0) {
+                markEncoderAdjusted(1);
+                adjustOikordOctave(amount);
             }
         });
+        encoders[1].bindTouched(layer, touched -> handleResettableTouch(1, touched,
+                this::showOikordOctaveInfo, oikordOctaveEncoder::reset));
         encoders[2].bindEncoder(layer, inc -> {
-            oikordFamilyEncoder.consume(inc);
-        });
-        encoders[2].bindTouched(layer, touched -> {
-            if (!touched) {
-                oikordFamilyEncoder.reset();
-                oled.clearScreenDelayed();
-            } else {
-                showOikordFamilyInfo();
+            if (oikordFamilyEncoder.consume(inc) != 0) {
+                markEncoderAdjusted(2);
             }
         });
+        encoders[2].bindTouched(layer, touched -> handleResettableTouch(2, touched,
+                this::showOikordFamilyInfo, oikordFamilyEncoder::reset));
         encoders[3].bindEncoder(layer, inc -> { });
         encoders[3].bindTouched(layer, touched -> {
             if (touched) {

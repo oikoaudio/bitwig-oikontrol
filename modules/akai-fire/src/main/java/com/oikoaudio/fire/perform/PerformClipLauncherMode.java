@@ -20,6 +20,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -29,6 +30,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PerformClipLauncherMode extends Layer {
+    private static final long PARAMETER_RESET_TOUCH_HOLD_MS = 250;
+    private static final long PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300;
+    private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int TRACKS = 16;
     private static final int SCENES = 4;
     private static final int DEFAULT_CLIP_LENGTH = 4;
@@ -59,7 +63,9 @@ public class PerformClipLauncherMode extends Layer {
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
-
+    private final TouchResetGesture parameterResetGesture =
+            new TouchResetGesture(4, PARAMETER_RESET_TOUCH_HOLD_MS, PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
+                    PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS);
     private Layer currentEncoderLayer;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
     private int blinkState;
@@ -165,8 +171,9 @@ public class PerformClipLauncherMode extends Layer {
             final int index = i;
             final Parameter parameter = page.getParameter(i);
             markParameterInterested(parameter);
-            encoders[i].bindEncoder(layer, inc -> adjustParameter(parameter, fallbackPrefix + " " + (index + 1), inc));
-            encoders[i].bindTouched(layer, touched -> handleParameterTouch(parameter,
+            encoders[i].bindEncoder(layer,
+                    inc -> adjustParameter(index, parameter, fallbackPrefix + " " + (index + 1), inc));
+            encoders[i].bindTouched(layer, touched -> handleParameterTouch(index, parameter,
                     fallbackPrefix + " " + (index + 1), touched));
         }
     }
@@ -181,11 +188,12 @@ public class PerformClipLauncherMode extends Layer {
         };
         final String[] fallbackLabels = {"Volume", "Pan", "Send 1", "Send 2"};
         for (int i = 0; i < encoders.length; i++) {
+            final int index = i;
             final Parameter parameter = parameters[i];
             markParameterInterested(parameter);
             final String label = fallbackLabels[i];
-            encoders[i].bindEncoder(layer, inc -> adjustParameter(parameter, label, inc));
-            encoders[i].bindTouched(layer, touched -> handleParameterTouch(parameter, label, touched));
+            encoders[i].bindEncoder(layer, inc -> adjustParameter(index, parameter, label, inc));
+            encoders[i].bindTouched(layer, touched -> handleParameterTouch(index, parameter, label, touched));
         }
     }
 
@@ -399,9 +407,13 @@ public class PerformClipLauncherMode extends Layer {
         };
     }
 
-    private void adjustParameter(final Parameter parameter, final String fallbackLabel, final int inc) {
+    private void adjustParameter(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
+                                 final int inc) {
         if (!isMapped(parameter)) {
             return;
+        }
+        if (driver.isEncoderTouchResetEnabled()) {
+            parameterResetGesture.onAdjusted(encoderIndex, Math.abs(inc));
         }
         final SettableRangedValue value = parameter.value();
         final double stepSize = isShiftHeld() ? PARAM_FINE_INC : PARAM_COARSE_INC;
@@ -410,17 +422,31 @@ public class PerformClipLauncherMode extends Layer {
         oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
     }
 
-    private void handleParameterTouch(final Parameter parameter, final String fallbackLabel, final boolean touched) {
-        if (!touched) {
+    private void handleParameterTouch(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
+                                      final boolean touched) {
+        if (touched) {
+            if (driver.isEncoderTouchResetEnabled()) {
+                parameterResetGesture.onTouchStart(encoderIndex);
+            }
+            if (!isMapped(parameter)) {
+                oled.valueInfo(fallbackLabel, "Unmapped");
+                return;
+            }
+            oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+            return;
+        }
+
+        if (!isMapped(parameter)) {
             oled.clearScreenDelayed();
             return;
         }
-        if (!isMapped(parameter)) {
-            oled.valueInfo(fallbackLabel, "Unmapped");
+        if (driver.isEncoderTouchResetEnabled()
+                && parameterResetGesture.shouldResetOnTouchRelease(encoderIndex)) {
+            parameter.reset();
+            oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
             return;
         }
-        parameter.reset();
-        oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+        oled.clearScreenDelayed();
     }
 
     private void markParameterInterested(final Parameter parameter) {
