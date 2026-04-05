@@ -20,12 +20,12 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getAuthor() {
-        return "Eric Ahrens / Richie Hawtin / David Fredman (Oiko Audio)";
+        return "David Fredman / Oiko Audio";
     }
 
     @Override
     public String getVersion() {
-        return "2.0.0";
+        return "2.0.1";
     }
 
     @Override
@@ -45,7 +45,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getHelpFilePath() {
-        return "Documentation/index.html";
+        return "index.html";
     }
 
     @Override
