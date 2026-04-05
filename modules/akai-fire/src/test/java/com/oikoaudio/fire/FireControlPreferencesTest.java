@@ -75,4 +75,44 @@ class FireControlPreferencesTest {
         assertEquals(false,
                 FireControlPreferences.shouldAutoPinFirstDrumMachine("unexpected"));
     }
+
+    @Test
+    void normalizesPadBrightnessToSupportedRange() {
+        assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MIN,
+                FireControlPreferences.normalizePadBrightness(0));
+        assertEquals(100.0, FireControlPreferences.normalizePadBrightness(100.0));
+        assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MAX,
+                FireControlPreferences.normalizePadBrightness(500.0));
+        assertEquals(FireControlPreferences.PAD_BRIGHTNESS_DEFAULT,
+                FireControlPreferences.normalizePadBrightness(Double.NaN));
+    }
+
+    @Test
+    void scalesPadColorComponentsByBrightnessPreference() {
+        assertEquals(69, FireControlPreferences.scalePadColorComponent(50, 50.0));
+        assertEquals(125, FireControlPreferences.scalePadColorComponent(50, 100.0));
+        assertEquals(35, FireControlPreferences.scalePadColorComponent(50, 0.0));
+        assertEquals(127, FireControlPreferences.scalePadColorComponent(100, 100.0));
+        assertEquals(0, FireControlPreferences.scalePadColorComponent(0, 100.0));
+    }
+
+    @Test
+    void normalizesPadSaturationToSupportedRange() {
+        assertEquals(FireControlPreferences.PAD_SATURATION_MIN,
+                FireControlPreferences.normalizePadSaturation(-10.0));
+        assertEquals(100.0, FireControlPreferences.normalizePadSaturation(100.0));
+        assertEquals(FireControlPreferences.PAD_SATURATION_MAX,
+                FireControlPreferences.normalizePadSaturation(1000.0));
+        assertEquals(FireControlPreferences.PAD_SATURATION_DEFAULT,
+                FireControlPreferences.normalizePadSaturation(Double.NaN));
+    }
+
+    @Test
+    void scalesPadColorComponentsByBrightnessAndSaturation() {
+        assertEquals(69, FireControlPreferences.scalePadColorComponent(50, 50, 0, 0, 50.0, 100.0));
+        assertEquals(92, FireControlPreferences.scalePadColorComponent(50, 50, 0, 0, 50.0, 150.0));
+        assertEquals(46, FireControlPreferences.scalePadColorComponent(50, 50, 0, 0, 50.0, 50.0));
+        assertEquals(46, FireControlPreferences.scalePadColorComponent(0, 100, 0, 0, 50.0, 0.0));
+        assertEquals(0, FireControlPreferences.scalePadColorComponent(0, 0, 0, 0, 50.0, 150.0));
+    }
 }
