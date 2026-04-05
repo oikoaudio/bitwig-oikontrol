@@ -81,6 +81,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
+    private SettableBooleanValue encoderTouchResetPref;
     private SettableRangedValue padBrightnessPref;
     private SettableRangedValue padSaturationPref;
     private SettableBooleanValue stepSeqPadAuditionPref;
@@ -95,6 +96,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumPinPreferenceObserved = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
+    private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -285,6 +287,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             redrawRgbPads();
         });
         padSaturation = FireControlPreferences.normalizePadSaturation(padSaturationPref.getRaw());
+
+        encoderTouchResetPref = preferences.getBooleanSetting("Encoder touch reset",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT);
+        encoderTouchResetPref.markInterested();
+        encoderTouchResetEnabled = encoderTouchResetPref.get();
+        encoderTouchResetPref.addValueObserver(value -> encoderTouchResetEnabled = value);
 
         // Deferred for now: the current live NOTE implementation still relies on
         // Bitwig key-translation updates, so "New Notes Only" does not preserve
@@ -691,6 +700,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public MultiStateHardwareLight[] getStateLights() {
         return stateLights;
+    }
+
+    public boolean isEncoderTouchResetEnabled() {
+        return encoderTouchResetEnabled;
     }
 
     private void switchActiveMode() {

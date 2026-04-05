@@ -7,6 +7,7 @@ import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -21,6 +22,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DrumSequenceMode extends Layer implements StepSequencerHost {
+    private static final long TOUCH_RESET_HOLD_MS = 250L;
+    private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
+    private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private final ControllerHost host;
     private final AkaiFireOikontrolExtension driver;
     private Application app;
@@ -92,7 +96,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private final EncoderStepAccumulator euclidPulsesEncoder = new EncoderStepAccumulator(3);
     private final EncoderStepAccumulator euclidRotationEncoder = new EncoderStepAccumulator(3);
     private final EncoderStepAccumulator euclidAccentEncoder = new EncoderStepAccumulator(3);
-
+    private final TouchResetGesture user2TouchResetGesture =
+            new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
+                    TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
 
     public DrumSequenceMode(final AkaiFireOikontrolExtension driver, final NoteRepeatHandler noteRepeatHandler) {
 
@@ -1174,18 +1180,21 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         encoders[0].bindEncoder(layer, inc -> {
             final int effective = euclidLengthEncoder.consume(inc);
             if (effective != 0) {
+                markUser2EncoderAdjusted(0);
                 handleEuclidAdjust(0, effective);
             }
         });
         encoders[1].bindEncoder(layer, inc -> {
             final int effective = euclidPulsesEncoder.consume(inc);
             if (effective != 0) {
+                markUser2EncoderAdjusted(1);
                 handleEuclidAdjust(1, effective);
             }
         });
         encoders[2].bindEncoder(layer, inc -> {
             final int effective = euclidRotationEncoder.consume(inc);
             if (effective != 0) {
+                markUser2EncoderAdjusted(2);
                 handleEuclidAdjust(2, effective);
             }
         });
@@ -1195,6 +1204,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         encoders[3].bindEncoder(layer, inc -> {
             final int effective = euclidAccentEncoder.consume(inc);
             if (effective != 0) {
+                markUser2EncoderAdjusted(3);
                 handleEuclidAdjust(3, effective);
             }
         });
@@ -1202,7 +1212,15 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     }
 
     private void handleUser2Touch(final boolean touched, final int index) {
-        if (!touched) {
+        if (touched) {
+            if (driver.isEncoderTouchResetEnabled()) {
+                user2TouchResetGesture.onTouchStart(index);
+            }
+            oled.valueInfo(infoForIndex(index), valueForIndex(index));
+            return;
+        }
+        if (driver.isEncoderTouchResetEnabled()
+                && user2TouchResetGesture.shouldResetOnTouchRelease(index)) {
             if (index == 0) {
                 euclidLengthEncoder.reset();
             } else if (index == 1) {
@@ -1212,10 +1230,16 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             } else if (index == 3) {
                 euclidAccentEncoder.reset();
             }
-            oled.clearScreenDelayed();
+            oled.valueInfo(infoForIndex(index), valueForIndex(index));
             return;
         }
-        oled.valueInfo(infoForIndex(index), valueForIndex(index));
+        oled.clearScreenDelayed();
+    }
+
+    private void markUser2EncoderAdjusted(final int index) {
+        if (driver.isEncoderTouchResetEnabled()) {
+            user2TouchResetGesture.onAdjusted(index, 1);
+        }
     }
 
     @Override
