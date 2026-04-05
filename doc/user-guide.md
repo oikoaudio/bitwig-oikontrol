@@ -12,8 +12,8 @@ This guide is the user-facing reference for setup, modes, preferences, and commo
 1. Build or install the `.bwextension` for the controller you want to use.
 2. In Bitwig Studio, open **Settings > Controllers**.
 3. Add the Oiko controller entry for your hardware:
-   - `Launch Control XL by Oiko Audio`
-   - `Akai Fire by Oiko Audio`
+   - `Oikontrol LCXL`
+   - `Oikontrol Fire`
 4. Use the extension preferences if you want to change launch, pinning, or controller-specific behavior.
 
 ## Launch Control XL
@@ -117,6 +117,8 @@ The Akai Fire extension is a clip, note, and sequencer workflow built around thr
 
 `DRUM` is the default sequencer-oriented workflow.
 
+Pad colors in `DRUM` follow the Bitwig track or drum-lane color context. The brightness and saturation preferences affect how strongly those project colors translate to the Fire LEDs, so perceived intensity will vary with the chosen track color.
+
 - Row 1: clip slots
 - Row 2: visible drum slots
 - Rows 3-4: 32 visible steps for the selected lane
@@ -197,6 +199,8 @@ Important gestures:
 
 `PERFORM` is the clip-launch and performance surface.
 
+Pad colors in `PERFORM` also follow Bitwig track and clip color context rather than a fixed Oikontrol palette.
+
 - pads show clip color and launch state
 - empty slots can create a new 4-bar clip
 - quick select, copy, delete, and clip-length gestures live on the `MUTE` buttons
@@ -265,11 +269,15 @@ Both controllers rely on Bitwig extension preferences for behavior that should b
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
+- `Pad Brightness`
+- `Pad Saturation`
 - `SELECT Encoder`
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`
 - `On-screen action notifications`
+
+`Pad Brightness` and `Pad Saturation` interact with the Bitwig track colors used by `DRUM` and `PERFORM`, so the same settings can read differently across different project palettes.
 
 ## Troubleshooting
 

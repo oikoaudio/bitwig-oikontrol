@@ -199,7 +199,7 @@ class PadContainer {
         if (selected) {
             return playing.returnTrueFalse(padColor.getBrightest(), padColor.getBrightend());
         }
-        return playing.returnTrueFalse(padColor, padColor.getDimmed());
+        return playing.returnTrueFalse(padColor, padColor.getSoftDimmed());
     }
 
     public void select() {

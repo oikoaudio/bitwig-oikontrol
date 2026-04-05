@@ -1,7 +1,8 @@
 version = '2.0.1'
 
 jar {
-    archiveBaseName.set('AkaiFireOiko')
+    archiveBaseName.set('OikontrolFire')
+    archiveVersion.set('')
     archiveExtension.set('bwextension')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(project(':modules:common').sourceSets.main.output)

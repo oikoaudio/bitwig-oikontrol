@@ -53,6 +53,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final byte[] singleRgb = new byte[]{SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, SE_CMD_RGB, 0, 4, 0, 0, 0, 0, SE_EN};
 
     private final int[] lastCcValue = new int[128];
+    private final RgbLigthState[] currentPadStates = new RgbLigthState[64];
 
     private Layer mainLayer;
     private final RgbButton[] rgbButtons = new RgbButton[64];
@@ -80,6 +81,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
+    private SettableRangedValue padBrightnessPref;
+    private SettableRangedValue padSaturationPref;
     private SettableBooleanValue stepSeqPadAuditionPref;
     private SettableBooleanValue screenNotificationsPref;
     private String tempoDisplayValue = "";
@@ -90,6 +93,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int drumTrackIndexBeforeAutoPin = -1;
     private boolean mainEncoderPressed = false;
     private boolean drumPinPreferenceObserved = false;
+    private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
+    private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -252,6 +257,34 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             notifyAction("Drum Pin",
                     FireControlPreferences.shouldAutoPinFirstDrumMachine(value) ? "Automatic" : "Follow Selected");
         });
+
+        padBrightnessPref = preferences.getNumberSetting("Pad Brightness",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.PAD_BRIGHTNESS_MIN,
+                FireControlPreferences.PAD_BRIGHTNESS_MAX,
+                FireControlPreferences.PAD_BRIGHTNESS_STEP,
+                "%",
+                FireControlPreferences.PAD_BRIGHTNESS_DEFAULT);
+        padBrightnessPref.markInterested();
+        padBrightnessPref.addRawValueObserver(value -> {
+            padBrightness = FireControlPreferences.normalizePadBrightness(value);
+            redrawRgbPads();
+        });
+        padBrightness = FireControlPreferences.normalizePadBrightness(padBrightnessPref.getRaw());
+
+        padSaturationPref = preferences.getNumberSetting("Pad Saturation",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.PAD_SATURATION_MIN,
+                FireControlPreferences.PAD_SATURATION_MAX,
+                FireControlPreferences.PAD_SATURATION_STEP,
+                "%",
+                FireControlPreferences.PAD_SATURATION_DEFAULT);
+        padSaturationPref.markInterested();
+        padSaturationPref.addRawValueObserver(value -> {
+            padSaturation = FireControlPreferences.normalizePadSaturation(value);
+            redrawRgbPads();
+        });
+        padSaturation = FireControlPreferences.normalizePadSaturation(padSaturationPref.getRaw());
 
         // Deferred for now: the current live NOTE implementation still relies on
         // Bitwig key-translation updates, so "New Notes Only" does not preserve
@@ -633,7 +666,27 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public void updateRgbPad(final int index, final RgbLigthState state) {
-        sendPadRgb(index, state.getRed(), state.getGreen(), state.getBlue());
+        currentPadStates[index] = state;
+        sendScaledPadRgb(index, state);
+    }
+
+    private void redrawRgbPads() {
+        for (int index = 0; index < currentPadStates.length; index++) {
+            final RgbLigthState state = currentPadStates[index];
+            if (state != null) {
+                sendScaledPadRgb(index, state);
+            }
+        }
+    }
+
+    private void sendScaledPadRgb(final int index, final RgbLigthState state) {
+        final int red = state.getRed() & 0xFF;
+        final int green = state.getGreen() & 0xFF;
+        final int blue = state.getBlue() & 0xFF;
+        sendPadRgb(index,
+                FireControlPreferences.scalePadColorComponent(red, red, green, blue, padBrightness, padSaturation),
+                FireControlPreferences.scalePadColorComponent(green, red, green, blue, padBrightness, padSaturation),
+                FireControlPreferences.scalePadColorComponent(blue, red, green, blue, padBrightness, padSaturation));
     }
 
     public MultiStateHardwareLight[] getStateLights() {

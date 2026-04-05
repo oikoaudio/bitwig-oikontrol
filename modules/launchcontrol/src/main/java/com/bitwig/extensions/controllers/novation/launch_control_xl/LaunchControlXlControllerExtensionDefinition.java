@@ -61,14 +61,13 @@ public class LaunchControlXlControllerExtensionDefinition extends ControllerExte
    @Override
    public String getName()
    {
-      // Use a distinct name so it doesn't collide with Bitwig's factory entry.
-      return "Launch Control XL by Oiko Audio";
+      return "Oikontrol LCXL";
    }
 
    @Override
    public String getAuthor()
    {
-      return "David Fredman / Oiko Audio";
+      return "";
    }
 
    @Override
