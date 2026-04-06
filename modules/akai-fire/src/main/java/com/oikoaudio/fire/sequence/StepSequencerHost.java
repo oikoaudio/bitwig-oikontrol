@@ -37,6 +37,13 @@ public interface StepSequencerHost {
 
     void registerModifiedSteps(List<NoteStep> notes);
 
+    default boolean hasCustomChannelPage() {
+        return false;
+    }
+
+    default void bindChannelPage(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders) {
+    }
+
     void bindMixerPage(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders);
 
     void bindUser2Page(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders);

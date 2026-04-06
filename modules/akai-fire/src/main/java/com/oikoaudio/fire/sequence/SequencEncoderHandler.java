@@ -58,7 +58,12 @@ public class SequencEncoderHandler extends Layer {
 		user1Layer = new Layer(driver.getLayers(), "ENC_USER1_LAYER");
 		user2Layer = new Layer(driver.getLayers(), "ENC_USER2_LAYER");
 		encoders = driver.getEncoders();
-		assign(EncoderMode.CHANNEL, channelLayer, encoders);
+        if (parent.hasCustomChannelPage()) {
+            modeMapping.put(EncoderMode.CHANNEL, channelLayer);
+            parent.bindChannelPage(this, channelLayer, encoders);
+        } else {
+            assign(EncoderMode.CHANNEL, channelLayer, encoders);
+        }
         modeMapping.put(EncoderMode.MIXER, mixerLayer);
         parent.bindMixerPage(this, mixerLayer, encoders);
 		assign(EncoderMode.USER_1, user1Layer, encoders);
