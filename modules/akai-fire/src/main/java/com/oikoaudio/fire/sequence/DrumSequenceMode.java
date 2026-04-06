@@ -572,6 +572,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         if (driver.isPopupBrowserActive()) {
             return;
         }
+        driver.markMainEncoderTurned();
         if (accentHandler.isHolding()) {
             accentHandler.handleMainEncoder(inc);
         } else {
@@ -627,11 +628,13 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             return;
         }
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (!press && !driver.wasMainEncoderTurnedWhilePressed()) {
+            driver.toggleMainEncoderRolePreference();
+            return;
+        }
         if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
             if (press) {
                 driver.showMainCursorParameterInfo();
-            } else {
-                driver.resetMainCursorParameter();
             }
         } else if (FireControlPreferences.MAIN_ENCODER_TEMPO.equals(mainEncoderRole)) {
             if (press) {
@@ -644,8 +647,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
             if (press) {
                 driver.showGrooveShuffleInfo();
-            } else {
-                driver.toggleGrooveEnabled();
             }
         } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
             if (press) {

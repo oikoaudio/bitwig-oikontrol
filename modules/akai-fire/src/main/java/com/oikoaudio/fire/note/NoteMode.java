@@ -135,6 +135,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private boolean oikordAccentActive = false;
     private boolean oikordAccentButtonHeld = false;
     private boolean oikordAccentModified = false;
+    private boolean mainEncoderPressConsumed = false;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
     private OikordInterpretation oikordInterpretation = OikordInterpretation.AS_IS;
     private int selectedOikordFamily = 0;
@@ -1088,6 +1089,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (driver.isPopupBrowserActive()) {
             return;
         }
+        driver.markMainEncoderTurned();
         final boolean fine = driver.isGlobalShiftHeld();
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
@@ -1109,10 +1111,19 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
         driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalShiftHeld()) {
+            mainEncoderPressConsumed = true;
             driver.cycleMainEncoderRolePreference();
             return;
         }
+        if (!pressed && mainEncoderPressConsumed) {
+            mainEncoderPressConsumed = false;
+            return;
+        }
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
+            driver.toggleMainEncoderRolePreference();
+            return;
+        }
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
             noteRepeatHandler.handlePressed(pressed);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
@@ -1124,8 +1135,6 @@ public class NoteMode extends Layer implements StepSequencerHost {
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showGrooveShuffleInfo();
-            } else {
-                driver.toggleGrooveEnabled();
             }
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
@@ -1135,8 +1144,6 @@ public class NoteMode extends Layer implements StepSequencerHost {
             }
         } else if (pressed) {
             driver.showMainCursorParameterInfo();
-        } else {
-            driver.resetMainCursorParameter();
         }
     }
 

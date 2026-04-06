@@ -1,16 +1,11 @@
 package com.oikoaudio.fire.display;
 
-import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.bitwig.extension.api.Host;
-import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.IntegerValue;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.SettableRangedValue;
 import com.bitwig.extensions.framework.Binding;
 
 public class ParameterDisplayBinding extends Binding<Parameter, DisplayTarget> {
-
-	ControllerHost host = AkaiFireOikontrolExtension.getGlobalHost();
 	private double rawValue;
 	private String displayValue;
 	private final int index;
@@ -60,7 +55,6 @@ public class ParameterDisplayBinding extends Binding<Parameter, DisplayTarget> {
 
 	private void handleDisplayValue(final String displayValue) {
 		this.displayValue = displayValue;
-		host.showPopupNotification(paramName);
 		if (isActive()) {
 			if (typeIndex == 4) { // Assuming typeIndex 4 is for Tune/Pitch
 

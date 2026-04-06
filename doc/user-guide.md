@@ -233,7 +233,9 @@ Encoder pages:
 
 ### Main encoder and transport
 
-Press `SHIFT + SELECT` to cycle the `SELECT` encoder role between:
+Tap `SELECT` to swap the `SELECT` encoder between `Last Touched Parameter` and the currently selected alternate role.
+
+Press `SHIFT + SELECT` to choose that alternate role by cycling through the full role list:
 
 - `Last Touched Parameter`
 - `Shuffle`
@@ -250,6 +252,11 @@ When `Track Select` is active:
 
 - Turn `SELECT` to move to the previous or next track
 - Hold `SELECT` while turning to jump by track pages
+
+When `Shuffle` is active:
+
+- turning `SELECT` down to `0` switches shuffle `Off`
+- turning it up from `0` enables shuffle again
 
 Shared transport behavior:
 

@@ -93,6 +93,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumDevicePinnedBeforeAutoPin = false;
     private int drumTrackIndexBeforeAutoPin = -1;
     private boolean mainEncoderPressed = false;
+    private boolean mainEncoderTurnedWhilePressed = false;
     private boolean drumPinPreferenceObserved = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
@@ -105,6 +106,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private TopLevelMode activeMode = TopLevelMode.NOTE;
     private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
     private String currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
+    private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     private enum TopLevelMode {
         DRUM,
@@ -192,11 +194,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.setIdleAction(this::showIdleOledInfo);
         midiOut.sendSysex(DEV_INQ);
 
-        oled.showLogo();
+        oled.valueInfo("Oikontrol", "");
         mainLayer.activate();
         switchActiveMode();
         host.scheduleTask(this::handlePing, 100);
-        notifyAction("Init", "Note Mode");
+        notifyPopup("Oikontrol Fire", "Active");
 
     }
 
@@ -761,7 +763,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public String cycleMainEncoderRolePreference() {
-        final String nextRole = FireControlPreferences.nextMainEncoderRole(getMainEncoderRolePreference());
+        final String cycleSource = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(getMainEncoderRolePreference())
+                ? alternateMainEncoderRole
+                : getMainEncoderRolePreference();
+        final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(cycleSource);
+        currentMainEncoderRole = nextRole;
+        alternateMainEncoderRole = nextRole;
+        notifyAction("Encoder Role", nextRole);
+        return nextRole;
+    }
+
+    public String toggleMainEncoderRolePreference() {
+        final String normalizedCurrentRole = getMainEncoderRolePreference();
+        final String normalizedAlternateRole = FireControlPreferences.normalizeMainEncoderRole(alternateMainEncoderRole);
+        final String nextRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(normalizedCurrentRole)
+                ? (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(normalizedAlternateRole)
+                ? FireControlPreferences.MAIN_ENCODER_TRACK_SELECT
+                : normalizedAlternateRole)
+                : FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
         currentMainEncoderRole = nextRole;
         notifyAction("Encoder Role", nextRole);
         return nextRole;
@@ -939,10 +958,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         final Parameter shuffleAmount = groove.getShuffleAmount();
         final SettableRangedValue value = shuffleAmount.value();
+        final SettableRangedValue enabledValue = groove.getEnabled().value();
         final double stepSize = fine ? MAIN_ENCODER_FINE_STEP : MAIN_ENCODER_STEP;
         final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * stepSize)));
         value.setImmediately(nextValue);
-        oled.valueInfo("Shuffle", shuffleAmount.displayedValue().get());
+        final boolean shuffleEnabled = nextValue > 0.0;
+        enabledValue.setImmediately(shuffleEnabled ? 1.0 : 0.0);
+        oled.valueInfo("Shuffle", shuffleEnabled ? shuffleAmount.displayedValue().get() : "Off");
     }
 
     public void adjustTempo(final int inc, final boolean fine) {
@@ -955,16 +977,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void showTempoInfo() {
         oled.valueInfo("Tempo", tempoDisplayValue);
-    }
-
-    public void toggleGrooveEnabled() {
-        if (groove == null) {
-            return;
-        }
-        final SettableRangedValue value = groove.getEnabled().value();
-        final boolean enableGroove = value.get() < 0.5;
-        value.setImmediately(enableGroove ? 1.0 : 0.0);
-        notifyAction("Shuffle", enableGroove ? "On" : "Off");
     }
 
     public void showGrooveShuffleInfo() {
@@ -992,10 +1004,23 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void setMainEncoderPressed(final boolean pressed) {
         mainEncoderPressed = pressed;
+        if (pressed) {
+            mainEncoderTurnedWhilePressed = false;
+        }
     }
 
     public boolean isMainEncoderPressed() {
         return mainEncoderPressed;
+    }
+
+    public void markMainEncoderTurned() {
+        if (mainEncoderPressed) {
+            mainEncoderTurnedWhilePressed = true;
+        }
+    }
+
+    public boolean wasMainEncoderTurnedWhilePressed() {
+        return mainEncoderTurnedWhilePressed;
     }
 
     public void adjustSelectedTrack(final int inc, final boolean pageStep) {
