@@ -1,6 +1,6 @@
 # Bitwig Oikontrol User Guide
 
-Bitwig Oikontrol is a pair of controller extensions for Bitwig Studio:
+Bitwig Oikontrol holds controller extensions for Bitwig Studio, currently for:
 
 - Novation Launch Control XL Mk2
 - Akai Fire
@@ -270,10 +270,6 @@ Shared transport behavior:
 
 ## Preferences
 
-### Shared ideas
-
-Both controllers rely on Bitwig extension preferences for behavior that should be stable and discoverable, rather than hidden behind one-off hardware gestures.
-
 ### Launch Control XL preferences
 
 - `Auto-attach to first Drum Machine and Arpeggiator`
@@ -295,10 +291,6 @@ Both controllers rely on Bitwig extension preferences for behavior that should b
 `Pad Brightness` and `Pad Saturation` interact with the Bitwig track colors used by `DRUM` and `PERFORM`, so the same settings can read differently across different project palettes.
 
 ## Troubleshooting
-
-### Controls seem doubled or unstable
-
-Remove duplicate controller entries in Bitwig and keep only the Oiko extension for the hardware you are using.
 
 ### The wrong device is being controlled
 
