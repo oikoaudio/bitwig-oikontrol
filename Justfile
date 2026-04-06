@@ -32,8 +32,8 @@ fire-extension:
 fire-install:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:akai-fire:jar
     mkdir -p "{{bitwig_extensions_dir}}"
-    cp "$(find modules/akai-fire/build/libs -maxdepth 1 -type f -name 'AkaiFireOiko-*.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
-    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'AkaiFireOiko-*.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+    cp "$(find modules/akai-fire/build/libs -maxdepth 1 -type f -name 'OikontrolFire.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
+    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'OikontrolFire.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
 
 launchcontrol-build:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:launchcontrol:build
