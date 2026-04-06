@@ -331,28 +331,15 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private RgbLigthState velocityLitStepState(final NoteStep noteStep, final boolean playing) {
         final RgbLigthState base = padHandler.getCurrentPadColor();
         if (noteStep == null) {
-            return playing ? base.getBrightend() : base;
+            return StepPadLightHelper.renderOccupiedStep(base, false, playing);
         }
 
         final int velocity = (int) Math.round(noteStep.velocity() * 127);
-        if (velocity >= accentHandler.getAccentedVelocity()) {
-            return base.getBrightest();
-        }
-        if (playing) {
-            return base.getBrightend();
-        }
-        return base;
+        return StepPadLightHelper.renderOccupiedStep(base, velocity >= accentHandler.getAccentedVelocity(), playing);
     }
 
     private RgbLigthState emptyNoteState(final int index) {
-        if (index == playingStep) {
-            return RgbLigthState.WHITE;
-        }
-        if (index / 4 % 2 == 0) {
-            return RgbLigthState.GRAY_1;
-        } else {
-            return RgbLigthState.GRAY_2;
-        }
+        return StepPadLightHelper.renderEmptyStep(index, playingStep);
     }
 
     // Declare a field to hold the original (normal) step size.

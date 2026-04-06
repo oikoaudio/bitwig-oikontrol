@@ -5,7 +5,12 @@ Bitwig Oikontrol is a pair of controller extensions for Bitwig Studio v5.3+:
 - Novation Launch Control XL Mk2
 - Akai Fire
 
-The project now ships one shared user guide for both controllers.
+These extensions are under active development and functions are in flux. Semantic versioning:
+major.minor.tick
+
+major - new controller extension, or overhaul of core functionality
+minor - new mode or changes to a mode within a controller
+tick - bug fixes and minor additions
 
 ## User guide
 

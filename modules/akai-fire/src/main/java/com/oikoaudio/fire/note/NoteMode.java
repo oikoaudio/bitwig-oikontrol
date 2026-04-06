@@ -32,6 +32,7 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.SequencEncoderHandler;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
 
@@ -46,6 +47,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class NoteMode extends Layer implements StepSequencerHost {
+    private static final int BUILDER_FAMILY_INDEX = 0;
+    private static final String BUILDER_FAMILY_LABEL = "Builder";
     private static final int PIANO_HIGHLIGHT_INDEX = -1;
     private static final int MIN_OCTAVE = 0;
     private static final int MAX_OCTAVE = 7;
@@ -94,7 +97,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private static final RgbLigthState EMPTY_STEP_B = RgbLigthState.GRAY_2;
     private static final RgbLigthState OCCUPIED_STEP = new RgbLigthState(0, 90, 38, true);
     private static final RgbLigthState HELD_STEP = new RgbLigthState(120, 88, 0, true);
-    private static final RgbLigthState SELECTED_CHORD = new RgbLigthState(127, 92, 0, true);
+    private static final RgbLigthState SELECTED_CHORD = new RgbLigthState(110, 24, 118, true);
+    private static final RgbLigthState SELECTED_BUILDER_NOTE = new RgbLigthState(88, 18, 127, true);
     private static final RgbLigthState DEFERRED_TOP = new RgbLigthState(110, 38, 0, true);
     private static final RgbLigthState DEFERRED_BOTTOM = new RgbLigthState(36, 16, 0, true);
 
@@ -111,6 +115,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Set<Integer> addedStepPads = new HashSet<>();
     private final Set<Integer> modifiedStepPads = new HashSet<>();
     private final Set<Integer> auditioningNotes = new HashSet<>();
+    private final Set<Integer> builderSelectedNotes = new HashSet<>();
+    private final Set<Integer> modifierHandledStepPads = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
     private final CursorTrack cursorTrack;
@@ -125,6 +131,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final SequencEncoderHandler stepEncoderLayer;
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject selectHeld = new BooleanValueObject();
+    private final BooleanValueObject copyHeld = new BooleanValueObject();
+    private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
+    private final BooleanValueObject invertHeld = new BooleanValueObject();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
@@ -142,6 +151,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int selectedOikordFamily = 0;
     private int oikordPage = 0;
     private int selectedOikordSlot = 0;
+    private Integer selectedPresetStepIndex = null;
     private int oikordRootOffset = 0;
     private int oikordOctaveOffset = 0;
     private Integer heldStepAnchor = null;
@@ -280,21 +290,17 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final BiColorButton bankRightButton = driver.getButton(NoteAssign.BANK_R);
         bankRightButton.bindPressed(this, pressed -> handleBankButton(pressed, 1), this::getBankLightState);
 
-        final BiColorButton octaveUpButton = driver.getButton(NoteAssign.MUTE_1);
-        octaveUpButton.bindPressed(this, pressed -> handlePitchContextButton(pressed, 1, false),
-                () -> getPitchContextLightState(1, false));
+        final BiColorButton mute1Button = driver.getButton(NoteAssign.MUTE_1);
+        mute1Button.bindPressed(this, pressed -> handleMute1Button(pressed), this::getMute1LightState);
 
-        final BiColorButton octaveDownButton = driver.getButton(NoteAssign.MUTE_2);
-        octaveDownButton.bindPressed(this, pressed -> handlePitchContextButton(pressed, -1, false),
-                () -> getPitchContextLightState(-1, false));
+        final BiColorButton mute2Button = driver.getButton(NoteAssign.MUTE_2);
+        mute2Button.bindPressed(this, pressed -> handleMute2Button(pressed), this::getMute2LightState);
 
-        final BiColorButton rootUpButton = driver.getButton(NoteAssign.MUTE_3);
-        rootUpButton.bindPressed(this, pressed -> handlePitchContextButton(pressed, 1, true),
-                () -> getPitchContextLightState(1, true));
+        final BiColorButton mute3Button = driver.getButton(NoteAssign.MUTE_3);
+        mute3Button.bindPressed(this, pressed -> handleMute3Button(pressed), this::getMute3LightState);
 
-        final BiColorButton rootDownButton = driver.getButton(NoteAssign.MUTE_4);
-        rootDownButton.bindPressed(this, pressed -> handlePitchContextButton(pressed, -1, true),
-                () -> getPitchContextLightState(-1, true));
+        final BiColorButton mute4Button = driver.getButton(NoteAssign.MUTE_4);
+        mute4Button.bindPressed(this, pressed -> handleMute4Button(pressed), this::getMute4LightState);
 
         final BiColorButton knobModeButton = driver.getButton(NoteAssign.KNOB_MODE);
         knobModeButton.bindPressed(liveModeControlLayer, this::handleLiveModeAdvance, this::getLiveModeLightState);
@@ -479,6 +485,91 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 liveVelocityEncoder::reset);
     }
 
+    private boolean isChordStepModeActive() {
+        return noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP;
+    }
+
+    private void handleMute1Button(final boolean pressed) {
+        if (isChordStepModeActive()) {
+            selectHeld.set(pressed);
+            if (pressed) {
+                oled.valueInfo("Select", "Load step");
+            } else {
+                oled.clearScreenDelayed();
+            }
+            return;
+        }
+        handlePitchContextButton(pressed, 1, false);
+    }
+
+    private void handleMute2Button(final boolean pressed) {
+        if (isChordStepModeActive()) {
+            copyHeld.set(pressed);
+            if (pressed) {
+                oled.valueInfo("Paste", "Target step");
+            } else {
+                oled.clearScreenDelayed();
+            }
+            return;
+        }
+        handlePitchContextButton(pressed, -1, false);
+    }
+
+    private void handleMute3Button(final boolean pressed) {
+        if (isChordStepModeActive()) {
+            fixedLengthHeld.set(pressed);
+            if (pressed) {
+                oled.valueInfo("Last Step", "Target step");
+            } else {
+                oled.clearScreenDelayed();
+            }
+            return;
+        }
+        handlePitchContextButton(pressed, 1, true);
+    }
+
+    private void handleMute4Button(final boolean pressed) {
+        if (isChordStepModeActive()) {
+            invertHeld.set(pressed);
+            if (pressed) {
+                invertCurrentChord(driver.isGlobalAltHeld() ? -1 : 1);
+            }
+            return;
+        }
+        handlePitchContextButton(pressed, -1, true);
+    }
+
+    private BiColorLightState getMute1LightState() {
+        if (isChordStepModeActive()) {
+            return selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        }
+        return getPitchContextLightState(1, false);
+    }
+
+    private BiColorLightState getMute2LightState() {
+        if (isChordStepModeActive()) {
+            return copyHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        }
+        return getPitchContextLightState(-1, false);
+    }
+
+    private BiColorLightState getMute3LightState() {
+        if (isChordStepModeActive()) {
+            return fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        }
+        return getPitchContextLightState(1, true);
+    }
+
+    private BiColorLightState getMute4LightState() {
+        if (isChordStepModeActive()) {
+            if (invertHeld.get()) {
+                return driver.isGlobalAltHeld() ? BiColorLightState.RED_FULL : BiColorLightState.RED_FULL;
+            }
+            return driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.RED_FULL;
+        }
+        return getPitchContextLightState(-1, true);
+    }
+
     private void handleEncoder1Touch(final boolean pressed) {
         handleResettableTouch(1, pressed, () -> showState("Scale"), liveScaleEncoder::reset);
     }
@@ -530,7 +621,11 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void handleOikordStepPadPress(final int padIndex, final boolean pressed) {
         if (padIndex < STEP_PAD_OFFSET) {
-            if (!oikordBank.hasSlot(selectedOikordFamily, oikordPage, padIndex)) {
+            if (isBuilderFamily()) {
+                handleBuilderSourcePadPress(padIndex, pressed);
+                return;
+            }
+            if (!oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, padIndex)) {
                 return;
             }
             if (pressed) {
@@ -558,7 +653,33 @@ public class NoteMode extends Layer implements StepSequencerHost {
             }
             return;
         }
+        if (!pressed && modifierHandledStepPads.remove(stepIndex)) {
+            return;
+        }
         if (pressed) {
+            if (invertHeld.get()) {
+                modifierHandledStepPads.add(stepIndex);
+                return;
+            }
+            if (selectHeld.get()) {
+                if (isBuilderFamily()) {
+                    loadBuilderFromStep(stepIndex);
+                } else {
+                    selectPresetStep(stepIndex);
+                }
+                modifierHandledStepPads.add(stepIndex);
+                return;
+            }
+            if (fixedLengthHeld.get()) {
+                setLastStep(stepIndex);
+                modifierHandledStepPads.add(stepIndex);
+                return;
+            }
+            if (copyHeld.get()) {
+                pasteCurrentChordToStep(stepIndex);
+                modifierHandledStepPads.add(stepIndex);
+                return;
+            }
             if (heldStepAnchor != null
                     && heldStepAnchor != stepIndex
                     && heldStepPads.contains(heldStepAnchor)
@@ -582,7 +703,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 heldStepAnchor = stepIndex;
             }
             if (!clipNotesByStep.containsKey(stepIndex)) {
-                assignSelectedOikordToSteps(Collections.singleton(stepIndex));
+                final boolean assigned = assignSelectedOikordToSteps(Collections.singleton(stepIndex));
+                if (!assigned) {
+                    heldStepPads.remove(stepIndex);
+                    refreshHeldStepAnchor(stepIndex);
+                    return;
+                }
                 addedStepPads.add(stepIndex);
             }
             showHeldStepInfo(stepIndex);
@@ -597,6 +723,64 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 noteStepClip.clearStepsAtX(0, stepIndex);
             }
         }
+    }
+
+    private void handleBuilderSourcePadPress(final int padIndex, final boolean pressed) {
+        if (!pressed) {
+            stopAuditionNotes();
+            return;
+        }
+        toggleBuilderNoteOffset(padIndex);
+        applyBuilderToHeldSteps();
+        final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
+        if (auditionEnabled) {
+            startAuditionSelectedOikord();
+        } else {
+            showCurrentOikord();
+        }
+    }
+
+    private void loadBuilderFromStep(final int stepIndex) {
+        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
+        if (notesAtStep == null || notesAtStep.isEmpty()) {
+            oled.valueInfo("Select", "Empty step");
+            return;
+        }
+        selectedOikordFamily = BUILDER_FAMILY_INDEX;
+        oikordPage = 0;
+        selectedOikordSlot = 0;
+        builderSelectedNotes.clear();
+        int loaded = 0;
+        for (final NoteStep note : notesAtStep.values()) {
+            if (note.state() != NoteStep.State.NoteOn) {
+                continue;
+            }
+            builderSelectedNotes.add(note.y());
+            loaded++;
+        }
+        oled.valueInfo("Select Step", loaded > 0 ? "Step " + (stepIndex + 1) : "Empty");
+    }
+
+    private void selectPresetStep(final int stepIndex) {
+        selectedPresetStepIndex = stepIndex;
+        oled.valueInfo("Step " + (stepIndex + 1), "selected");
+    }
+
+    private void pasteCurrentChordToStep(final int stepIndex) {
+        final int[] notes = renderSelectedOikord();
+        if (notes.length == 0) {
+            oled.valueInfo("Paste", "Empty chord");
+            return;
+        }
+        writeOikordAtStep(stepIndex, notes, currentOikordVelocity(), STEP_LENGTH);
+        modifiedStepPads.add(stepIndex);
+        oled.valueInfo("Paste", "Step " + (stepIndex + 1));
+    }
+
+    private void setLastStep(final int stepIndex) {
+        final double newLength = (stepIndex + 1) * STEP_LENGTH;
+        noteStepClip.getLoopLength().set(newLength);
+        oled.valueInfo("Last Step", Integer.toString(stepIndex + 1));
     }
 
     private void handleClipStepRecordPadPress(final int padIndex, final boolean pressed) {
@@ -699,6 +883,43 @@ public class NoteMode extends Layer implements StepSequencerHost {
         oled.valueInfo("Move", amount > 0 ? "Right" : "Left");
     }
 
+    private void invertCurrentChord(final int direction) {
+        final int[] currentNotes = renderSelectedOikord();
+        if (currentNotes.length == 0) {
+            oled.valueInfo("Invert", "Empty");
+            return;
+        }
+        selectedOikordFamily = BUILDER_FAMILY_INDEX;
+        oikordPage = 0;
+        selectedOikordSlot = 0;
+        final int[] inverted = rotateChordInversion(currentNotes, direction);
+        builderSelectedNotes.clear();
+        for (final int midiNote : inverted) {
+            builderSelectedNotes.add(midiNote);
+        }
+        applyBuilderToHeldSteps();
+        oled.valueInfo("Invert", direction > 0 ? "Up" : "Down");
+    }
+
+    private int[] rotateChordInversion(final int[] notes, final int direction) {
+        final int[] sorted = java.util.Arrays.stream(notes).sorted().toArray();
+        if (sorted.length <= 1) {
+            return sorted;
+        }
+        final int[] rotated = java.util.Arrays.copyOf(sorted, sorted.length);
+        if (direction >= 0) {
+            final int first = rotated[0];
+            System.arraycopy(rotated, 1, rotated, 0, rotated.length - 1);
+            rotated[rotated.length - 1] = first + 12;
+        } else {
+            final int last = rotated[rotated.length - 1];
+            System.arraycopy(rotated, 0, rotated, 1, rotated.length - 1);
+            rotated[0] = last - 12;
+        }
+        java.util.Arrays.sort(rotated);
+        return rotated;
+    }
+
     private void nudgeHeldNotes(final int amount) {
         final List<NoteStep> heldNotes = getHeldNotes();
         if (heldNotes.isEmpty()) {
@@ -768,6 +989,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         addedStepPads.clear();
         modifiedStepPads.clear();
         heldStepAnchor = null;
+        selectedPresetStepIndex = null;
         clearTranslation();
         syncEncoderLayers();
         if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
@@ -783,6 +1005,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         addedStepPads.clear();
         modifiedStepPads.clear();
         heldStepAnchor = null;
+        selectedPresetStepIndex = null;
         syncEncoderLayers();
         applyLayout();
         showState("Mode");
@@ -828,20 +1051,25 @@ public class NoteMode extends Layer implements StepSequencerHost {
         assignSelectedOikordToSteps(heldStepPads);
     }
 
-    private void assignSelectedOikordToSteps(final Set<Integer> stepIndexes) {
+    private boolean assignSelectedOikordToSteps(final Set<Integer> stepIndexes) {
         if (stepIndexes.isEmpty()) {
-            return;
+            return false;
         }
-        final OikordBank.Slot slot = currentOikordSlot();
-        final int[] notes = renderSelectedOikord(slot);
+        final int[] notes = renderSelectedOikord();
+        if (notes.length == 0) {
+            oled.valueInfo("Select", "Notes 1st");
+            return false;
+        }
         for (final int stepIndex : stepIndexes) {
             writeOikordAtStep(stepIndex, notes, currentOikordVelocity(), STEP_LENGTH);
         }
-        oled.valueInfo(oledFamilyLabel(slot.family()), oledOikordName(slot));
+        oled.valueInfo(currentOikordFamilyLabel(), currentOikordName());
+        return true;
     }
 
     private void writeSelectedOikordAtStep(final int stepIndex, final double duration) {
-        writeOikordAtStep(stepIndex, renderSelectedOikord(currentOikordSlot()), currentOikordVelocity(), duration);
+        final int[] notes = renderSelectedOikord();
+        writeOikordAtStep(stepIndex, notes, currentOikordVelocity(), duration);
     }
 
     private void writeOikordAtStep(final int stepIndex, final int[] notes, final int velocity, final double duration) {
@@ -851,11 +1079,32 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
     }
 
+    private void applyBuilderToHeldSteps() {
+        if (!isBuilderFamily() || heldStepPads.isEmpty()) {
+            return;
+        }
+        modifiedStepPads.addAll(heldStepPads);
+        for (final int stepIndex : heldStepPads) {
+            writeSelectedOikordAtStep(stepIndex, getStepDuration(stepIndex));
+        }
+    }
+
+    private double getStepDuration(final int stepIndex) {
+        return noteStepsByPosition.getOrDefault(stepIndex, Map.of()).values().stream()
+                .filter(note -> note.state() == NoteStep.State.NoteOn)
+                .mapToDouble(NoteStep::duration)
+                .max()
+                .orElse(STEP_LENGTH);
+    }
+
     private void adjustOikordPage(final int amount) {
         if (amount == 0) {
             return;
         }
-        final int nextPage = Math.max(0, Math.min(oikordBank.pageCount(selectedOikordFamily) - 1, oikordPage + amount));
+        if (isBuilderFamily()) {
+            return;
+        }
+        final int nextPage = Math.max(0, Math.min(currentOikordPageCount() - 1, oikordPage + amount));
         if (nextPage == oikordPage) {
             return;
         }
@@ -868,7 +1117,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (amount == 0) {
             return;
         }
-        final int familyCount = oikordBank.families().size();
+        final int familyCount = oikordFamilyCount();
         final int nextFamily = Math.max(0, Math.min(familyCount - 1, selectedOikordFamily + amount));
         if (nextFamily == selectedOikordFamily) {
             return;
@@ -893,6 +1142,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         showOikordRootInfo();
     }
 
+    private void resetOikordRoot() {
+        oikordRootOffset = 0;
+    }
+
     private void adjustOikordOctave(final int amount) {
         if (amount == 0) {
             return;
@@ -906,6 +1159,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         showOikordOctaveInfo();
     }
 
+    private void resetOikordOctave() {
+        oikordOctaveOffset = 0;
+    }
+
     private void toggleOikordInterpretation() {
         oikordInterpretation = oikordInterpretation.next();
         oled.valueInfo("Chord Step Mode", oikordInterpretation.displayName());
@@ -913,14 +1170,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void startAuditionSelectedOikord() {
-        final OikordBank.Slot slot = currentOikordSlot();
-        final int[] notes = renderSelectedOikord(slot);
+        final int[] notes = renderSelectedOikord();
         stopAuditionNotes();
         for (final int midiNote : notes) {
             noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, AUDITION_VELOCITY);
             auditioningNotes.add(midiNote);
         }
-        oled.valueInfo(oledFamilyLabel(slot.family()), oledOikordName(slot));
+        oled.valueInfo(currentOikordFamilyLabel(), currentOikordName());
     }
 
     private void stopAuditionNotes() {
@@ -1092,6 +1348,15 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final int distanceToAccent = Math.abs(velocity - DEFAULT_OIKORD_ACCENTED_VELOCITY);
         final int distanceToStandard = Math.abs(velocity - DEFAULT_OIKORD_STANDARD_VELOCITY);
         return distanceToAccent <= distanceToStandard;
+    }
+
+    private boolean isOikordStepAccented(final int stepIndex) {
+        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
+        return notesAtStep != null
+                && !notesAtStep.isEmpty()
+                && notesAtStep.values().stream()
+                .filter(note -> note.state() == NoteStep.State.NoteOn)
+                .allMatch(this::isOikordAccented);
     }
 
     private void toggleLayout() {
@@ -1323,34 +1588,45 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private RgbLigthState getOikordStepPadLight(final int padIndex) {
         if (padIndex < STEP_PAD_OFFSET) {
-            if (!oikordBank.hasSlot(selectedOikordFamily, oikordPage, padIndex)) {
+            if (isBuilderFamily()) {
+                return getBuilderSourcePadLight(padIndex);
+            }
+            if (!oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, padIndex)) {
                 return RgbLigthState.OFF;
             }
-            final OikordBank.Slot slot = oikordBank.slot(selectedOikordFamily, oikordPage, padIndex);
+            final OikordBank.Slot slot = oikordBank.slot(currentPresetFamilyIndex(), oikordPage, padIndex);
             final int groupIndex = padIndex / 8;
             final RgbLigthState grouped = getFamilyGroupColor(slot.family(), groupIndex, oikordPage,
-                    oikordBank.pageCount(selectedOikordFamily));
+                    currentOikordPageCount());
             return padIndex == selectedOikordSlot ? SELECTED_CHORD : grouped.getDimmed();
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
         final boolean occupied = clipNotesByStep.containsKey(stepIndex);
+        final boolean accented = occupied && isOikordStepAccented(stepIndex);
         final boolean sustained = !occupied && isOikordStepSustained(stepIndex);
         final RgbLigthState occupiedStepColor = getOikordOccupiedStepColor();
         final RgbLigthState sustainedStepColor = getOikordSustainedStepColor();
-        final RgbLigthState base = heldStepPads.contains(stepIndex)
-                ? HELD_STEP
-                : occupied
-                ? occupiedStepColor
-                : sustained
-                ? sustainedStepColor
-                : (stepIndex / 4) % 2 == 0 ? EMPTY_STEP_A : EMPTY_STEP_B;
         if (heldStepPads.contains(stepIndex)) {
-            return base.getBrightest();
+            return HELD_STEP.getBrightest();
         }
-        if (stepIndex == playingStep) {
-            return (occupied || sustained) ? base.getBrightend() : RgbLigthState.WHITE;
+        if (occupied) {
+            return StepPadLightHelper.renderOccupiedStep(occupiedStepColor, accented, stepIndex == playingStep);
         }
-        return base;
+        if (sustained) {
+            return stepIndex == playingStep ? sustainedStepColor.getBrightend() : sustainedStepColor;
+        }
+        return StepPadLightHelper.renderEmptyStep(stepIndex, playingStep);
+    }
+
+    private RgbLigthState getBuilderSourcePadLight(final int padIndex) {
+        final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
+        if (midiNote < 0) {
+            return RgbLigthState.OFF;
+        }
+        if (builderSelectedNotes.contains(midiNote)) {
+            return SELECTED_BUILDER_NOTE;
+        }
+        return getBuilderBasePadLight(padIndex);
     }
 
     private RgbLigthState getOikordOccupiedStepColor() {
@@ -1472,15 +1748,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void showCurrentOikord() {
-        final OikordBank.Slot slot = currentOikordSlot();
-        oled.valueInfo("%s %d/%d".formatted(oledFamilyLabel(slot.family()), oikordPage + 1,
-                        oikordBank.pageCount(selectedOikordFamily)),
-                "%s %s".formatted(oledOikordName(slot), oikordInterpretationSuffix()));
+        oled.valueInfo("%s %d/%d".formatted(currentOikordFamilyLabel(), oikordPage + 1,
+                        currentOikordPageCount()),
+                "%s %s".formatted(currentOikordName(), oikordInterpretationSuffix()));
     }
 
     private String currentOikordDisplay() {
-        final OikordBank.Slot slot = currentOikordSlot();
-        return "%s %s".formatted(oledOikordName(slot), oikordInterpretationSuffix());
+        return "%s %s".formatted(currentOikordName(), oikordInterpretationSuffix());
     }
 
     private String oledOikordName(final OikordBank.Slot slot) {
@@ -1522,6 +1796,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private String oledFamilyLabel(final String family) {
         return switch (family) {
+            case BUILDER_FAMILY_LABEL -> BUILDER_FAMILY_LABEL;
             case "Sus Motion" -> "SusMot";
             case "Minor Drift" -> "MinDrft";
             case "Dorian Lift" -> "DorLift";
@@ -1538,22 +1813,30 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private OikordBank.Slot currentOikordSlot() {
+        if (isBuilderFamily()) {
+            throw new IllegalStateException("Builder source has no preset slot");
+        }
         ensureSelectedOikordSlotValid();
-        return oikordBank.slot(selectedOikordFamily, oikordPage, selectedOikordSlot);
+        return oikordBank.slot(currentPresetFamilyIndex(), oikordPage, selectedOikordSlot);
     }
 
     private void ensureSelectedOikordSlotValid() {
-        if (oikordBank.hasSlot(selectedOikordFamily, oikordPage, selectedOikordSlot)) {
+        if (isBuilderFamily()) {
+            oikordPage = 0;
+            selectedOikordSlot = 0;
+            return;
+        }
+        if (oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, selectedOikordSlot)) {
             return;
         }
         final int pageStart = oikordPage * OikordBank.PAGE_SIZE;
-        final int familySlotCount = oikordBank.family(selectedOikordFamily).slots().size();
+        final int familySlotCount = oikordBank.family(currentPresetFamilyIndex()).slots().size();
         if (pageStart >= familySlotCount) {
-            oikordPage = Math.max(0, oikordBank.pageCount(selectedOikordFamily) - 1);
+            oikordPage = Math.max(0, currentOikordPageCount() - 1);
         }
         selectedOikordSlot = 0;
         while (selectedOikordSlot < OikordBank.PAGE_SIZE
-                && !oikordBank.hasSlot(selectedOikordFamily, oikordPage, selectedOikordSlot)) {
+                && !oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, selectedOikordSlot)) {
             selectedOikordSlot++;
         }
         if (selectedOikordSlot >= OikordBank.PAGE_SIZE) {
@@ -1561,16 +1844,27 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
     }
 
-    private int[] renderSelectedOikord(final OikordBank.Slot slot) {
+    private int[] renderSelectedOikord() {
+        if (isBuilderFamily()) {
+            return renderBuilderOikord();
+        }
+        final OikordBank.Slot slot = currentOikordSlot();
         if (oikordInterpretation == OikordInterpretation.CAST) {
             final int shiftedRoot = getRootNote() + oikordRootOffset;
             final int castRoot = Math.floorMod(shiftedRoot, 12);
             final int castOctaveOffset = Math.floorDiv(shiftedRoot, 12) + oikordOctaveOffset;
-            return transpose(oikordBank.renderCast(selectedOikordFamily, oikordPage, selectedOikordSlot, getScale(), castRoot),
+            return transpose(oikordBank.renderCast(currentPresetFamilyIndex(), oikordPage, selectedOikordSlot, getScale(), castRoot),
                     castOctaveOffset * 12);
         }
-        return oikordBank.renderAsIs(selectedOikordFamily, oikordPage, selectedOikordSlot,
+        return oikordBank.renderAsIs(currentPresetFamilyIndex(), oikordPage, selectedOikordSlot,
                 getOikordRootMidi() + oikordRootOffset + oikordOctaveOffset * 12);
+    }
+
+    private int[] renderBuilderOikord() {
+        return builderSelectedNotes.stream()
+                .sorted()
+                .mapToInt(Integer::intValue)
+                .toArray();
     }
 
     private int getOikordRootMidi() {
@@ -1593,13 +1887,116 @@ public class NoteMode extends Layer implements StepSequencerHost {
         oled.valueInfo("Chord Root", "%s %s".formatted(NoteGridLayout.noteName(noteClass), formatSignedValue(oikordRootOffset)));
     }
 
+    private boolean isBuilderFamily() {
+        return selectedOikordFamily == BUILDER_FAMILY_INDEX;
+    }
+
+    private int currentPresetFamilyIndex() {
+        return selectedOikordFamily - 1;
+    }
+
+    private int oikordFamilyCount() {
+        return oikordBank.families().size() + 1;
+    }
+
+    private int currentOikordPageCount() {
+        return isBuilderFamily() ? 1 : oikordBank.pageCount(currentPresetFamilyIndex());
+    }
+
+    private String currentOikordFamilyLabel() {
+        return isBuilderFamily()
+                ? BUILDER_FAMILY_LABEL
+                : oledFamilyLabel(oikordBank.family(currentPresetFamilyIndex()).family());
+    }
+
+    private String currentOikordName() {
+        if (isBuilderFamily()) {
+            return builderSelectedNotes.isEmpty() ? "Empty" : builderSelectionSummary();
+        }
+        return oledOikordName(currentOikordSlot());
+    }
+
+    private void toggleBuilderNoteOffset(final int padIndex) {
+        final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
+        if (midiNote < 0) {
+            return;
+        }
+        if (builderSelectedNotes.contains(midiNote)) {
+            builderSelectedNotes.remove(midiNote);
+        } else {
+            builderSelectedNotes.add(midiNote);
+        }
+    }
+
+    private int getBuilderNoteMidiForPad(final int padIndex) {
+        final NoteGridLayout layout = createBuilderLayout();
+        return applyLivePitchOffset(layout.noteForPad(padIndex));
+    }
+
+    private int getBuilderRenderedNoteMidiForPad(final int padIndex) {
+        final int midiNote = getBuilderNoteMidiForPad(padIndex);
+        if (midiNote < 0) {
+            return -1;
+        }
+        return midiNote + oikordRootOffset + oikordOctaveOffset * 12;
+    }
+
+    private String builderSelectionSummary() {
+        final List<Integer> renderedNotes = builderSelectedNotes.stream()
+                .sorted()
+                .toList();
+        final List<String> noteNames = renderedNotes.stream()
+                .limit(4)
+                .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
+                .toList();
+        final String suffix = renderedNotes.size() > 4 ? " +" + (renderedNotes.size() - 4) : "";
+        return "%d notes %s%s".formatted(renderedNotes.size(), String.join(" ", noteNames), suffix).trim();
+    }
+
+    private RgbLigthState getBuilderBasePadLight(final int padIndex) {
+        final NoteGridLayout layout = createBuilderLayout();
+        final int midiNote = applyLivePitchOffset(layout.noteForPad(padIndex));
+        final RgbLigthState base;
+        if (midiNote < 0) {
+            base = RgbLigthState.OFF;
+        } else if (!inKey && scaleIndex == PIANO_HIGHLIGHT_INDEX) {
+            if (layout.roleForPad(padIndex) == NoteGridLayout.PadRole.ROOT) {
+                base = ROOT_COLOR;
+            } else if (NoteGridLayout.isBlackKey(midiNote)) {
+                base = PIANO_BLACK_KEY_COLOR;
+            } else {
+                base = PIANO_WHITE_KEY_COLOR;
+            }
+        } else {
+            final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
+            base = switch (role) {
+                case ROOT -> ROOT_COLOR;
+                case IN_SCALE -> IN_SCALE_COLOR;
+                case OUT_OF_SCALE -> OUT_OF_SCALE_COLOR;
+                case UNAVAILABLE -> RgbLigthState.OFF;
+            };
+        }
+        return heldPads.contains(padIndex) ? base.getBrightest() : base;
+    }
+
     private void showOikordOctaveInfo() {
         oled.valueInfo("Chord Oct", formatSignedValue(oikordOctaveOffset));
     }
 
     private void showOikordFamilyInfo() {
-        final OikordBank.Family family = oikordBank.family(selectedOikordFamily);
+        if (isBuilderFamily()) {
+            oled.valueInfo("Chord Family", BUILDER_FAMILY_LABEL);
+            return;
+        }
+        final OikordBank.Family family = oikordBank.family(currentPresetFamilyIndex());
         oled.valueInfo("Chord Family", family.family());
+    }
+
+    private void resetOikordFamilySelection() {
+        selectedOikordFamily = BUILDER_FAMILY_INDEX;
+        oikordPage = 0;
+        selectedOikordSlot = 0;
+        ensureSelectedOikordSlotValid();
     }
 
     private String formatSignedValue(final int value) {
@@ -1670,6 +2067,11 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private NoteGridLayout createLayout() {
         return new NoteGridLayout(getScale(), getRootNote(), getOctave(), inKey);
+    }
+
+    private NoteGridLayout createBuilderLayout() {
+        final int effectiveBase = transposeBase + oikordRootOffset + oikordOctaveOffset * 12;
+        return new NoteGridLayout(getScale(), Math.floorMod(effectiveBase, 12), Math.floorDiv(effectiveBase, 12), inKey);
     }
 
     private int applyLivePitchOffset(final int midiNote) {
@@ -1792,6 +2194,67 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     @Override
     public void registerModifiedSteps(final List<NoteStep> notes) {
+        notes.forEach(note -> modifiedStepPads.add(note.x()));
+    }
+
+    @Override
+    public boolean hasCustomChannelPage() {
+        return true;
+    }
+
+    @Override
+    public void bindChannelPage(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
+        encoders[0].bindEncoder(layer, inc -> {
+            final int amount = oikordRootEncoder.consume(inc);
+            if (amount != 0) {
+                markEncoderAdjusted(0);
+                adjustOikordRoot(amount);
+            }
+        });
+        encoders[0].bindTouched(layer, touched -> handleResettableTouch(0, touched,
+                this::showOikordRootInfo, () -> {
+                    oikordRootEncoder.reset();
+                    resetOikordRoot();
+                }));
+
+        encoders[1].bindEncoder(layer, inc -> {
+            final int amount = oikordOctaveEncoder.consume(inc);
+            if (amount != 0) {
+                markEncoderAdjusted(1);
+                adjustOikordOctave(amount);
+            }
+        });
+        encoders[1].bindTouched(layer, touched -> handleResettableTouch(1, touched,
+                this::showOikordOctaveInfo, () -> {
+                    oikordOctaveEncoder.reset();
+                    resetOikordOctave();
+                }));
+
+        encoders[2].bindEncoder(layer, inc -> {
+            final int amount = oikordFamilyEncoder.consume(inc);
+            if (amount != 0) {
+                markEncoderAdjusted(2);
+                adjustOikordFamily(amount);
+            }
+        });
+        encoders[2].bindTouched(layer, touched -> handleResettableTouch(2, touched,
+                this::showOikordFamilyInfo, () -> {
+                    oikordFamilyEncoder.reset();
+                    resetOikordFamilySelection();
+                }));
+
+        encoders[3].bindEncoder(layer, inc -> {
+            if (inc != 0) {
+                toggleOikordInterpretation();
+            }
+        });
+        encoders[3].bindTouched(layer, touched -> {
+            if (touched) {
+                oled.valueInfo("Interpret", oikordInterpretation.displayName());
+            } else {
+                oled.clearScreenDelayed();
+            }
+        });
     }
 
     @Override
@@ -1827,45 +2290,19 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     @Override
     public void bindUser2Page(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
-        encoders[0].bindEncoder(layer, inc -> {
-            final int amount = oikordRootEncoder.consume(inc);
-            if (amount != 0) {
-                markEncoderAdjusted(0);
-                adjustOikordRoot(amount);
-            }
-        });
-        encoders[0].bindTouched(layer, touched -> handleResettableTouch(0, touched,
-                this::showOikordRootInfo, oikordRootEncoder::reset));
-        encoders[1].bindEncoder(layer, inc -> {
-            final int amount = oikordOctaveEncoder.consume(inc);
-            if (amount != 0) {
-                markEncoderAdjusted(1);
-                adjustOikordOctave(amount);
-            }
-        });
-        encoders[1].bindTouched(layer, touched -> handleResettableTouch(1, touched,
-                this::showOikordOctaveInfo, oikordOctaveEncoder::reset));
-        encoders[2].bindEncoder(layer, inc -> {
-            if (oikordFamilyEncoder.consume(inc) != 0) {
-                markEncoderAdjusted(2);
-            }
-        });
-        encoders[2].bindTouched(layer, touched -> handleResettableTouch(2, touched,
-                this::showOikordFamilyInfo, oikordFamilyEncoder::reset));
-        encoders[3].bindEncoder(layer, inc -> { });
-        encoders[3].bindTouched(layer, touched -> {
-            if (touched) {
-                oled.valueInfo("User 2-4", "Reserved");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        });
+        handler.bindNoteAccess(layer, encoders[0], NoteStepAccess.VELOCITY);
+        handler.bindNoteAccess(layer, encoders[1], NoteStepAccess.PRESSURE);
+        handler.bindNoteAccess(layer, encoders[2], NoteStepAccess.TIMBRE);
+        handler.bindNoteAccess(layer, encoders[3], NoteStepAccess.PITCH);
     }
 
     @Override
     public String getModeInfo(final EncoderMode mode) {
+        if (mode == EncoderMode.CHANNEL) {
+            return "1: Root Offset\n2: Octave Offset\n3: Chord Source\n4: Interpret";
+        }
         if (mode == EncoderMode.USER_2) {
-            return "1: Root Offset\n2: Octave Offset\n3: Family\n4: Reserved";
+            return "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr";
         }
         return StepSequencerHost.super.getModeInfo(mode);
     }
@@ -1891,8 +2328,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
     @Override
     protected void onActivate() {
         noteStepActive = false;
+        builderSelectedNotes.clear();
         heldStepPads.clear();
         heldStepAnchor = null;
+        selectedPresetStepIndex = null;
         patternButtons.setUpCallback(this::handlePatternUp, this::getPatternButtonLight);
         patternButtons.setDownCallback(this::handlePatternDown, this::getPatternButtonLight);
         liveEncoderMode = EncoderMode.CHANNEL;
@@ -1909,8 +2348,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
         noteStepActive = false;
+        builderSelectedNotes.clear();
         heldStepPads.clear();
         heldStepAnchor = null;
+        selectedPresetStepIndex = null;
         stopAuditionNotes();
         deactivateLiveEncoderLayers();
         liveModeControlLayer.deactivate();
