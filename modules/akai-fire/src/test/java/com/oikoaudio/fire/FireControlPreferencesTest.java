@@ -39,19 +39,19 @@ class FireControlPreferencesTest {
     }
 
     @Test
-    void cyclesMainEncoderRolesInConfiguredOrder() {
-        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
-                FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED));
+    void cyclesAlternateMainEncoderRolesWithoutLastTouched() {
         assertEquals(FireControlPreferences.MAIN_ENCODER_TEMPO,
-                FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_SHUFFLE));
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_SHUFFLE));
         assertEquals(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT,
-                FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT,
-                FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT));
-        assertEquals(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED,
-                FireControlPreferences.nextMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT));
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
-                FireControlPreferences.nextMainEncoderRole("unexpected"));
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+                FireControlPreferences.nextAlternateMainEncoderRole("unexpected"));
     }
 
     @Test

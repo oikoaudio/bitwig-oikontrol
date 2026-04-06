@@ -49,15 +49,6 @@ public class OledDisplay {
 		this.midiOut = midiOut;
 	}
 
-	public void showLogo() {
-		clearScreen();
-		sendString(0, TextJustification.CENTER, 0, "");
-		sendString(3, TextJustification.CENTER, 2, "OIKO");
-		sendString(5, TextJustification.CENTER, 5, "");
-		inGraphicsMode = false;
-		this.logoBlock = System.currentTimeMillis();
-	}
-
 	public void clearScreenDelayed() {
 		clearTask = System.currentTimeMillis();
 	}

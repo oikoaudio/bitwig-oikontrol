@@ -111,14 +111,18 @@ public final class FireControlPreferences {
         return MAIN_ENCODER_LAST_TOUCHED;
     }
 
-    public static String nextMainEncoderRole(final String currentRole) {
+    public static String nextAlternateMainEncoderRole(final String currentRole) {
         final String normalizedRole = normalizeMainEncoderRole(currentRole);
-        for (int index = 0; index < MAIN_ENCODER_ROLES.length; index++) {
-            if (MAIN_ENCODER_ROLES[index].equals(normalizedRole)) {
-                return MAIN_ENCODER_ROLES[(index + 1) % MAIN_ENCODER_ROLES.length];
-            }
+        if (MAIN_ENCODER_SHUFFLE.equals(normalizedRole)) {
+            return MAIN_ENCODER_TEMPO;
         }
-        return MAIN_ENCODER_LAST_TOUCHED;
+        if (MAIN_ENCODER_TEMPO.equals(normalizedRole)) {
+            return MAIN_ENCODER_NOTE_REPEAT;
+        }
+        if (MAIN_ENCODER_NOTE_REPEAT.equals(normalizedRole)) {
+            return MAIN_ENCODER_TRACK_SELECT;
+        }
+        return MAIN_ENCODER_SHUFFLE;
     }
 
     public static String normalizeEuclidScope(final String preferenceValue) {
