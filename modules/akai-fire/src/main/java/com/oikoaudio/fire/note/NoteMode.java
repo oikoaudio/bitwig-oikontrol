@@ -3,6 +3,8 @@ package com.oikoaudio.fire.note;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
+import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteOccurrence;
@@ -22,22 +24,27 @@ import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.sequence.EncoderBank;
+import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
+import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
-import com.oikoaudio.fire.sequence.SequencEncoderHandler;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Comparator;
@@ -66,21 +73,19 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private static final int OIKORD_ROOT_ENCODER_THRESHOLD = 8;
     private static final int OIKORD_OCTAVE_ENCODER_THRESHOLD = 6;
     private static final int OIKORD_FAMILY_ENCODER_THRESHOLD = 8;
-    private static final int LIVE_VELOCITY_ENCODER_THRESHOLD = 2;
+    private static final int LIVE_VELOCITY_ENCODER_THRESHOLD = 1;
     private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 5;
     private static final int MIN_OIKORD_ROOT_OFFSET = -24;
     private static final int MAX_OIKORD_ROOT_OFFSET = 24;
     private static final int MIN_OIKORD_OCTAVE_OFFSET = -3;
     private static final int MAX_OIKORD_OCTAVE_OFFSET = 3;
-    private static final double MIXER_INC = 0.025;
-    private static final double MIXER_FINE_INC = 0.001;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
     private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_STANDARD_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_ACCENTED_VELOCITY = 127;
-    private static final long TOUCH_RESET_HOLD_MS = 250L;
+    private static final long TOUCH_RESET_HOLD_MS = 1000L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int DEFAULT_TIMBRE = 64;
@@ -124,6 +129,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final OikordBank oikordBank = new OikordBank();
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
+    private final ClipLauncherSlotBank noteClipSlotBank;
     private final PinnableCursorDevice liveCursorDevice;
     private final CursorRemoteControlsPage liveRemoteControlsPage;
     private final Layer liveModeControlLayer;
@@ -131,7 +137,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Layer liveMixerLayer;
     private final Layer liveUser1Layer;
     private final Layer liveUser2Layer;
-    private final SequencEncoderHandler stepEncoderLayer;
+    private final StepSequencerEncoderHandler stepEncoderLayer;
+    private final EncoderBankLayout stepEncoderBankLayout;
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
@@ -163,12 +170,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int liveTimbre = DEFAULT_TIMBRE;
     private int liveModulation = MIN_MIDI_VALUE;
     private int livePitchExpression = DEFAULT_LIVE_PITCH_EXPRESSION;
+    private int defaultOikordVelocity = DEFAULT_OIKORD_STANDARD_VELOCITY;
     private int playingStep = -1;
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
     private EncoderMode liveEncoderMode = EncoderMode.CHANNEL;
     private Layer currentLiveEncoderLayer;
     private boolean sustainActive = false;
     private boolean sostenutoActive = false;
+    private boolean selectedNoteClipHasContent = false;
     private RgbLigthState oikordStepBaseColor = OCCUPIED_STEP;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
@@ -255,11 +264,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
         this.noteStepClip = cursorTrack.createLauncherCursorClip("NOTE_STEP", "NOTE_STEP", STEP_COUNT, 128);
+        this.noteClipSlotBank = cursorTrack.clipLauncherSlotBank();
         this.noteStepClip.scrollToKey(0);
         this.noteStepClip.addStepDataObserver(this::handleStepData);
         this.noteStepClip.addNoteStepObserver(this::handleNoteStepObject);
         this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
-        this.stepEncoderLayer = new SequencEncoderHandler(this, driver);
+        observeSelectedNoteClip();
+        this.stepEncoderBankLayout = createStepEncoderBankLayout();
+        this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
         this.currentLiveEncoderLayer = liveChannelLayer;
 
         for (int i = 0; i < liveRemoteControlsPage.getParameterCount(); i++) {
@@ -315,7 +327,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private void bindEncoders() {
         final TouchEncoder[] encoders = driver.getEncoders();
         bindLiveChannelEncoders(encoders);
-        bindMixerPage(null, liveMixerLayer, encoders);
+        bindLiveMixerEncoders(encoders);
         bindLiveExpressionEncoders(encoders);
         bindLiveRemoteEncoders(encoders);
 
@@ -353,8 +365,39 @@ public class NoteMode extends Layer implements StepSequencerHost {
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
             final Parameter parameter = liveRemoteControlsPage.getParameter(index);
-            encoders[i].bindEncoder(liveUser2Layer, inc -> adjustMixerParameter(parameter.value(), inc));
+            encoders[i].bindEncoder(liveUser2Layer, inc -> adjustMixerParameter(parameter, parameter.name().get(), inc));
             encoders[i].bindTouched(liveUser2Layer, touched -> {
+                if (touched) {
+                    oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+                } else {
+                    oled.clearScreenDelayed();
+                }
+            });
+        }
+    }
+
+    private void bindLiveMixerEncoders(final TouchEncoder[] encoders) {
+        final Track track = cursorTrack;
+        final List<com.bitwig.extension.controller.api.Parameter> params = new ArrayList<>();
+        params.add(track.volume());
+        params.add(track.pan());
+        params.add(track.sendBank().getItemAt(0));
+        params.add(track.sendBank().getItemAt(1));
+        for (final com.bitwig.extension.controller.api.Parameter parameter : params) {
+            parameter.name().markInterested();
+            parameter.displayedValue().markInterested();
+            parameter.value().markInterested();
+        }
+        for (int i = 0; i < encoders.length; i++) {
+            final com.bitwig.extension.controller.api.Parameter parameter = params.get(i);
+            final String fallbackLabel = switch (i) {
+                case 0 -> "Volume";
+                case 1 -> "Pan";
+                case 2 -> "Send 1";
+                default -> "Send 2";
+            };
+            encoders[i].bindEncoder(liveMixerLayer, inc -> adjustMixerParameter(parameter, fallbackLabel, inc));
+            encoders[i].bindTouched(liveMixerLayer, touched -> {
                 if (touched) {
                     oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
                 } else {
@@ -815,6 +858,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void pasteCurrentChordToStep(final int stepIndex) {
+        if (!ensureSelectedNoteClip()) {
+            return;
+        }
         final int[] notes = renderSelectedOikord();
         if (notes.length == 0) {
             oled.valueInfo("Paste", "Empty chord");
@@ -1081,8 +1127,26 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void activateCurrentLiveEncoderLayer() {
         deactivateLiveEncoderLayers();
+        applyLiveEncoderStepSizes(liveEncoderMode);
         currentLiveEncoderLayer = liveLayerForMode(liveEncoderMode);
         currentLiveEncoderLayer.activate();
+    }
+
+    private void applyLiveEncoderStepSizes(final EncoderMode mode) {
+        final TouchEncoder[] encoders = driver.getEncoders();
+        switch (mode) {
+            case CHANNEL -> {
+                encoders[0].setStepSize(MixerEncoderProfile.STEP_SIZE);
+                encoders[1].setStepSize(MixerEncoderProfile.STEP_SIZE);
+                encoders[2].setStepSize(MixerEncoderProfile.STEP_SIZE);
+                encoders[3].setStepSize(MixerEncoderProfile.STEP_SIZE);
+            }
+            case MIXER, USER_1, USER_2 -> {
+                for (final TouchEncoder encoder : encoders) {
+                    encoder.setStepSize(MixerEncoderProfile.STEP_SIZE);
+                }
+            }
+        }
     }
 
     private Layer liveLayerForMode(final EncoderMode mode) {
@@ -1101,6 +1165,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private boolean assignSelectedOikordToSteps(final Set<Integer> stepIndexes) {
         if (stepIndexes.isEmpty()) {
+            return false;
+        }
+        if (!ensureSelectedNoteClip()) {
             return false;
         }
         final int[] notes = renderSelectedOikord();
@@ -1318,15 +1385,18 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (touched) {
             if (driver.isEncoderTouchResetEnabled()) {
                 touchResetGesture.onTouchStart(encoderIndex);
+                driver.getHost().scheduleTask(() -> {
+                    if (driver.isEncoderTouchResetEnabled() && touchResetGesture.shouldResetWhileTouched(encoderIndex)) {
+                        resetAction.run();
+                        showInfo.run();
+                    }
+                }, TOUCH_RESET_HOLD_MS);
             }
             showInfo.run();
             return;
         }
-        if (driver.isEncoderTouchResetEnabled()
-                && touchResetGesture.shouldResetOnTouchRelease(encoderIndex)) {
-            resetAction.run();
-            showInfo.run();
-            return;
+        if (driver.isEncoderTouchResetEnabled()) {
+            touchResetGesture.onTouchEnd(encoderIndex);
         }
         oled.clearScreenDelayed();
     }
@@ -1391,7 +1461,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private int currentOikordVelocity() {
-        return oikordAccentActive ? DEFAULT_OIKORD_ACCENTED_VELOCITY : DEFAULT_OIKORD_STANDARD_VELOCITY;
+        return oikordAccentActive ? DEFAULT_OIKORD_ACCENTED_VELOCITY : defaultOikordVelocity;
     }
 
     private void toggleOikordAccentForStep(final int stepIndex) {
@@ -1400,7 +1470,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         final boolean accented = notesAtStep.values().stream().allMatch(this::isOikordAccented);
-        final double targetVelocity = (accented ? DEFAULT_OIKORD_STANDARD_VELOCITY : DEFAULT_OIKORD_ACCENTED_VELOCITY) / 127.0;
+        final double targetVelocity = (accented ? defaultOikordVelocity : DEFAULT_OIKORD_ACCENTED_VELOCITY) / 127.0;
         notesAtStep.values().forEach(note -> note.setVelocity(targetVelocity));
         oikordAccentModified = true;
         oled.valueInfo("Accent", accented ? "Normal" : "Accented");
@@ -2219,6 +2289,20 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     @Override
+    public List<NoteStep> getFocusedNotes() {
+        final List<NoteStep> heldNotes = getHeldNotes();
+        if (!heldNotes.isEmpty()) {
+            return heldNotes;
+        }
+        if (selectedPresetStepIndex == null) {
+            return List.of();
+        }
+        return noteStepsByPosition.getOrDefault(selectedPresetStepIndex, Map.of()).values().stream()
+                .filter(note -> note.state() == NoteStep.State.NoteOn)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public String getDetails(final List<NoteStep> heldNotes) {
         return "%s <%d>".formatted(currentStepSubMode.displayName(), heldNotes.size());
     }
@@ -2260,118 +2344,301 @@ public class NoteMode extends Layer implements StepSequencerHost {
         notes.forEach(note -> modifiedStepPads.add(note.x()));
     }
 
-    @Override
-    public boolean hasCustomChannelPage() {
-        return true;
+    private void adjustMixerParameter(final Parameter parameter, final String fallbackLabel, final int inc) {
+        MixerEncoderProfile.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
+        oled.valueInfo(fallbackLabel, parameter.displayedValue().get());
     }
 
     @Override
-    public void bindChannelPage(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
-        encoders[0].bindEncoder(layer, inc -> {
-            final int amount = oikordOctaveEncoder.consume(inc);
-            if (amount != 0) {
-                markEncoderAdjusted(0);
-                adjustOikordOctave(amount);
-            }
-        });
-        encoders[0].bindTouched(layer, touched -> handleResettableTouch(0, touched,
-                this::showOikordOctaveInfo, () -> {
-                    oikordOctaveEncoder.reset();
-                    resetOikordOctave();
-                }));
-
-        encoders[1].bindEncoder(layer, inc -> {
-            final int amount = oikordRootEncoder.consume(inc);
-            if (amount != 0) {
-                markEncoderAdjusted(1);
-                adjustOikordRoot(amount);
-            }
-        });
-        encoders[1].bindTouched(layer, touched -> handleResettableTouch(1, touched,
-                this::showOikordRootInfo, () -> {
-                    oikordRootEncoder.reset();
-                    resetOikordRoot();
-                }));
-
-        encoders[2].bindEncoder(layer, inc -> {
-            final int amount = oikordFamilyEncoder.consume(inc);
-            if (amount != 0) {
-                markEncoderAdjusted(2);
-                if (driver.isGlobalShiftHeld() || driver.isGlobalAltHeld()) {
-                    adjustOikordPage(amount);
-                } else {
-                    adjustOikordFamily(amount);
-                }
-            }
-        });
-        encoders[2].bindTouched(layer, touched -> handleResettableTouch(2, touched,
-                this::showCurrentOikord, () -> {
-                    oikordFamilyEncoder.reset();
-                    resetOikordFamilySelection();
-                }));
-
-        encoders[3].bindEncoder(layer, inc -> {
-            if (inc != 0) {
-                adjustOikordInterpretation(inc);
-            }
-        });
-        encoders[3].bindTouched(layer, touched -> {
-            if (touched) {
-                oled.valueInfo("Interpret", oikordInterpretation.displayName());
-            } else {
-                oled.clearScreenDelayed();
-            }
-        });
+    public EncoderBankLayout getEncoderBankLayout() {
+        return stepEncoderBankLayout;
     }
 
-    @Override
-    public void bindMixerPage(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
-        final Track track = cursorTrack;
-        final List<com.bitwig.extension.controller.api.Parameter> params = new ArrayList<>();
-        params.add(track.volume());
-        params.add(track.pan());
-        params.add(track.sendBank().getItemAt(0));
-        params.add(track.sendBank().getItemAt(1));
-        for (final com.bitwig.extension.controller.api.Parameter parameter : params) {
-            parameter.name().markInterested();
-            parameter.displayedValue().markInterested();
-            parameter.value().markInterested();
-        }
-        for (int i = 0; i < encoders.length; i++) {
-            final com.bitwig.extension.controller.api.Parameter parameter = params.get(i);
-            encoders[i].bindEncoder(layer, inc -> adjustMixerParameter(parameter.value(), inc));
-            encoders[i].bindTouched(layer, touched -> {
-                if (touched) {
-                    oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
-                } else {
+    private EncoderBankLayout createStepEncoderBankLayout() {
+        final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
+        banks.put(EncoderMode.CHANNEL, new EncoderBank(
+                "1: Octave Root\n2: Chord Root\n3: Chord Family\n4: Interpret",
+                new EncoderSlotBinding[]{
+                        oikordSlot(0, oikordOctaveEncoder, this::adjustOikordOctave,
+                                this::showOikordOctaveInfo, this::resetOikordOctave),
+                        oikordSlot(1, oikordRootEncoder, this::adjustOikordRoot,
+                                this::showOikordRootInfo, this::resetOikordRoot),
+                        oikordSlot(2, oikordFamilyEncoder,
+                                amount -> {
+                                    if (driver.isGlobalShiftHeld() || driver.isGlobalAltHeld()) {
+                                        adjustOikordPage(amount);
+                                    } else {
+                                        adjustOikordFamily(amount);
+                                    }
+                                },
+                                this::showCurrentOikord, this::resetOikordFamilySelection),
+                        interpretSlot()
+                }));
+        banks.put(EncoderMode.MIXER, new EncoderBank(
+                "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
+                new EncoderSlotBinding[]{
+                        chordMixerSlot(0, "Volume"),
+                        chordMixerSlot(1, "Pan"),
+                        chordMixerSlot(2, "Send 1"),
+                        chordMixerSlot(3, "Send 2")
+                }));
+        banks.put(EncoderMode.USER_1, new EncoderBank(
+                "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
+                new EncoderSlotBinding[]{
+                        chordVelocitySlot(),
+                        noteAccessSlot(NoteStepAccess.PRESSURE),
+                        noteAccessSlot(NoteStepAccess.TIMBRE),
+                        noteAccessSlot(NoteStepAccess.PITCH)
+                }));
+        banks.put(EncoderMode.USER_2, new EncoderBank(
+                "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
+                new EncoderSlotBinding[]{
+                        noteAccessSlot(NoteStepAccess.DURATION),
+                        noteAccessSlot(NoteStepAccess.CHANCE),
+                        noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD),
+                        noteAccessSlot(NoteStepAccess.REPEATS)
+                }));
+        return new EncoderBankLayout(banks);
+    }
+
+    private EncoderSlotBinding noteAccessSlot(final NoteStepAccess access) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return access.getResolution();
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                handler.bindNoteAccess(layer, encoder, slotIndex, access);
+            }
+        };
+    }
+
+    private EncoderSlotBinding chordVelocitySlot() {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return NoteStepAccess.VELOCITY.getResolution();
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                encoder.bindEncoder(layer, inc -> {
+                    final List<NoteStep> heldNotes = getHeldNotes();
+                    handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
+                    if (!heldNotes.isEmpty()) {
+                        handler.handleExplicitNoteAccess(inc, NoteStepAccess.VELOCITY);
+                        return;
+                    }
+                    adjustDefaultOikordVelocity(inc);
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        final List<NoteStep> heldNotes = getHeldNotes();
+                        if (!heldNotes.isEmpty()) {
+                            handler.beginTouchReset(slotIndex,
+                                    () -> handler.resetAccessorToDefault(NoteStepAccess.VELOCITY));
+                            handler.showAccessorTouchValue(NoteStepAccess.VELOCITY);
+                            return;
+                        }
+                        handler.beginTouchReset(slotIndex, () -> {
+                            resetDefaultOikordVelocity();
+                            showDefaultOikordVelocity();
+                        });
+                        showDefaultOikordVelocity();
+                        return;
+                    }
+                    handler.endTouchReset(slotIndex);
                     oled.clearScreenDelayed();
-                }
-            });
+                });
+            }
+        };
+    }
+
+    private void adjustDefaultOikordVelocity(final int inc) {
+        final int nextVelocity = Math.max(MIN_VELOCITY,
+                Math.min(DEFAULT_OIKORD_ACCENTED_VELOCITY - 1, defaultOikordVelocity + inc));
+        if (nextVelocity == defaultOikordVelocity) {
+            return;
+        }
+        defaultOikordVelocity = nextVelocity;
+        showDefaultOikordVelocity();
+    }
+
+    private void resetDefaultOikordVelocity() {
+        defaultOikordVelocity = DEFAULT_OIKORD_STANDARD_VELOCITY;
+    }
+
+    private void showDefaultOikordVelocity() {
+        oled.paramInfo("Velocity", defaultOikordVelocity, "Chord Default", MIN_VELOCITY,
+                DEFAULT_OIKORD_ACCENTED_VELOCITY - 1);
+    }
+
+    private EncoderSlotBinding emptySlot() {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                encoder.bindEncoder(layer, inc -> { });
+                encoder.bindTouched(layer, touched -> {
+                    if (!touched) {
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
+    private EncoderSlotBinding chordMixerSlot(final int index, final String label) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                final com.bitwig.extension.controller.api.Parameter parameter = switch (index) {
+                    case 0 -> cursorTrack.volume();
+                    case 1 -> cursorTrack.pan();
+                    case 2 -> cursorTrack.sendBank().getItemAt(0);
+                    default -> cursorTrack.sendBank().getItemAt(1);
+                };
+                parameter.name().markInterested();
+                parameter.displayedValue().markInterested();
+                parameter.value().markInterested();
+                encoder.bindEncoder(layer, inc -> adjustMixerParameter(parameter, label, inc));
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        oled.valueInfo(label, parameter.displayedValue().get());
+                    } else {
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
+    private void observeSelectedNoteClip() {
+        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
+            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
+            slot.exists().markInterested();
+            slot.hasContent().markInterested();
+            slot.isSelected().markInterested();
+            slot.exists().addValueObserver(ignored -> refreshSelectedNoteClipState());
+            slot.hasContent().addValueObserver(ignored -> refreshSelectedNoteClipState());
+            slot.isSelected().addValueObserver(ignored -> refreshSelectedNoteClipState());
+        }
+        refreshSelectedNoteClipState();
+    }
+
+    private void refreshSelectedNoteClipState() {
+        selectedNoteClipHasContent = false;
+        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
+            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
+            if (slot.exists().get() && slot.isSelected().get()) {
+                selectedNoteClipHasContent = slot.hasContent().get();
+                return;
+            }
         }
     }
 
-    private void adjustMixerParameter(final SettableRangedValue value, final int inc) {
-        final double amount = inc * (driver.isGlobalShiftHeld() ? MIXER_FINE_INC : MIXER_INC);
-        value.setImmediately(Math.max(0, Math.min(1, value.get() + amount)));
+    private boolean ensureSelectedNoteClip() {
+        if (selectedNoteClipHasContent || hasLoadedNoteClipContent()) {
+            return true;
+        }
+        oled.valueInfo("No Clip", "Create or Select Clip");
+        driver.notifyPopup("No Clip", "Create or select clip");
+        return false;
     }
 
-    @Override
-    public void bindUser2Page(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
-        handler.bindNoteAccess(layer, encoders[0], NoteStepAccess.DURATION);
-        handler.bindNoteAccess(layer, encoders[1], NoteStepAccess.CHANCE);
-        handler.bindNoteAccess(layer, encoders[2], NoteStepAccess.VELOCITY_SPREAD);
-        handler.bindNoteAccess(layer, encoders[3], NoteStepAccess.REPEATS);
+    private boolean hasLoadedNoteClipContent() {
+        return noteStepsByPosition.values().stream()
+                .flatMap(step -> step.values().stream())
+                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
     }
 
-    @Override
-    public String getModeInfo(final EncoderMode mode) {
-        if (mode == EncoderMode.CHANNEL) {
-            return "1: Octave Root\n2: Chord Root\n3: Chord Family\n4: Interpret";
-        }
-        if (mode == EncoderMode.USER_2) {
-            return "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat";
-        }
-        return StepSequencerHost.super.getModeInfo(mode);
+    @FunctionalInterface
+    private interface OikordAdjuster {
+        void adjust(int amount);
+    }
+
+    private EncoderSlotBinding oikordSlot(final int slotIndex, final EncoderStepAccumulator accumulator,
+                                          final OikordAdjuster adjuster, final Runnable showInfo,
+                                          final Runnable resetAction) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return 0.25;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int boundSlotIndex) {
+                encoder.bindEncoder(layer, inc -> {
+                    final int amount = accumulator.consume(inc);
+                    if (amount != 0) {
+                        handler.recordTouchAdjustment(boundSlotIndex, Math.abs(amount));
+                        markEncoderAdjusted(slotIndex);
+                        adjuster.adjust(amount);
+                    }
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        handler.beginTouchReset(boundSlotIndex, () -> {
+                            accumulator.reset();
+                            resetAction.run();
+                            showInfo.run();
+                        });
+                        showInfo.run();
+                        return;
+                    }
+                    handler.endTouchReset(boundSlotIndex);
+                    oled.clearScreenDelayed();
+                });
+            }
+        };
+    }
+
+    private EncoderSlotBinding interpretSlot() {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return 1.0;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                encoder.bindEncoder(layer, inc -> {
+                    if (inc != 0) {
+                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
+                        adjustOikordInterpretation(inc);
+                    }
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        handler.beginTouchReset(slotIndex, () -> {
+                            oikordInterpretation = OikordInterpretation.AS_IS;
+                            oled.valueInfo("Interpret", oikordInterpretation.displayName());
+                        });
+                        oled.valueInfo("Interpret", oikordInterpretation.displayName());
+                        return;
+                    }
+                    handler.endTouchReset(slotIndex);
+                    oled.clearScreenDelayed();
+                });
+            }
+        };
     }
 
     private String getLiveModeInfo(final EncoderMode mode) {

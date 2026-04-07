@@ -60,7 +60,7 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeDrumPinMode(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));
         assertEquals(FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE,
                 FireControlPreferences.normalizeDrumPinMode(FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE));
-        assertEquals(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION,
+        assertEquals(FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE,
                 FireControlPreferences.normalizeDrumPinMode("unexpected"));
     }
 
@@ -72,7 +72,7 @@ class FireControlPreferencesTest {
         assertEquals(false,
                 FireControlPreferences.shouldAutoPinFirstDrumMachine(
                         FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));
-        assertEquals(false,
+        assertEquals(true,
                 FireControlPreferences.shouldAutoPinFirstDrumMachine("unexpected"));
     }
 

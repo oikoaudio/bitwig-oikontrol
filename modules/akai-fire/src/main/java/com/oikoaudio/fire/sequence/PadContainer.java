@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.display.ParameterDisplayBinding;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.controller.api.*;
@@ -11,8 +12,6 @@ import com.bitwig.extensions.framework.values.DawColor;
 class PadContainer {
 
 
-    private static final double SHIFT_INC = 0.001;
-    private static final double REGULAR_INC = 0.025;
     private static final double TUNE_INC = 0.0416667;
     private static final double PITCH_INC = 0.0138889;
 
@@ -45,6 +44,9 @@ class PadContainer {
     private final ParameterDisplayBinding volumeBinding;
     private final ParameterDisplayBinding panBinding;
     private final ParameterDisplayBinding[] sendBindings = new ParameterDisplayBinding[8];
+    private final Parameter volumeParameter;
+    private final Parameter panParameter;
+    private final Send[] sendParameters = new Send[8];
 
     private final CursorRemoteControlsPage remoteControls;
     private final ParameterDisplayBinding macro1Binding;
@@ -72,6 +74,7 @@ class PadContainer {
 
         for (int i = 0; i < 8; i++) {
             final Send sendItem = pad.sendBank().getItemAt(i);
+            sendParameters[i] = sendItem;
             // sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem, padHandler.getDiplayTarget(), false, null);
             sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem, padHandler.getDisplayTarget(), false);
         }
@@ -91,8 +94,10 @@ class PadContainer {
                 this.padHandler.currentPadColor = bitwigPadColor;
             }
         });
-        volumeBinding = new ParameterDisplayBinding(0, index, pad.volume(), padHandler.getDisplayTarget(), false);
-        panBinding = new ParameterDisplayBinding(1, index, pad.pan(), padHandler.getDisplayTarget(), true);
+        volumeParameter = pad.volume();
+        panParameter = pad.pan();
+        volumeBinding = new ParameterDisplayBinding(0, index, volumeParameter, padHandler.getDisplayTarget(), false);
+        panBinding = new ParameterDisplayBinding(1, index, panParameter, padHandler.getDisplayTarget(), true);
 
         remoteControls = pad.createDeviceBank(1).getDevice(0).createCursorRemoteControlsPage(8);
         remoteControls.selectedPageIndex().markInterested();
@@ -214,10 +219,12 @@ class PadContainer {
             amount = inc * TUNE_INC; // Force increments of exactly ±1
             else if (remoteControls.getParameter(0).name().get().contains("Pitch"))
                amount = inc * PITCH_INC;
-            else amount = inc * REGULAR_INC;
+            else amount = inc * MixerEncoderProfile.COARSE_INCREMENT;
         }
         else {
-            amount = inc * (shiftHeld ? SHIFT_INC : REGULAR_INC);
+            amount = inc * (shiftHeld
+                    ? MixerEncoderProfile.FINE_INCREMENT
+                    : MixerEncoderProfile.COARSE_INCREMENT);
         }
         switch (typeIndex) {
             case 0:
@@ -259,6 +266,39 @@ class PadContainer {
             default:
                 break;
         }
+    }
+
+    public boolean adjustMixerValue(final int typeIndex, final int inc, final boolean fine) {
+        final Parameter parameter = mixerParameter(typeIndex);
+        if (parameter == null) {
+            return false;
+        }
+        MixerEncoderProfile.adjustParameter(parameter, fine, inc);
+        return true;
+    }
+
+    public String mixerDisplayedValue(final int typeIndex) {
+        final Parameter parameter = mixerParameter(typeIndex);
+        return parameter != null ? parameter.displayedValue().get() : "";
+    }
+
+    public String mixerName(final int typeIndex, final String fallbackLabel) {
+        final Parameter parameter = mixerParameter(typeIndex);
+        if (parameter == null) {
+            return fallbackLabel;
+        }
+        final String name = parameter.name().get();
+        return name == null || name.isBlank() ? fallbackLabel : name;
+    }
+
+    private Parameter mixerParameter(final int typeIndex) {
+        return switch (typeIndex) {
+            case 0 -> volumeParameter;
+            case 1 -> panParameter;
+            case 2 -> sendParameters[0];
+            case 3 -> sendParameters[1];
+            default -> null;
+        };
     }
 
     public void updateDisplay(final int typeIndex) {

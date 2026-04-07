@@ -449,6 +449,32 @@ public class PadHandler {
         selectedPad.modifyValue(typeIndex, inc, parent.isShiftHeld(), parent.isAltHeld());
     }
 
+    public boolean adjustMixerParameter(final int typeIndex, final int inc) {
+        if (selectedPad == null) {
+            return false;
+        }
+        return selectedPad.adjustMixerValue(typeIndex, inc, parent.isShiftHeld());
+    }
+
+    public void ensureSelectedPad() {
+        if (selectedPad != null) {
+            selectedPad.pad.selectInEditor();
+            return;
+        }
+        if (!pads.isEmpty()) {
+            pads.get(0).pad.selectInEditor();
+        }
+    }
+
+    public void showMixerDisplay(final int typeIndex, final String fallbackLabel) {
+        if (selectedPad == null) {
+            parent.getOled().valueInfo("Mixer", "Select Pad");
+            return;
+        }
+        parent.getOled().valueInfo(selectedPad.mixerName(typeIndex, fallbackLabel),
+                selectedPad.mixerDisplayedValue(typeIndex));
+    }
+
     public void bindPadParameters(final Layer layer) {
         for (final PadContainer pad : pads) {
             pad.bindParameters(layer);
