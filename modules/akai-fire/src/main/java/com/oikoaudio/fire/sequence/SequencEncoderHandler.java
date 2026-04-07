@@ -66,7 +66,8 @@ public class SequencEncoderHandler extends Layer {
         }
         modeMapping.put(EncoderMode.MIXER, mixerLayer);
         parent.bindMixerPage(this, mixerLayer, encoders);
-		assign(EncoderMode.USER_1, user1Layer, encoders);
+        modeMapping.put(EncoderMode.USER_1, user1Layer);
+        parent.bindUser1Page(this, user1Layer, encoders);
         modeMapping.put(EncoderMode.USER_2, user2Layer);
         parent.bindUser2Page(this, user2Layer, encoders);
 		currentLayer = channelLayer;
@@ -85,6 +86,10 @@ public class SequencEncoderHandler extends Layer {
 			}
 		}
 	}
+
+    public void bindDefaultPage(final EncoderMode mode, final Layer layer, final TouchEncoder[] encoders) {
+        assign(mode, layer, encoders);
+    }
 
 	public EncoderMode nextMode() {
 		if (encoderMode == EncoderMode.CHANNEL) {
@@ -118,6 +123,10 @@ public class SequencEncoderHandler extends Layer {
             handleTouch(touched, access);
         });
 	}
+
+    public void handleExplicitNoteAccess(final int inc, final NoteStepAccess accessor) {
+        handleMod(inc, accessor);
+    }
 
 	private void handleModeAdvance(final boolean pressed) {
 		if (!pressed) {

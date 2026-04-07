@@ -96,6 +96,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     private final EncoderStepAccumulator euclidPulsesEncoder = new EncoderStepAccumulator(3);
     private final EncoderStepAccumulator euclidRotationEncoder = new EncoderStepAccumulator(3);
     private final EncoderStepAccumulator euclidAccentEncoder = new EncoderStepAccumulator(3);
+    private int defaultVelocity = 100;
+    private double defaultPressure = 0.0;
+    private double defaultTimbre = 0.0;
+    private final TouchResetGesture user1TouchResetGesture =
+            new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
+                    TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
     private final TouchResetGesture user2TouchResetGesture =
             new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
                     TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
@@ -579,6 +585,157 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         }
     }
 
+    public int getDefaultVelocity() {
+        return defaultVelocity;
+    }
+
+    private List<NoteStep> getExpressionTargetNotes() {
+        return isPadBeingHeld() ? getOnNotes() : getHeldNotes();
+    }
+
+    private void adjustDefaultVelocity(final int inc) {
+        if (inc == 0) {
+            return;
+        }
+        final int nextValue = Math.max(1, Math.min(accentHandler.getAccentedVelocity() - 1, defaultVelocity + inc));
+        if (nextValue == defaultVelocity) {
+            return;
+        }
+        defaultVelocity = nextValue;
+        if (driver.isEncoderTouchResetEnabled()) {
+            user1TouchResetGesture.onAdjusted(0, Math.abs(inc));
+        }
+        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrenVel());
+        oled.paramInfo("Velocity", defaultVelocity, "Drum Default", 1, accentHandler.getAccentedVelocity() - 1);
+    }
+
+    private void adjustDefaultPressure(final int inc) {
+        if (inc == 0) {
+            return;
+        }
+        final double nextValue = Math.max(0.0, Math.min(1.0, defaultPressure + inc * 0.01));
+        if (nextValue == defaultPressure) {
+            return;
+        }
+        defaultPressure = nextValue;
+        if (driver.isEncoderTouchResetEnabled()) {
+            user1TouchResetGesture.onAdjusted(1, Math.abs(inc));
+        }
+        oled.paramInfoPercent("Pressure", defaultPressure, "Drum Default", 0, 1);
+    }
+
+    private void adjustDefaultTimbre(final int inc) {
+        if (inc == 0) {
+            return;
+        }
+        final double nextValue = Math.max(-1.0, Math.min(1.0, defaultTimbre + inc * 0.01));
+        if (nextValue == defaultTimbre) {
+            return;
+        }
+        defaultTimbre = nextValue;
+        if (driver.isEncoderTouchResetEnabled()) {
+            user1TouchResetGesture.onAdjusted(2, Math.abs(inc));
+        }
+        oled.paramInfoPercent("Timbre", defaultTimbre, "Drum Default", -1, 1);
+    }
+
+    private void resetDefaultVelocity() {
+        defaultVelocity = 100;
+        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrenVel());
+    }
+
+    private void resetDefaultPressure() {
+        defaultPressure = 0.0;
+    }
+
+    private void resetDefaultTimbre() {
+        defaultTimbre = 0.0;
+    }
+
+    private void showDefaultVelocity() {
+        oled.paramInfo("Velocity", defaultVelocity, "Drum Default", 1, accentHandler.getAccentedVelocity() - 1);
+    }
+
+    private void showDefaultPressure() {
+        oled.paramInfoPercent("Pressure", defaultPressure, "Drum Default", 0, 1);
+    }
+
+    private void showDefaultTimbre() {
+        oled.paramInfoPercent("Timbre", defaultTimbre, "Drum Default", -1, 1);
+    }
+
+    private void adjustUser1Velocity(final SequencEncoderHandler handler, final int inc) {
+        if (getExpressionTargetNotes().isEmpty()) {
+            adjustDefaultVelocity(inc);
+            return;
+        }
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.VELOCITY);
+    }
+
+    private void adjustUser1Pressure(final SequencEncoderHandler handler, final int inc) {
+        if (getExpressionTargetNotes().isEmpty()) {
+            adjustDefaultPressure(inc);
+            return;
+        }
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.PRESSURE);
+    }
+
+    private void adjustUser1Timbre(final SequencEncoderHandler handler, final int inc) {
+        if (getExpressionTargetNotes().isEmpty()) {
+            adjustDefaultTimbre(inc);
+            return;
+        }
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.TIMBRE);
+    }
+
+    private void adjustUser1Pitch(final SequencEncoderHandler handler, final int inc) {
+        if (getExpressionTargetNotes().isEmpty()) {
+            return;
+        }
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.PITCH);
+    }
+
+    private void handleUser1Touch(final boolean touched, final int index, final NoteStepAccess accessor,
+                                  final Runnable showDefault, final Runnable resetDefault) {
+        if (touched) {
+            if (getExpressionTargetNotes().isEmpty()) {
+                if (driver.isEncoderTouchResetEnabled()) {
+                    user1TouchResetGesture.onTouchStart(index);
+                }
+                showDefault.run();
+                return;
+            }
+            handlerTouchAccess(accessor);
+            return;
+        }
+        if (getExpressionTargetNotes().isEmpty()
+                && driver.isEncoderTouchResetEnabled()
+                && resetDefault != null
+                && user1TouchResetGesture.shouldResetOnTouchRelease(index)) {
+            resetDefault.run();
+            showDefault.run();
+            return;
+        }
+        oled.clearScreenDelayed();
+    }
+
+    private void handlerTouchAccess(final NoteStepAccess accessor) {
+        final List<NoteStep> heldNotes = getExpressionTargetNotes();
+        if (heldNotes.isEmpty()) {
+            oled.valueInfo(accessor.getName(), "Hold Step");
+            return;
+        }
+        final NoteStep note = heldNotes.get(0);
+        final String details = getDetails(heldNotes);
+        if (accessor.getUnit() == NoteValueUnit.MIDI || accessor.getUnit() == NoteValueUnit.NONE) {
+            oled.paramInfo(accessor.getName(), accessor.getInt(note), details, accessor.getMinInt(), accessor.getMaxInt());
+        } else if (accessor.getUnit() == NoteValueUnit.SEMI) {
+            oled.paramInfoDouble(accessor.getName(), accessor.getDouble(note), details, accessor.getMin(), accessor.getMax());
+        } else {
+            oled.paramInfoPercent(accessor.getName(), accessor.getDouble(note), details, accessor.getMin(), accessor.getMax());
+        }
+    }
+
     private void handleAccentStepAction(final int index, final NoteStep note) {
         accentHandler.markModified();
         if (note == null || note.state() == State.Empty || note.state() == State.NoteSustain) {
@@ -1025,6 +1182,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             final NoteStep previousStep = expectedNoteChanges.get(newStep);
             expectedNoteChanges.remove(newStep);
             applyValues(noteStep, previousStep);
+        } else if (addedSteps.contains(newStep) && noteStep.state() == State.NoteOn) {
+            noteStep.setPressure(defaultPressure);
+            noteStep.setTimbre(defaultTimbre);
         }
     }
 
@@ -1169,6 +1329,22 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             });
         }
         padHandler.bindPadParameters(layer);
+    }
+
+    @Override
+    public void bindUser1Page(final SequencEncoderHandler handler, final Layer layer, final TouchEncoder[] encoders) {
+        encoders[0].bindEncoder(layer, inc -> adjustUser1Velocity(handler, inc));
+        encoders[0].bindTouched(layer, touched -> handleUser1Touch(touched, 0, NoteStepAccess.VELOCITY,
+                this::showDefaultVelocity, this::resetDefaultVelocity));
+        encoders[1].bindEncoder(layer, inc -> adjustUser1Pressure(handler, inc));
+        encoders[1].bindTouched(layer, touched -> handleUser1Touch(touched, 1, NoteStepAccess.PRESSURE,
+                this::showDefaultPressure, this::resetDefaultPressure));
+        encoders[2].bindEncoder(layer, inc -> adjustUser1Timbre(handler, inc));
+        encoders[2].bindTouched(layer, touched -> handleUser1Touch(touched, 2, NoteStepAccess.TIMBRE,
+                this::showDefaultTimbre, this::resetDefaultTimbre));
+        encoders[3].bindEncoder(layer, inc -> adjustUser1Pitch(handler, inc));
+        encoders[3].bindTouched(layer, touched -> handleUser1Touch(touched, 3, NoteStepAccess.PITCH,
+                () -> oled.valueInfo("Pitch", "Hold Step"), null));
     }
 
     @Override

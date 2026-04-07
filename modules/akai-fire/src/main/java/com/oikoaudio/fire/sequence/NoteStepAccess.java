@@ -46,7 +46,7 @@ public enum NoteStepAccess implements EncoderAccess {
 			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
 	PITCH("Pitch", ns -> ns.transpose(), //
 			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
-			NoteValueUnit.PERCENT, -96, 96, 1, 1, 0.0, 2);
+			NoteValueUnit.SEMI, -96, 96, 1, 1, 0.0, 2);
 
 //	TRANSPOSE("Transpose", ns -> ns.transpose(), //
 //			(final NoteStep ns, final double v) -> ns.setTranspose(v), //

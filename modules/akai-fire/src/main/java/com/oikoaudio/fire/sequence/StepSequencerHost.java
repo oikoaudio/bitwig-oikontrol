@@ -46,6 +46,10 @@ public interface StepSequencerHost {
 
     void bindMixerPage(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders);
 
+    default void bindUser1Page(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders) {
+        handler.bindDefaultPage(EncoderMode.USER_1, layer, encoders);
+    }
+
     void bindUser2Page(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders);
 
     default String getModeInfo(final EncoderMode mode) {
