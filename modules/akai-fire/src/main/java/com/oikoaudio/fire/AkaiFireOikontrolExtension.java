@@ -78,6 +78,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private Preferences preferences;
     private SettableEnumValue clipLaunchModePref;
     private SettableEnumValue clipLaunchQuantizationPref;
+    private SettableEnumValue defaultClipLengthPref;
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
@@ -240,6 +241,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         clipLaunchQuantizationPref.markInterested();
         clipLaunchQuantizationPref.addValueObserver(this::applyLaunchQuantizationPreference);
         applyLaunchQuantizationPreference(clipLaunchQuantizationPref.get());
+
+        defaultClipLengthPref = preferences.getEnumSetting("Default Clip Length",
+                FireControlPreferences.CATEGORY_CLIP_LAUNCH,
+                FireControlPreferences.DEFAULT_CLIP_LENGTHS,
+                FireControlPreferences.CLIP_LENGTH_2_BARS);
+        defaultClipLengthPref.markInterested();
 
         euclidScopePref = preferences.getEnumSetting("Euclid Scope",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -756,6 +763,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return clipLaunchModePref == null
                 ? FireControlPreferences.CLIP_LAUNCH_MODE_SYNCED
                 : clipLaunchModePref.get();
+    }
+
+    public int getDefaultClipLengthBeats() {
+        return (int) Math.round(defaultClipLengthPref == null
+                ? FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_2_BARS)
+                : FireControlPreferences.toClipLengthBeats(defaultClipLengthPref.get()));
     }
 
     public String getMainEncoderRolePreference() {

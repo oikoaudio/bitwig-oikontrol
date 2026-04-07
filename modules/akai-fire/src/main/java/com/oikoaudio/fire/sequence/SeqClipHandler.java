@@ -140,7 +140,7 @@ public class SeqClipHandler {
                     parent.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
                 }
             } else {
-                slot.createEmptyClip(4);
+                slot.createEmptyClip(parent.getDriver().getDefaultClipLengthBeats());
             }
         }
     }
