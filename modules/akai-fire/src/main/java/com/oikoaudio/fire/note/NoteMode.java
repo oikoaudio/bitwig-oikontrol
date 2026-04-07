@@ -156,6 +156,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private boolean oikordAccentButtonHeld = false;
     private boolean oikordAccentModified = false;
     private boolean mainEncoderPressConsumed = false;
+    private boolean builderInKey = false;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
     private OikordInterpretation oikordInterpretation = OikordInterpretation.AS_IS;
     private int selectedOikordFamily = 0;
@@ -801,6 +802,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
                     return;
                 }
                 addedStepPads.add(stepIndex);
+            } else if (isBuilderFamily()) {
+                loadBuilderFromStep(stepIndex);
             }
             showHeldStepInfo(stepIndex);
         } else {
@@ -1087,6 +1090,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         clearTranslation();
         syncEncoderLayers();
         if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
+            ensureBuilderSeededIfEmpty();
             showCurrentOikord();
             return;
         }
@@ -1530,13 +1534,22 @@ public class NoteMode extends Layer implements StepSequencerHost {
     public void toggleCurrentSurfaceVariant() {
         if (noteStepActive) {
             if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-                toggleOikordInterpretation();
+                toggleBuilderLayout();
             } else {
                 driver.notifyAction("Step Mode", currentStepSubMode.displayName());
             }
             return;
         }
         toggleLayout();
+    }
+
+    private void toggleBuilderLayout() {
+        builderInKey = !builderInKey;
+        if (builderInKey && scaleIndex == PIANO_HIGHLIGHT_INDEX) {
+            scaleIndex = 1;
+        }
+        oled.valueInfo("Builder Layout", builderInKey ? "In Key" : "Chromatic");
+        driver.notifyPopup("Builder Layout", builderInKey ? "In Key" : "Chromatic");
     }
 
     public BiColorLightState getModeButtonLightState() {
@@ -2021,6 +2034,24 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 .toArray();
     }
 
+    private void ensureBuilderSeededIfEmpty() {
+        if (!isBuilderFamily() || !builderSelectedNotes.isEmpty()) {
+            return;
+        }
+        final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
+        final int builderRoot = firstVisibleNote >= 0
+                ? Math.floorMod(firstVisibleNote, 12)
+                : Math.floorMod(getRootNote() + oikordRootOffset, 12);
+        for (int padIndex = 0; padIndex < STEP_PAD_OFFSET; padIndex++) {
+            final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
+            if (midiNote >= 0 && getScale().isRootMidiNote(builderRoot, midiNote)) {
+                builderSelectedNotes.add(midiNote);
+                return;
+            }
+        }
+        builderSelectedNotes.add(getOikordRootMidi() + oikordRootOffset + oikordOctaveOffset * 12);
+    }
+
     private int getOikordRootMidi() {
         return (OikordBank.MID_REGISTER_OCTAVE + 1) * 12 + getRootNote();
     }
@@ -2083,16 +2114,30 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private int getBuilderNoteMidiForPad(final int padIndex) {
-        final NoteGridLayout layout = createBuilderLayout();
-        return applyLivePitchOffset(layout.noteForPad(padIndex));
+        if (padIndex < 0 || padIndex >= STEP_PAD_OFFSET) {
+            return -1;
+        }
+        final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
+        if (firstVisibleNote < 0) {
+            return -1;
+        }
+        if (!builderInKey) {
+            final int note = firstVisibleNote + padIndex;
+            return note >= 0 && note <= 127 ? note : -1;
+        }
+        final int builderRoot = Math.floorMod(firstVisibleNote, 12);
+        int note = firstVisibleNote;
+        for (int i = 0; i < padIndex; i++) {
+            note = nextBuilderScaleNote(note, builderRoot);
+            if (note < 0) {
+                return -1;
+            }
+        }
+        return note;
     }
 
     private int getBuilderRenderedNoteMidiForPad(final int padIndex) {
-        final int midiNote = getBuilderNoteMidiForPad(padIndex);
-        if (midiNote < 0) {
-            return -1;
-        }
-        return midiNote + oikordRootOffset + oikordOctaveOffset * 12;
+        return getBuilderNoteMidiForPad(padIndex);
     }
 
     private String builderSelectionSummary() {
@@ -2108,13 +2153,16 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private RgbLigthState getBuilderBasePadLight(final int padIndex) {
-        final NoteGridLayout layout = createBuilderLayout();
-        final int midiNote = applyLivePitchOffset(layout.noteForPad(padIndex));
+        final int midiNote = getBuilderNoteMidiForPad(padIndex);
+        final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
+        final int builderRoot = firstVisibleNote >= 0
+                ? Math.floorMod(firstVisibleNote, 12)
+                : Math.floorMod(getRootNote() + oikordRootOffset, 12);
         final RgbLigthState base;
         if (midiNote < 0) {
             base = RgbLigthState.OFF;
-        } else if (!inKey && scaleIndex == PIANO_HIGHLIGHT_INDEX) {
-            if (layout.roleForPad(padIndex) == NoteGridLayout.PadRole.ROOT) {
+        } else if (!builderInKey && scaleIndex == PIANO_HIGHLIGHT_INDEX) {
+            if (getScale().isRootMidiNote(builderRoot, midiNote)) {
                 base = ROOT_COLOR;
             } else if (NoteGridLayout.isBlackKey(midiNote)) {
                 base = PIANO_BLACK_KEY_COLOR;
@@ -2122,7 +2170,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 base = PIANO_WHITE_KEY_COLOR;
             }
         } else {
-            final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
+            final NoteGridLayout.PadRole role;
+            if (getScale().isRootMidiNote(builderRoot, midiNote)) {
+                role = NoteGridLayout.PadRole.ROOT;
+            } else if (getScale().isMidiNoteInScale(builderRoot, midiNote)) {
+                role = NoteGridLayout.PadRole.IN_SCALE;
+            } else {
+                role = NoteGridLayout.PadRole.OUT_OF_SCALE;
+            }
             base = switch (role) {
                 case ROOT -> ROOT_COLOR;
                 case IN_SCALE -> IN_SCALE_COLOR;
@@ -2223,9 +2278,20 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return new NoteGridLayout(getScale(), getRootNote(), getOctave(), inKey);
     }
 
-    private NoteGridLayout createBuilderLayout() {
-        final int effectiveBase = transposeBase + oikordRootOffset + oikordOctaveOffset * 12;
-        return new NoteGridLayout(getScale(), Math.floorMod(effectiveBase, 12), Math.floorDiv(effectiveBase, 12), inKey);
+    private int getBuilderFirstVisibleMidiNote() {
+        final int firstVisible = applyLivePitchOffset(getOikordRootMidi() + oikordRootOffset + oikordOctaveOffset * 12);
+        return firstVisible >= 0 && firstVisible <= 127 ? firstVisible : -1;
+    }
+
+    private int nextBuilderScaleNote(final int currentNote, final int builderRoot) {
+        int note = currentNote + 1;
+        while (note <= 127) {
+            if (getScale().isMidiNoteInScale(builderRoot, note)) {
+                return note;
+            }
+            note++;
+        }
+        return -1;
     }
 
     private int applyLivePitchOffset(final int midiNote) {
