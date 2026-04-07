@@ -46,6 +46,15 @@ public final class FireControlPreferences {
             QUANTIZATION_1_16
     };
 
+    public static final String CLIP_LENGTH_1_BAR = "1 bar";
+    public static final String CLIP_LENGTH_2_BARS = "2 bars";
+    public static final String CLIP_LENGTH_4_BARS = "4 bars";
+    public static final String[] DEFAULT_CLIP_LENGTHS = {
+            CLIP_LENGTH_1_BAR,
+            CLIP_LENGTH_2_BARS,
+            CLIP_LENGTH_4_BARS
+    };
+
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
@@ -150,6 +159,23 @@ public final class FireControlPreferences {
             }
         }
         return DRUM_PIN_MODE_FIRST_DRUM_MACHINE;
+    }
+
+    public static String normalizeDefaultClipLength(final String preferenceValue) {
+        for (final String value : DEFAULT_CLIP_LENGTHS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return CLIP_LENGTH_2_BARS;
+    }
+
+    public static double toClipLengthBeats(final String preferenceValue) {
+        return switch (normalizeDefaultClipLength(preferenceValue)) {
+            case CLIP_LENGTH_1_BAR -> 4.0;
+            case CLIP_LENGTH_4_BARS -> 16.0;
+            default -> 8.0;
+        };
     }
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {

@@ -77,6 +77,29 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesDefaultClipLengthPreferenceValues() {
+        assertEquals(FireControlPreferences.CLIP_LENGTH_1_BAR,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_1_BAR));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_4_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
+                FireControlPreferences.normalizeDefaultClipLength("unexpected"));
+    }
+
+    @Test
+    void mapsDefaultClipLengthPreferenceToBeats() {
+        assertEquals(4.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_1_BAR));
+        assertEquals(8.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(16.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(8.0, FireControlPreferences.toClipLengthBeats("unexpected"));
+    }
+
+    @Test
     void normalizesPadBrightnessToSupportedRange() {
         assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MIN,
                 FireControlPreferences.normalizePadBrightness(0));

@@ -799,6 +799,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         return oled;
     }
 
+    public AkaiFireOikontrolExtension getDriver() {
+        return driver;
+    }
+
     public void notifyPopup(final String title, final String value) {
         driver.notifyPopup(title, value);
     }
@@ -1201,6 +1205,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         encoderLayer.activate();
         padHandler.ensureSelectedPad();
         padHandler.applyScale();
+        positionHandler.setPage(0);
+        if (positionHandler.getPages() > 1) {
+            oled.valueInfo("Drum 1/%d".formatted(positionHandler.getPages()), "Step Page");
+        }
     }
 
     @Override
@@ -1590,31 +1598,31 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             host.println("PatternButtons is null in DrumSequenceMode.bindPatternButtons()");
             return;
         }
-        // Bind a unified callback for the UP button:
         patternButtons.setUpCallback(pressed -> {
-            if (pressed) {
-                if (altActive.get()) {
-                    // When Alt is held, scroll pads
-                    padHandler.scrollForward(true);
-                } else {
-                    // Otherwise, toggle the encoder shift mode
-                    encoderLayer.toggleShiftForCurrentMode();
-                }
+            if (pressed && !altActive.get()) {
+                pageStepView(-1);
             }
-        }, () -> BiColorLightState.HALF);
+        }, () -> positionHandler.canScrollLeft().get() ? BiColorLightState.HALF : BiColorLightState.OFF);
 
-        // Bind a unified callback for the DOWN button:
         patternButtons.setDownCallback(pressed -> {
-            if (pressed) {
-                if (altActive.get()) {
-                    // When Alt is held, scroll pads backward
-                    padHandler.scrollBackward(true);
-                } else {
-                    // Otherwise, toggle the encoder shift mode
-                    encoderLayer.toggleShiftForCurrentMode();
-                }
+            if (pressed && !altActive.get()) {
+                pageStepView(1);
             }
-        }, () -> BiColorLightState.HALF);
+        }, () -> positionHandler.canScrollRight().get() ? BiColorLightState.HALF : BiColorLightState.OFF);
+    }
+
+    private void pageStepView(final int direction) {
+        final int previousPage = positionHandler.getCurrentPage();
+        if (direction < 0) {
+            positionHandler.scrollLeft();
+        } else if (direction > 0) {
+            positionHandler.scrollRight();
+        }
+        if (positionHandler.getCurrentPage() == previousPage) {
+            return;
+        }
+        oled.valueInfo("Drum %d/%d".formatted(positionHandler.getCurrentPage() + 1, positionHandler.getPages()),
+                "Step Page");
     }
 
     private void clearPatternButtonCallbacks() {

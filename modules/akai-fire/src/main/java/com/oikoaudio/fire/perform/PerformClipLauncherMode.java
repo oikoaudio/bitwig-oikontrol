@@ -36,7 +36,6 @@ public class PerformClipLauncherMode extends Layer {
     private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int TRACKS = 16;
     private static final int SCENES = 4;
-    private static final int DEFAULT_CLIP_LENGTH = 4;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
 
@@ -301,7 +300,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        slot.createEmptyClip(DEFAULT_CLIP_LENGTH);
+        slot.createEmptyClip(driver.getDefaultClipLengthBeats());
         slot.launch();
         oled.valueInfo("Create Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
     }
@@ -312,7 +311,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         final ClipLauncherSlot slot = getSelectedVisibleSlot();
-        if (slot == null || !slot.exists().get() || !slot.hasContent().get()) {
+        if (slot == null || !slot.exists().get()) {
             oled.valueInfo("Duplicate Clip", "Select visible clip");
             return;
         }
@@ -327,30 +326,33 @@ public class PerformClipLauncherMode extends Layer {
         final Track track = trackBank.getItemAt(visibleTrackIndex);
         track.selectInMixer();
         slot.select();
-
-        final double currentLength = performCursorClip.getLoopLength().get();
-        if (currentLength <= 0) {
-            oled.valueInfo("Duplicate Clip", "No clip length");
-            return;
-        }
-        if (isShiftHeld()) {
-            if (currentLength <= MIN_DUPLICATE_CLIP_LENGTH) {
-                oled.valueInfo("Clip Length", formatBars(MIN_DUPLICATE_CLIP_LENGTH));
+        driver.getHost().scheduleTask(() -> {
+            final double currentLength = performCursorClip.getLoopLength().get();
+            if (currentLength <= 0) {
+                oled.valueInfo("Duplicate Clip", "No clip length");
                 return;
             }
-            final double newLength = Math.max(currentLength / 2.0, MIN_DUPLICATE_CLIP_LENGTH);
+            if (isShiftHeld()) {
+                if (currentLength <= MIN_DUPLICATE_CLIP_LENGTH) {
+                    oled.valueInfo("Clip Length", formatBars(MIN_DUPLICATE_CLIP_LENGTH));
+                    return;
+                }
+                final double newLength = Math.max(currentLength / 2.0, MIN_DUPLICATE_CLIP_LENGTH);
+                performCursorClip.getLoopLength().set(newLength);
+                oled.valueInfo("Clip Length", formatBars(newLength));
+                return;
+            }
+            if (currentLength >= MAX_DUPLICATE_CLIP_LENGTH) {
+                oled.valueInfo("Clip Length", formatBars(MAX_DUPLICATE_CLIP_LENGTH));
+                return;
+            }
+            final double newLength = Math.min(currentLength * 2.0, MAX_DUPLICATE_CLIP_LENGTH);
+            if (slot.hasContent().get()) {
+                performCursorClip.duplicateContent();
+            }
             performCursorClip.getLoopLength().set(newLength);
             oled.valueInfo("Clip Length", formatBars(newLength));
-            return;
-        }
-        if (currentLength >= MAX_DUPLICATE_CLIP_LENGTH) {
-            oled.valueInfo("Clip Length", formatBars(MAX_DUPLICATE_CLIP_LENGTH));
-            return;
-        }
-        final double newLength = Math.min(currentLength * 2.0, MAX_DUPLICATE_CLIP_LENGTH);
-        performCursorClip.duplicateContent();
-        performCursorClip.getLoopLength().set(newLength);
-        oled.valueInfo("Clip Length", formatBars(newLength));
+        }, 1);
     }
 
     private void handleTrackScroll(final boolean pressed, final int direction) {
