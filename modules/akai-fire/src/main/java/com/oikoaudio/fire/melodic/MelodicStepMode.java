@@ -365,27 +365,21 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final Random random = new Random(mutationSeed);
         final LinkedHashSet<Integer> mutated = new LinkedHashSet<>(allowedPitches);
         final List<Integer> ordered = new ArrayList<>(layout);
-        final List<Integer> selected = new ArrayList<>(mutated);
+        List<Integer> selected = new ArrayList<>(mutated);
         Collections.sort(selected);
 
         final int budget = mutateIntensity >= 0.75 ? 2 : 1;
         for (int i = 0; i < budget; i++) {
-            if (!selected.isEmpty() && mutated.size() > 2 && random.nextDouble() < 0.4) {
-                final int removeIndex = Math.max(0, selected.size() - 1 - random.nextInt(Math.min(2, selected.size())));
-                final Integer removed = selected.remove(removeIndex);
-                mutated.remove(removed);
-                continue;
+            final double actionRoll = random.nextDouble();
+            if (actionRoll < 0.45 && selected.size() > 2) {
+                movePoolNote(mutated, ordered, selected, random);
+            } else if (actionRoll < 0.75 && selected.size() > 2) {
+                removePoolNote(mutated, selected, random);
+            } else {
+                addPoolNote(mutated, ordered, selected, random);
             }
-
-            final int anchorPitch = selected.isEmpty()
-                    ? layout.get(nearestPitchIndex(phraseContext().baseMidiNote(), layout))
-                    : selected.get(random.nextInt(selected.size()));
-            final int anchorIndex = nearestPitchIndex(anchorPitch, ordered);
-            final int maxOffset = Math.max(1, 1 + (int) Math.round(tension * 4));
-            final int direction = random.nextBoolean() ? 1 : -1;
-            final int offset = 1 + random.nextInt(maxOffset);
-            final int candidateIndex = Math.max(0, Math.min(ordered.size() - 1, anchorIndex + direction * offset));
-            mutated.add(ordered.get(candidateIndex));
+            selected = new ArrayList<>(mutated);
+            Collections.sort(selected);
         }
 
         allowedPitches.clear();
@@ -393,6 +387,68 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         poolUserEdited = true;
         seed = nextSeed(mutationSeed);
         revoiceCurrentPatternToPool("Pool", "Mutated");
+    }
+
+    private void movePoolNote(final LinkedHashSet<Integer> mutated, final List<Integer> ordered,
+                              final List<Integer> selected, final Random random) {
+        final Integer source = chooseMutablePoolPitch(selected, random);
+        if (source == null) {
+            addPoolNote(mutated, ordered, selected, random);
+            return;
+        }
+        mutated.remove(source);
+        final int sourceIndex = nearestPitchIndex(source, ordered);
+        final int maxOffset = Math.max(1, 1 + (int) Math.round(tension * 5));
+        final int direction = random.nextBoolean() ? 1 : -1;
+        final int offset = 1 + random.nextInt(maxOffset);
+        final int candidateIndex = Math.max(0, Math.min(ordered.size() - 1, sourceIndex + direction * offset));
+        mutated.add(ordered.get(candidateIndex));
+    }
+
+    private void removePoolNote(final LinkedHashSet<Integer> mutated, final List<Integer> selected, final Random random) {
+        final Integer removed = chooseMutablePoolPitch(selected, random);
+        if (removed != null) {
+            mutated.remove(removed);
+        }
+    }
+
+    private void addPoolNote(final LinkedHashSet<Integer> mutated, final List<Integer> ordered,
+                             final List<Integer> selected, final Random random) {
+        final int anchorPitch = selected.isEmpty()
+                ? ordered.get(nearestPitchIndex(phraseContext().baseMidiNote(), ordered))
+                : selected.get(random.nextInt(selected.size()));
+        final int anchorIndex = nearestPitchIndex(anchorPitch, ordered);
+        final int maxOffset = Math.max(1, 1 + (int) Math.round(tension * 4));
+        final int direction = random.nextBoolean() ? 1 : -1;
+        final int offset = 1 + random.nextInt(maxOffset);
+        final int candidateIndex = Math.max(0, Math.min(ordered.size() - 1, anchorIndex + direction * offset));
+        mutated.add(ordered.get(candidateIndex));
+    }
+
+    private Integer chooseMutablePoolPitch(final List<Integer> selected, final Random random) {
+        if (selected.isEmpty()) {
+            return null;
+        }
+        final Set<Integer> protectedPitches = protectedPoolPitches();
+        final List<Integer> mutable = selected.stream()
+                .filter(pitch -> !protectedPitches.contains(pitch))
+                .toList();
+        final List<Integer> source = mutable.isEmpty() ? selected : mutable;
+        return source.get(random.nextInt(source.size()));
+    }
+
+    private Set<Integer> protectedPoolPitches() {
+        final Set<Integer> protectedPitches = new HashSet<>();
+        for (int i = 0; i < cachedPattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = cachedPattern.step(i);
+            if (!step.active() || step.pitch() == null) {
+                continue;
+            }
+            if (i == 0 || i % 4 == 0 || i == cachedPattern.loopSteps() - 1) {
+                protectedPitches.add(nearestAllowedPitch(step.pitch()));
+            }
+        }
+        return protectedPitches;
     }
 
     private void buildGeneratedPitchPool(final long poolSeed, final boolean advanceSeed) {
