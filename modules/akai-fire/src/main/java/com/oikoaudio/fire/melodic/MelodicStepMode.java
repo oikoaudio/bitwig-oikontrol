@@ -586,7 +586,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final long mutationSeed = seed;
         MelodicPattern mutated = mutator.mutate(sourcePattern, phraseContext(), mutationMode, mutateIntensity, 0.7, mutationSeed);
         mutated = enrichLatentSteps(mutated);
-        mutated = constrainPatternToPool(mutated);
+        mutated = constrainPatternToPoolLocally(mutated);
         basePattern = mutated;
         applyPattern(mutated, fromOriginalPattern ? "Mutate Orig" : "Mutate", mutationLabel(mutationMode));
         seed = nextSeed(mutationSeed);
@@ -919,6 +919,22 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             }
             final Integer mappedPitch = broadPoolMapping.get(step.pitch());
             steps.add(step.withPitch(mappedPitch != null ? mappedPitch : nearestAllowedPitch(step.pitch())));
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private MelodicPattern constrainPatternToPoolLocally(final MelodicPattern pattern) {
+        if (allowedPitches.isEmpty()) {
+            return pattern;
+        }
+        final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
+        for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.pitch() == null) {
+                steps.add(step);
+                continue;
+            }
+            steps.add(step.withPitch(nearestAllowedPitch(step.pitch())));
         }
         return new MelodicPattern(steps, pattern.loopSteps());
     }
