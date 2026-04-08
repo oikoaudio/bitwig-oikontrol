@@ -135,6 +135,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Map<Integer, Map<Integer, Set<Integer>>> observedFineOccupancyByStep = new HashMap<>();
     private final Map<Integer, Map<Integer, Integer>> observedFineNoteStartsByStep = new HashMap<>();
     private final Map<Integer, Map<Integer, Integer>> heldBankFineStarts = new HashMap<>();
+    private final Set<Integer> shiftBankTargetSteps = new HashSet<>();
+    private final Map<Integer, Map<Integer, Integer>> shiftBankFineStarts = new HashMap<>();
     private final Set<Integer> pendingBankTargetSteps = new HashSet<>();
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
@@ -1099,24 +1101,20 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
         modifiedStepPads.addAll(targetSteps);
         final boolean heldOnly = !heldStepPads.isEmpty();
-        final List<ObservedChordNote> notesToNudge = heldOnly
-                ? fineStartSnapshot.entrySet().stream()
-                .flatMap(stepEntry -> stepEntry.getValue().entrySet().stream()
-                        .map(noteEntry -> new ObservedChordNote(stepEntry.getKey(), localToGlobalStep(stepEntry.getKey()),
-                                noteEntry.getValue(), noteEntry.getKey(), currentOikordVelocity(), STEP_LENGTH, null)))
-                .sorted(amount > 0
-                        ? Comparator.comparingInt(ObservedChordNote::fineStart).reversed()
-                        : Comparator.comparingInt(ObservedChordNote::fineStart))
-                .toList()
-                : targetSteps.stream()
-                .distinct()
-                .flatMap(step -> notesForMove(step).stream())
-                .sorted(amount > 0
-                        ? Comparator.comparingInt(ObservedChordNote::fineStart).reversed()
-                        : Comparator.comparingInt(ObservedChordNote::fineStart))
-                .toList();
+        final List<ObservedChordNote> notesToNudge = notesFromFineStartSnapshot(fineStartSnapshot, amount);
         if (notesToNudge.isEmpty()) {
             return;
+        }
+        if (heldOnly) {
+            heldBankFineStarts.keySet().retainAll(targetSteps);
+            targetSteps.forEach(step -> heldBankFineStarts.put(step, new HashMap<>()));
+        } else if (driver.isGlobalShiftHeld()) {
+            shiftBankTargetSteps.clear();
+            shiftBankTargetSteps.addAll(targetSteps);
+            shiftBankFineStarts.keySet().retainAll(targetSteps);
+            targetSteps.forEach(step -> shiftBankFineStarts.put(step, new HashMap<>()));
+        } else {
+            clearShiftBankFineNudgeSession();
         }
         if (DEBUG_CHORD_FINE_NUDGE && !heldOnly) {
             driver.getHost().println("Chord fine-nudge all: amount=" + amount
@@ -1163,12 +1161,42 @@ public class NoteMode extends Layer implements StepSequencerHost {
             if (heldOnly) {
                 heldBankFineStarts.computeIfAbsent(note.localStep(), ignored -> new HashMap<>())
                         .put(note.midiNote(), targetFineStart);
+            } else if (driver.isGlobalShiftHeld()) {
+                shiftBankFineStarts.computeIfAbsent(note.localStep(), ignored -> new HashMap<>())
+                        .put(note.midiNote(), targetFineStart);
             }
         }
         if (wrappedMoveApplied) {
             refreshChordStepObservation();
         }
         oled.valueInfo("Nudge", amount > 0 ? "+Fine" : "-Fine");
+    }
+
+    private List<ObservedChordNote> notesFromFineStartSnapshot(final Map<Integer, Map<Integer, Integer>> fineStartSnapshot,
+                                                               final int amount) {
+        return fineStartSnapshot.entrySet().stream()
+                .flatMap(stepEntry -> {
+                    final Map<Integer, ObservedChordNote> observedByMidi = notesForMove(stepEntry.getKey()).stream()
+                            .collect(Collectors.toMap(ObservedChordNote::midiNote, note -> note, (a, b) -> a,
+                                    HashMap::new));
+                    return stepEntry.getValue().entrySet().stream()
+                            .map(noteEntry -> {
+                                final ObservedChordNote observed = observedByMidi.get(noteEntry.getKey());
+                                final int fineStart = noteEntry.getValue();
+                                return new ObservedChordNote(
+                                        stepEntry.getKey(),
+                                        Math.floorDiv(fineStart, FINE_STEPS_PER_STEP),
+                                        fineStart,
+                                        noteEntry.getKey(),
+                                        observed == null ? currentOikordVelocity() : observed.velocity(),
+                                        observed == null ? STEP_LENGTH : observed.duration(),
+                                        observed == null ? null : observed.visibleStep());
+                            });
+                })
+                .sorted(amount > 0
+                        ? Comparator.comparingInt(ObservedChordNote::fineStart).reversed()
+                        : Comparator.comparingInt(ObservedChordNote::fineStart))
+                .toList();
     }
 
     private int chordLoopFineSteps() {
@@ -1634,6 +1662,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {
+        if (!driver.isGlobalShiftHeld()) {
+            clearShiftBankFineNudgeSession();
+        }
         if (noteStepActive) {
             if (pressed) {
                 pendingBankDir = amount;
@@ -1641,11 +1672,19 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 pendingBankTargetSteps.clear();
                 pendingBankFineStarts.clear();
                 if (pendingBankFineMove) {
-                    final Set<Integer> targetSteps = heldStepPads.isEmpty() ? getVisibleStartedSteps() : new HashSet<>(heldStepPads);
-                    pendingBankTargetSteps.addAll(targetSteps);
                     final boolean heldOnly = !heldStepPads.isEmpty();
+                    final Set<Integer> targetSteps = heldOnly
+                            ? new HashSet<>(heldStepPads)
+                            : shiftBankTargetSteps.isEmpty()
+                            ? getVisibleStartedSteps()
+                            : new HashSet<>(shiftBankTargetSteps);
+                    pendingBankTargetSteps.addAll(targetSteps);
                     for (final int stepIndex : targetSteps) {
-                        final Map<Integer, Integer> starts = snapshotFineStartsForStep(stepIndex, heldOnly);
+                        final Map<Integer, Integer> starts = heldOnly
+                                ? snapshotFineStartsForStep(stepIndex, true)
+                                : shiftBankFineStarts.containsKey(stepIndex)
+                                ? new HashMap<>(shiftBankFineStarts.get(stepIndex))
+                                : snapshotFineStartsForStep(stepIndex, false);
                         if (!starts.isEmpty()) {
                             pendingBankFineStarts.put(stepIndex, starts);
                         }
@@ -2750,8 +2789,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (chordStepPosition.getCurrentPage() == previousPage) {
             return;
         }
+        clearShiftBankFineNudgeSession();
         refreshChordStepObservation();
         showChordPageInfo();
+    }
+
+    private void clearShiftBankFineNudgeSession() {
+        shiftBankTargetSteps.clear();
+        shiftBankFineStarts.clear();
     }
 
     private void showChordPageInfo() {
