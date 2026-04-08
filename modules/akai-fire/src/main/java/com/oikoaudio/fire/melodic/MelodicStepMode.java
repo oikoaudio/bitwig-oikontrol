@@ -1193,14 +1193,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             return pattern;
         }
         final List<Integer> uniquePitches = activePitches.stream().distinct().sorted().toList();
-        final List<Integer> targetPitches;
-        if (uniquePitches.size() == 1) {
-            targetPitches = List.of(uniquePitches.get(0));
-        } else if (upwards) {
-            targetPitches = uniquePitches.subList(0, Math.max(1, uniquePitches.size() / 2));
-        } else {
-            targetPitches = uniquePitches.subList(Math.max(0, uniquePitches.size() / 2), uniquePitches.size());
-        }
+        final int pivotPitch = upwards ? uniquePitches.get(0) : uniquePitches.get(uniquePitches.size() - 1);
         MelodicPattern out = pattern;
         boolean changed = false;
         for (int i = 0; i < pattern.loopSteps(); i++) {
@@ -1209,9 +1202,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 continue;
             }
             int pitch = step.pitch();
-            if (upwards && targetPitches.contains(pitch)) {
+            if (upwards && pitch == pivotPitch) {
                 pitch = Math.min(127, pitch + 12);
-            } else if (!upwards && targetPitches.contains(pitch)) {
+            } else if (!upwards && pitch == pivotPitch) {
                 pitch = Math.max(24, pitch - 12);
             }
             if (pitch != step.pitch()) {
@@ -1220,10 +1213,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             out = out.withStep(step.withPitch(pitch));
         }
         if (!changed && !uniquePitches.isEmpty()) {
-            final int fallbackPitch = upwards ? uniquePitches.get(0) : uniquePitches.get(uniquePitches.size() - 1);
             for (int i = 0; i < pattern.loopSteps(); i++) {
                 final MelodicPattern.Step step = out.step(i);
-                if (step.pitch() == null || step.pitch() != fallbackPitch) {
+                if (step.pitch() == null || step.pitch() != pivotPitch) {
                     continue;
                 }
                 final int shifted = upwards ? Math.min(127, step.pitch() + 12) : Math.max(24, step.pitch() - 12);
