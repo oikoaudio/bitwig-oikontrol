@@ -55,6 +55,18 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesMainEncoderStartupStatePreferenceValues() {
+        assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED,
+                FireControlPreferences.normalizeMainEncoderStartupState(
+                        FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET,
+                FireControlPreferences.normalizeMainEncoderStartupState(
+                        FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET,
+                FireControlPreferences.normalizeMainEncoderStartupState("unexpected"));
+    }
+
+    @Test
     void normalizesDrumPinModes() {
         assertEquals(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION,
                 FireControlPreferences.normalizeDrumPinMode(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));
@@ -74,6 +86,29 @@ class FireControlPreferencesTest {
                         FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));
         assertEquals(true,
                 FireControlPreferences.shouldAutoPinFirstDrumMachine("unexpected"));
+    }
+
+    @Test
+    void normalizesDefaultClipLengthPreferenceValues() {
+        assertEquals(FireControlPreferences.CLIP_LENGTH_1_BAR,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_1_BAR));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_4_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
+                FireControlPreferences.normalizeDefaultClipLength("unexpected"));
+    }
+
+    @Test
+    void mapsDefaultClipLengthPreferenceToBeats() {
+        assertEquals(4.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_1_BAR));
+        assertEquals(8.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(16.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(8.0, FireControlPreferences.toClipLengthBeats("unexpected"));
     }
 
     @Test

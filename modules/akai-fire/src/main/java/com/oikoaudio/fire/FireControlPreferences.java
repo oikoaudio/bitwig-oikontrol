@@ -46,6 +46,15 @@ public final class FireControlPreferences {
             QUANTIZATION_1_16
     };
 
+    public static final String CLIP_LENGTH_1_BAR = "1 bar";
+    public static final String CLIP_LENGTH_2_BARS = "2 bars";
+    public static final String CLIP_LENGTH_4_BARS = "4 bars";
+    public static final String[] DEFAULT_CLIP_LENGTHS = {
+            CLIP_LENGTH_1_BAR,
+            CLIP_LENGTH_2_BARS,
+            CLIP_LENGTH_4_BARS
+    };
+
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
@@ -57,6 +66,12 @@ public final class FireControlPreferences {
             MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT,
             MAIN_ENCODER_TRACK_SELECT
+    };
+    public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
+    public static final String MAIN_ENCODER_STARTUP_FUNCTION_SET = "Function Set";
+    public static final String[] MAIN_ENCODER_STARTUP_STATES = {
+            MAIN_ENCODER_STARTUP_LAST_TOUCHED,
+            MAIN_ENCODER_STARTUP_FUNCTION_SET
     };
 
     public static final String EUCLID_SCOPE_VISIBLE_PAGE = "Visible Page";
@@ -125,6 +140,15 @@ public final class FireControlPreferences {
         return MAIN_ENCODER_SHUFFLE;
     }
 
+    public static String normalizeMainEncoderStartupState(final String preferenceValue) {
+        for (final String value : MAIN_ENCODER_STARTUP_STATES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return MAIN_ENCODER_STARTUP_FUNCTION_SET;
+    }
+
     public static String normalizeEuclidScope(final String preferenceValue) {
         for (final String value : EUCLID_SCOPES) {
             if (value.equals(preferenceValue)) {
@@ -150,6 +174,23 @@ public final class FireControlPreferences {
             }
         }
         return DRUM_PIN_MODE_FIRST_DRUM_MACHINE;
+    }
+
+    public static String normalizeDefaultClipLength(final String preferenceValue) {
+        for (final String value : DEFAULT_CLIP_LENGTHS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return CLIP_LENGTH_2_BARS;
+    }
+
+    public static double toClipLengthBeats(final String preferenceValue) {
+        return switch (normalizeDefaultClipLength(preferenceValue)) {
+            case CLIP_LENGTH_1_BAR -> 4.0;
+            case CLIP_LENGTH_4_BARS -> 16.0;
+            default -> 8.0;
+        };
     }
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {
