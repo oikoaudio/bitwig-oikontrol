@@ -348,6 +348,51 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
 
     private void generatePitchPool() {
         buildGeneratedPitchPool(seed, true);
+        revoiceCurrentPatternToPool("Pool", "New");
+    }
+
+    private void mutatePitchPool() {
+        final List<Integer> layout = pitchPoolLayoutPitches();
+        if (layout.isEmpty()) {
+            generatePitchPool();
+            return;
+        }
+        if (allowedPitches.isEmpty()) {
+            generatePitchPool();
+            return;
+        }
+        final long mutationSeed = seed;
+        final Random random = new Random(mutationSeed);
+        final LinkedHashSet<Integer> mutated = new LinkedHashSet<>(allowedPitches);
+        final List<Integer> ordered = new ArrayList<>(layout);
+        final List<Integer> selected = new ArrayList<>(mutated);
+        Collections.sort(selected);
+
+        final int budget = mutateIntensity >= 0.75 ? 2 : 1;
+        for (int i = 0; i < budget; i++) {
+            if (!selected.isEmpty() && mutated.size() > 2 && random.nextDouble() < 0.4) {
+                final int removeIndex = Math.max(0, selected.size() - 1 - random.nextInt(Math.min(2, selected.size())));
+                final Integer removed = selected.remove(removeIndex);
+                mutated.remove(removed);
+                continue;
+            }
+
+            final int anchorPitch = selected.isEmpty()
+                    ? layout.get(nearestPitchIndex(phraseContext().baseMidiNote(), layout))
+                    : selected.get(random.nextInt(selected.size()));
+            final int anchorIndex = nearestPitchIndex(anchorPitch, ordered);
+            final int maxOffset = Math.max(1, 1 + (int) Math.round(tension * 4));
+            final int direction = random.nextBoolean() ? 1 : -1;
+            final int offset = 1 + random.nextInt(maxOffset);
+            final int candidateIndex = Math.max(0, Math.min(ordered.size() - 1, anchorIndex + direction * offset));
+            mutated.add(ordered.get(candidateIndex));
+        }
+
+        allowedPitches.clear();
+        allowedPitches.addAll(mutated);
+        poolUserEdited = true;
+        seed = nextSeed(mutationSeed);
+        revoiceCurrentPatternToPool("Pool", "Mutated");
     }
 
     private void buildGeneratedPitchPool(final long poolSeed, final boolean advanceSeed) {
@@ -577,6 +622,21 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         MelodicClipAdapter.writeToClip(cursorClip, cachedPattern, STEP_LENGTH);
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
+    }
+
+    private void revoiceCurrentPatternToPool(final String label, final String value) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        final MelodicPattern source = activeStepCount(cachedPattern) > 0 ? cachedPattern : basePattern;
+        if (activeStepCount(source) == 0) {
+            oled.valueInfo(label, value);
+            driver.notifyPopup(label, value);
+            return;
+        }
+        final MelodicPattern revoiced = constrainPatternToPool(source);
+        basePattern = revoiced;
+        applyPattern(revoiced, label, value);
     }
 
     private void adjustSelectedPitch(final int amount) {
@@ -1313,8 +1373,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             if (pressed) {
                 if (driver.isGlobalShiftHeld()) {
                     setView(view == View.NOTES ? View.EXPRESSION : view == View.EXPRESSION ? View.PROCESS : View.NOTES);
+                } else if (driver.isGlobalAltHeld()) {
+                    mutatePitchPool();
                 } else {
-                    mutatePattern(driver.isGlobalAltHeld());
+                    generatePitchPool();
                 }
             }
         }, () -> BiColorLightState.GREEN_HALF);
@@ -1323,7 +1385,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 if (driver.isGlobalShiftHeld()) {
                     setView(view == View.NOTES ? View.PROCESS : view == View.EXPRESSION ? View.NOTES : View.EXPRESSION);
                 } else if (driver.isGlobalAltHeld()) {
-                    generatePitchPool();
+                    mutatePattern(false);
                 } else {
                     generatePattern();
                 }
@@ -1331,7 +1393,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }, () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
         selectedStep = Math.min(selectedStep, Math.max(0, loopSteps - 1));
-        oled.lineInfo("Melodic Step", "Top: Pitch Pool\nPatDn Generate\nAlt+PatDn Pool");
+        oled.lineInfo("Melodic Step", "Up Pool  Alt+Up MutPool\nDown Phrase  Alt+Down Mut");
     }
 
     @Override
