@@ -188,22 +188,30 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
 
         driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> {
             if (pressed) {
-                oled.valueInfo("Unused", "Reserved");
+                if (driver.isGlobalAltHeld()) {
+                    applyMirrorDouble();
+                } else {
+                    applyRepeatDouble();
+                }
             }
-        }, () -> BiColorLightState.OFF);
+        }, () -> driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
 
         driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> {
             if (pressed) {
-                oled.valueInfo("Unused", "Reserved");
+                if (driver.isGlobalAltHeld()) {
+                    applyPattern(swivelPattern(cachedPattern), "Swivel", "Halves");
+                } else {
+                    applyPattern(cachedPattern.reversed(), "Reverse", "Pattern");
+                }
             }
-        }, () -> BiColorLightState.OFF);
+        }, () -> driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
 
         driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> {
             if (pressed) {
                 if (driver.isGlobalAltHeld()) {
-                    applyPattern(invertedAroundRoot(cachedPattern), "Invert", "Root");
+                    applyPattern(contourInvertDown(cachedPattern), "Invert", "Down");
                 } else {
-                    applyPattern(cachedPattern.reversed(), "Reverse", "Pattern");
+                    applyPattern(contourInvertUp(cachedPattern), "Invert", "Up");
                 }
             }
         }, () -> driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
@@ -1099,6 +1107,95 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             final int distance = step.pitch() - rootPitch;
             final int invertedPitch = Math.max(0, Math.min(127, rootPitch - distance));
             out = out.withStep(step.withPitch(invertedPitch));
+        }
+        return out;
+    }
+
+    private void applyRepeatDouble() {
+        if (loopSteps * 2 > STEP_COUNT) {
+            oled.valueInfo("Double", "Max Len");
+            return;
+        }
+        applyPattern(repeatDouble(cachedPattern), "Double", "Repeat");
+    }
+
+    private void applyMirrorDouble() {
+        if (loopSteps * 2 > STEP_COUNT) {
+            oled.valueInfo("Mirror", "Max Len");
+            return;
+        }
+        applyPattern(mirrorDouble(cachedPattern), "Double", "Mirror");
+    }
+
+    private MelodicPattern repeatDouble(final MelodicPattern pattern) {
+        final int sourceLength = pattern.loopSteps();
+        final int newLoopSteps = Math.min(STEP_COUNT, sourceLength * 2);
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
+        for (int i = 0; i < sourceLength && sourceLength + i < STEP_COUNT; i++) {
+            final MelodicPattern.Step source = pattern.step(i);
+            steps.set(sourceLength + i, source.withIndex(sourceLength + i).withTieFromPrevious(false));
+        }
+        return new MelodicPattern(steps, newLoopSteps);
+    }
+
+    private MelodicPattern mirrorDouble(final MelodicPattern pattern) {
+        final int sourceLength = pattern.loopSteps();
+        final int newLoopSteps = Math.min(STEP_COUNT, sourceLength * 2);
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
+        for (int i = 0; i < sourceLength && sourceLength + i < STEP_COUNT; i++) {
+            final MelodicPattern.Step source = pattern.step(sourceLength - 1 - i);
+            steps.set(sourceLength + i, source.withIndex(sourceLength + i).withTieFromPrevious(false));
+        }
+        return new MelodicPattern(steps, newLoopSteps);
+    }
+
+    private MelodicPattern swivelPattern(final MelodicPattern pattern) {
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
+        final int segmentLength = Math.max(1, pattern.loopSteps() / 2);
+        for (int segmentStart = 0; segmentStart < pattern.loopSteps(); segmentStart += segmentLength) {
+            final int segmentEnd = Math.min(pattern.loopSteps(), segmentStart + segmentLength);
+            for (int i = 0; i < segmentEnd - segmentStart; i++) {
+                final MelodicPattern.Step source = pattern.step(segmentEnd - 1 - i);
+                steps.set(segmentStart + i, source.withIndex(segmentStart + i).withTieFromPrevious(false));
+            }
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private MelodicPattern contourInvertUp(final MelodicPattern pattern) {
+        return contourInvert(pattern, true);
+    }
+
+    private MelodicPattern contourInvertDown(final MelodicPattern pattern) {
+        return contourInvert(pattern, false);
+    }
+
+    private MelodicPattern contourInvert(final MelodicPattern pattern, final boolean upwards) {
+        final List<Integer> activePitches = new ArrayList<>();
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.active() && step.pitch() != null) {
+                activePitches.add(step.pitch());
+            }
+        }
+        if (activePitches.isEmpty()) {
+            return pattern;
+        }
+        Collections.sort(activePitches);
+        final int pivot = activePitches.get(activePitches.size() / 2);
+        MelodicPattern out = pattern;
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = out.step(i);
+            if (step.pitch() == null) {
+                continue;
+            }
+            int pitch = step.pitch();
+            if (upwards && pitch < pivot) {
+                pitch = Math.min(127, pitch + 12);
+            } else if (!upwards && pitch >= pivot) {
+                pitch = Math.max(24, pitch - 12);
+            }
+            out = out.withStep(step.withPitch(pitch));
         }
         return out;
     }
