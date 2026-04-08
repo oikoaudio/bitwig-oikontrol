@@ -1050,6 +1050,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         final int loopSteps = chordLoopSteps();
+        boolean wrappedMoveApplied = false;
         for (final ObservedChordNote note : notesToMove) {
             final int targetGlobalStep = Math.floorMod(note.globalStep() + amount, loopSteps);
             final boolean wrapped = targetGlobalStep != note.globalStep() + amount;
@@ -1064,12 +1065,16 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 observedNoteClip.setStep(targetFineStart, note.midiNote(), note.velocity(),
                     note.duration());
                 observedNoteClip.clearStep(note.fineStart(), note.midiNote());
+                wrappedMoveApplied = true;
             }
             updateObservedFineStart(note.fineStart(), targetFineStart, note.midiNote());
             if (heldStepPads.contains(note.localStep())) {
                 heldBankFineStarts.computeIfAbsent(note.localStep(), ignored -> new HashMap<>())
                         .put(note.midiNote(), targetFineStart);
             }
+        }
+        if (wrappedMoveApplied) {
+            refreshChordStepObservation();
         }
         oled.valueInfo("Move", amount > 0 ? "Right" : "Left");
     }
