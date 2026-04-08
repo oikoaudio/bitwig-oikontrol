@@ -250,7 +250,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
                 FireControlPreferences.CATEGORY_PINNING,
                 FireControlPreferences.DRUM_PIN_MODES,
-                FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION);
+                FireControlPreferences.DRUM_PIN_MODE_FIRST_DRUM_MACHINE);
         drumPinModePref.markInterested();
         drumPinModePref.addValueObserver(value -> {
             syncDrumPinningForActiveMode();

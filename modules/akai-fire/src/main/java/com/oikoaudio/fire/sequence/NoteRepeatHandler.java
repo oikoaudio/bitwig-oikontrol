@@ -11,6 +11,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 public class NoteRepeatHandler {
+    private static final int DEFAULT_TOGGLE_RATE_INDEX = 2;
 
 	private final OledDisplay oled;
 	private final BooleanValueObject noteRepeatActive = new BooleanValueObject();
@@ -66,6 +67,14 @@ public class NoteRepeatHandler {
 	public BooleanValueObject getNoteRepeatActive() {
 		return noteRepeatActive;
 	}
+
+    public void toggleActive() {
+        if (noteRepeatActive.get()) {
+            setNoteRateValue(0);
+            return;
+        }
+        setNoteRateValue(selectedArpIndex == 0 ? DEFAULT_TOGGLE_RATE_INDEX : selectedArpIndex);
+    }
 
 	//BUG Pagename is not updated correctly
 
