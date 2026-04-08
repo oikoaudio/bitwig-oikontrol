@@ -202,6 +202,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int selectedNoteClipSlotIndex = -1;
     private boolean chordObservationResyncQueued = false;
     private boolean pendingBankFineMove = false;
+    private boolean bankMoveInFlight = false;
+    private int bankMoveGeneration = 0;
     private RgbLigthState oikordStepBaseColor = OCCUPIED_STEP;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
@@ -1335,11 +1337,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return List.of();
         }
         final int anchorFineStart = noteStarts.values().stream().min(Integer::compareTo).orElse(globalStep * FINE_STEPS_PER_STEP);
+        final boolean normalizeToSharedAnchor = noteStarts.size() > 1
+                && noteStarts.values().stream().distinct().count() == 1;
         final List<ChordEventNote> notes = noteStarts.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue())
                 .map(entry -> {
                     final int midiNote = entry.getKey();
                     final int fineStart = entry.getValue();
+                    final int effectiveFineStart = normalizeToSharedAnchor ? anchorFineStart : fineStart;
                     final NoteStep visibleNote = visibleNotes == null ? null : visibleNotes.get(midiNote);
                     final int velocity = visibleNote == null
                             ? currentOikordVelocity()
@@ -1349,8 +1354,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
                             : durationForObservedNote(fineStart, midiNote, STEP_LENGTH);
                     return new ChordEventNote(
                             midiNote,
-                            fineStart,
-                            fineStart - anchorFineStart,
+                            effectiveFineStart,
+                            effectiveFineStart - anchorFineStart,
                             velocity,
                             duration,
                             visibleNote);
@@ -1431,7 +1436,26 @@ public class NoteMode extends Layer implements StepSequencerHost {
             observedNoteClip.setStep(move.targetFineStart(), move.midiNote(), move.velocity(), move.duration());
             updateObservedFineStart(move.sourceFineStart(), move.targetFineStart(), move.midiNote(), move.duration());
         }
+        beginBankMoveInFlight();
         refreshChordStepObservation();
+    }
+
+    private void beginBankMoveInFlight() {
+        bankMoveInFlight = true;
+        final int generation = ++bankMoveGeneration;
+        driver.getHost().scheduleTask(() -> {
+            if (bankMoveGeneration == generation) {
+                bankMoveInFlight = false;
+            }
+        }, 24);
+    }
+
+    private void clearPendingBankAction() {
+        pendingBankDir = 0;
+        pendingBankFineMove = false;
+        pendingBankTargetSteps.clear();
+        pendingBankFineStarts.clear();
+        pendingBankChordEvents.clear();
     }
 
     private boolean isVisibleGlobalStep(final int globalStep) {
@@ -1781,6 +1805,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
             clearShiftBankFineNudgeSession();
         }
         if (noteStepActive) {
+            if (bankMoveInFlight) {
+                if (!pressed) {
+                    clearPendingBankAction();
+                }
+                return;
+            }
             if (pressed) {
                 pendingBankDir = amount;
                 pendingBankFineMove = driver.isGlobalShiftHeld() || !heldStepPads.isEmpty();
@@ -1814,14 +1844,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
             }
             if (pendingBankFineMove) {
                 nudgeHeldNotes(pendingBankDir, new HashSet<>(pendingBankTargetSteps), new HashMap<>(pendingBankChordEvents));
-                pendingBankTargetSteps.clear();
-                pendingBankFineStarts.clear();
-                pendingBankChordEvents.clear();
-                pendingBankFineMove = false;
+                clearPendingBankAction();
                 return;
             }
             if (!pressed) {
-                moveStepContent(pendingBankDir);
+                oled.valueInfo("Coarse Nudge", "Disabled");
+                driver.notifyPopup("Coarse Nudge", "Use fine nudge in chord step mode");
+                clearPendingBankAction();
                 return;
             }
         }
