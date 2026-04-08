@@ -188,13 +188,15 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
 
         driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> {
             if (pressed) {
-                if (driver.isGlobalAltHeld()) {
+                if (driver.isGlobalShiftHeld()) {
+                    applyHalveLength();
+                } else if (driver.isGlobalAltHeld()) {
                     applyMirrorDouble();
                 } else {
                     applyRepeatDouble();
                 }
             }
-        }, () -> driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
+        }, () -> driver.isGlobalShiftHeld() || driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
 
         driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> {
             if (pressed) {
@@ -682,6 +684,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             return;
         }
         refreshClipCursor();
+        loopSteps = pattern.loopSteps();
         cachedPattern = pattern.withLoopSteps(loopSteps);
         MelodicClipAdapter.writeToClip(cursorClip, cachedPattern, STEP_LENGTH);
         oled.valueInfo(label, value);
@@ -1119,6 +1122,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         applyPattern(repeatDouble(cachedPattern), "Double", "Repeat");
     }
 
+    private void applyHalveLength() {
+        if (loopSteps <= 1) {
+            oled.valueInfo("Half", "Min Len");
+            return;
+        }
+        applyPattern(cachedPattern.withLoopSteps(Math.max(1, loopSteps / 2)), "Half", Integer.toString(Math.max(1, loopSteps / 2)));
+    }
+
     private void applyMirrorDouble() {
         if (loopSteps * 2 > STEP_COUNT) {
             oled.valueInfo("Mirror", "Max Len");
@@ -1181,21 +1192,44 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (activePitches.isEmpty()) {
             return pattern;
         }
-        Collections.sort(activePitches);
-        final int pivot = activePitches.get(activePitches.size() / 2);
+        final List<Integer> uniquePitches = activePitches.stream().distinct().sorted().toList();
+        final List<Integer> targetPitches;
+        if (uniquePitches.size() == 1) {
+            targetPitches = List.of(uniquePitches.get(0));
+        } else if (upwards) {
+            targetPitches = uniquePitches.subList(0, Math.max(1, uniquePitches.size() / 2));
+        } else {
+            targetPitches = uniquePitches.subList(Math.max(0, uniquePitches.size() / 2), uniquePitches.size());
+        }
         MelodicPattern out = pattern;
+        boolean changed = false;
         for (int i = 0; i < pattern.loopSteps(); i++) {
             final MelodicPattern.Step step = out.step(i);
             if (step.pitch() == null) {
                 continue;
             }
             int pitch = step.pitch();
-            if (upwards && pitch < pivot) {
+            if (upwards && targetPitches.contains(pitch)) {
                 pitch = Math.min(127, pitch + 12);
-            } else if (!upwards && pitch >= pivot) {
+            } else if (!upwards && targetPitches.contains(pitch)) {
                 pitch = Math.max(24, pitch - 12);
             }
+            if (pitch != step.pitch()) {
+                changed = true;
+            }
             out = out.withStep(step.withPitch(pitch));
+        }
+        if (!changed && !uniquePitches.isEmpty()) {
+            final int fallbackPitch = upwards ? uniquePitches.get(0) : uniquePitches.get(uniquePitches.size() - 1);
+            for (int i = 0; i < pattern.loopSteps(); i++) {
+                final MelodicPattern.Step step = out.step(i);
+                if (step.pitch() == null || step.pitch() != fallbackPitch) {
+                    continue;
+                }
+                final int shifted = upwards ? Math.min(127, step.pitch() + 12) : Math.max(24, step.pitch() - 12);
+                out = out.withStep(step.withPitch(shifted));
+                break;
+            }
         }
         return out;
     }
