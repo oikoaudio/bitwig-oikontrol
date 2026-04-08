@@ -169,7 +169,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
 
     private int scaleIndex = PIANO_HIGHLIGHT_INDEX;
-    private int transposeBase = 36;
+    private int transposeBase = 48;
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private boolean oikordAccentActive = false;

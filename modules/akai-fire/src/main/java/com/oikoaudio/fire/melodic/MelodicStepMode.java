@@ -175,14 +175,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final BiColorButton bankLeftButton = driver.getButton(NoteAssign.BANK_L);
         bankLeftButton.bindPressed(this, pressed -> {
             if (pressed) {
-                applyPattern(cachedPattern.rotated(-1), "Rotate", "Left");
+                applyTransform(cachedPattern.rotated(-1), "Rotate", "Left", false);
             }
         }, this::bankLightState);
 
         final BiColorButton bankRightButton = driver.getButton(NoteAssign.BANK_R);
         bankRightButton.bindPressed(this, pressed -> {
             if (pressed) {
-                applyPattern(cachedPattern.rotated(1), "Rotate", "Right");
+                applyTransform(cachedPattern.rotated(1), "Rotate", "Right", false);
             }
         }, this::bankLightState);
 
@@ -201,9 +201,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> {
             if (pressed) {
                 if (driver.isGlobalAltHeld()) {
-                    applyPattern(swivelPattern(cachedPattern), "Swivel", "Halves");
+                    applyTransform(swivelPattern(cachedPattern), "Swivel", "Halves", false);
                 } else {
-                    applyPattern(cachedPattern.reversed(), "Reverse", "Pattern");
+                    applyTransform(cachedPattern.reversed(), "Reverse", "Pattern", false);
                 }
             }
         }, () -> driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
@@ -211,9 +211,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> {
             if (pressed) {
                 if (driver.isGlobalAltHeld()) {
-                    applyPattern(contourInvertDown(cachedPattern), "Invert", "Down");
+                    applyTransform(contourInvertDown(cachedPattern), "Invert", "Down", true);
                 } else {
-                    applyPattern(contourInvertUp(cachedPattern), "Invert", "Up");
+                    applyTransform(contourInvertUp(cachedPattern), "Invert", "Up", true);
                 }
             }
         }, () -> driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.AMBER_HALF);
@@ -691,6 +691,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         driver.notifyPopup(label, value);
     }
 
+    private void applyTransform(final MelodicPattern pattern, final String label, final String value,
+                                final boolean syncPoolFromPattern) {
+        if (syncPoolFromPattern) {
+            seedPitchPoolFromPattern(pattern);
+            poolUserEdited = true;
+        }
+        basePattern = pattern;
+        applyPattern(pattern, label, value);
+    }
+
     private void revoiceCurrentPatternToPool(final String label, final String value) {
         if (!ensureClipAvailable()) {
             return;
@@ -1119,7 +1129,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             oled.valueInfo("Double", "Max Len");
             return;
         }
-        applyPattern(repeatDouble(cachedPattern), "Double", "Repeat");
+        applyTransform(repeatDouble(cachedPattern), "Double", "Repeat", false);
     }
 
     private void applyHalveLength() {
@@ -1127,7 +1137,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             oled.valueInfo("Half", "Min Len");
             return;
         }
-        applyPattern(cachedPattern.withLoopSteps(Math.max(1, loopSteps / 2)), "Half", Integer.toString(Math.max(1, loopSteps / 2)));
+        applyTransform(cachedPattern.withLoopSteps(Math.max(1, loopSteps / 2)),
+                "Half", Integer.toString(Math.max(1, loopSteps / 2)), false);
     }
 
     private void applyMirrorDouble() {
@@ -1135,7 +1146,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             oled.valueInfo("Mirror", "Max Len");
             return;
         }
-        applyPattern(mirrorDouble(cachedPattern), "Double", "Mirror");
+        applyTransform(mirrorDouble(cachedPattern), "Double", "Mirror", false);
     }
 
     private MelodicPattern repeatDouble(final MelodicPattern pattern) {
