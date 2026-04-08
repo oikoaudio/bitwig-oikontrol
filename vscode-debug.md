@@ -41,6 +41,10 @@ High level options
     }
   ]
 }
+
+if developing in Wsl on windows, it may not be able to connect to 127.0.0.1. Find the ip by executing this in wsl:
+`ip route | awk '/default/ {print $3}'`
+
 ```
 
 4. Press the green "Attach to Bitwig JVM" button in VS Code once Bitwig has finished launching. Breakpoints placed inside `src/main/java` should now hit whenever the corresponding code executes.
