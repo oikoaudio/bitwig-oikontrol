@@ -83,6 +83,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue mainEncoderStartupPref;
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
+    private SettableEnumValue defaultScalePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableRangedValue padBrightnessPref;
@@ -267,6 +268,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.EUCLID_SCOPES,
                 FireControlPreferences.EUCLID_SCOPE_FULL_CLIP);
         euclidScopePref.markInterested();
+
+        defaultScalePref = preferences.getEnumSetting("Default Scale",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.DEFAULT_SCALES,
+                FireControlPreferences.DEFAULT_SCALE_PIANO);
+        defaultScalePref.markInterested();
 
         drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
                 FireControlPreferences.CATEGORY_PINNING,
@@ -857,6 +864,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isStepSeqPadAuditionEnabled() {
         return stepSeqPadAuditionPref != null && stepSeqPadAuditionPref.get();
+    }
+
+    public String getDefaultScalePreference() {
+        return defaultScalePref == null
+                ? FireControlPreferences.DEFAULT_SCALE_PIANO
+                : FireControlPreferences.normalizeDefaultScale(defaultScalePref.get());
     }
 
     public void exitMelodicStepMode() {

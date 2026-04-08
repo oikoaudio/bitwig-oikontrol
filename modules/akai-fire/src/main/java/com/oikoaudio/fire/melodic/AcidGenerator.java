@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Random;
 
 public final class AcidGenerator implements MelodicGenerator {
-    private static final int[] ACID_DEGREES = {0, 0, 2, 3, 4, 1, 0, 2};
+    private static final int[] CORE_DEGREES = {0, 1, 2, 3, 4, 5, 6};
+    private static final int[] FILL_DEGREES = {0, 2, 3, 4, 5, 6, 7};
     private static final boolean[] ANCHOR_STEPS = {
             true, false, false, false,
             true, false, false, false,
@@ -33,12 +34,9 @@ public final class AcidGenerator implements MelodicGenerator {
             }
             final boolean accent = anchor || random.nextDouble() < 0.14 + parameters.tension() * 0.28;
             final boolean slide = i < loopSteps - 1 && random.nextDouble() < 0.12 + parameters.tension() * 0.28;
-            final int degreePoolIndex = Math.floorMod(previousDegree + random.nextInt(3) - 1, ACID_DEGREES.length);
-            final int degree = ACID_DEGREES[degreePoolIndex];
-            previousDegree = degreePoolIndex;
-            final int octaveOffset = random.nextDouble() < parameters.octaveActivity() * 0.25
-                    ? (random.nextBoolean() ? 1 : -1)
-                    : 0;
+            final int degree = pickDegree(random, previousDegree, anchor, parameters.tension());
+            previousDegree = degree;
+            final int octaveOffset = octaveOffset(random, parameters.octaveActivity(), anchor);
             final int pitch = context.pitchForDegree(octaveOffset, degree);
             final double gate = slide ? 1.12 : (accent ? 0.95 : 0.82 + parameters.density() * 0.12);
             final int velocity = accent ? 120 : 88 + random.nextInt(16);
@@ -73,11 +71,41 @@ public final class AcidGenerator implements MelodicGenerator {
             if (step.active()) {
                 continue;
             }
-            final int degree = ACID_DEGREES[random.nextInt(ACID_DEGREES.length)];
+            final int degree = FILL_DEGREES[random.nextInt(FILL_DEGREES.length)];
             out = out.withStep(new MelodicPattern.Step(stepIndex, true, false, context.pitchForDegree(0, degree),
                     92 + random.nextInt(12), 0.84, false, false));
         }
         return out;
+    }
+
+    private int pickDegree(final Random random, final int previousDegree, final boolean anchor, final double tension) {
+        if (anchor) {
+            return random.nextDouble() < 0.65 ? 0 : CORE_DEGREES[random.nextInt(Math.min(4, CORE_DEGREES.length))];
+        }
+        final int[] palette = random.nextDouble() < 0.55 + tension * 0.25 ? CORE_DEGREES : FILL_DEGREES;
+        final int maxLeap = tension >= 0.6 ? 3 : 2;
+        final List<Integer> candidates = new ArrayList<>();
+        for (final int degree : palette) {
+            if (Math.abs(degree - previousDegree) <= maxLeap || degree == 0) {
+                candidates.add(degree);
+            }
+        }
+        if (candidates.isEmpty()) {
+            candidates.add(previousDegree);
+            candidates.add(0);
+        }
+        return candidates.get(random.nextInt(candidates.size()));
+    }
+
+    private int octaveOffset(final Random random, final double octaveActivity, final boolean anchor) {
+        final double chance = anchor ? octaveActivity * 0.18 : octaveActivity * 0.35;
+        if (random.nextDouble() >= chance) {
+            return 0;
+        }
+        if (random.nextDouble() < octaveActivity * 0.15) {
+            return random.nextBoolean() ? 2 : -1;
+        }
+        return random.nextBoolean() ? 1 : -1;
     }
 
     private int activeCount(final MelodicPattern pattern) {

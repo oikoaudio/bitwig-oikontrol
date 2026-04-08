@@ -53,6 +53,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private static final int DEFAULT_VELOCITY = 96;
     private static final double DEFAULT_GATE = 0.8;
     private static final int ENGINE_ENCODER_THRESHOLD = 3;
+    private static final int MUTATION_MODE_ENCODER_THRESHOLD = 3;
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
@@ -69,6 +70,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
     private final MotifGenerator motifGenerator = new MotifGenerator();
+    private final CallResponseGenerator callResponseGenerator = new CallResponseGenerator();
     private final EuclideanPhraseGenerator euclideanGenerator = new EuclideanPhraseGenerator();
     private final AcidGenerator acidGenerator = new AcidGenerator();
     private final RollingBassGenerator rollingBassGenerator = new RollingBassGenerator();
@@ -94,7 +96,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private double mutateIntensity = 0.45;
     private long seed = 1L;
     private View view = View.PROCESS;
-    private Generator generator = Generator.MOTIF;
+    private Generator generator = Generator.ACID;
+    private MelodicMutator.Mode mutationMode = MelodicMutator.Mode.PRESERVE_RHYTHM;
 
     private enum View {
         NOTES("Notes"),
@@ -109,9 +112,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     }
 
     private enum Generator {
-        MOTIF("Motif"),
-        EUCLIDEAN("Euclid"),
         ACID("Acid"),
+        MOTIF("Motif"),
+        CALL_RESPONSE("Call/Resp"),
+        EUCLIDEAN("Euclid"),
         ROLLING("Rolling"),
         OCTAVE("Octave");
 
@@ -313,6 +317,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 tension = 0.25;
                 octaveActivity = 1.0;
             }
+            case CALL_RESPONSE -> {
+                density = 0.46;
+                tension = 0.28;
+                octaveActivity = 1.0;
+            }
             case EUCLIDEAN -> {
                 density = 0.55;
                 tension = 0.30;
@@ -357,6 +366,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final LinkedHashSet<Integer> generatedPool = new LinkedHashSet<>();
         final int[] offsetPool = switch (generator) {
             case MOTIF -> new int[]{0, 1, 2, 3, 4, 5, 6};
+            case CALL_RESPONSE -> new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8};
             case EUCLIDEAN -> new int[]{0, 1, 2, 3, 4};
             case ACID -> new int[]{0, 1, 2, 3, 4, 5, 6, 7};
             case ROLLING -> new int[]{0, 1, 2, 3, 4, 5, 6};
@@ -364,6 +374,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         };
         final int targetCount = switch (generator) {
             case MOTIF -> 3 + random.nextInt(tension >= 0.5 ? 3 : 2);
+            case CALL_RESPONSE -> 4 + random.nextInt(tension >= 0.5 ? 3 : 2);
             case EUCLIDEAN -> 2 + random.nextInt(2 + (tension >= 0.6 ? 1 : 0));
             case ACID -> 5 + random.nextInt(2 + (tension >= 0.6 ? 1 : 0));
             case ROLLING -> 3 + random.nextInt(2 + (density >= 0.65 ? 1 : 0));
@@ -412,6 +423,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
         MelodicPattern generated = switch (generator) {
             case MOTIF -> motifGenerator.generate(context, parameters);
+            case CALL_RESPONSE -> callResponseGenerator.generate(context, parameters);
             case EUCLIDEAN -> euclideanGenerator.generate(context, parameters);
             case ACID -> acidGenerator.generate(context, parameters);
             case ROLLING -> rollingBassGenerator.generate(context, parameters);
@@ -428,6 +440,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         return switch (generator) {
             case MOTIF -> new MelodicGenerator.GenerateParameters(
                     loopSteps, density, tension, octaveActivity, euclideanPulses, euclideanRotation, generationSeed);
+            case CALL_RESPONSE -> new MelodicGenerator.GenerateParameters(
+                    loopSteps, Math.max(0.35, density), Math.max(0.2, tension),
+                    octaveActivity, euclideanPulses, euclideanRotation, generationSeed);
             case EUCLIDEAN -> new MelodicGenerator.GenerateParameters(
                     loopSteps, density, tension, octaveActivity,
                     Math.max(1, euclideanPulses), euclideanRotation, generationSeed);
@@ -468,22 +483,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             return;
         }
         final long mutationSeed = seed;
-        final MelodicMutator.Mode mutationMode = sampleMutationMode(mutationSeed);
         MelodicPattern mutated = mutator.mutate(sourcePattern, phraseContext(), mutationMode, mutateIntensity, 0.7, mutationSeed);
         mutated = enrichLatentSteps(mutated);
         mutated = constrainPatternToPool(mutated);
         basePattern = mutated;
         applyPattern(mutated, fromOriginalPattern ? "Mutate Orig" : "Mutate", mutationLabel(mutationMode));
         seed = nextSeed(mutationSeed);
-    }
-
-    private MelodicMutator.Mode sampleMutationMode(final long sampleSeed) {
-        final MelodicMutator.Mode[] modes = {
-                MelodicMutator.Mode.PRESERVE_RHYTHM,
-                MelodicMutator.Mode.VARY_ENDING,
-                MelodicMutator.Mode.DENSIFY
-        };
-        return modes[Math.floorMod((int) sampleSeed, modes.length)];
     }
 
     private void toggleStep(final int stepIndex) {
@@ -746,7 +751,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
 
     private void adjustMutateIntensity(final int amount) {
         mutateIntensity = clampUnit(mutateIntensity + amount * 0.05);
-        oled.valueInfo("Intensity", "%.2f".formatted(mutateIntensity));
+        oled.valueInfo("Mut %", "%.2f".formatted(mutateIntensity));
+    }
+
+    private void cycleMutationMode(final int direction) {
+        final MelodicMutator.Mode[] values = MelodicMutator.Mode.values();
+        final int nextIndex = Math.max(0, Math.min(values.length - 1, mutationMode.ordinal() + direction));
+        mutationMode = values[nextIndex];
+        oled.valueInfo("Mut Type", mutationLabel(mutationMode));
     }
 
     private void adjustSeed(final int amount) {
@@ -777,6 +789,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (allowedPitches.isEmpty()) {
             return pattern;
         }
+        final List<Integer> orderedPool = new ArrayList<>(allowedPitches);
+        Collections.sort(orderedPool);
+        final Map<Integer, Integer> broadPoolMapping = orderedPool.size() >= 6
+                ? buildBroadPoolMapping(pattern, orderedPool)
+                : Map.of();
         final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
         for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
             final MelodicPattern.Step step = pattern.step(i);
@@ -784,9 +801,32 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 steps.add(step);
                 continue;
             }
-            steps.add(step.withPitch(nearestAllowedPitch(step.pitch())));
+            final Integer mappedPitch = broadPoolMapping.get(step.pitch());
+            steps.add(step.withPitch(mappedPitch != null ? mappedPitch : nearestAllowedPitch(step.pitch())));
         }
         return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private Map<Integer, Integer> buildBroadPoolMapping(final MelodicPattern pattern, final List<Integer> orderedPool) {
+        final List<Integer> distinctGenerated = new ArrayList<>();
+        final Set<Integer> seen = new HashSet<>();
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.pitch() != null && seen.add(step.pitch())) {
+                distinctGenerated.add(step.pitch());
+            }
+        }
+        if (distinctGenerated.size() < 2) {
+            return Map.of();
+        }
+        Collections.sort(distinctGenerated);
+        final Map<Integer, Integer> mapping = new HashMap<>();
+        for (int i = 0; i < distinctGenerated.size(); i++) {
+            final double normalized = distinctGenerated.size() == 1 ? 0.0 : (double) i / (distinctGenerated.size() - 1);
+            final int poolIndex = (int) Math.round(normalized * (orderedPool.size() - 1));
+            mapping.put(distinctGenerated.get(i), orderedPool.get(poolIndex));
+        }
+        return mapping;
     }
 
     private MelodicPattern enrichLatentSteps(final MelodicPattern pattern) {
@@ -832,6 +872,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 case 1 -> 3;
                 case 2 -> -2;
                 default -> 5;
+            };
+            case CALL_RESPONSE -> switch (Math.floorMod(stepIndex, 8)) {
+                case 0 -> 0;
+                case 1 -> 2;
+                case 2 -> 4;
+                case 3 -> 5;
+                case 4 -> 0;
+                case 5 -> 3;
+                case 6 -> 5;
+                default -> 7;
             };
             case ROLLING -> switch (Math.floorMod(stepIndex, 4)) {
                 case 0 -> 0;
@@ -1091,12 +1141,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Engine\n2: Density\n3: Shape\n4: Mut Str",
+                "1: Engine\n2: Density\n3: Shape\n4: Mut Type",
                 new EncoderSlotBinding[]{
                         engineSlot(),
                         valueSlot(this::adjustDensity, () -> "Density"),
                         valueSlot(this::adjustChannelShape, this::channelShapeLabel),
-                        valueSlot(this::adjustMutateIntensity, () -> "Mut Str")
+                        mutationModeSlot()
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
                 "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
@@ -1153,6 +1203,37 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         oled.valueInfo("Engine", generator.label);
+                    } else {
+                        accumulator.reset();
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
+    private EncoderSlotBinding mutationModeSlot() {
+        final EncoderStepAccumulator accumulator = new EncoderStepAccumulator(MUTATION_MODE_ENCODER_THRESHOLD);
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                encoder.bindEncoder(layer, inc -> {
+                    final int steps = accumulator.consume(inc);
+                    if (steps > 0) {
+                        cycleMutationMode(1);
+                    } else if (steps < 0) {
+                        cycleMutationMode(-1);
+                    }
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        oled.valueInfo("Mut Type", mutationLabel(mutationMode));
                     } else {
                         accumulator.reset();
                         oled.clearScreenDelayed();

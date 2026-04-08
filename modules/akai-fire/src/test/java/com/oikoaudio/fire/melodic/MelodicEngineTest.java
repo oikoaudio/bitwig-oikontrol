@@ -4,7 +4,9 @@ import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -106,6 +108,17 @@ class MelodicEngineTest {
     }
 
     @Test
+    void rollingGeneratorUsesMoreThanTightThreeNoteCluster() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(16, 0.72, 0.35, 1.0, 6, 0, 31L);
+
+        final MelodicPattern pattern = new RollingBassGenerator().generate(context, parameters);
+
+        assertTrue(distictActivePitchCount(pattern) >= 4);
+    }
+
+    @Test
     void collapsedPitchPoolProducesThirtyTwoScaleNotes() {
         final MelodicPhraseContext context = context();
 
@@ -127,6 +140,35 @@ class MelodicEngineTest {
 
         assertTrue(activeCount(pattern) <= 12);
         assertTrue(activeCount(pattern) >= 4);
+    }
+
+    @Test
+    void acidGeneratorUsesMoreThanOnePitch() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(16, 0.52, 0.62, 1.0, 5, 0, 17L);
+
+        final MelodicPattern pattern = new AcidGenerator().generate(context, parameters);
+
+        assertTrue(distictActivePitchCount(pattern) >= 3);
+    }
+
+    @Test
+    void callResponseGeneratorAnswersTheCall() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(16, 0.5, 0.3, 0.6, 5, 0, 41L);
+
+        final MelodicPattern pattern = new CallResponseGenerator().generate(context, parameters);
+
+        assertTrue(activeCount(pattern) >= 6);
+        int mirroredHits = 0;
+        for (int i = 0; i < 8; i++) {
+            if (pattern.step(i).active() && pattern.step(i + 8).active()) {
+                mirroredHits++;
+            }
+        }
+        assertTrue(mirroredHits >= 3);
     }
 
     private MelodicPhraseContext context() {
@@ -160,5 +202,16 @@ class MelodicEngineTest {
             }
         }
         return count;
+    }
+
+    private int distictActivePitchCount(final MelodicPattern pattern) {
+        final Set<Integer> pitches = new HashSet<>();
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.active() && step.pitch() != null) {
+                pitches.add(step.pitch());
+            }
+        }
+        return pitches.size();
     }
 }

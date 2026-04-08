@@ -23,6 +23,7 @@ import com.bitwig.extensions.framework.values.Midi;
 import com.bitwig.extensions.framework.values.StepViewPosition;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
@@ -320,6 +321,34 @@ public class NoteMode extends Layer implements StepSequencerHost {
         bindPads();
         bindButtons();
         bindEncoders();
+        applyDefaultScalePreference();
+    }
+
+    private void applyDefaultScalePreference() {
+        final String defaultScale = driver.getDefaultScalePreference();
+        switch (defaultScale) {
+            case FireControlPreferences.DEFAULT_SCALE_MINOR -> {
+                scaleIndex = findScaleIndex("Aeolian (Minor)", 2);
+                inKey = true;
+            }
+            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> {
+                scaleIndex = findScaleIndex("Ionan (Major)", 1);
+                inKey = true;
+            }
+            default -> {
+                scaleIndex = PIANO_HIGHLIGHT_INDEX;
+                inKey = false;
+            }
+        }
+    }
+
+    private int findScaleIndex(final String scaleName, final int fallbackIndex) {
+        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
+            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
+                return i;
+            }
+        }
+        return fallbackIndex;
     }
 
     private void bindPads() {

@@ -88,6 +88,15 @@ public final class FireControlPreferences {
             LIVE_PITCH_OFFSET_RETUNE_HELD
     };
 
+    public static final String DEFAULT_SCALE_PIANO = "Piano";
+    public static final String DEFAULT_SCALE_MINOR = "Minor";
+    public static final String DEFAULT_SCALE_MAJOR = "Major";
+    public static final String[] DEFAULT_SCALES = {
+            DEFAULT_SCALE_PIANO,
+            DEFAULT_SCALE_MINOR,
+            DEFAULT_SCALE_MAJOR
+    };
+
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
     public static final String[] DRUM_PIN_MODES = {
@@ -165,6 +174,15 @@ public final class FireControlPreferences {
             }
         }
         return LIVE_PITCH_OFFSET_NEW_NOTES;
+    }
+
+    public static String normalizeDefaultScale(final String preferenceValue) {
+        for (final String value : DEFAULT_SCALES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_SCALE_PIANO;
     }
 
     public static String normalizeDrumPinMode(final String preferenceValue) {
