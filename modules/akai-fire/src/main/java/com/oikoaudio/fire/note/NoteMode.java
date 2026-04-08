@@ -66,8 +66,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private static final int HELD_NOTE_VELOCITY = 100;
     private static final int STEP_PAD_OFFSET = 32;
     private static final int STEP_COUNT = 32;
+    private static final int MAX_CHORD_STEPS = 2048;
     private static final double STEP_LENGTH = 0.25;
     private static final int FINE_STEPS_PER_STEP = 16;
+    private static final int OBSERVED_FINE_STEP_CAPACITY = MAX_CHORD_STEPS * FINE_STEPS_PER_STEP;
     private static final double FINE_STEP_LENGTH = STEP_LENGTH / FINE_STEPS_PER_STEP;
     private static final double MIN_GATE_RATIO = 0.25;
     private static final double MAX_GATE_RATIO = 1.0;
@@ -283,7 +285,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
         this.noteStepClip = cursorTrack.createLauncherCursorClip("NOTE_STEP", "NOTE_STEP", STEP_COUNT, 128);
-        this.observedNoteClip = host.createLauncherCursorClip(16 * 8 * 2 * 2, 128);
+        this.observedNoteClip = host.createLauncherCursorClip(OBSERVED_FINE_STEP_CAPACITY, 128);
         this.chordStepPosition = new StepViewPosition(noteStepClip, STEP_COUNT, "CHORD");
         this.noteClipSlotBank = cursorTrack.clipLauncherSlotBank();
         this.noteClipSlotBank.cursorIndex().markInterested();
@@ -1022,6 +1024,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void moveStepContent(final int amount) {
+        if (!ensureChordClipWithinObservedCapacity()) {
+            return;
+        }
         final Set<Integer> selectedSteps = heldStepPads.isEmpty() ? getVisibleStartedSteps() : heldStepPads;
         if (selectedSteps.isEmpty()) {
             return;
@@ -1113,6 +1118,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void nudgeHeldNotes(final int amount, final Set<Integer> targetSteps,
                                 final Map<Integer, Map<Integer, Integer>> fineStartSnapshot) {
+        if (!ensureChordClipWithinObservedCapacity()) {
+            return;
+        }
         if (targetSteps.isEmpty() || fineStartSnapshot.isEmpty()) {
             return;
         }
@@ -1203,6 +1211,15 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return Math.max(1, chordStepPosition.getSteps());
     }
 
+    private boolean ensureChordClipWithinObservedCapacity() {
+        if (chordStepPosition.getSteps() <= MAX_CHORD_STEPS) {
+            return true;
+        }
+        oled.valueInfo("Clip too long", Integer.toString(chordStepPosition.getSteps()));
+        driver.notifyPopup("Clip too long", "Chord nudging supports up to %d steps".formatted(MAX_CHORD_STEPS));
+        return false;
+    }
+
     private void rewriteFineNudgeBeforeLoopStart(final ObservedChordNote note, final int targetFineStart) {
         final int targetGlobalStep = Math.floorDiv(targetFineStart, FINE_STEPS_PER_STEP);
         if (note.visibleStep() != null && isVisibleGlobalStep(targetGlobalStep)) {
@@ -1227,9 +1244,6 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 .filter(this::isVisibleGlobalStep)
                 .map(this::globalToLocalStep)
                 .collect(Collectors.toCollection(HashSet::new));
-        if (!startedSteps.isEmpty()) {
-            return startedSteps;
-        }
         noteStepsByPosition.entrySet().stream()
                 .filter(entry -> entry.getValue().values().stream().anyMatch(note -> note.state() == NoteStep.State.NoteOn))
                 .map(Map.Entry::getKey)
