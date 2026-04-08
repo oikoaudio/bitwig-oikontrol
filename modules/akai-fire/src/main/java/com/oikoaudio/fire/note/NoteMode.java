@@ -718,7 +718,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         if (pressed) {
-            oled.valueInfo("Step Seq", "Reserved");
+            driver.enterMelodicStepMode();
         }
     }
 
@@ -2081,6 +2081,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return inKey ? BiColorLightState.RED_FULL : BiColorLightState.AMBER_FULL;
     }
 
+    public boolean isStepSurfaceActive() {
+        return noteStepActive;
+    }
+
     private void adjustScale(final int amount) {
         if (amount == 0) {
             return;
@@ -2745,6 +2749,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return scaleLibrary.getMusicalScale(effectiveScaleIndex);
     }
 
+    public MusicalScale getCurrentScale() {
+        return getScale();
+    }
+
     private String getScaleDisplayName() {
         if (scaleIndex == PIANO_HIGHLIGHT_INDEX) {
             return "Piano";
@@ -2777,8 +2785,20 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return Math.floorMod(transposeBase, 12);
     }
 
+    public int getCurrentRootNoteClass() {
+        return getRootNote();
+    }
+
     private int getOctave() {
         return transposeBase / 12;
+    }
+
+    public int getCurrentOctave() {
+        return getOctave();
+    }
+
+    public int getCurrentBaseMidiNote() {
+        return transposeBase;
     }
 
     private NoteGridLayout createLayout() {

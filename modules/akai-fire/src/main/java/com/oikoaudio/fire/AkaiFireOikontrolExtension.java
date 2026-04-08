@@ -6,6 +6,7 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.melodic.MelodicStepMode;
 import com.oikoaudio.fire.note.NoteMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -103,9 +104,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
+    private MelodicStepMode melodicStepMode;
     private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
     private TopLevelMode activeMode = TopLevelMode.NOTE;
+    private TopLevelMode previousNonStepMode = TopLevelMode.NOTE;
     private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
     private String currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
@@ -113,6 +116,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private enum TopLevelMode {
         DRUM,
         NOTE,
+        MELODIC_STEP,
         PERFORM
     }
 
@@ -192,6 +196,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         noteMode = new NoteMode(this, noteRepeatHandler);
+        melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
         performMode = new PerformClipLauncherMode(this);
         oled.setIdleAction(this::showIdleOledInfo);
         midiOut.sendSysex(DEV_INQ);
@@ -373,7 +378,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         addButton(NoteAssign.MUTE_2);
         addButton(NoteAssign.MUTE_3);
         addButton(NoteAssign.MUTE_4);
-        addButton(NoteAssign.STEP_SEQ);
+        final BiColorButton stepButton = addButton(NoteAssign.STEP_SEQ);
         addButton(NoteAssign.KNOB_MODE, NoteAssign.KNOB_MODE_LIGHT.getNoteValue());
         addButton(NoteAssign.NOTE);
         //addButton(NoteAssign.DRUM);
@@ -386,6 +391,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final BiColorButton drumButton = addButton(NoteAssign.DRUM);
         final BiColorButton noteButton = getButton(NoteAssign.NOTE);
         final BiColorButton performButton = getButton(NoteAssign.PERFORM);
+        stepButton.bindPressed(mainLayer, this::handleStepPressed, this::getStepState);
         patternButton.bindPressed(mainLayer, this::handlePatternPressed, this::getPatternState);
         drumButton.bindPressed(mainLayer, this::handleDrumPressed, this::getDrumState);
         noteButton.bindPressed(mainLayer, this::handleNotePressed, this::getNoteState);
@@ -469,6 +475,19 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return BiColorLightState.OFF;
         }
         return noteMode.getModeButtonLightState();
+    }
+
+    private BiColorLightState getStepState() {
+        if (activeMode == TopLevelMode.MELODIC_STEP && melodicStepMode != null) {
+            return melodicStepMode.getModeButtonLightState();
+        }
+        if (activeMode == TopLevelMode.NOTE && noteMode != null && !noteMode.isStepSurfaceActive()) {
+            return BiColorLightState.GREEN_HALF;
+        }
+        if (activeMode == TopLevelMode.PERFORM) {
+            return BiColorLightState.GREEN_HALF;
+        }
+        return BiColorLightState.OFF;
     }
 
     private BiColorLightState getPerformState() {
@@ -585,6 +604,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         activeMode = TopLevelMode.NOTE;
         switchActiveMode();
         notifyAction("Mode", "Note");
+    }
+
+    private void handleStepPressed(final boolean pressed) {
+        if ((activeMode == TopLevelMode.DRUM || activeMode == TopLevelMode.NOTE || activeMode == TopLevelMode.PERFORM)
+                && (isGlobalShiftHeld() || isGlobalAltHeld())) {
+            return;
+        }
+        if (activeMode == TopLevelMode.NOTE && noteMode != null && noteMode.isStepSurfaceActive()) {
+            return;
+        }
+        if (activeMode == TopLevelMode.MELODIC_STEP) {
+            melodicStepMode.handleStepButton(pressed);
+            return;
+        }
+        if (!pressed) {
+            return;
+        }
+        enterMelodicStepMode();
     }
 
     private void handlePerformPressed(final boolean pressed) {
@@ -735,6 +772,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         releaseAutoPinnedDrumContext(true);
         drumSequenceMode.deactivate();
         noteMode.deactivate();
+        melodicStepMode.deactivate();
         performMode.deactivate();
         if (activeMode == TopLevelMode.DRUM) {
             applyDrumPinningIfEnabled();
@@ -744,6 +782,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         clearPads();
         if (activeMode == TopLevelMode.NOTE) {
             noteMode.activate();
+        } else if (activeMode == TopLevelMode.MELODIC_STEP) {
+            melodicStepMode.activate();
         } else {
             performMode.activate();
         }
@@ -817,6 +857,23 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isStepSeqPadAuditionEnabled() {
         return stepSeqPadAuditionPref != null && stepSeqPadAuditionPref.get();
+    }
+
+    public void exitMelodicStepMode() {
+        activeMode = previousNonStepMode == TopLevelMode.MELODIC_STEP ? TopLevelMode.NOTE : previousNonStepMode;
+        switchActiveMode();
+        notifyAction("Mode", activeMode == TopLevelMode.PERFORM ? "Perform" : activeMode == TopLevelMode.DRUM ? "Drum" : "Note");
+    }
+
+    public void enterMelodicStepMode() {
+        previousNonStepMode = activeMode == TopLevelMode.MELODIC_STEP ? TopLevelMode.NOTE : activeMode;
+        activeMode = TopLevelMode.MELODIC_STEP;
+        switchActiveMode();
+        notifyAction("Mode", "Melodic Step");
+    }
+
+    public NoteMode getNoteMode() {
+        return noteMode;
     }
 
     public boolean isEuclidFullClipEnabled() {
@@ -955,6 +1012,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final String modeLabel = switch (activeMode) {
             case DRUM -> "Drum";
             case NOTE -> "Note";
+            case MELODIC_STEP -> "Melodic Step";
             case PERFORM -> "Perform";
         };
         oled.valueInfo("Mode", modeLabel);
