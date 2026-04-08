@@ -55,6 +55,18 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesMainEncoderStartupStatePreferenceValues() {
+        assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED,
+                FireControlPreferences.normalizeMainEncoderStartupState(
+                        FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET,
+                FireControlPreferences.normalizeMainEncoderStartupState(
+                        FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET,
+                FireControlPreferences.normalizeMainEncoderStartupState("unexpected"));
+    }
+
+    @Test
     void normalizesDrumPinModes() {
         assertEquals(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION,
                 FireControlPreferences.normalizeDrumPinMode(FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION));

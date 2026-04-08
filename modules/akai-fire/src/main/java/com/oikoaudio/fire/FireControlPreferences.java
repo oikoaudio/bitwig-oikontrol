@@ -67,6 +67,12 @@ public final class FireControlPreferences {
             MAIN_ENCODER_NOTE_REPEAT,
             MAIN_ENCODER_TRACK_SELECT
     };
+    public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
+    public static final String MAIN_ENCODER_STARTUP_FUNCTION_SET = "Function Set";
+    public static final String[] MAIN_ENCODER_STARTUP_STATES = {
+            MAIN_ENCODER_STARTUP_LAST_TOUCHED,
+            MAIN_ENCODER_STARTUP_FUNCTION_SET
+    };
 
     public static final String EUCLID_SCOPE_VISIBLE_PAGE = "Visible Page";
     public static final String EUCLID_SCOPE_FULL_CLIP = "Full Clip";
@@ -132,6 +138,15 @@ public final class FireControlPreferences {
             return MAIN_ENCODER_TRACK_SELECT;
         }
         return MAIN_ENCODER_SHUFFLE;
+    }
+
+    public static String normalizeMainEncoderStartupState(final String preferenceValue) {
+        for (final String value : MAIN_ENCODER_STARTUP_STATES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return MAIN_ENCODER_STARTUP_FUNCTION_SET;
     }
 
     public static String normalizeEuclidScope(final String preferenceValue) {

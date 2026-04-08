@@ -79,6 +79,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue clipLaunchModePref;
     private SettableEnumValue clipLaunchQuantizationPref;
     private SettableEnumValue defaultClipLengthPref;
+    private SettableEnumValue mainEncoderStartupPref;
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
@@ -247,6 +248,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_CLIP_LENGTHS,
                 FireControlPreferences.CLIP_LENGTH_2_BARS);
         defaultClipLengthPref.markInterested();
+
+        mainEncoderStartupPref = preferences.getEnumSetting("SELECT Encoder Startup",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.MAIN_ENCODER_STARTUP_STATES,
+                FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
+        mainEncoderStartupPref.markInterested();
+        mainEncoderStartupPref.addValueObserver(this::applyMainEncoderStartupPreference);
+        applyMainEncoderStartupPreference(mainEncoderStartupPref.get());
 
         euclidScopePref = preferences.getEnumSetting("Euclid Scope",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -773,6 +782,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public String getMainEncoderRolePreference() {
         return FireControlPreferences.normalizeMainEncoderRole(currentMainEncoderRole);
+    }
+
+    private void applyMainEncoderStartupPreference(final String preferenceValue) {
+        final String startupState = FireControlPreferences.normalizeMainEncoderStartupState(preferenceValue);
+        currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED.equals(startupState)
+                ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
+                : FireControlPreferences.normalizeMainEncoderRole(alternateMainEncoderRole);
     }
 
     public String cycleMainEncoderRolePreference() {
