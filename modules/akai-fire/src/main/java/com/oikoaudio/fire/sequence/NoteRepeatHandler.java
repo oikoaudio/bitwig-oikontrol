@@ -79,6 +79,10 @@ public class NoteRepeatHandler {
 	//BUG Pagename is not updated correctly
 
 	public void handleMainEncoder(final int inc, final boolean altHeld) {
+		handleMainEncoder(inc, altHeld, true);
+	}
+
+	public void handleMainEncoder(final int inc, final boolean altHeld, final boolean allowOff) {
 		if (altHeld) {
 			CursorRemoteControlsPage remotePage = remotePageSupplier.get();
 			if (remotePage != null) {
@@ -93,9 +97,9 @@ public class NoteRepeatHandler {
 				}
 			}
 		} else {
-			// Regular behavior...
+			final int minValue = allowOff ? 0 : 1;
 			final int newValue = selectedArpIndex + inc;
-			if (newValue >= 0 && newValue < GRID_RATES_STR.length) {
+			if (newValue >= minValue && newValue < GRID_RATES_STR.length) {
 				setNoteRateValue(newValue);
 			}
 		}

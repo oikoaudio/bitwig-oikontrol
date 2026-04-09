@@ -571,22 +571,18 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             return;
         }
         driver.markMainEncoderTurned();
-        if (accentHandler.isHolding()) {
-            accentHandler.handleMainEncoder(inc);
-        } else {
-            final String mainEncoderRole = driver.getMainEncoderRolePreference();
-            final boolean fine = isShiftHeld();
-            if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
-                padHandler.handleMainEncoder(inc);
-            } else if (FireControlPreferences.MAIN_ENCODER_TEMPO.equals(mainEncoderRole)) {
-                driver.adjustTempo(inc, fine);
-            } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
-                driver.adjustGrooveShuffleAmount(inc, fine);
-            } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
-                driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
-            } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
-                driver.adjustMainCursorParameter(inc, fine);
-            }
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        final boolean fine = isShiftHeld();
+        if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
+            padHandler.handleMainEncoder(inc);
+        } else if (FireControlPreferences.MAIN_ENCODER_TEMPO.equals(mainEncoderRole)) {
+            driver.adjustTempo(inc, fine);
+        } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
+            driver.adjustGrooveShuffleAmount(inc, fine);
+        } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
+            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
+            driver.adjustMainCursorParameter(inc, fine);
         }
     }
 
@@ -738,10 +734,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             return;
         }
         driver.setMainEncoderPressed(press);
-        if (accentHandler.isHolding()) {
-            accentHandler.handeMainEncoderPress(press);
-            return;
-        }
         if (press && isShiftHeld()) {
             mainEncoderPressConsumed = true;
             driver.cycleMainEncoderRolePreference();
@@ -1543,7 +1535,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         if (altActive.get()) {
             if (pressed) {
                 driver.toggleFillMode();
-                oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
+                oled.valueInfo("Fill", driver.isFillModeActive() ? "On" : "Off");
             }
             return;
         }
@@ -1557,9 +1549,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             return accentHandler.getLightState();
         }
         if (altActive.get()) {
-            return driver.getFillLightState();
+            return driver.getStepFillLightState();
         }
-        return BiColorLightState.GREEN_HALF;
+        return accentHandler.getLightState() == BiColorLightState.AMBER_FULL
+                ? BiColorLightState.AMBER_FULL
+                : BiColorLightState.OFF;
     }
 
     private void handleBankButton(final boolean pressed, final int dir) {

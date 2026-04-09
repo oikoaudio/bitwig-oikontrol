@@ -751,7 +751,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             if (driver.isGlobalAltHeld()) {
                 if (pressed) {
                     driver.toggleFillMode();
-                    oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
+                    oled.valueInfo("Fill", driver.isFillModeActive() ? "On" : "Off");
                 }
                 return;
             }
@@ -2012,9 +2012,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
         if (driver.isGlobalAltHeld()) {
-            return driver.getFillLightState();
+            return driver.getStepFillLightState();
         }
-        return BiColorLightState.GREEN_HALF;
+        return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     private void handleOikordAccentPressed(final boolean pressed) {
@@ -2122,9 +2122,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     public BiColorLightState getModeButtonLightState() {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-            return BiColorLightState.GREEN_FULL;
+            return BiColorLightState.AMBER_FULL;
         }
-        return inKey ? BiColorLightState.RED_FULL : BiColorLightState.AMBER_FULL;
+        return BiColorLightState.RED_FULL;
     }
 
     public boolean isStepSurfaceActive() {
@@ -2176,7 +2176,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
         driver.markMainEncoderTurned();
         if (!noteStepActive && noteRepeatHandler.getNoteRepeatActive().get()) {
-            noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld());
+            // While transient live note repeat is active, keep SELECT dedicated to repeat-rate edits.
+            // Turning through the minimum rate should not drop straight into the underlying encoder role.
+            noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld(), false);
             return;
         }
         final boolean fine = driver.isGlobalShiftHeld();

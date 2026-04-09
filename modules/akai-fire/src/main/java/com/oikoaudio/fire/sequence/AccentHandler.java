@@ -64,12 +64,4 @@ public class AccentHandler {
 		parent.getOled().valueInfo("Accent", accentActive.get() ? "On" : "Off");
 	}
 
-	void handleMainEncoder(final int inc) {
-		// Accent no longer owns editable velocity levels.
-	}
-
-	void handeMainEncoderPress(final boolean pressed) {
-		// Accent no longer owns editable velocity levels.
-	}
-
 }

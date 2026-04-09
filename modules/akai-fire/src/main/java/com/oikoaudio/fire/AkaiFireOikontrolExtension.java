@@ -99,6 +99,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int drumTrackIndexBeforeAutoPin = -1;
     private boolean mainEncoderPressed = false;
     private boolean mainEncoderTurnedWhilePressed = false;
+    private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
@@ -475,7 +476,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return transport.isMetronomeEnabled().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
         }
         if (isGlobalAltHeld()) {
-            return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.AMBER_FULL;
         }
         return getClipLauncherAutomationWriteEnabledState();
     }
@@ -494,12 +495,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private BiColorLightState getStepState() {
         if (activeMode == TopLevelMode.MELODIC_STEP && melodicStepMode != null) {
             return melodicStepMode.getModeButtonLightState();
-        }
-        if (activeMode == TopLevelMode.NOTE && noteMode != null && !noteMode.isStepSurfaceActive()) {
-            return BiColorLightState.GREEN_HALF;
-        }
-        if (activeMode == TopLevelMode.PERFORM) {
-            return BiColorLightState.GREEN_HALF;
         }
         return BiColorLightState.OFF;
     }
@@ -548,7 +543,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        transport.isClipLauncherAutomationWriteEnabled().toggle();
+        final boolean enabled = transport.isClipLauncherAutomationWriteEnabled().get();
+        transport.isClipLauncherAutomationWriteEnabled().set(!enabled);
     }
 
     private void handlePatternPressed(final boolean pressed) {
@@ -566,7 +562,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         toggleClipLauncherAutomationWriteEnabled(true);
-        notifyAction("Clip Write", transport.isClipLauncherAutomationWriteEnabled().get() ? "On" : "Off");
+        host.scheduleTask(
+                () -> notifyAction("Clip Write",
+                        transport.isClipLauncherAutomationWriteEnabled().get() ? "On" : "Off"),
+                1);
     }
 
     public void notifyAction(final String title, final String value) {
@@ -629,6 +628,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (activeMode == TopLevelMode.MELODIC_STEP) {
+            if (!pressed && suppressNextMelodicStepRelease) {
+                suppressNextMelodicStepRelease = false;
+                return;
+            }
             melodicStepMode.handleStepButton(pressed);
             return;
         }
@@ -818,8 +821,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notifyAction("Fill", transport.isFillModeActive().get() ? "On" : "Off");
     }
 
+    public boolean isFillModeActive() {
+        return transport != null && transport.isFillModeActive().get();
+    }
+
     public BiColorLightState getFillLightState() {
         return transport.isFillModeActive().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+    }
+
+    public BiColorLightState getStepFillLightState() {
+        return isFillModeActive() ? BiColorLightState.AMBER_HALF : BiColorLightState.AMBER_FULL;
     }
 
     public String getClipLaunchModePreference() {
@@ -892,10 +903,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public void enterMelodicStepMode() {
+        suppressNextMelodicStepRelease = true;
         previousNonStepMode = activeMode == TopLevelMode.MELODIC_STEP ? TopLevelMode.NOTE : activeMode;
         activeMode = TopLevelMode.MELODIC_STEP;
         switchActiveMode();
-        notifyAction("Mode", "Melodic Step");
+        notifyAction("Mode", "Step");
     }
 
     public NoteMode getNoteMode() {

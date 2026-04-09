@@ -95,7 +95,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private final LinkedHashSet<Integer> allowedPitches = new LinkedHashSet<>();
     private boolean poolUserEdited = false;
     private Generator poolGeneratorSource = null;
+    private boolean accentActive = false;
     private boolean accentButtonHeld = false;
+    private boolean accentModified = false;
+    private boolean mainEncoderPressConsumed = false;
     private double density = 0.45;
     private double tension = 0.25;
     private double octaveActivity = 0.1;
@@ -168,6 +171,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         observeSelectedClip();
         bindPads();
         bindButtons();
+        bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
     }
@@ -237,17 +241,32 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }, () -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF);
     }
 
+    private void bindMainEncoder() {
+        final TouchEncoder mainEncoder = driver.getMainEncoder();
+        mainEncoder.bindEncoder(this, this::handleMainEncoder);
+        mainEncoder.bindTouched(this, this::handleMainEncoderPress);
+    }
+
     public void handleStepButton(final boolean pressed) {
-        if (driver.isGlobalShiftHeld()) {
-            accentButtonHeld = pressed;
+        if (driver.isGlobalAltHeld()) {
             if (pressed) {
-                oled.valueInfo("Accent", "Hold step");
-            } else {
-                oled.clearScreenDelayed();
+                driver.toggleFillMode();
+                oled.valueInfo("Fill", driver.isFillModeActive() ? "On" : "Off");
             }
             return;
         }
-        accentButtonHeld = false;
+        accentButtonHeld = pressed;
+        if (pressed) {
+            oled.valueInfo("Accent", accentActive ? "On" : "Off");
+        } else {
+            if (!accentModified) {
+                accentActive = !accentActive;
+                oled.valueInfo("Accent", accentActive ? "On" : "Off");
+            } else {
+                oled.clearScreenDelayed();
+            }
+            accentModified = false;
+        }
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
@@ -278,6 +297,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         heldStepConsumed = false;
         if (accentButtonHeld) {
             heldStepConsumed = true;
+            accentModified = true;
             toggleAccent(stepIndex);
             return;
         }
@@ -754,7 +774,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             return;
         }
         final MelodicPattern.Step created = step.pitch() != null
-                ? step.withActive(true)
+                ? applyCurrentAccentState(step.withActive(true))
                 : restoreGeneratedStepOrDefault(stepIndex);
         applyPattern(cachedPattern.withStep(created), "Step", Integer.toString(stepIndex + 1));
     }
@@ -809,14 +829,21 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private MelodicPattern.Step restoreGeneratedStepOrDefault(final int stepIndex) {
         final MelodicPattern.Step base = basePattern.step(stepIndex);
         if (base.active() && base.pitch() != null) {
-            return base.withIndex(stepIndex);
+            return applyCurrentAccentState(base.withIndex(stepIndex));
         }
         return defaultStep(stepIndex);
     }
 
     private MelodicPattern.Step defaultStep(final int stepIndex) {
         final int pitch = defaultPoolPitch();
-        return new MelodicPattern.Step(stepIndex, true, false, pitch, DEFAULT_VELOCITY, DEFAULT_GATE, false, false);
+        return applyCurrentAccentState(new MelodicPattern.Step(stepIndex, true, false, pitch,
+                DEFAULT_VELOCITY, DEFAULT_GATE, false, false));
+    }
+
+    private MelodicPattern.Step applyCurrentAccentState(final MelodicPattern.Step step) {
+        return accentActive
+                ? step.withAccent(true).withVelocity(118)
+                : step.withAccent(false).withVelocity(DEFAULT_VELOCITY);
     }
 
     private void setLoopSteps(final int newLoopSteps) {
@@ -929,6 +956,68 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             default -> "Normal";
         };
         applyPattern(pattern, "Artic", label);
+    }
+
+    private void handleMainEncoder(final int inc) {
+        if (driver.isPopupBrowserActive()) {
+            return;
+        }
+        driver.markMainEncoderTurned();
+        final boolean fine = driver.isGlobalShiftHeld();
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            driver.adjustTempo(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+            driver.adjustGrooveShuffleAmount(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else {
+            driver.adjustMainCursorParameter(inc, fine);
+        }
+    }
+
+    private void handleMainEncoderPress(final boolean pressed) {
+        if (driver.isPopupBrowserActive()) {
+            return;
+        }
+        driver.setMainEncoderPressed(pressed);
+        if (pressed && driver.isGlobalShiftHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.cycleMainEncoderRolePreference();
+            return;
+        }
+        if (!pressed && mainEncoderPressConsumed) {
+            mainEncoderPressConsumed = false;
+            return;
+        }
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
+            driver.toggleMainEncoderRolePreference();
+            return;
+        }
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            noteRepeatHandler.handlePressed(pressed);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showTempoInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showGrooveShuffleInfo();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (pressed) {
+            driver.showMainCursorParameterInfo();
+        }
     }
 
     private int editingStepIndex() {
@@ -1622,7 +1711,13 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return accentButtonHeld ? BiColorLightState.AMBER_FULL : BiColorLightState.GREEN_FULL;
+        if (driver.isGlobalAltHeld()) {
+            return driver.getStepFillLightState();
+        }
+        if (accentButtonHeld) {
+            return accentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        }
+        return accentActive ? BiColorLightState.AMBER_HALF : BiColorLightState.GREEN_FULL;
     }
 
     private String mutationLabel(final MelodicMutator.Mode mode) {
