@@ -235,6 +235,7 @@
       </ul>
       <p>The current note-step sub-modes are:</p>
       <ul>
+        <li><code>Melodic Step</code></li>
         <li><code>Chord Step</code></li>
         <li><code>Clip Step Record</code> placeholder</li>
       </ul>
@@ -245,6 +246,51 @@
         <li>Press <code>NOTE</code> again to move between the primary note-family surfaces.</li>
         <li>Use the current note layout controls to change scale, root, and octave.</li>
       </ol>
+
+      <h3>Melodic Step workflow</h3>
+      <p><code>Melodic Step</code> is a generated and editable mono phrase sequencer for basslines, motifs, and melodic hooks.</p>
+      <ul>
+        <li>Upper two rows: collapsed in-scale pitch pool</li>
+        <li>Lower two rows: 16 visible steps</li>
+        <li>generated phrases are constrained to the current pitch pool</li>
+        <li>different generator modes provide different phrase grammars such as <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Euclid</code>, <code>Rolling</code>, and <code>Octave</code></li>
+      </ul>
+      <p>Main ideas:</p>
+      <ul>
+        <li><code>Pattern Up</code> works on the pitch pool</li>
+        <li><code>Pattern Down</code> works on the phrase</li>
+        <li>if you manually edit the pitch pool, it is treated as user-owned and is not auto-replaced on mode switch</li>
+        <li>if the pool was auto-generated, first generation in a different mode can rebuild it for that mode</li>
+      </ul>
+      <p>Important gestures:</p>
+      <ul>
+        <li>tap a pitch pad: add or remove that note from the pool</li>
+        <li>tap a step pad: place, clear, or load that step depending on state</li>
+        <li>hold a step pad and turn encoders: edit that held step directly</li>
+        <li><code>STEP SEQ</code>: hold and tap a step to toggle accent</li>
+        <li><code>PATTERN UP</code>: generate a new pitch pool for the current mode</li>
+        <li><code>ALT + PATTERN UP</code>: mutate the current pitch pool</li>
+        <li><code>PATTERN DOWN</code>: generate a new phrase from the current mode</li>
+        <li><code>ALT + PATTERN DOWN</code>: mutate the current phrase</li>
+        <li><code>SHIFT + PATTERN UP</code> and <code>SHIFT + PATTERN DOWN</code>: cycle the current view between <code>Notes</code>, <code>Expression</code>, and <code>Process</code></li>
+        <li><code>BANK LEFT/RIGHT</code>: shorten or lengthen the visible loop</li>
+        <li><code>SHIFT + BANK LEFT/RIGHT</code>: halve or double the loop region where possible</li>
+      </ul>
+      <p>Encoder pages:</p>
+      <ul>
+        <li><code>Channel</code>: generator, density, shape, mutation type</li>
+        <li><code>Mixer</code>: track volume, pan, send 1, send 2</li>
+        <li><code>User 1</code>: tension, Euclid pulses, Euclid rotation, mutation amount</li>
+        <li><code>User 2</code>: selected or held step octave, gate, velocity, articulation</li>
+      </ul>
+      <p>Notes on generation:</p>
+      <ul>
+        <li><code>Acid</code> focuses on bassline-style phrase families</li>
+        <li><code>Motif</code> focuses on short melodic cells with repetition and variation</li>
+        <li><code>Call/Resp</code> creates a call phrase and an answering phrase</li>
+        <li><code>Rolling</code> targets denser rolling bassline motion</li>
+        <li>the OLED generation message shows the current mode family, for example <code>Acd.RootAnswer</code></li>
+      </ul>
 
       <h3>Chord Step workflow</h3>
       <p><code>Chord Step</code> is the current chord-oriented note-step workflow.</p>

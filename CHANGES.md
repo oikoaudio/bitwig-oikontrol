@@ -2,6 +2,12 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.1.0 - Akai Fire melodic generation and workflow pass
+- Reworked melodic phrase generation for `Acid`, `Motif`, `Call/Resp`, and `Rolling`
+- Added cleaner mode-specific pitch-pool behavior and pool preservation across manual edits
+- Improved melodic step editing workflow, OLED feedback, and Fire pad color consistency
+- Added generator family feedback on pattern generation
+
 ## 2.0.0 - Akai Fire and multi-controller repo
 Adds a full Akai Fire extension and promotes `bitwig-oikontrol` into a multi-controller repository:
 - Added a full Akai Fire extension under `modules/akai-fire`

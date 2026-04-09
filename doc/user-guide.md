@@ -172,6 +172,7 @@ Quick start:
 
 The current note-step sub-modes are:
 
+- `Melodic Step`
 - `Chord Step`
 - `Clip Step Record` placeholder
 
@@ -181,6 +182,51 @@ Quick start:
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
 4. Use the current note layout controls to change scale, root, and octave.
+
+### Melodic Step workflow
+
+`Melodic Step` is a generated and editable mono phrase sequencer for basslines, motifs, and melodic hooks.
+
+- Upper two rows: collapsed in-scale pitch pool
+- Lower two rows: 16 visible steps
+- generated phrases are constrained to the current pitch pool
+- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Euclid`, `Rolling`, and `Octave`
+
+Main ideas:
+
+- `Pattern Up` works on the pitch pool
+- `Pattern Down` works on the phrase
+- if you manually edit the pitch pool, it is treated as user-owned and is not auto-replaced on mode switch
+- if the pool was auto-generated, first generation in a different mode can rebuild it for that mode
+
+Important gestures:
+
+- tap a pitch pad: add or remove that note from the pool
+- tap a step pad: place, clear, or load that step depending on state
+- hold a step pad and turn encoders: edit that held step directly
+- `STEP SEQ`: hold and tap a step to toggle accent
+- `PATTERN UP`: generate a new pitch pool for the current mode
+- `ALT + PATTERN UP`: mutate the current pitch pool
+- `PATTERN DOWN`: generate a new phrase from the current mode
+- `ALT + PATTERN DOWN`: mutate the current phrase
+- `SHIFT + PATTERN UP` and `SHIFT + PATTERN DOWN`: cycle the current view between `Notes`, `Expression`, and `Process`
+- `BANK LEFT/RIGHT`: shorten or lengthen the visible loop
+- `SHIFT + BANK LEFT/RIGHT`: halve or double the loop region where possible
+
+Encoder pages:
+
+- `Channel`: generator, density, shape, mutation type
+- `Mixer`: track volume, pan, send 1, send 2
+- `User 1`: tension, Euclid pulses, Euclid rotation, mutation amount
+- `User 2`: selected or held step octave, gate, velocity, articulation
+
+Notes on generation:
+
+- `Acid` focuses on bassline-style phrase families
+- `Motif` focuses on short melodic cells with repetition and variation
+- `Call/Resp` creates a call phrase and an answering phrase
+- `Rolling` targets denser rolling bassline motion
+- the OLED generation message shows the current mode family, for example `Acd.RootAnswer`
 
 ### Chord Step workflow
 
