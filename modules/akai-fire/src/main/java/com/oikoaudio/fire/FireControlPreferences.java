@@ -96,6 +96,17 @@ public final class FireControlPreferences {
             DEFAULT_SCALE_MINOR,
             DEFAULT_SCALE_MAJOR
     };
+    public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+    };
+    public static final String DEFAULT_NOTE_INPUT_OCTAVE = "3";
 
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
@@ -183,6 +194,19 @@ public final class FireControlPreferences {
             }
         }
         return DEFAULT_SCALE_PIANO;
+    }
+
+    public static String normalizeDefaultNoteInputOctave(final String preferenceValue) {
+        for (final String value : DEFAULT_NOTE_INPUT_OCTAVES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_NOTE_INPUT_OCTAVE;
+    }
+
+    public static int toDefaultNoteInputOctave(final String preferenceValue) {
+        return Integer.parseInt(normalizeDefaultNoteInputOctave(preferenceValue));
     }
 
     public static String normalizeDrumPinMode(final String preferenceValue) {

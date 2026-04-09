@@ -84,6 +84,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue defaultScalePref;
+    private SettableEnumValue defaultNoteInputOctavePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableRangedValue padBrightnessPref;
@@ -274,6 +275,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_SCALES,
                 FireControlPreferences.DEFAULT_SCALE_PIANO);
         defaultScalePref.markInterested();
+
+        defaultNoteInputOctavePref = preferences.getEnumSetting("Default Note Input Octave",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVES,
+                FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE);
+        defaultNoteInputOctavePref.markInterested();
 
         drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
                 FireControlPreferences.CATEGORY_PINNING,
@@ -870,6 +877,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return defaultScalePref == null
                 ? FireControlPreferences.DEFAULT_SCALE_PIANO
                 : FireControlPreferences.normalizeDefaultScale(defaultScalePref.get());
+    }
+
+    public int getDefaultNoteInputOctavePreference() {
+        return defaultNoteInputOctavePref == null
+                ? FireControlPreferences.toDefaultNoteInputOctave(FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE)
+                : FireControlPreferences.toDefaultNoteInputOctave(defaultNoteInputOctavePref.get());
     }
 
     public void exitMelodicStepMode() {
