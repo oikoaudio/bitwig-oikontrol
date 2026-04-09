@@ -107,11 +107,12 @@ Quick start:
 
 ## Akai Fire
 
-The Akai Fire extension is a clip, note, and sequencer workflow built around three top-level modes:
+The Akai Fire extension is a clip, note, and sequencer workflow built around four top-level modes:
 
 - `DRUM`
 - `NOTE`
 - `PERFORM`
+- `STEP`
 
 ### DRUM mode
 
@@ -191,9 +192,35 @@ Quick start:
 3. Press `NOTE` again to move between the primary note-family surfaces.
 4. Use the current note layout controls to change scale, root, and octave.
 
-### Melodic Step workflow
+### Chord Step workflow
+To get to this mode from the Note live input mode, press the `NOTE` controller button. From any other mode, press the `NOTE` button twice to cycle past the Note input mode.
 
-`Melodic Step` is a generated and editable mono phrase sequencer for basslines, motifs, and melodic hooks.
+`Chord Step` is the chord-oriented note-step workflow.
+
+- Upper two rows: chord definition or curated chord slots
+- Lower two rows: 16 visible steps
+- In chord definition mode, first pick which notes that should be in the chord on the top two rows, then place it on steps on the bottom two rows.
+- If you select one of the pre-defined chord families (using the `PATTERN` buttons), the workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
+- Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord
+
+Important gestures:
+
+- `MUTE_1..4`: chord octave and root offsets
+- `PATTERN DOWN/UP`: next/previous chord family
+- `ALT + PATTERN DOWN/UP`: next/previous page within the current family
+- `STEP SEQ`: enter `Melodic Step`
+- `SHIFT + STEP SEQ`: accent toggle/edit
+- `ALT + STEP SEQ`: Fill
+- tap an empty step pad: place the selected chord
+- tap a lit step pad: remove the chord from that step
+- `BANK LEFT/RIGHT`: move written step content left or right
+- `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
+
+In `Chord Step`, hold `Paste` (Mute_2) and press a step. The currently selected step is used as the source to copy from.
+
+### Melodic STEP mode
+
+`STEP` is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks.
 
 - Upper two rows: collapsed in-scale pitch pool
 - Lower two rows: 16 visible steps
@@ -236,29 +263,6 @@ Notes on generation:
 - `Rolling` targets denser rolling bassline motion
 - the OLED generation message shows the current mode family, for example `Acd.RootAnswer`
 
-### Chord Step workflow
-
-`Chord Step` is the current chord-oriented note-step workflow.
-
-- Upper two rows: curated chord slots
-- Lower two rows: 16 visible steps
-- The default workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
-- Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord
-
-Important gestures:
-
-- `MUTE_1..4`: chord octave and root offsets
-- `PATTERN DOWN/UP`: next/previous chord family
-- `ALT + PATTERN DOWN/UP`: next/previous page within the current family
-- `STEP SEQ`: enter `Melodic Step`
-- `SHIFT + STEP SEQ`: accent toggle/edit
-- `ALT + STEP SEQ`: Fill
-- tap an empty step pad: place the selected chord
-- tap a lit step pad: remove the chord from that step
-- `BANK LEFT/RIGHT`: move written step content left or right
-- `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
-
-In `Chord Step`, hold `Paste` and press a step. The currently selected step is used as the source to copy from.
 
 ### PERFORM mode
 
@@ -369,7 +373,8 @@ Shared transport behavior:
 
 ## Attribution
 
-- Based on Bitwig's original Launch Control XL controller script from `bitwig-extensions`.
-- LCXL User Template 8 adapts Richie Hawtin and Eric Ahrens' `rhbitwig` arp workflow.
-- The Akai Fire extension started as a fork of the drum sequencer work in `rhbitwig`.
-- Fine-grid step nudging is based on Wim Van den Borre's `AkaiFireNudger`, adapted further here.
+- `rhbitwig` by Richie Hawtin and Eric Ahrens provided the Akai Fire drum sequencer which has been adapted for use here, as well as the arp workflow used on the LCXL User Template 8.
+
+- The fine-grid step nudging is based on Wim Van den Borre's `AkaiFireNudger` fork of `rhbitwig`, and developed further here.
+
+- All LCXL factory modes were taken from Bitwig's original `bitwig-extensions` for the Launch Control XL controller 

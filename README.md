@@ -9,23 +9,32 @@ Bitwig Oikontrol is a pair of controller extensions for Bitwig Studio v5.3+:
 > These controller scripts are under active development. Behavior, mappings, and mode workflows may change between versions, and some functions are still in flux.
 
 Semantic versioning:
-major.minor.tick
+`major`.`minor`.`tick`
 
-major - new controller extension, or overhaul of core functionality
-minor - new mode or changes to a mode within a controller
-tick - bug fixes and minor additions
+`major` - new controller extension, or overhaul of core functionality
+
+`minor` - new mode or changes to a mode within a controller
+
+`tick` - bug fixes and minor additions
 
 ## User guide
 
-- Canonical guide source: `doc/user-guide.md`
-- Bundled help inside Bitwig:
-  - `Oikontrol LCXL` opens `index.html`
-  - `Oikontrol Fire` opens `index.html`
+- User guide source: `doc/user-guide.md`
+- Bundled help inside Bitwig (press the ? symbol) opens `index.html`
 
 High-level controller summary:
 
-- **Launch Control XL (Mk2)** keeps the factory-template workflow intact while adding user-template support for device pages, drum machine control, and the Richie Hawtin / Eric Ahrens arp workflow from `rhbitwig`.
-- **Akai Fire** provides three top-level modes: `DRUM`, `NOTE`, and `PERFORM`, with clip sequencing, note play, Oikord note-step workflows, clip launching, OLED feedback, and configurable pinning and encoder roles.
+- **Launch Control XL (Mk2)** keeps the Bitwig factory-template workflow intact, while adding user-templates for drum machine control, the Richie Hawtin / Eric Ahrens arp workflow from `rhbitwig` and a mode targeting 6-7 remote pages in one view.
+
+- **Akai Fire** provides OLED and optional on-screen feedback for most parameters, step micro-timing, configurable device pinning and four top-level modes: 
+
+`STEP` - a generative melodic step sequencer
+
+`NOTE` - note play with many scale modes
+
+`PERFORM` - clip launching and clip management
+
+`DRUM` - an X0X sequencer mode forked from the rhbitwig extension (see attribution section)
 
 ## Requirements
 
