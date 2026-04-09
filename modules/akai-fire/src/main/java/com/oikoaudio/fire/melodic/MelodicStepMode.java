@@ -89,6 +89,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private int loopSteps = DEFAULT_LOOP_STEPS;
     private final LinkedHashSet<Integer> allowedPitches = new LinkedHashSet<>();
     private boolean poolUserEdited = false;
+    private Generator poolGeneratorSource = null;
     private boolean accentButtonHeld = false;
     private double density = 0.45;
     private double tension = 0.25;
@@ -530,6 +531,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             allowedPitches.clear();
             allowedPitches.addAll(generatedPool);
             poolUserEdited = false;
+            poolGeneratorSource = generator;
             oled.valueInfo("Pool", "%d notes".formatted(allowedPitches.size()));
             driver.notifyPopup("Pitch Pool", "%d notes".formatted(allowedPitches.size()));
             if (advanceSeed) {
@@ -578,6 +580,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         allowedPitches.clear();
         allowedPitches.addAll(generatedPool);
         poolUserEdited = false;
+        poolGeneratorSource = generator;
         oled.valueInfo("Pool", "%d notes".formatted(allowedPitches.size()));
         driver.notifyPopup("Pitch Pool", "%d notes".formatted(allowedPitches.size()));
         if (advanceSeed) {
@@ -612,7 +615,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }
         final long generationSeed = seed;
         final MelodicPhraseContext context = phraseContext();
-        if (allowedPitches.isEmpty()) {
+        if (allowedPitches.isEmpty() || (!poolUserEdited && poolGeneratorSource != generator)) {
             buildGeneratedPitchPool(generationSeed, false);
         }
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
