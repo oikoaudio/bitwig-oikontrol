@@ -48,6 +48,7 @@ public class ViewCursorControl {
 		cursorTrack.clipLauncherSlotBank().cursorIndex().addValueObserver(index -> {
 			// RemoteConsole.out.println(" => {}", index);
 		});
+		cursorTrack.clipLauncherSlotBank().cursorIndex().markInterested();
 
 		deviceBank = cursorTrack.createDeviceBank(8);
 		primaryDevice = cursorTrack.createCursorDevice("drumdetection", "Pad Device", 8,
@@ -68,6 +69,10 @@ public class ViewCursorControl {
 
 	public CursorTrack getCursorTrack() {
 		return cursorTrack;
+	}
+
+	public int getSelectedClipSlotIndex() {
+		return cursorTrack.clipLauncherSlotBank().cursorIndex().get();
 	}
 
 	public int getSelectedTrackIndex() {

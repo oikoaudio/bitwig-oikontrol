@@ -41,9 +41,58 @@ High level options
     }
   ]
 }
+
+if developing in Wsl on windows, it may not be able to connect to 127.0.0.1. Find the ip by executing this in wsl:
+`ip route | awk '/default/ {print $3}'`
+
 ```
 
 4. Press the green "Attach to Bitwig JVM" button in VS Code once Bitwig has finished launching. Breakpoints placed inside `src/main/java` should now hit whenever the corresponding code executes.
+
+## Live workflow
+
+For controller-script issues, prefer this workflow:
+
+1. Rebuild and copy the extension so Bitwig is running the same code you are looking at.
+2. Verify JDWP is available before attaching:
+
+   ```bash
+   lsof -nP -iTCP:5005 | rg 'ESTABLISHED|LISTEN'
+   ```
+
+   Expected states:
+   - `LISTEN` only: Bitwig is ready and no debugger is attached yet.
+   - `ESTABLISHED` plus `LISTEN`: VS Code or another debugger is already attached.
+
+3. If you need a terminal debugger instead of VS Code, stop the VS Code debug session first so JDWP is free.
+
+### Prefer logging for controller interaction
+
+Breakpoints in the control-surface thread can freeze or effectively crash the Bitwig UI while input is being processed. For hardware interaction bugs:
+
+- Prefer temporary `driver.getHost().println(...)` logging over breakpoints.
+- Use logging to capture:
+  - requested source fine/grid start
+  - requested target fine/grid start
+  - note duration
+  - observed callback values after the move
+
+Bitwig controller log on macOS:
+
+```bash
+tail -f ~/Documents/Bitwig\ Studio/Controller\ Scripting\ Data/log.txt
+```
+
+This is the safest way to debug note movement and observer/caching issues without suspending the UI thread.
+
+### When breakpoints are still useful
+
+Use breakpoints sparingly when you need one exact transition and can avoid touching the controller repeatedly while the VM is suspended. After you are done:
+
+- resume the VM
+- stop the debugger
+
+Otherwise Bitwig can remain visually frozen because the control-surface session thread is paused.
 
 ## Local test harness debugging
 

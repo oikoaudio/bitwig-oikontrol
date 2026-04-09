@@ -3,10 +3,9 @@ package com.oikoaudio.fire.sequence;
 import java.util.List;
 
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
+import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
-import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
-import com.oikoaudio.fire.control.TouchEncoder;
 
 public interface StepSequencerHost {
     boolean isSelectHeld();
@@ -18,6 +17,10 @@ public interface StepSequencerHost {
     List<NoteStep> getOnNotes();
 
     List<NoteStep> getHeldNotes();
+
+    default List<NoteStep> getFocusedNotes() {
+        return getHeldNotes();
+    }
 
     String getDetails(List<NoteStep> heldNotes);
 
@@ -37,18 +40,25 @@ public interface StepSequencerHost {
 
     void registerModifiedSteps(List<NoteStep> notes);
 
-    default boolean hasCustomChannelPage() {
-        return false;
+    EncoderBankLayout getEncoderBankLayout();
+
+    default int getDefaultStepVelocity() {
+        return 100;
     }
 
-    default void bindChannelPage(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders) {
+    default double getDefaultStepPressure() {
+        return 0.0;
     }
 
-    void bindMixerPage(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders);
+    default double getDefaultStepDuration() {
+        return getGridResolution();
+    }
 
-    void bindUser2Page(SequencEncoderHandler handler, Layer layer, TouchEncoder[] encoders);
+    default NoteOccurrence getDefaultStepOccurrence() {
+        return NoteOccurrence.values()[0];
+    }
 
     default String getModeInfo(final EncoderMode mode) {
-        return mode.getInfo();
+        return getEncoderBankLayout().bank(mode).modeInfo();
     }
 }

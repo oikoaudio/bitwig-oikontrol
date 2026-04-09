@@ -74,9 +74,8 @@ public class StepViewPosition {
     }
     
     private void updateStates() {
-        if (pagePosition < pages) {
-            clip.scrollToStep(pagePosition * stepsPerPage);
-        }
+        pagePosition = Math.max(0, Math.min(pagePosition, Math.max(0, pages - 1)));
+        clip.scrollToStep(pagePosition * stepsPerPage);
         canScrollLeft.set(pagePosition > 0);
         canScrollRight.set(pagePosition < pages - 1);
     }
@@ -90,7 +89,7 @@ public class StepViewPosition {
     }
     
     public void setPage(final int index) {
-        this.pagePosition = index;
+        this.pagePosition = Math.max(0, Math.min(index, Math.max(0, pages - 1)));
         updateStates();
     }
     
@@ -136,7 +135,7 @@ public class StepViewPosition {
     }
     
     public void scrollRight() {
-        if (pagePosition < pages) {
+        if (pagePosition < pages - 1) {
             pagePosition++;
             clip.scrollToStep(pagePosition * stepsPerPage);
             updateStates();

@@ -1,334 +1,329 @@
 # Akai Fire Controller Layout
 
-This document is the working reference for the intended Akai Fire control layout in the Oikontrol script.
+This document is the current implementation reference for the Akai Fire layout in the Oikontrol script.
 
-It describes the target layout to build toward. Some items are already implemented, some are planned, and a few remain intentionally provisional until the surrounding mode design is complete.
+It replaces the older "target layout" notes that drifted away from the code. Where behavior is still intentionally incomplete, that is called out explicitly.
 
 ## Top-Level Modes
 
-The three large mode buttons on the Fire become the primary mode selectors:
+The three large mode buttons are the main mode selectors:
 
 | Button | Role | Notes |
 | --- | --- | --- |
-| `DRUM` | Main sequencer mode | Repeated press cycles Drum sub-modes |
-| `NOTE` | Note input mode | Scale or chromatic note playing |
-| `PERFORM` | Clip launcher / performance mode | Inspired by the DrivenByMoss performance workflow |
+| `DRUM` | Drum sequencing | Default sequencing workflow |
+| `NOTE` | Live note input and note-step workflows | Includes `Chord Step` and `Melodic Step` entry points |
+| `PERFORM` | Clip launcher and performance mode | `16x4` clip grid |
 
-## Drum Sub-Modes
+## Shared Transport And Utility Controls
 
-`DRUM` is a top-level mode and also the entry point for Drum sub-modes.
+These mappings apply across the Fire modes unless a mode temporarily takes over the control:
 
-| Action | Result |
+| Control | Action |
 | --- | --- |
-| Press `DRUM` from another top-level mode | Enter standard Drum mode |
-| Press `DRUM` again while already in Drum mode | Advance to next Drum sub-mode |
-
-Planned Drum sub-modes:
-
-| Sub-mode | Intended LED color | Purpose |
-| --- | --- | --- |
-| Standard Drum | `TBD` | Main drum sequencer workflow |
-| Polyrhythm Drum | `TBD` | One row per lane with independent lengths and per-row generation |
-
-Exact colors are still to be chosen based on what the Fire LEDs can represent clearly.
-
-## Global Buttons
-
-These mappings should remain consistent across the top-level modes unless noted otherwise.
-
-| Control | Target role | Notes |
-| --- | --- | --- |
-| `PLAY` | Toggle transport | Existing behavior |
-| `ALT + PLAY` | Retrigger current clip | Already implemented and worth keeping |
-| `STOP` | Stop transport | Existing behavior |
-| `REC` | Toggle clip launcher overdub | Existing behavior |
-| `SHIFT` | Global modifier | Used for alternate actions |
-| `ALT` | Global modifier | Used for alternate actions |
-| `BROWSER` | Global popup browser | Available in all top-level modes |
-| Main select encoder | Preference-backed main encoder | `Last Touched Parameter`, `Shuffle`, or `Note Repeat` |
-| Main encoder press | Role-specific action | Reset last-touched parameter, toggle groove, toggle note repeat, or commit browser selection |
+| `PLAY` | Toggle transport, with retrigger-on-start behavior |
+| `ALT + PLAY` | Retrigger current clip |
+| `REC` | Clip record in `DRUM`, arranger record in `NOTE` and `PERFORM` |
+| `ALT + REC` | Arranger automation write |
+| `PATTERN` | Clip launcher automation write |
+| `SHIFT + PATTERN` | Metronome |
+| `ALT + PATTERN` | Clip launcher overdub |
+| `BROWSER` | Open or close Bitwig popup browser |
 
 ## Main Select Encoder
 
-The large select encoder defaults to controlling the real last clicked/touched Bitwig parameter via `LastClickedParameter`.
+The large `SELECT` encoder is a global utility encoder.
 
-Preference:
-
-| Preference | Options |
-| --- | --- |
-| `Main Encoder Role` | `Last Touched Parameter`, `Shuffle`, `Note Repeat` |
-
-Behavior:
+### Role Switching
 
 | Action | Result |
 | --- | --- |
-| Turn main encoder | Change last touched parameter |
-| Press main encoder | Reset the current last touched parameter to its default value |
+| Tap `SELECT` | Swap between `Last Touched Parameter` and the current alternate role |
+| `SHIFT + SELECT` press | Cycle the alternate role |
 
-Additional encoder-role behavior:
+Available alternate roles:
 
-| Role | Turn | Press | OLED |
-| --- | --- | --- | --- |
-| `Shuffle` | Adjust global groove shuffle amount | Toggle groove on/off | Shuffle amount or on/off |
-| `Note Repeat` | Change note repeat value while active | Toggle note repeat on/off | Current note repeat value |
-Role management:
+- `Shuffle`
+- `Tempo`
+- `Note Repeat`
+- `Track Select`
 
-| Action | Result |
+### Encoder Roles
+
+| Role | Turn | Press / hold behavior |
+| --- | --- | --- |
+| `Last Touched Parameter` | Adjust last touched Bitwig parameter | Reset parameter to default |
+| `Shuffle` | Adjust groove shuffle | Turning to `0` disables shuffle |
+| `Tempo` | Adjust project tempo | No special note beyond normal encoder interaction |
+| `Note Repeat` | Select repeat division; `Off` disables repeat | Works as the active repeat control |
+| `Track Select` | Move to previous/next track | Hold while turning to jump by visible pages |
+
+## Popup Browser
+
+When the popup browser is open, the main `SELECT` encoder is temporarily remapped:
+
+| Control | Browser action |
 | --- | --- |
-| `SHIFT + press SELECT` | Cycle the persistent main encoder role |
-| `SHIFT + turn SELECT` | Fine adjustment for continuous roles |
-| Accent hold | Temporarily overrides the encoder for accent velocity editing |
+| `SELECT` turn | Move through popup browser results |
+| `SELECT` press | Commit selected result |
+| `BROWSER` | Close popup browser |
 
-## Drum Mode Layout
+Browser insert mode follows modifiers when opening:
 
-Standard Drum mode is built around a fixed 4-row pad layout:
+| Action | Browser open mode |
+| --- | --- |
+| `BROWSER` | Replace / add in current context |
+| `SHIFT + BROWSER` | Insert before |
+| `ALT + BROWSER` | Insert after |
+
+## DRUM Mode
+
+`DRUM` is the fixed drum-sequencer surface.
+
+### Pad Layout
 
 | Pad row | Role |
 | --- | --- |
 | Row 1 | Clip slots |
-| Row 2 | Drum slots / visible drum pads |
-| Rows 3-4 | 32-step sequencer for the selected drum lane |
+| Row 2 | Visible drum slots |
+| Rows 3-4 | 32-step sequencer for the selected lane |
 
-This replaces the current preference-driven choice between clip-row and mute-row behavior.
+### Left-Side Edit Buttons
 
-## Drum Mode Buttons
+| Button | Role |
+| --- | --- |
+| `MUTE_1` | Select |
+| `MUTE_2` | Last Step |
+| `MUTE_3` | Copy |
+| `MUTE_4` | Delete / Reset |
 
-### Left Side Buttons
-
-| Button | Primary role | Shift role |
-| --- | --- | --- |
-| `MUTE_1` | Select / row-target action | Mute mode or alternate row action |
-| `MUTE_2` | Last step / fixed length | Solo or alternate row action if retained |
-| `MUTE_3` | Copy | None planned |
-| `MUTE_4` | Delete / reset | None planned |
-
-These may be refined further once the row-oriented polyrhythm mode is implemented.
-
-### Bottom Row Buttons
-
-| Button | Role in Drum mode | Notes |
-| --- | --- | --- |
-| Hold `STEP SEQ` | Accent gesture mode | Hold and tap steps to add or toggle accented notes |
-| `SHIFT + STEP SEQ` | Fill | Secondary action while Accent gets the prime gesture |
-| `PATTERN` | Configurable utility | Default should be Clip Launcher Automation Write |
-| `SHIFT + PATTERN` | Metronome | Fixed default matching the printed controller label |
-| `BROWSER` | Global popup browser | Plain = replace/current context, `SHIFT` = insert before, `ALT` = insert after |
-
-### Grid Arrows
-
-The two top-right buttons with `GRID` printed between them and left/right arrows on the button caps stay as the main timing-edit pair. In code these are `BANK_L` and `BANK_R`.
+### Step And Timing Controls
 
 | Action | Result |
 | --- | --- |
-| `GRID` left / right arrows | Coarse pattern shift |
-| `SHIFT + GRID` left / right arrows | Fine nudge |
-| `ALT + GRID` left / right arrows | Grid resolution down / up |
+| `STEP SEQ` | Enter `Melodic Step` |
+| `SHIFT + STEP SEQ` | Accent mode |
+| `ALT + STEP SEQ` | Toggle Fill |
+| `BANK LEFT/RIGHT` | Move or rotate pattern |
+| `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
+| `ALT + BANK LEFT/RIGHT` | Grid resolution down / up |
 
-This keeps timing-related actions grouped on one pair of buttons.
+Held-step nudge behavior:
 
-Implementation note:
+- Hold one or more step pads, then use `BANK LEFT/RIGHT` timing gestures to move those held notes directly.
+- Fine-nudged notes stay attached to the held note target during that gesture rather than being re-picked by nearest-grid lookup mid-action.
 
-- Holding one or more step pads while pressing the `GRID` left / right arrows fine-nudges those held notes directly, without needing `SHIFT`.
-- While the pad remains held, repeated nudges stay attached to that same note start rather than re-targeting by nearest grid match.
-- After release, ownership returns to the currently visible coarse grid. A note nudged earlier can therefore appear to belong to the previous step until the grid resolution is increased.
+### Encoders In DRUM
 
-## Popup Browser Controls
-
-When the popup browser is open in any top-level mode, the main select encoder takes over popup-browser result navigation:
-
-| Control | Browser action |
+| Encoder page | Role |
 | --- | --- |
-| `SELECT` turn | Move through the popup browser results |
-| `SELECT` press | Commit the selected result |
-| `BROWSER` | Close the popup browser |
+| `Channel` | Shared step-expression editing |
+| `Mixer` | Track volume, pan, send 1, send 2 |
+| `User 1` | Step behavior page |
+| `User 2` | Euclid controls |
 
-Behavior notes:
+Current `User 2` Euclid assignments:
 
-- The OLED shows the currently selected browser result while turning `SELECT`.
-- `PATTERN` and the `GRID` arrows keep their normal Drum-mode functions; they no longer add extra popup-browser navigation state.
-- The Browser button and popup result browsing are global controller functions, not Drum-mode-only behavior.
-
-## Euclid Controls
-
-Euclid is intended as a simplified Drum-mode generator, not a separate commit workflow.
-
-| Control | Role |
+| Encoder | Function |
 | --- | --- |
-| Euclid length encoder | Change pattern length |
-| Euclid density encoder | Change pulses / density |
+| 1 | Euclid length |
+| 2 | Euclid pulses |
+| 3 | Euclid rotation |
+| 4 | Accent density |
 
-Design notes:
+## NOTE Mode
 
-- Remove `ROT`
-- Remove `INV`
-- Apply immediately when length or pulse changes
-- Clear and rewrite only when the effective Euclid state changes
-- Keep grid-button shifting as the practical replacement for rotation
+`NOTE` is the live note-input surface, with note-step workflows behind `STEP SEQ`.
 
-## Note Mode
-
-`NOTE` is now split into live note play plus note-step sub-modes.
-
-### Live Note Play
-
-Default `NOTE` behavior:
-
-| Control area | Role |
-| --- | --- |
-| Pad matrix | 16x4 isomorphic note grid |
-| Pad LEDs | Root, in-scale, and out-of-scale note highlighting |
-| `DRUM` | Return to Drum mode |
-| `PERFORM` | Switch to Perform mode |
-| `NOTE` | Toggle `Chromatic` / `In Key` layout |
-| `STEP SEQ` | Enter the current note-step sub-mode |
-| `SHIFT + STEP SEQ` | Cycle note-step sub-mode and enter it |
-| `PATTERN` up / down | Root note up / down |
-| `BANK` left / right | Octave down / up |
-| `MUTE_1` / `MUTE_2` | Previous / next scale |
-| User encoders 1-4 | Root, scale, octave, layout toggle |
-
-OLED feedback shows the current layout, root, octave, and scale whenever one of those values changes.
-
-### Note Step Sub-Modes
-
-Available sub-modes:
-
-| Sub-mode | Status | Purpose |
-| --- | --- | --- |
-| `Oikord Step` | Implemented first pass | Curated harmonic step assignment |
-| `Clip Step Record` | Deferred placeholder | Future ordinary note-into-clip step mode |
-
-`STEP SEQ` enters the current note-step sub-mode from live note play.
-While a note-step sub-mode is active, `NOTE` returns to live note play.
-
-### Oikord Step
-
-`Oikord Step` repurposes the pad grid and several nearby controls:
-
-| Control | Role |
-| --- | --- |
-| Upper two pad rows | 32 visible curated Oikord slots |
-| Lower two pad rows | 32 visible steps |
-| Hold lower-row step(s) + tap upper-row Oikord | Assign selected Oikord to those steps |
-| Tap upper-row Oikord with no held steps | Audition the Oikord if the preference is enabled |
-| `STEP SEQ` while already in `Oikord Step` | Toggle `As Is` / `Cast` rendering |
-| `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
-| `PATTERN` up / down | Page within the active Oikord family across two pages |
-| `MUTE_1` / `MUTE_2` | Oikord octave offset down / up |
-| `MUTE_3` / `MUTE_4` | Oikord root offset down / up |
-| `GRID` left / right (`BANK_L` / `BANK_R`) | Move step content left / right |
-| `SHIFT + GRID` left / right | Fine nudge held or selected notes |
-| Encoder 1 | Oikord root offset |
-| Encoder 2 | Oikord octave offset |
-| Encoder 3 | Select active Oikord family |
-| Encoder 4 | Reserved / no-op for now |
-
-Behavior notes:
-
-- Eight curated families are exposed: `Barker`, `Audible`, `SUSMOTION`, `QUARTALCOLOR`, `CLUSTERLIGHT`, `MINORDRIFT`, `DORIANLIFT`, and `ROOTDRONE`
-- Each curated family preserves its full 64-chord traversal
-- The upper rows show 32 visible slots at a time, grouped visually in blocks of 8 for recognition
-- Oikord assignment writes literal notes directly into the clip
-- `As Is` keeps the source voicing literally transposed
-- `Cast` renders the Oikord through the Fire's local note-scale state
-- Oikord root and octave offsets persist until changed and affect new assignments and auditions
-- Oikord audition is controlled by a preference: `Audition Oikords`
-- Oikord selection OLED text shows family, chosen voicing name, page, rendering mode, and current root/octave offsets
-- Shared step encoder pages now apply in `Oikord Step`: `Channel = Velocity/Pressure/Timbre/Pitch Expression`, `Mixer = Volume/Pan/Send 1/Send 2`, `User 1 = Note Length/Chance/Velocity Spread/Repeat`, `User 2 = Oikord-specific root/octave/family`
-
-Explicitly deferred from this first pass:
-
-- piano layout
-- Bitwig host-scale follow
-- full Clip Step Record behavior
-- broader performance-note features
-
-## Perform Mode
-
-`PERFORM` is now a top-level `16x4` clip launcher and performance mode.
-
-Current layout:
+### Live Note Layout
 
 | Area / Control | Role |
 | --- | --- |
-| Pad matrix | Global `16x4` clip grid |
-| Filled slot pad | Select and launch the clip |
-| Empty slot pad | Create a new `4`-bar clip and launch it |
-| Pad LEDs | Clip color plus queued / playing / recording indication |
-| Hold `MUTE_1` + pad press | Select clip without launching |
-| `MUTE_2` | Duplicate content and double selected visible clip length |
-| `SHIFT + MUTE_2` | Halve selected visible clip length |
-| Hold `MUTE_3` + pad press | Copy from the selected visible clip |
-| Hold `MUTE_4` + pad press | Delete clip |
-| `BANK_L` / `BANK_R` | Scroll tracks by visible page |
-| `SHIFT + BANK_L` / `SHIFT + BANK_R` | Scroll tracks by `1` |
-| `PATTERN` up / down | Scroll scenes by visible page |
-| `SHIFT + PATTERN` up / down | Scroll scenes by `1` |
-| `KNOB_MODE` | Cycle Perform encoder pages |
+| Pad matrix | `16x4` isomorphic note grid |
+| Pad LEDs | Root, in-scale, and out-of-scale feedback |
+| `NOTE` | Cycle note layout family |
+| `STEP SEQ` | Enter current note-step sub-mode |
+| `SHIFT + STEP SEQ` | Cycle note-step sub-mode and enter it |
+| `BANK LEFT/RIGHT` | Octave down / up |
+| `PATTERN UP/DOWN` | Octave up / down |
+| `SHIFT + PATTERN UP/DOWN` | Root up / down |
+| `MUTE_1` | Sustain |
+| `MUTE_2` | Sostenuto |
+| `MUTE_3` | Note Repeat toggle |
+| `KNOB MODE` | Cycle live-note encoder pages |
 
-Perform encoder pages:
+The default note octave is initialized from the `Default Note Input Octave` preference.
+
+### Live Note Encoder Pages
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Pitch offset | Live velocity | Scale | Layout / note family |
+| `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
+| `User 1` | Mod | Pressure | Timbre | Pitch expression |
+| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
+
+## Note-Step Sub-Modes
+
+The current note-step sub-modes are:
+
+| Sub-mode | Status | Notes |
+| --- | --- | --- |
+| `Chord Step` | Implemented | Main note-step mode under `NOTE` |
+| `Clip Step Record` | Placeholder | Still deferred |
+
+`Melodic Step` is not a NOTE sub-mode. It is entered directly from `DRUM` via `STEP SEQ`.
+
+## Chord Step
+
+`Chord Step` repurposes the `NOTE` surface into a chord-and-step editor.
+
+### Pad Layout
+
+| Pad row | Role |
+| --- | --- |
+| Upper two rows | Curated chord slots |
+| Lower two rows | 32 visible steps |
+
+### Main Chord Step Gestures
+
+| Action | Result |
+| --- | --- |
+| Tap empty step | Place selected chord |
+| Tap lit step | Remove chord from that step |
+| Hold step pad(s) + tap chord pad | Rewrite held steps with that chord |
+| Tap chord pad with no held step | Audition chord, if enabled |
+| `STEP SEQ` | Toggle `As Is` / `Cast` rendering |
+| `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
+| `PATTERN UP/DOWN` | Page the visible chord-step window |
+| Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge held chord material |
+| `SHIFT + BANK LEFT/RIGHT` | Fine-nudge visible chord material |
+
+### Chord Step Left-Side Buttons
+
+| Button | Role |
+| --- | --- |
+| `MUTE_1` | Select / load step |
+| `MUTE_2` | Paste to target step |
+| `MUTE_3` | Last Step target mode |
+| `MUTE_4` | Invert selected chord (`ALT` inverts the other direction) |
+
+Chord root and octave offsets still exist in `Chord Step`, but they are adjusted from the pitch-context controls rather than the `MUTE` buttons. Plain coarse nudge is currently disabled in this mode.
+
+## Melodic Step
+
+`Melodic Step` is a generated and editable mono phrase sequencer for basslines and melodic hooks.
+
+### Pad Layout
+
+| Pad row | Role |
+| --- | --- |
+| Upper two rows | Pitch pool |
+| Lower two rows | 32-step melodic phrase |
+
+### Generator Modes
+
+Current generators:
+
+- `Acid`
+- `Motif`
+- `Call/Resp`
+- `Euclid`
+- `Rolling`
+- `Octave`
+
+### Main Melodic Step Gestures
+
+| Action | Result |
+| --- | --- |
+| Tap pitch-pool pad | Add or remove that pitch from the pool |
+| Hold step + tap pitch-pool pad | Assign that pitch to the held step |
+| Tap step | Toggle or select step |
+| `SHIFT + STEP SEQ` hold | Accent gesture for melodic steps |
+| `BANK LEFT/RIGHT` | Rotate phrase left / right |
+| `PATTERN UP` | Generate new pitch pool |
+| `ALT + PATTERN UP` | Mutate pitch pool |
+| `PATTERN DOWN` | Generate new phrase |
+| `ALT + PATTERN DOWN` | Mutate phrase |
+| `SHIFT + PATTERN UP/DOWN` | Cycle view between `Notes`, `Expression`, and `Process` |
+
+If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions that note.
+
+### Melodic Step Left-Side Buttons
+
+| Button | Primary role | Alt / Shift variant |
+| --- | --- | --- |
+| `MUTE_1` | Repeat / double | `SHIFT`: halve, `ALT`: mirror-double |
+| `MUTE_2` | Reverse | `ALT`: swivel halves |
+| `MUTE_3` | Invert up | `ALT`: invert down |
+| `MUTE_4` | Last Step target mode | None |
+
+### Melodic Step Encoders
+
+`Melodic Step` uses the shared step-encoder infrastructure with mode-specific pages for generation and phrase editing. The exact labels shown on OLED depend on the active view and the held-step state.
+
+## PERFORM Mode
+
+`PERFORM` is the `16x4` clip-launch and performance surface.
+
+### Pad Layout
+
+| Area | Role |
+| --- | --- |
+| Pad matrix | `16x4` clip grid |
+| Filled slot | Select and launch |
+| Empty slot | Create a new clip using `Default Clip Length`, then launch |
+
+Pad LEDs follow Bitwig clip and track colors plus launch state.
+
+### Left-Side Buttons
+
+| Button | Role |
+| --- | --- |
+| `MUTE_1` | Hold for select-without-launch |
+| `MUTE_2` | Double selected visible clip length |
+| `SHIFT + MUTE_2` | Halve selected visible clip length |
+| `MUTE_3` | Hold for copy / paste selected clip |
+| `MUTE_4` | Hold for delete |
+
+### Navigation
+
+| Action | Result |
+| --- | --- |
+| `BANK LEFT/RIGHT` | Scroll tracks by visible page |
+| `SHIFT + BANK LEFT/RIGHT` | Scroll tracks by one |
+| `PATTERN UP/DOWN` | Scroll scenes by visible page |
+| `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
+| `KNOB MODE` | Cycle Perform encoder pages |
+
+### Perform Encoder Pages
 
 | Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
 | `Channel` | Project Remote 1 | Project Remote 2 | Project Remote 3 | Project Remote 4 |
-| `Mixer` | Selected Track Volume | Selected Track Pan | Selected Track Send 1 | Selected Track Send 2 |
-| `User 1` | Selected Track Remote 1 | Selected Track Remote 2 | Selected Track Remote 3 | Selected Track Remote 4 |
-| `User 2` | Selected Device Remote 1 | Selected Device Remote 2 | Selected Device Remote 3 | Selected Device Remote 4 |
+| `Mixer` | Selected track volume | Selected track pan | Selected track send 1 | Selected track send 2 |
+| `User 1` | Selected track remote 1 | Remote 2 | Remote 3 | Remote 4 |
+| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
-Behavior notes:
+## Preferences That Affect Layout
 
-- Touching any bound top encoder resets that parameter to its default value.
-- `MUTE_2` length changes are bounded to `1`..`256` bars.
-- `Perform` currently focuses on clip launch, slot selection, copy/delete, and fast remote access rather than scene launch, stop rows, or deeper transport workflows.
-- This replaces the previous temporary use of `PERFORM` as a grid-resolution modifier.
+These preferences materially change how the Fire feels in use:
 
-## Pinning
+- `Clip Launch Mode`
+- `Clip Launch Quantization`
+- `Default Clip Length`
+- `Default Note Input Octave`
+- `SELECT Encoder Startup`
+- `SELECT Encoder`
+- `Drum Mode Pinning`
+- `Step Seq Pad Audition`
+- `Euclid Scope`
+- `Pad Brightness`
+- `Pad Saturation`
 
-Pinning the Fire to the current track, clip, or device context is still desirable.
+## Known Gaps
 
-Current recommendation:
+These areas are still intentionally incomplete or provisional:
 
-| Approach | Status |
-| --- | --- |
-| Preference-driven auto pinning | Preferred |
-| Dedicated manual pin button | Deferred |
-
-The exact preference names are still open, but pinning should be controlled by settings before it consumes a prime hardware button.
-
-## Note Repeat
-
-Note repeat no longer occupies the `BROWSER` button. It remains available as an optional main encoder role.
-
-## Open Decisions
-
-These points are still intentionally open:
-
-- exact LED colors for Drum sub-modes
-- exact left-side button behavior once polyrhythm mode is implemented
-- exact pin preferences
-- exact Note-mode step-input behavior
-- whether solo remains part of the row workflow or is dropped
-
-## Summary
-
-The intended high-level model is:
-
-| Button | Meaning |
-| --- | --- |
-| `DRUM` | Sequencing |
-| `NOTE` | Playing notes |
-| `PERFORM` | Launching / performing clips |
-
-And within Drum mode:
-
-| Control | Meaning |
-| --- | --- |
-| Hold `STEP SEQ` | Accent gesture mode |
-| `SHIFT + STEP SEQ` | Fill |
-| `PATTERN` | Configurable utility |
-| `SHIFT + PATTERN` | Metronome |
-| `GRID` left / right arrows | Shift pattern |
-| `SHIFT + GRID` left / right arrows | Fine nudge |
-| `ALT + GRID` left / right arrows | Grid resolution |
-
-This is the layout to refer back to while implementing the next Fire iterations.
+- `Clip Step Record` remains a placeholder.
+- `Chord Step` works best with simpler, grid-aligned chord material.
+- `Melodic Step` encoder documentation is still lighter here than the implementation and should be expanded once that mode stabilizes further.
