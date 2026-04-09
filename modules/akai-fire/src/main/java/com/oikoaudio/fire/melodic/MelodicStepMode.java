@@ -616,19 +616,35 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             buildGeneratedPitchPool(generationSeed, false);
         }
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
-        MelodicPattern generated = switch (generator) {
-            case MOTIF -> motifGenerator.generate(context, parameters);
-            case CALL_RESPONSE -> callResponseGenerator.generate(context, parameters);
-            case EUCLIDEAN -> euclideanGenerator.generate(context, parameters);
-            case ACID -> acidGenerator.generate(context, parameters);
-            case ROLLING -> rollingBassGenerator.generate(context, parameters);
-            case OCTAVE -> octaveJumpGenerator.generate(context, parameters);
+        final MelodicGenerator activeGenerator = switch (generator) {
+            case MOTIF -> motifGenerator;
+            case CALL_RESPONSE -> callResponseGenerator;
+            case EUCLIDEAN -> euclideanGenerator;
+            case ACID -> acidGenerator;
+            case ROLLING -> rollingBassGenerator;
+            case OCTAVE -> octaveJumpGenerator;
         };
+        MelodicPattern generated = activeGenerator.generate(context, parameters);
         generated = enrichLatentSteps(generated);
         generated = constrainPatternToPool(generated);
         basePattern = generated;
-        applyPattern(generated, "Generate", generator.label);
+        final String familyLabel = activeGenerator.lastFamilyLabel();
+        applyPattern(generated, "Generate",
+                familyLabel == null || familyLabel.isBlank()
+                        ? shortGeneratorLabel(generator)
+                        : "%s.%s".formatted(shortGeneratorLabel(generator), familyLabel));
         seed = nextSeed(generationSeed);
+    }
+
+    private String shortGeneratorLabel(final Generator selectedGenerator) {
+        return switch (selectedGenerator) {
+            case MOTIF -> "Mtf";
+            case CALL_RESPONSE -> "C&R";
+            case EUCLIDEAN -> "Euc";
+            case ACID -> "Acd";
+            case ROLLING -> "Rol";
+            case OCTAVE -> "Oct";
+        };
     }
 
     private MelodicGenerator.GenerateParameters generatorParametersForCurrentEngine(final long generationSeed) {
