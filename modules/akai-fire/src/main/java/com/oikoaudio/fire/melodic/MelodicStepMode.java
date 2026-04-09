@@ -6,12 +6,14 @@ import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extensions.framework.Layer;
+import com.bitwig.extensions.framework.values.Midi;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
@@ -55,11 +57,13 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private static final double DEFAULT_GATE = 0.8;
     private static final int ENGINE_ENCODER_THRESHOLD = 3;
     private static final int MUTATION_MODE_ENCODER_THRESHOLD = 3;
+    private static final int AUDITION_VELOCITY = 96;
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
     private final PatternButtons patternButtons;
     private final NoteRepeatHandler noteRepeatHandler;
+    private final NoteInput noteInput;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip cursorClip;
     private final ClipLauncherSlotBank clipSlotBank;
@@ -70,6 +74,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
+    private final Set<Integer> auditioningPoolPitches = new HashSet<>();
     private final MotifGenerator motifGenerator = new MotifGenerator();
     private final CallResponseGenerator callResponseGenerator = new CallResponseGenerator();
     private final EuclideanPhraseGenerator euclideanGenerator = new EuclideanPhraseGenerator();
@@ -135,6 +140,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         this.oled = driver.getOled();
         this.patternButtons = driver.getPatternButtons();
         this.noteRepeatHandler = noteRepeatHandler;
+        this.noteInput = driver.getNoteInput();
 
         final ControllerHost host = driver.getHost();
         this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melodic Step", 8, 8, true);
@@ -245,6 +251,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
+        if (padIndex < STEP_PAD_OFFSET && !pressed) {
+            stopPitchPoolAudition(padIndex);
+            return;
+        }
         if (padIndex >= STEP_PAD_OFFSET && !pressed) {
             final int stepIndex = padIndex - STEP_PAD_OFFSET;
             if (heldStep != null && heldStep == stepIndex) {
@@ -292,6 +302,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (pitch < 0) {
             return;
         }
+        startPitchPoolAudition(pitch);
         if (heldStep != null) {
             heldStepConsumed = true;
             assignPitchToStep(heldStep, pitch);
@@ -305,6 +316,35 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             oled.valueInfo("Pool +", pitchName(pitch));
         }
         poolUserEdited = true;
+    }
+
+    private void startPitchPoolAudition(final int pitch) {
+        if (!driver.isStepSeqPadAuditionEnabled() || pitch < 0 || pitch > 127 || auditioningPoolPitches.contains(pitch)) {
+            return;
+        }
+        noteInput.sendRawMidiEvent(Midi.NOTE_ON, pitch, AUDITION_VELOCITY);
+        auditioningPoolPitches.add(pitch);
+    }
+
+    private void stopPitchPoolAudition(final int padIndex) {
+        if (!driver.isStepSeqPadAuditionEnabled()) {
+            return;
+        }
+        final int pitch = pitchPoolPitch(padIndex);
+        if (!auditioningPoolPitches.remove(pitch)) {
+            return;
+        }
+        noteInput.sendRawMidiEvent(Midi.NOTE_OFF, pitch, 0);
+    }
+
+    private void stopPitchPoolAuditions() {
+        if (auditioningPoolPitches.isEmpty()) {
+            return;
+        }
+        for (final int pitch : auditioningPoolPitches) {
+            noteInput.sendRawMidiEvent(Midi.NOTE_OFF, pitch, 0);
+        }
+        auditioningPoolPitches.clear();
     }
 
     private void assignPitchToStep(final int stepIndex, final int pitch) {
@@ -1538,8 +1578,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
 
     private MelodicPhraseContext phraseContext() {
         final NoteMode noteMode = driver.getNoteMode();
-        return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getCurrentRootNoteClass(),
-                noteMode.getCurrentBaseMidiNote());
+        return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getMelodicStepRootNoteClass(),
+                noteMode.getMelodicStepBaseMidiNote());
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -1799,6 +1839,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         accentButtonHeld = false;
         fixedLengthHeld.set(false);
         deleteHeld.set(false);
+        stopPitchPoolAuditions();
         encoderLayer.deactivate();
         noteRepeatHandler.deactivate();
     }

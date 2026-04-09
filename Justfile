@@ -1,7 +1,13 @@
 set shell := ["bash", "-cu"]
 
 gradle_user_home := env_var_or_default("GRADLE_USER_HOME", "/tmp/gradle-home")
-gradlew := "./gradlew --no-daemon"
+gradle_java_home := env_var_or_default("GRADLE_JAVA_HOME", "")
+java_home_cmd := if gradle_java_home != "" {
+    "JAVA_HOME='" + gradle_java_home + "'"
+} else {
+    "JAVA_HOME=\"$(/usr/libexec/java_home -v 21 2>/dev/null || printf '%s' \"${JAVA_HOME:-}\")\""
+}
+gradlew := java_home_cmd + " PATH=\"$JAVA_HOME/bin:$PATH\" ./gradlew --no-daemon"
 bitwig_extensions_dir := env_var_or_default("BITWIG_EXTENSIONS_DIR", env_var("HOME") + "/Documents/Bitwig Studio/Extensions")
 
 default:

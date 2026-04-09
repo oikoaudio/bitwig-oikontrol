@@ -89,6 +89,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
+    private static final int LEGACY_MELODIC_STEP_DEFAULT_BASE = 48;
     private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_STANDARD_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_ACCENTED_VELOCITY = 127;
@@ -169,7 +170,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
 
     private int scaleIndex = PIANO_HIGHLIGHT_INDEX;
-    private int transposeBase = 48;
+    private int transposeBase = LEGACY_MELODIC_STEP_DEFAULT_BASE;
+    private boolean pitchContextTouched = false;
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private boolean oikordAccentActive = false;
@@ -323,6 +325,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         bindButtons();
         bindEncoders();
         applyDefaultScalePreference();
+        applyDefaultNoteInputOctavePreference();
     }
 
     private void applyDefaultScalePreference() {
@@ -350,6 +353,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
             }
         }
         return fallbackIndex;
+    }
+
+    private void applyDefaultNoteInputOctavePreference() {
+        transposeBase = driver.getDefaultNoteInputOctavePreference() * 12 + getRootNote();
     }
 
     private void bindPads() {
@@ -2145,6 +2152,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (nextOctave == getOctave()) {
             return;
         }
+        pitchContextTouched = true;
         applyLayoutChange(() -> transposeBase = nextOctave * 12 + getRootNote());
         showState("Octave");
     }
@@ -2157,6 +2165,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (nextBase < MIN_TRANSPOSE || nextBase > MAX_TRANSPOSE) {
             return;
         }
+        pitchContextTouched = true;
         applyLayoutChange(() -> transposeBase = nextBase);
         showState("Root");
     }
@@ -2841,6 +2850,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     public int getCurrentBaseMidiNote() {
         return transposeBase;
+    }
+
+    public int getMelodicStepRootNoteClass() {
+        return pitchContextTouched ? getRootNote() : Math.floorMod(LEGACY_MELODIC_STEP_DEFAULT_BASE, 12);
+    }
+
+    public int getMelodicStepBaseMidiNote() {
+        return pitchContextTouched ? transposeBase : LEGACY_MELODIC_STEP_DEFAULT_BASE;
     }
 
     private NoteGridLayout createLayout() {

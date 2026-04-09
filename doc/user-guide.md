@@ -340,6 +340,7 @@ Shared transport behavior:
 - `Default Clip Length`
 - `SELECT Encoder Startup`
 - `Default Scale`
+- `Default Note Input Octave`
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`
