@@ -6,12 +6,13 @@ It replaces the older "target layout" notes that drifted away from the code. Whe
 
 ## Top-Level Modes
 
-The three large mode buttons are the main mode selectors:
+The Fire exposes four top-level workflows. Three are selected by the large mode buttons, and `STEP` is entered with `STEP SEQ` from the current note or drum context.
 
 | Button | Role | Notes |
 | --- | --- | --- |
 | `DRUM` | Drum sequencing | Default sequencing workflow |
-| `NOTE` | Live note input and note-step workflows | Includes `Chord Step` and `Melodic Step` entry points |
+| `NOTE` | Live note input | Includes entry to `Chord Step` via `STEP SEQ` |
+| `STEP SEQ` | Step sequencing | Enters `Chord Step` from `NOTE` and `Melodic Step` from `DRUM` |
 | `PERFORM` | Clip launcher and performance mode | `16x4` clip grid |
 
 ## Shared Transport And Utility Controls
