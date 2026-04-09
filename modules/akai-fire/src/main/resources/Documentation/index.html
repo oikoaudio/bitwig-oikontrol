@@ -188,8 +188,9 @@
       </ul>
       <p>Main gestures:</p>
       <ul>
-        <li><code>STEP SEQ</code>: accent entry and accent editing</li>
-        <li><code>SHIFT + STEP SEQ</code>: Fill</li>
+        <li><code>STEP SEQ</code>: enter <code>Melodic Step</code></li>
+        <li><code>SHIFT + STEP SEQ</code>: accent entry and accent editing</li>
+        <li><code>ALT + STEP SEQ</code>: Fill</li>
         <li><code>BANK LEFT/RIGHT</code>: pattern shift and movement</li>
         <li><code>SHIFT + BANK LEFT/RIGHT</code>: fine nudge</li>
         <li><code>ALT + BANK LEFT/RIGHT</code>: grid resolution</li>
@@ -233,6 +234,13 @@
         <li>local root note, scale, and octave controls</li>
         <li>LED and OLED note feedback</li>
       </ul>
+      <p>Useful live-note controls:</p>
+      <ul>
+        <li><code>PATTERN UP/DOWN</code>: octave</li>
+        <li><code>SHIFT + PATTERN UP/DOWN</code>: root</li>
+        <li><code>MUTE_1</code>: sustain</li>
+        <li><code>MUTE_2</code>: sostenuto</li>
+      </ul>
       <p>The current note-step sub-modes are:</p>
       <ul>
         <li><code>Melodic Step</code></li>
@@ -267,7 +275,7 @@
         <li>tap a pitch pad: add or remove that note from the pool</li>
         <li>tap a step pad: place, clear, or load that step depending on state</li>
         <li>hold a step pad and turn encoders: edit that held step directly</li>
-        <li><code>STEP SEQ</code>: hold and tap a step to toggle accent</li>
+        <li><code>SHIFT + STEP SEQ</code>: hold and tap a step to toggle accent</li>
         <li><code>PATTERN UP</code>: generate a new pitch pool for the current mode</li>
         <li><code>ALT + PATTERN UP</code>: mutate the current pitch pool</li>
         <li><code>PATTERN DOWN</code>: generate a new phrase from the current mode</li>
@@ -305,6 +313,9 @@
         <li><code>MUTE_1..4</code>: chord octave and root offsets</li>
         <li><code>PATTERN DOWN/UP</code>: next/previous chord family</li>
         <li><code>ALT + PATTERN DOWN/UP</code>: next/previous page within the current family</li>
+        <li><code>STEP SEQ</code>: enter <code>Melodic Step</code></li>
+        <li><code>SHIFT + STEP SEQ</code>: accent toggle/edit</li>
+        <li><code>ALT + STEP SEQ</code>: Fill</li>
         <li>tap an empty step pad: place the selected chord</li>
         <li>tap a lit step pad: remove the chord from that step</li>
         <li><code>BANK LEFT/RIGHT</code>: move written step content left or right</li>
@@ -317,7 +328,7 @@
       <p>Pad colors in <code>PERFORM</code> also follow Bitwig track and clip color context rather than a fixed Oikontrol palette.</p>
       <ul>
         <li>pads show clip color and launch state</li>
-        <li>empty slots can create a new 4-bar clip</li>
+        <li>empty slots can create a new clip using the current <code>Default Clip Length</code> preference</li>
         <li>quick select, copy, delete, and clip-length gestures live on the <code>MUTE</code> buttons</li>
       </ul>
       <p>Important gestures:</p>
@@ -392,8 +403,12 @@
       <ul>
         <li><code>Clip Launch Mode</code></li>
         <li><code>Clip Launch Quantization</code></li>
+        <li><code>Default Clip Length</code></li>
+        <li><code>SELECT Encoder Startup</code></li>
+        <li><code>Default Scale</code></li>
         <li><code>Pad Brightness</code></li>
         <li><code>Pad Saturation</code></li>
+        <li><code>Encoder touch reset</code></li>
         <li><code>SELECT Encoder</code></li>
         <li><code>Euclid Scope</code></li>
         <li><code>Drum Mode Pinning</code></li>

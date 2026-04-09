@@ -738,14 +738,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private void handleStepSeqPressed(final boolean pressed) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
             if (driver.isGlobalShiftHeld()) {
+                handleOikordAccentPressed(pressed);
+                return;
+            }
+            if (driver.isGlobalAltHeld()) {
                 if (pressed) {
                     driver.toggleFillMode();
                     oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
                 }
-                return;
-            }
-            if (driver.isGlobalAltHeld()) {
-                handleOikordAccentPressed(pressed);
                 return;
             }
             if (pressed) {
@@ -2002,10 +2002,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return BiColorLightState.OFF;
         }
         if (driver.isGlobalShiftHeld()) {
-            return driver.getFillLightState();
+            return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
         if (driver.isGlobalAltHeld()) {
-            return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return driver.getFillLightState();
         }
         return BiColorLightState.GREEN_HALF;
     }

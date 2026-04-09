@@ -125,8 +125,9 @@ Pad colors in `DRUM` follow the Bitwig track or drum-lane color context. The bri
 
 Main gestures:
 
-- `STEP SEQ`: accent entry and accent editing
-- `SHIFT + STEP SEQ`: Fill
+- `STEP SEQ`: enter `Melodic Step`
+- `SHIFT + STEP SEQ`: accent entry and accent editing
+- `ALT + STEP SEQ`: Fill
 - `BANK LEFT/RIGHT`: pattern shift and movement
 - `SHIFT + BANK LEFT/RIGHT`: fine nudge
 - `ALT + BANK LEFT/RIGHT`: grid resolution
@@ -170,6 +171,13 @@ Quick start:
 - local root note, scale, and octave controls
 - LED and OLED note feedback
 
+Useful live-note controls:
+
+- `PATTERN UP/DOWN`: octave
+- `SHIFT + PATTERN UP/DOWN`: root
+- `MUTE_1`: sustain
+- `MUTE_2`: sostenuto
+
 The current note-step sub-modes are:
 
 - `Melodic Step`
@@ -204,7 +212,7 @@ Important gestures:
 - tap a pitch pad: add or remove that note from the pool
 - tap a step pad: place, clear, or load that step depending on state
 - hold a step pad and turn encoders: edit that held step directly
-- `STEP SEQ`: hold and tap a step to toggle accent
+- `SHIFT + STEP SEQ`: hold and tap a step to toggle accent
 - `PATTERN UP`: generate a new pitch pool for the current mode
 - `ALT + PATTERN UP`: mutate the current pitch pool
 - `PATTERN DOWN`: generate a new phrase from the current mode
@@ -242,6 +250,9 @@ Important gestures:
 - `MUTE_1..4`: chord octave and root offsets
 - `PATTERN DOWN/UP`: next/previous chord family
 - `ALT + PATTERN DOWN/UP`: next/previous page within the current family
+- `STEP SEQ`: enter `Melodic Step`
+- `SHIFT + STEP SEQ`: accent toggle/edit
+- `ALT + STEP SEQ`: Fill
 - tap an empty step pad: place the selected chord
 - tap a lit step pad: remove the chord from that step
 - `BANK LEFT/RIGHT`: move written step content left or right
@@ -256,7 +267,7 @@ In `Chord Step`, hold `Paste` and press a step. The currently selected step is u
 Pad colors in `PERFORM` also follow Bitwig track and clip color context rather than a fixed Oikontrol palette.
 
 - pads show clip color and launch state
-- empty slots can create a new 4-bar clip
+- empty slots can create a new clip using the current `Default Clip Length` preference
 - quick select, copy, delete, and clip-length gestures live on the `MUTE` buttons
 
 Important gestures:
@@ -326,8 +337,12 @@ Shared transport behavior:
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
+- `Default Clip Length`
+- `SELECT Encoder Startup`
+- `Default Scale`
 - `Pad Brightness`
 - `Pad Saturation`
+- `Encoder touch reset`
 - `SELECT Encoder`
 - `Euclid Scope`
 - `Drum Mode Pinning`
