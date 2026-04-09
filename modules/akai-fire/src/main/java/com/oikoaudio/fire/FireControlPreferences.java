@@ -16,7 +16,7 @@ public final class FireControlPreferences {
     public static final double PAD_SATURATION_MAX = 150.0;
     public static final double PAD_SATURATION_STEP = 5.0;
     public static final double PAD_SATURATION_DEFAULT = 100.0;
-    public static final boolean ENCODER_TOUCH_RESET_DEFAULT = false;
+    public static final boolean ENCODER_TOUCH_RESET_DEFAULT = true;
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
     public static final String CLIP_LAUNCH_MODE_FROM_START = "From Start";
@@ -46,6 +46,15 @@ public final class FireControlPreferences {
             QUANTIZATION_1_16
     };
 
+    public static final String CLIP_LENGTH_1_BAR = "1 bar";
+    public static final String CLIP_LENGTH_2_BARS = "2 bars";
+    public static final String CLIP_LENGTH_4_BARS = "4 bars";
+    public static final String[] DEFAULT_CLIP_LENGTHS = {
+            CLIP_LENGTH_1_BAR,
+            CLIP_LENGTH_2_BARS,
+            CLIP_LENGTH_4_BARS
+    };
+
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
@@ -57,6 +66,12 @@ public final class FireControlPreferences {
             MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT,
             MAIN_ENCODER_TRACK_SELECT
+    };
+    public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
+    public static final String MAIN_ENCODER_STARTUP_FUNCTION_SET = "Function Set";
+    public static final String[] MAIN_ENCODER_STARTUP_STATES = {
+            MAIN_ENCODER_STARTUP_LAST_TOUCHED,
+            MAIN_ENCODER_STARTUP_FUNCTION_SET
     };
 
     public static final String EUCLID_SCOPE_VISIBLE_PAGE = "Visible Page";
@@ -72,6 +87,26 @@ public final class FireControlPreferences {
             LIVE_PITCH_OFFSET_NEW_NOTES,
             LIVE_PITCH_OFFSET_RETUNE_HELD
     };
+
+    public static final String DEFAULT_SCALE_PIANO = "Piano";
+    public static final String DEFAULT_SCALE_MINOR = "Minor";
+    public static final String DEFAULT_SCALE_MAJOR = "Major";
+    public static final String[] DEFAULT_SCALES = {
+            DEFAULT_SCALE_PIANO,
+            DEFAULT_SCALE_MINOR,
+            DEFAULT_SCALE_MAJOR
+    };
+    public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+    };
+    public static final String DEFAULT_NOTE_INPUT_OCTAVE = "3";
 
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
@@ -125,6 +160,15 @@ public final class FireControlPreferences {
         return MAIN_ENCODER_SHUFFLE;
     }
 
+    public static String normalizeMainEncoderStartupState(final String preferenceValue) {
+        for (final String value : MAIN_ENCODER_STARTUP_STATES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return MAIN_ENCODER_STARTUP_FUNCTION_SET;
+    }
+
     public static String normalizeEuclidScope(final String preferenceValue) {
         for (final String value : EUCLID_SCOPES) {
             if (value.equals(preferenceValue)) {
@@ -143,13 +187,52 @@ public final class FireControlPreferences {
         return LIVE_PITCH_OFFSET_NEW_NOTES;
     }
 
+    public static String normalizeDefaultScale(final String preferenceValue) {
+        for (final String value : DEFAULT_SCALES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_SCALE_PIANO;
+    }
+
+    public static String normalizeDefaultNoteInputOctave(final String preferenceValue) {
+        for (final String value : DEFAULT_NOTE_INPUT_OCTAVES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_NOTE_INPUT_OCTAVE;
+    }
+
+    public static int toDefaultNoteInputOctave(final String preferenceValue) {
+        return Integer.parseInt(normalizeDefaultNoteInputOctave(preferenceValue));
+    }
+
     public static String normalizeDrumPinMode(final String preferenceValue) {
         for (final String value : DRUM_PIN_MODES) {
             if (value.equals(preferenceValue)) {
                 return value;
             }
         }
-        return DRUM_PIN_MODE_FOLLOW_SELECTION;
+        return DRUM_PIN_MODE_FIRST_DRUM_MACHINE;
+    }
+
+    public static String normalizeDefaultClipLength(final String preferenceValue) {
+        for (final String value : DEFAULT_CLIP_LENGTHS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return CLIP_LENGTH_2_BARS;
+    }
+
+    public static double toClipLengthBeats(final String preferenceValue) {
+        return switch (normalizeDefaultClipLength(preferenceValue)) {
+            case CLIP_LENGTH_1_BAR -> 4.0;
+            case CLIP_LENGTH_4_BARS -> 16.0;
+            default -> 8.0;
+        };
     }
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {

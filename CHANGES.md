@@ -2,6 +2,14 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.1.0 - Akai Fire melodic generation and workflow pass
+- Added `Melodic Step` mode under `STEP` with phrase engines for `Acid`, `Motif`, `Call/Resp`, `Euclid`, `Rolling`, and `Octave`
+- Added editable melodic pitch-pool generation, mutation, note audition, and cleaner preservation of manual pool edits
+- Reworked Fire encoder banks and step-sequencer controls to align behavior across drum, note, chord, and melodic workflows
+- Added step paging plus fine-nudging for chord sequencing, while leaving unreliable rotation behavior disabled for now
+- Added default note-input octave control, stronger OLED and pad feedback, and generator family feedback during melodic generation
+- Updated docs, tests, and Fire workflow preferences to match the 2.1 sequencing pass
+
 ## 2.0.0 - Akai Fire and multi-controller repo
 Adds a full Akai Fire extension and promotes `bitwig-oikontrol` into a multi-controller repository:
 - Added a full Akai Fire extension under `modules/akai-fire`

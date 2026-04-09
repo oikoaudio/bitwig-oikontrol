@@ -11,6 +11,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 public class NoteRepeatHandler {
+    private static final int DEFAULT_TOGGLE_RATE_INDEX = 2;
 
 	private final OledDisplay oled;
 	private final BooleanValueObject noteRepeatActive = new BooleanValueObject();
@@ -67,9 +68,21 @@ public class NoteRepeatHandler {
 		return noteRepeatActive;
 	}
 
+    public void toggleActive() {
+        if (noteRepeatActive.get()) {
+            setNoteRateValue(0);
+            return;
+        }
+        setNoteRateValue(selectedArpIndex == 0 ? DEFAULT_TOGGLE_RATE_INDEX : selectedArpIndex);
+    }
+
 	//BUG Pagename is not updated correctly
 
 	public void handleMainEncoder(final int inc, final boolean altHeld) {
+		handleMainEncoder(inc, altHeld, true);
+	}
+
+	public void handleMainEncoder(final int inc, final boolean altHeld, final boolean allowOff) {
 		if (altHeld) {
 			CursorRemoteControlsPage remotePage = remotePageSupplier.get();
 			if (remotePage != null) {
@@ -84,9 +97,9 @@ public class NoteRepeatHandler {
 				}
 			}
 		} else {
-			// Regular behavior...
+			final int minValue = allowOff ? 0 : 1;
 			final int newValue = selectedArpIndex + inc;
-			if (newValue >= 0 && newValue < GRID_RATES_STR.length) {
+			if (newValue >= minValue && newValue < GRID_RATES_STR.length) {
 				setNoteRateValue(newValue);
 			}
 		}

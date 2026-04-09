@@ -2,10 +2,11 @@ package com.oikoaudio.fire.sequence;
 
 import java.util.List;
 
-import com.oikoaudio.fire.sequence.SequencEncoderHandler.NoteDoubleGetter;
-import com.oikoaudio.fire.sequence.SequencEncoderHandler.NoteDoubleSetter;
-import com.oikoaudio.fire.sequence.SequencEncoderHandler.NoteIntGetter;
-import com.oikoaudio.fire.sequence.SequencEncoderHandler.NoteIntSetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteDoubleGetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteDoubleSetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteIntGetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteIntSetter;
+import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 
 public enum NoteStepAccess implements EncoderAccess {
@@ -46,7 +47,7 @@ public enum NoteStepAccess implements EncoderAccess {
 			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
 	PITCH("Pitch", ns -> ns.transpose(), //
 			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
-			NoteValueUnit.PERCENT, -96, 96, 1, 1, 0.0, 2);
+			NoteValueUnit.SEMI, -96, 96, 1, 1, 0.0, 2);
 
 //	TRANSPOSE("Transpose", ns -> ns.transpose(), //
 //			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
@@ -177,10 +178,41 @@ public enum NoteStepAccess implements EncoderAccess {
 	}
 
 	boolean canReset() {
-		return resetValue != null;
+		return resetValue != null
+                || this == VELOCITY
+                || this == PRESSURE
+                || this == DURATION
+                || this == OCCURENCE;
 	}
 
-	void applyReset(final List<NoteStep> onNotes) {
+	void applyReset(final StepSequencerHost host, final List<NoteStep> onNotes) {
+        if (this == VELOCITY) {
+            final double defaultVelocity = host.getDefaultStepVelocity() / 127.0;
+            for (final NoteStep noteStep : onNotes) {
+                doubleSetter.set(noteStep, defaultVelocity);
+            }
+            return;
+        }
+        if (this == PRESSURE) {
+            for (final NoteStep noteStep : onNotes) {
+                doubleSetter.set(noteStep, host.getDefaultStepPressure());
+            }
+            return;
+        }
+        if (this == DURATION) {
+            final double defaultDuration = host.getDefaultStepDuration();
+            for (final NoteStep noteStep : onNotes) {
+                doubleSetter.set(noteStep, defaultDuration);
+            }
+            return;
+        }
+        if (this == OCCURENCE) {
+            final NoteOccurrence defaultOccurrence = host.getDefaultStepOccurrence();
+            for (final NoteStep noteStep : onNotes) {
+                noteStep.setOccurrence(defaultOccurrence);
+            }
+            return;
+        }
 		if (resetValue == null) {
 			return;
 		}
