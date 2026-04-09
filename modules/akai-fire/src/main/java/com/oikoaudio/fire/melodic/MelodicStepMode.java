@@ -528,7 +528,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }
         final long generationSeed = seed;
         final MelodicPhraseContext context = phraseContext();
-        if (allowedPitches.isEmpty() || !poolUserEdited) {
+        if (allowedPitches.isEmpty()) {
             buildGeneratedPitchPool(generationSeed, false);
         }
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
@@ -596,7 +596,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final long mutationSeed = seed;
         MelodicPattern mutated = mutator.mutate(sourcePattern, phraseContext(), mutationMode, mutateIntensity, 0.7, mutationSeed);
         mutated = enrichLatentSteps(mutated);
-        mutated = constrainPatternToPoolLocally(mutated);
+        mutated = mutationMode == MelodicMutator.Mode.PRESERVE_RHYTHM
+                ? revoicePatternToPoolVariant(mutated, mutateIntensity, mutationSeed)
+                : constrainPatternToPoolLocally(mutated);
         basePattern = mutated;
         applyPattern(mutated, fromOriginalPattern ? "Mutate Orig" : "Mutate", mutationLabel(mutationMode));
         seed = nextSeed(mutationSeed);
@@ -720,17 +722,30 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (amount == 0) {
             return;
         }
-        final MelodicPattern.Step step = ensureStep(selectedStep);
+        final int stepIndex = editingStepIndex();
+        final MelodicPattern.Step step = ensureStep(stepIndex);
         final int currentPitch = step.pitch() == null ? phraseContext().baseMidiNote() : step.pitch();
         applyPattern(cachedPattern.withStep(step.withPitch(Math.max(0, Math.min(127, currentPitch + amount)))),
                 "Pitch", Integer.toString(currentPitch + amount));
+    }
+
+    private void adjustSelectedOctave(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        final int stepIndex = editingStepIndex();
+        final MelodicPattern.Step step = ensureStep(stepIndex);
+        final int currentPitch = step.pitch() == null ? phraseContext().baseMidiNote() : step.pitch();
+        final int shiftedPitch = Math.max(0, Math.min(127, currentPitch + amount * 12));
+        applyPattern(cachedPattern.withStep(step.withPitch(shiftedPitch)),
+                "Octave", pitchName(shiftedPitch));
     }
 
     private void adjustSelectedGate(final int amount) {
         if (amount == 0) {
             return;
         }
-        final MelodicPattern.Step step = ensureStep(selectedStep);
+        final MelodicPattern.Step step = ensureStep(editingStepIndex());
         applyPattern(cachedPattern.withStep(step.withGate(step.gate() + amount * 0.05)),
                 "Gate", "%.2f".formatted(step.gate() + amount * 0.05));
     }
@@ -739,7 +754,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (amount == 0) {
             return;
         }
-        final MelodicPattern.Step step = ensureStep(selectedStep);
+        final MelodicPattern.Step step = ensureStep(editingStepIndex());
         applyPattern(cachedPattern.withStep(step.withVelocity(step.velocity() + amount)),
                 "Velocity", Integer.toString(step.velocity() + amount));
     }
@@ -748,18 +763,19 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (amount == 0) {
             return;
         }
-        final MelodicPattern.Step step = ensureStep(selectedStep);
+        final int stepIndex = editingStepIndex();
+        final MelodicPattern.Step step = ensureStep(stepIndex);
         final int current = step.tieFromPrevious() ? 3 : step.slide() ? 2 : step.accent() ? 1 : 0;
         final int next = Math.floorMod(current + amount, 4);
         MelodicPattern pattern = cachedPattern.withStep(step.withAccent(false).withSlide(false));
-        if (selectedStep + 1 < STEP_COUNT) {
-            pattern = pattern.withStep(pattern.step(selectedStep + 1).withTieFromPrevious(false));
+        if (stepIndex + 1 < STEP_COUNT) {
+            pattern = pattern.withStep(pattern.step(stepIndex + 1).withTieFromPrevious(false));
         }
         pattern = switch (next) {
-            case 1 -> pattern.withStep(pattern.step(selectedStep).withAccent(true).withVelocity(118));
-            case 2 -> pattern.withStep(pattern.step(selectedStep).withSlide(true).withGate(1.05));
-            case 3 -> selectedStep + 1 < STEP_COUNT
-                    ? pattern.withStep(pattern.step(selectedStep + 1).withTieFromPrevious(true))
+            case 1 -> pattern.withStep(pattern.step(stepIndex).withAccent(true).withVelocity(118));
+            case 2 -> pattern.withStep(pattern.step(stepIndex).withSlide(true).withGate(1.05));
+            case 3 -> stepIndex + 1 < STEP_COUNT
+                    ? pattern.withStep(pattern.step(stepIndex + 1).withTieFromPrevious(true))
                     : pattern;
             default -> pattern;
         };
@@ -772,24 +788,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         applyPattern(pattern, "Artic", label);
     }
 
-    private void adjustSelectedVisibility(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        if (amount > 0) {
-            final MelodicPattern.Step current = cachedPattern.step(selectedStep);
-            if (current.active()) {
-                oled.valueInfo("Step", "Shown");
-                return;
-            }
-            final MelodicPattern.Step base = basePattern.step(selectedStep);
-            final MelodicPattern.Step restored = base.active()
-                    ? base.withIndex(selectedStep)
-                    : defaultStep(selectedStep);
-            applyPattern(cachedPattern.withStep(restored), "Step", "Shown");
-            return;
-        }
-        clearStep(selectedStep);
+    private int editingStepIndex() {
+        return heldStep != null ? heldStep : selectedStep;
     }
 
     private void adjustDensity(final int amount) {
@@ -958,6 +958,89 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             steps.add(step.withPitch(nearestAllowedPitch(step.pitch())));
         }
         return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private MelodicPattern revoicePatternToPoolVariant(final MelodicPattern pattern, final double intensity,
+                                                       final long seedValue) {
+        if (allowedPitches.isEmpty()) {
+            return pattern;
+        }
+        MelodicPattern out = constrainPatternToPoolLocally(pattern);
+        final MelodicPatternAnalyzer.Analysis analysis = MelodicPatternAnalyzer.analyze(out);
+        final List<Integer> orderedPool = new ArrayList<>(allowedPitches);
+        Collections.sort(orderedPool);
+        final List<Integer> candidates = new ArrayList<>();
+        for (final int stepIndex : analysis.activeSteps()) {
+            final MelodicPattern.Step step = out.step(stepIndex);
+            if (step.pitch() == null) {
+                continue;
+            }
+            if (analysis.anchorSteps().contains(stepIndex)) {
+                continue;
+            }
+            candidates.add(stepIndex);
+        }
+        if (candidates.isEmpty()) {
+            return out;
+        }
+
+        final Random random = new Random(seedValue ^ 0x9E3779B97F4A7C15L);
+        Collections.shuffle(candidates, random);
+        final int budget = Math.max(1, Math.min(candidates.size(), mutateIntensity >= 0.75 ? 3 : mutateIntensity >= 0.4 ? 2 : 1));
+        final Set<Integer> usedPitches = patternPitchSet(out);
+        for (int i = 0; i < budget; i++) {
+            final int stepIndex = candidates.get(i);
+            final MelodicPattern.Step step = out.step(stepIndex);
+            final Integer replacement = choosePoolVariantPitch(step.pitch(), orderedPool, usedPitches, random);
+            if (replacement == null || replacement.equals(step.pitch())) {
+                continue;
+            }
+            usedPitches.add(replacement);
+            out = out.withStep(step.withPitch(replacement));
+        }
+        return out;
+    }
+
+    private Integer choosePoolVariantPitch(final Integer sourcePitch, final List<Integer> orderedPool,
+                                           final Set<Integer> usedPitches, final Random random) {
+        if (sourcePitch == null || orderedPool.isEmpty()) {
+            return null;
+        }
+        final int currentIndex = nearestPitchIndex(sourcePitch, orderedPool);
+        final int[] offsets = {2, -2, 1, -1, 3, -3, 4, -4};
+        for (final int offset : offsets) {
+            final int candidateIndex = currentIndex + offset;
+            if (candidateIndex < 0 || candidateIndex >= orderedPool.size()) {
+                continue;
+            }
+            final Integer candidatePitch = orderedPool.get(candidateIndex);
+            if (!candidatePitch.equals(sourcePitch) && !usedPitches.contains(candidatePitch)) {
+                return candidatePitch;
+            }
+        }
+        final List<Integer> alternatives = new ArrayList<>();
+        for (final Integer candidatePitch : orderedPool) {
+            if (!candidatePitch.equals(sourcePitch)) {
+                alternatives.add(candidatePitch);
+            }
+        }
+        if (alternatives.isEmpty()) {
+            return null;
+        }
+        alternatives.sort((left, right) -> Integer.compare(Math.abs(left - sourcePitch), Math.abs(right - sourcePitch)));
+        final int limit = Math.min(3, alternatives.size());
+        return alternatives.get(random.nextInt(limit));
+    }
+
+    private Set<Integer> patternPitchSet(final MelodicPattern pattern) {
+        final Set<Integer> pitches = new HashSet<>();
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.active() && step.pitch() != null) {
+                pitches.add(step.pitch());
+            }
+        }
+        return pitches;
     }
 
     private Map<Integer, Integer> buildBroadPoolMapping(final MelodicPattern pattern, final List<Integer> orderedPool) {
@@ -1423,17 +1506,17 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                         mixerSlot(3, "Send 2")
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Tension\n2: Pulses\n3: Rotation\n4: Seed",
+                "1: Tension\n2: Pulses\n3: Rotation\n4: Mut %",
                 new EncoderSlotBinding[]{
                         valueSlot(this::adjustTension, () -> "Tension"),
                         valueSlot(this::adjustEuclideanPulses, () -> "Pulses"),
                         valueSlot(this::adjustEuclideanRotation, () -> "Rotation"),
-                        valueSlot(this::adjustSeed, () -> "Seed")
+                        valueSlot(this::adjustMutateIntensity, () -> "Mut %")
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Show\n2: Gate\n3: Velocity\n4: Artic",
+                "1: Octave\n2: Gate\n3: Velocity\n4: Artic",
                 new EncoderSlotBinding[]{
-                        valueSlot(this::adjustSelectedVisibility, () -> stepDetail("Show")),
+                        valueSlot(this::adjustSelectedOctave, () -> stepDetail("Oct")),
                         valueSlot(this::adjustSelectedGate, () -> stepDetail("Gate")),
                         valueSlot(this::adjustSelectedVelocity, () -> stepDetail("Velocity")),
                         valueSlot(this::cycleArticulation, () -> stepDetail("Artic"))

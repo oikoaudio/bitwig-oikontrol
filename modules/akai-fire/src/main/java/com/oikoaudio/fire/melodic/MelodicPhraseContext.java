@@ -29,7 +29,7 @@ public record MelodicPhraseContext(MusicalScale scale, int rootNote, int baseMid
 
     public List<Integer> collapsedScaleRange(final int count) {
         final List<Integer> notes = new ArrayList<>(count);
-        final int start = Math.max(0, baseMidiNote - 5);
+        final int start = Math.max(0, baseMidiNote - 17);
         int candidate = start;
         while (notes.size() < count && candidate <= 127) {
             if (scale.isMidiNoteInScale(rootNote, candidate)) {
