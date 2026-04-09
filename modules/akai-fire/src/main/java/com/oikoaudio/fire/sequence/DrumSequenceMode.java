@@ -1537,20 +1537,29 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
 
     private void handleStepSeqPressed(final boolean pressed) {
         if (shiftActive.get()) {
+            accentHandler.handlePressed(pressed);
+            return;
+        }
+        if (altActive.get()) {
             if (pressed) {
                 driver.toggleFillMode();
                 oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
             }
             return;
         }
-        accentHandler.handlePressed(pressed);
+        if (pressed) {
+            driver.enterMelodicStepMode();
+        }
     }
 
     private BiColorLightState getStepSeqLightState() {
         if (shiftActive.get()) {
+            return accentHandler.getLightState();
+        }
+        if (altActive.get()) {
             return driver.getFillLightState();
         }
-        return accentHandler.getLightState();
+        return BiColorLightState.GREEN_HALF;
     }
 
     private void handleBankButton(final boolean pressed, final int dir) {

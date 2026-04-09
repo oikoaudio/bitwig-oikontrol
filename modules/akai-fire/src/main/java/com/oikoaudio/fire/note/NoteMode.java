@@ -23,6 +23,7 @@ import com.bitwig.extensions.framework.values.Midi;
 import com.bitwig.extensions.framework.values.StepViewPosition;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
@@ -168,7 +169,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
 
     private int scaleIndex = PIANO_HIGHLIGHT_INDEX;
-    private int transposeBase = 36;
+    private int transposeBase = 48;
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private boolean oikordAccentActive = false;
@@ -205,6 +206,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private boolean bankMoveInFlight = false;
     private int bankMoveGeneration = 0;
     private RgbLigthState oikordStepBaseColor = OCCUPIED_STEP;
+    private RgbLigthState selectedNoteClipColor = OCCUPIED_STEP;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator liveScaleEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
@@ -320,6 +322,34 @@ public class NoteMode extends Layer implements StepSequencerHost {
         bindPads();
         bindButtons();
         bindEncoders();
+        applyDefaultScalePreference();
+    }
+
+    private void applyDefaultScalePreference() {
+        final String defaultScale = driver.getDefaultScalePreference();
+        switch (defaultScale) {
+            case FireControlPreferences.DEFAULT_SCALE_MINOR -> {
+                scaleIndex = findScaleIndex("Aeolian (Minor)", 2);
+                inKey = true;
+            }
+            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> {
+                scaleIndex = findScaleIndex("Ionan (Major)", 1);
+                inKey = true;
+            }
+            default -> {
+                scaleIndex = PIANO_HIGHLIGHT_INDEX;
+                inKey = false;
+            }
+        }
+    }
+
+    private int findScaleIndex(final String scaleName, final int fallbackIndex) {
+        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
+            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
+                return i;
+            }
+        }
+        return fallbackIndex;
     }
 
     private void bindPads() {
@@ -708,17 +738,23 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private void handleStepSeqPressed(final boolean pressed) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
             if (driver.isGlobalShiftHeld()) {
+                handleOikordAccentPressed(pressed);
+                return;
+            }
+            if (driver.isGlobalAltHeld()) {
                 if (pressed) {
                     driver.toggleFillMode();
                     oled.valueInfo("Fill", driver.getFillLightState() == BiColorLightState.AMBER_FULL ? "On" : "Off");
                 }
                 return;
             }
-            handleOikordAccentPressed(pressed);
+            if (pressed) {
+                driver.enterMelodicStepMode();
+            }
             return;
         }
         if (pressed) {
-            oled.valueInfo("Step Seq", "Reserved");
+            driver.enterMelodicStepMode();
         }
     }
 
@@ -1966,9 +2002,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return BiColorLightState.OFF;
         }
         if (driver.isGlobalShiftHeld()) {
+            return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        }
+        if (driver.isGlobalAltHeld()) {
             return driver.getFillLightState();
         }
-        return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        return BiColorLightState.GREEN_HALF;
     }
 
     private void handleOikordAccentPressed(final boolean pressed) {
@@ -2079,6 +2118,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return BiColorLightState.GREEN_FULL;
         }
         return inKey ? BiColorLightState.RED_FULL : BiColorLightState.AMBER_FULL;
+    }
+
+    public boolean isStepSurfaceActive() {
+        return noteStepActive;
     }
 
     private void adjustScale(final int amount) {
@@ -2319,6 +2362,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private RgbLigthState getOikordOccupiedStepColor() {
+        if (selectedNoteClipColor != null) {
+            return selectedNoteClipColor;
+        }
         return oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
     }
 
@@ -2745,6 +2791,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return scaleLibrary.getMusicalScale(effectiveScaleIndex);
     }
 
+    public MusicalScale getCurrentScale() {
+        return getScale();
+    }
+
     private String getScaleDisplayName() {
         if (scaleIndex == PIANO_HIGHLIGHT_INDEX) {
             return "Piano";
@@ -2777,8 +2827,20 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return Math.floorMod(transposeBase, 12);
     }
 
+    public int getCurrentRootNoteClass() {
+        return getRootNote();
+    }
+
     private int getOctave() {
         return transposeBase / 12;
+    }
+
+    public int getCurrentOctave() {
+        return getOctave();
+    }
+
+    public int getCurrentBaseMidiNote() {
+        return transposeBase;
     }
 
     private NoteGridLayout createLayout() {
@@ -3187,9 +3249,11 @@ public class NoteMode extends Layer implements StepSequencerHost {
             slot.exists().markInterested();
             slot.hasContent().markInterested();
             slot.isSelected().markInterested();
+            slot.color().markInterested();
             slot.exists().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.hasContent().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.isSelected().addValueObserver(ignored -> refreshSelectedNoteClipState());
+            slot.color().addValueObserver((r, g, b) -> refreshSelectedNoteClipState());
         }
         refreshSelectedNoteClipState();
     }
@@ -3199,11 +3263,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final boolean previousHasContent = selectedNoteClipHasContent;
         selectedNoteClipSlotIndex = -1;
         selectedNoteClipHasContent = false;
+        selectedNoteClipColor = oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
         for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
             final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
             if (slot.exists().get() && slot.isSelected().get()) {
                 selectedNoteClipSlotIndex = i;
                 selectedNoteClipHasContent = slot.hasContent().get();
+                selectedNoteClipColor = ColorLookup.getColor(slot.color().get());
                 break;
             }
         }

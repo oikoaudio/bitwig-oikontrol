@@ -125,8 +125,9 @@ Pad colors in `DRUM` follow the Bitwig track or drum-lane color context. The bri
 
 Main gestures:
 
-- `STEP SEQ`: accent entry and accent editing
-- `SHIFT + STEP SEQ`: Fill
+- `STEP SEQ`: enter `Melodic Step`
+- `SHIFT + STEP SEQ`: accent entry and accent editing
+- `ALT + STEP SEQ`: Fill
 - `BANK LEFT/RIGHT`: pattern shift and movement
 - `SHIFT + BANK LEFT/RIGHT`: fine nudge
 - `ALT + BANK LEFT/RIGHT`: grid resolution
@@ -170,8 +171,16 @@ Quick start:
 - local root note, scale, and octave controls
 - LED and OLED note feedback
 
+Useful live-note controls:
+
+- `PATTERN UP/DOWN`: octave
+- `SHIFT + PATTERN UP/DOWN`: root
+- `MUTE_1`: sustain
+- `MUTE_2`: sostenuto
+
 The current note-step sub-modes are:
 
+- `Melodic Step`
 - `Chord Step`
 - `Clip Step Record` placeholder
 
@@ -181,6 +190,51 @@ Quick start:
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
 4. Use the current note layout controls to change scale, root, and octave.
+
+### Melodic Step workflow
+
+`Melodic Step` is a generated and editable mono phrase sequencer for basslines, motifs, and melodic hooks.
+
+- Upper two rows: collapsed in-scale pitch pool
+- Lower two rows: 16 visible steps
+- generated phrases are constrained to the current pitch pool
+- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Euclid`, `Rolling`, and `Octave`
+
+Main ideas:
+
+- `Pattern Up` works on the pitch pool
+- `Pattern Down` works on the phrase
+- if you manually edit the pitch pool, it is treated as user-owned and is not auto-replaced on mode switch
+- if the pool was auto-generated, first generation in a different mode can rebuild it for that mode
+
+Important gestures:
+
+- tap a pitch pad: add or remove that note from the pool
+- tap a step pad: place, clear, or load that step depending on state
+- hold a step pad and turn encoders: edit that held step directly
+- `SHIFT + STEP SEQ`: hold and tap a step to toggle accent
+- `PATTERN UP`: generate a new pitch pool for the current mode
+- `ALT + PATTERN UP`: mutate the current pitch pool
+- `PATTERN DOWN`: generate a new phrase from the current mode
+- `ALT + PATTERN DOWN`: mutate the current phrase
+- `SHIFT + PATTERN UP` and `SHIFT + PATTERN DOWN`: cycle the current view between `Notes`, `Expression`, and `Process`
+- `BANK LEFT/RIGHT`: shorten or lengthen the visible loop
+- `SHIFT + BANK LEFT/RIGHT`: halve or double the loop region where possible
+
+Encoder pages:
+
+- `Channel`: generator, density, shape, mutation type
+- `Mixer`: track volume, pan, send 1, send 2
+- `User 1`: tension, Euclid pulses, Euclid rotation, mutation amount
+- `User 2`: selected or held step octave, gate, velocity, articulation
+
+Notes on generation:
+
+- `Acid` focuses on bassline-style phrase families
+- `Motif` focuses on short melodic cells with repetition and variation
+- `Call/Resp` creates a call phrase and an answering phrase
+- `Rolling` targets denser rolling bassline motion
+- the OLED generation message shows the current mode family, for example `Acd.RootAnswer`
 
 ### Chord Step workflow
 
@@ -196,6 +250,9 @@ Important gestures:
 - `MUTE_1..4`: chord octave and root offsets
 - `PATTERN DOWN/UP`: next/previous chord family
 - `ALT + PATTERN DOWN/UP`: next/previous page within the current family
+- `STEP SEQ`: enter `Melodic Step`
+- `SHIFT + STEP SEQ`: accent toggle/edit
+- `ALT + STEP SEQ`: Fill
 - tap an empty step pad: place the selected chord
 - tap a lit step pad: remove the chord from that step
 - `BANK LEFT/RIGHT`: move written step content left or right
@@ -210,7 +267,7 @@ In `Chord Step`, hold `Paste` and press a step. The currently selected step is u
 Pad colors in `PERFORM` also follow Bitwig track and clip color context rather than a fixed Oikontrol palette.
 
 - pads show clip color and launch state
-- empty slots can create a new 4-bar clip
+- empty slots can create a new clip using the current `Default Clip Length` preference
 - quick select, copy, delete, and clip-length gestures live on the `MUTE` buttons
 
 Important gestures:
@@ -280,8 +337,12 @@ Shared transport behavior:
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
+- `Default Clip Length`
+- `SELECT Encoder Startup`
+- `Default Scale`
 - `Pad Brightness`
 - `Pad Saturation`
+- `Encoder touch reset`
 - `SELECT Encoder`
 - `Euclid Scope`
 - `Drum Mode Pinning`
