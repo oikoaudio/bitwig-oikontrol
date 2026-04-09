@@ -743,7 +743,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 }
                 return;
             }
-            handleOikordAccentPressed(pressed);
+            if (driver.isGlobalAltHeld()) {
+                handleOikordAccentPressed(pressed);
+                return;
+            }
+            if (pressed) {
+                driver.enterMelodicStepMode();
+            }
             return;
         }
         if (pressed) {
@@ -1997,7 +2003,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (driver.isGlobalShiftHeld()) {
             return driver.getFillLightState();
         }
-        return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        if (driver.isGlobalAltHeld()) {
+            return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        }
+        return BiColorLightState.GREEN_HALF;
     }
 
     private void handleOikordAccentPressed(final boolean pressed) {

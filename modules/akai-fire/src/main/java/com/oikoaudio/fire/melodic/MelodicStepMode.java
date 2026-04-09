@@ -474,6 +474,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             return;
         }
         final int baseIndex = nearestPitchIndex(phraseContext().baseMidiNote(), layout);
+        final int rootPitch = nearestLayoutRootPitch(layout);
         final LinkedHashSet<Integer> generatedPool = new LinkedHashSet<>();
         final int[] offsetPool = switch (generator) {
             case MOTIF -> new int[]{0, 1, 2, 3, 4, 5, 6};
@@ -492,6 +493,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             case OCTAVE -> 3 + random.nextInt(2);
         };
         generatedPool.add(layout.get(baseIndex));
+        generatedPool.add(rootPitch);
         final List<Integer> shuffledOffsets = new ArrayList<>(offsetPool.length);
         for (final int offset : offsetPool) {
             shuffledOffsets.add(offset);
@@ -520,6 +522,23 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         if (advanceSeed) {
             seed = nextSeed(poolSeed);
         }
+    }
+
+    private int nearestLayoutRootPitch(final List<Integer> layout) {
+        final MelodicPhraseContext context = phraseContext();
+        int bestPitch = layout.get(0);
+        int bestDistance = Integer.MAX_VALUE;
+        for (final int pitch : layout) {
+            if (!context.scale().isRootMidiNote(context.rootNote(), pitch)) {
+                continue;
+            }
+            final int distance = Math.abs(pitch - context.baseMidiNote());
+            if (distance < bestDistance || (distance == bestDistance && pitch < bestPitch)) {
+                bestPitch = pitch;
+                bestDistance = distance;
+            }
+        }
+        return bestPitch;
     }
 
     private void generatePattern() {
