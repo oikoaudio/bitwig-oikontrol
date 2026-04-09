@@ -346,7 +346,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                 octaveActivity = 1.0;
             }
             case ROLLING -> {
-                density = 0.72;
+                density = 1.0;
                 tension = 0.24;
                 octaveActivity = 1.0;
             }
@@ -478,6 +478,65 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final int baseIndex = nearestPitchIndex(phraseContext().baseMidiNote(), layout);
         final int rootPitch = nearestLayoutRootPitch(layout);
         final LinkedHashSet<Integer> generatedPool = new LinkedHashSet<>();
+        if (generator == Generator.ROLLING) {
+            final MelodicPhraseContext context = phraseContext();
+            final int rollingCenter = Math.max(0, context.baseMidiNote() - 12);
+            final int rollingBaseIndex = nearestPitchIndex(rollingCenter, layout);
+            final int rollingRootPitch = nearestLayoutRootPitch(layout, rollingCenter);
+            final int rollingRootIndex = nearestPitchIndex(rollingRootPitch, layout);
+            final int family = random.nextInt(4);
+            generatedPool.add(layout.get(rollingRootIndex));
+            generatedPool.add(layout.get(rollingBaseIndex));
+            switch (family) {
+                case 0 -> {
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 1)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 2)));
+                    if (random.nextDouble() < 0.45 && rollingRootIndex > 0) {
+                        generatedPool.add(layout.get(rollingRootIndex - 1));
+                    }
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 4)));
+                }
+                case 1 -> {
+                    if (rollingRootIndex > 0) {
+                        generatedPool.add(layout.get(rollingRootIndex - 1));
+                    }
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 1)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 3)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 5)));
+                }
+                case 2 -> {
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 2)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 4)));
+                    if (random.nextDouble() < 0.35) {
+                        generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 1)));
+                    }
+                    if (rollingRootIndex > 0) {
+                        generatedPool.add(layout.get(rollingRootIndex - 1));
+                    }
+                }
+                default -> {
+                    if (rollingRootIndex > 0) {
+                        generatedPool.add(layout.get(rollingRootIndex - 1));
+                    }
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 1)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 2)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 4)));
+                    generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 6)));
+                }
+            }
+            if (tension >= 0.65 && density >= 0.9 && random.nextDouble() < 0.35) {
+                generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 5)));
+            }
+            allowedPitches.clear();
+            allowedPitches.addAll(generatedPool);
+            poolUserEdited = false;
+            oled.valueInfo("Pool", "%d notes".formatted(allowedPitches.size()));
+            driver.notifyPopup("Pitch Pool", "%d notes".formatted(allowedPitches.size()));
+            if (advanceSeed) {
+                seed = nextSeed(poolSeed);
+            }
+            return;
+        }
         final int[] offsetPool = switch (generator) {
             case MOTIF -> new int[]{0, 1, 2, 3, 4, 5, 6};
             case CALL_RESPONSE -> new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8};
@@ -527,6 +586,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     }
 
     private int nearestLayoutRootPitch(final List<Integer> layout) {
+        return nearestLayoutRootPitch(layout, phraseContext().baseMidiNote());
+    }
+
+    private int nearestLayoutRootPitch(final List<Integer> layout, final int targetPitch) {
         final MelodicPhraseContext context = phraseContext();
         int bestPitch = layout.get(0);
         int bestDistance = Integer.MAX_VALUE;
@@ -534,7 +597,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             if (!context.scale().isRootMidiNote(context.rootNote(), pitch)) {
                 continue;
             }
-            final int distance = Math.abs(pitch - context.baseMidiNote());
+            final int distance = Math.abs(pitch - targetPitch);
             if (distance < bestDistance || (distance == bestDistance && pitch < bestPitch)) {
                 bestPitch = pitch;
                 bestDistance = distance;
@@ -588,7 +651,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
                     generationSeed);
             case ROLLING -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
-                    Math.max(0.55, density),
+                    density,
                     Math.max(0.2, tension),
                     Math.min(0.25, Math.max(0.05, octaveActivity)),
                     Math.max(6, euclideanPulses),

@@ -32,6 +32,8 @@ public final class MotifGenerator implements MelodicGenerator {
         HOOK_RETURN
     }
 
+    private String lastFamilyLabel = "";
+
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
         final int loopSteps = Math.max(1, Math.min(MelodicPattern.MAX_STEPS, parameters.loopSteps()));
@@ -40,6 +42,7 @@ public final class MotifGenerator implements MelodicGenerator {
         final int[] baseRhythm = projectPositions(RHYTHM_CELLS[random.nextInt(RHYTHM_CELLS.length)], sectionLength);
         final int[] baseCell = buildBaseCell(baseRhythm.length, parameters.tension(), random);
         final MotifFamily family = MotifFamily.values()[random.nextInt(MotifFamily.values().length)];
+        lastFamilyLabel = familyLabel(family);
 
         final boolean[] active = new boolean[loopSteps];
         final int[] degrees = new int[loopSteps];
@@ -79,6 +82,20 @@ public final class MotifGenerator implements MelodicGenerator {
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }
         return new MelodicPattern(steps, loopSteps);
+    }
+
+    @Override
+    public String lastFamilyLabel() {
+        return lastFamilyLabel;
+    }
+
+    private String familyLabel(final MotifFamily family) {
+        return switch (family) {
+            case REPEAT_THEN_TAIL -> "RepeatTail";
+            case SEQUENCE_REPLY -> "Sequence";
+            case TRUNCATE_EXTEND -> "TruncExtend";
+            case HOOK_RETURN -> "HookReturn";
+        };
     }
 
     private int phraseSectionLength(final int loopSteps) {

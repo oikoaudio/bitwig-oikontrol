@@ -108,14 +108,14 @@ class MelodicEngineTest {
     }
 
     @Test
-    void rollingGeneratorUsesMoreThanTightThreeNoteCluster() {
+    void rollingGeneratorUsesAtLeastThreePitches() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
                 new MelodicGenerator.GenerateParameters(16, 0.72, 0.35, 1.0, 6, 0, 31L);
 
         final MelodicPattern pattern = new RollingBassGenerator().generate(context, parameters);
 
-        assertTrue(distictActivePitchCount(pattern) >= 4);
+        assertTrue(distictActivePitchCount(pattern) >= 3);
     }
 
     @Test

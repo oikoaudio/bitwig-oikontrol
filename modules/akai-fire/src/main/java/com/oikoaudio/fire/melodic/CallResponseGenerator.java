@@ -15,6 +15,8 @@ public final class CallResponseGenerator implements MelodicGenerator {
         CADENTIAL_REPLY
     }
 
+    private String lastFamilyLabel = "";
+
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
         final int loopSteps = Math.max(1, Math.min(MelodicPattern.MAX_STEPS, parameters.loopSteps()));
@@ -23,6 +25,7 @@ public final class CallResponseGenerator implements MelodicGenerator {
         final boolean[] active = new boolean[loopSteps];
         final int[] degrees = new int[loopSteps];
         final ResponseTransform transform = ResponseTransform.values()[random.nextInt(ResponseTransform.values().length)];
+        lastFamilyLabel = transformLabel(transform);
 
         buildCall(active, degrees, half, parameters.density(), parameters.tension(), random);
         buildResponse(active, degrees, half, loopSteps, transform, parameters.density(), parameters.tension(), random);
@@ -47,6 +50,20 @@ public final class CallResponseGenerator implements MelodicGenerator {
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }
         return new MelodicPattern(steps, loopSteps);
+    }
+
+    @Override
+    public String lastFamilyLabel() {
+        return lastFamilyLabel;
+    }
+
+    private String transformLabel(final ResponseTransform transform) {
+        return switch (transform) {
+            case DOWN_ANSWER -> "DownAnswer";
+            case UP_ANSWER -> "UpAnswer";
+            case INVERT_AROUND_ROOT -> "Invert";
+            case CADENTIAL_REPLY -> "Cadential";
+        };
     }
 
     private void buildCall(final boolean[] active, final int[] degrees, final int half, final double density,

@@ -22,12 +22,15 @@ public final class AcidGenerator implements MelodicGenerator {
         SUPPORT_HOOK
     }
 
+    private String lastFamilyLabel = "";
+
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
         final int loopSteps = Math.max(1, Math.min(MelodicPattern.MAX_STEPS, parameters.loopSteps()));
         final Random random = new Random(parameters.seed());
         final boolean[] active = buildActivity(loopSteps, parameters.density(), random);
         final Family family = Family.values()[random.nextInt(Family.values().length)];
+        lastFamilyLabel = familyLabel(family);
         final int[] degrees = new int[loopSteps];
         final int[] octaveOffsets = new int[loopSteps];
         final boolean[] accents = new boolean[loopSteps];
@@ -66,6 +69,20 @@ public final class AcidGenerator implements MelodicGenerator {
             pattern = forceThirdPitch(pattern, context, active);
         }
         return pattern;
+    }
+
+    @Override
+    public String lastFamilyLabel() {
+        return lastFamilyLabel;
+    }
+
+    private String familyLabel(final Family family) {
+        return switch (family) {
+            case FUNDAMENTAL_ROLL -> "FundRoll";
+            case ROOT_ANSWER -> "RootAnswer";
+            case OCTAVE_LEAD -> "OctLead";
+            case SUPPORT_HOOK -> "SupportHook";
+        };
     }
 
     private boolean[] buildActivity(final int loopSteps, final double density, final Random random) {
