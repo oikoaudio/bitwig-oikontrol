@@ -11,8 +11,8 @@ The Fire exposes four top-level workflows. Three are selected by the large mode 
 | Button | Role | Notes |
 | --- | --- | --- |
 | `DRUM` | Drum sequencing | Default sequencing workflow |
-| `NOTE` | Live note input | Includes entry to `Chord Step` via `STEP SEQ` |
-| `STEP SEQ` | Step sequencing | Enters `Chord Step` from `NOTE` and `Melodic Step` from `DRUM` |
+| `NOTE` | Live note input | Includes entry to `Chord Step` on second press |
+| `STEP` | Step sequencing | Enters `Melodic Step` mode |
 | `PERFORM` | Clip launcher and performance mode | `16x4` clip grid |
 
 ## Shared Transport And Utility Controls
