@@ -5,35 +5,34 @@ import com.oikoaudio.fire.sequence.StepPadLightHelper;
 
 public final class MelodicRenderer {
     public static final RgbLigthState ACTIVE_STEP = new RgbLigthState(0, 88, 32, true);
-    public static final RgbLigthState SELECTED_STEP = new RgbLigthState(112, 96, 0, true);
-    public static final RgbLigthState TIED_STEP = new RgbLigthState(16, 70, 70, true);
-    public static final RgbLigthState ACCENT_STEP = new RgbLigthState(0, 110, 60, true);
+    public static final RgbLigthState HELD_STEP = RgbLigthState.PURPLE;
     public static final RgbLigthState OUT_OF_LOOP = new RgbLigthState(12, 12, 18, true);
-    public static final RgbLigthState PROCESS = new RgbLigthState(32, 48, 96, true);
-    public static final RgbLigthState PROCESS_SELECTED = new RgbLigthState(96, 72, 24, true);
     public static final RgbLigthState PITCH_POOL_ON = new RgbLigthState(0, 76, 112, true);
     public static final RgbLigthState PITCH_POOL_OFF = RgbLigthState.GRAY_1;
     public static final RgbLigthState PITCH_POOL_ROOT = new RgbLigthState(88, 80, 0, true);
-    public static final RgbLigthState PITCH_POOL_USED = new RgbLigthState(0, 116, 68, true);
+    public static final RgbLigthState PITCH_POOL_USED = RgbLigthState.PURPLE;
 
     private MelodicRenderer() {
     }
 
-    public static RgbLigthState stepLight(final MelodicPattern.Step step, final boolean selected,
-                                          final boolean inLoop, final boolean playing, final int stepIndex) {
+    public static RgbLigthState stepLight(final MelodicPattern.Step step, final boolean held,
+                                          final boolean inLoop, final boolean playing, final int stepIndex,
+                                          final RgbLigthState clipColor) {
         if (!inLoop) {
             return OUT_OF_LOOP;
         }
-        if (selected) {
-            return playing ? SELECTED_STEP.getBrightest() : SELECTED_STEP;
+        if (held) {
+            return playing ? HELD_STEP.getBrightest() : HELD_STEP;
         }
+        final RgbLigthState baseColor = clipColor != null ? clipColor : ACTIVE_STEP;
         if (step.tieFromPrevious()) {
-            return playing ? TIED_STEP.getBrightest() : TIED_STEP;
+            final RgbLigthState tied = baseColor.getSoftDimmed();
+            return playing ? tied.getBrightend() : tied;
         }
         if (!step.active()) {
             return StepPadLightHelper.renderEmptyStep(stepIndex, playing ? stepIndex : -1);
         }
-        final RgbLigthState base = step.accent() ? ACCENT_STEP : ACTIVE_STEP;
+        final RgbLigthState base = step.accent() ? baseColor.getBrightend() : baseColor.getSoftDimmed();
         return playing ? base.getBrightest() : base;
     }
 

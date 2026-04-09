@@ -206,6 +206,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private boolean bankMoveInFlight = false;
     private int bankMoveGeneration = 0;
     private RgbLigthState oikordStepBaseColor = OCCUPIED_STEP;
+    private RgbLigthState selectedNoteClipColor = OCCUPIED_STEP;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator liveScaleEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
@@ -2361,6 +2362,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private RgbLigthState getOikordOccupiedStepColor() {
+        if (selectedNoteClipColor != null) {
+            return selectedNoteClipColor;
+        }
         return oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
     }
 
@@ -3245,9 +3249,11 @@ public class NoteMode extends Layer implements StepSequencerHost {
             slot.exists().markInterested();
             slot.hasContent().markInterested();
             slot.isSelected().markInterested();
+            slot.color().markInterested();
             slot.exists().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.hasContent().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.isSelected().addValueObserver(ignored -> refreshSelectedNoteClipState());
+            slot.color().addValueObserver((r, g, b) -> refreshSelectedNoteClipState());
         }
         refreshSelectedNoteClipState();
     }
@@ -3257,11 +3263,13 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final boolean previousHasContent = selectedNoteClipHasContent;
         selectedNoteClipSlotIndex = -1;
         selectedNoteClipHasContent = false;
+        selectedNoteClipColor = oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
         for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
             final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
             if (slot.exists().get() && slot.isSelected().get()) {
                 selectedNoteClipSlotIndex = i;
                 selectedNoteClipHasContent = slot.hasContent().get();
+                selectedNoteClipColor = ColorLookup.getColor(slot.color().get());
                 break;
             }
         }

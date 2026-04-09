@@ -13,6 +13,7 @@ import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
+import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -84,6 +85,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     private boolean heldStepConsumed = false;
     private int playingStep = -1;
     private int selectedClipSlotIndex = -1;
+    private RgbLigthState selectedClipColor = MelodicRenderer.ACTIVE_STEP;
     private int loopSteps = DEFAULT_LOOP_STEPS;
     private final LinkedHashSet<Integer> allowedPitches = new LinkedHashSet<>();
     private boolean poolUserEdited = false;
@@ -947,7 +949,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }
         final List<Integer> orderedPool = new ArrayList<>(allowedPitches);
         Collections.sort(orderedPool);
-        final Map<Integer, Integer> broadPoolMapping = orderedPool.size() >= 6
+        final Map<Integer, Integer> broadPoolMapping = orderedPool.size() >= 2
                 ? buildBroadPoolMapping(pattern, orderedPool)
                 : Map.of();
         final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
@@ -1406,19 +1408,23 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             slot.exists().markInterested();
             slot.isSelected().markInterested();
             slot.hasContent().markInterested();
+            slot.color().markInterested();
             slot.exists().addValueObserver(ignored -> refreshSelectedClipState());
             slot.isSelected().addValueObserver(ignored -> refreshSelectedClipState());
             slot.hasContent().addValueObserver(ignored -> refreshSelectedClipState());
+            slot.color().addValueObserver((r, g, b) -> refreshSelectedClipState());
         }
         refreshSelectedClipState();
     }
 
     private void refreshSelectedClipState() {
         selectedClipSlotIndex = -1;
+        selectedClipColor = MelodicRenderer.ACTIVE_STEP;
         for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
             final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
             if (slot.exists().get() && slot.isSelected().get()) {
                 selectedClipSlotIndex = i;
+                selectedClipColor = ColorLookup.getColor(slot.color().get());
                 break;
             }
         }
@@ -1459,8 +1465,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             return getPitchPoolPadLight(padIndex);
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
-        return MelodicRenderer.stepLight(cachedPattern.step(stepIndex), stepIndex == selectedStep,
-                stepIndex < loopSteps, stepIndex == playingStep, stepIndex);
+        return MelodicRenderer.stepLight(cachedPattern.step(stepIndex), heldStep != null && heldStep == stepIndex,
+                stepIndex < loopSteps, stepIndex == playingStep, stepIndex, selectedClipColor);
     }
 
     private RgbLigthState getPitchPoolPadLight(final int padIndex) {
