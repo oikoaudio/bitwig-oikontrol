@@ -189,14 +189,22 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final BiColorButton bankLeftButton = driver.getButton(NoteAssign.BANK_L);
         bankLeftButton.bindPressed(this, pressed -> {
             if (pressed) {
-                applyTransform(cachedPattern.rotated(-1), "Rotate", "Left", false);
+                if (driver.isGlobalAltHeld()) {
+                    applyHalveLength();
+                } else {
+                    applyTransform(cachedPattern.rotated(-1), "Rotate", "Left", false);
+                }
             }
         }, this::bankLightState);
 
         final BiColorButton bankRightButton = driver.getButton(NoteAssign.BANK_R);
         bankRightButton.bindPressed(this, pressed -> {
             if (pressed) {
-                applyTransform(cachedPattern.rotated(1), "Rotate", "Right", false);
+                if (driver.isGlobalAltHeld()) {
+                    applyRepeatDouble();
+                } else {
+                    applyTransform(cachedPattern.rotated(1), "Rotate", "Right", false);
+                }
             }
         }, this::bankLightState);
 
@@ -974,6 +982,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
             driver.adjustGrooveShuffleAmount(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            oled.valueInfo("Drum Grid", "Drum only");
         } else {
             driver.adjustMainCursorParameter(inc, fine);
         }
@@ -1013,6 +1023,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Drum Grid", "Drum only");
             } else {
                 oled.clearScreenDelayed();
             }

@@ -47,6 +47,7 @@ Available alternate roles:
 - `Tempo`
 - `Note Repeat`
 - `Track Select`
+- `Drum Grid`
 
 ### Encoder Roles
 
@@ -57,6 +58,7 @@ Available alternate roles:
 | `Tempo` | Adjust project tempo | No special note beyond normal encoder interaction |
 | `Note Repeat` | Select repeat division; `Off` disables repeat | Works as the active repeat control |
 | `Track Select` | Move to previous/next track | Hold while turning to jump by visible pages |
+| `Drum Grid` | Adjust drum-step grid resolution in `DRUM` mode | `DRUM` mode only |
 
 ## Popup Browser
 
@@ -106,7 +108,7 @@ Browser insert mode follows modifiers when opening:
 | `ALT + STEP SEQ` | Toggle Fill |
 | `BANK LEFT/RIGHT` | Move or rotate pattern |
 | `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
-| `ALT + BANK LEFT/RIGHT` | Grid resolution down / up |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 
 Held-step nudge behavior:
 
@@ -130,6 +132,8 @@ Current `User 2` Euclid assignments:
 | 2 | Euclid pulses |
 | 3 | Euclid rotation |
 | 4 | Accent density |
+
+Drum grid resolution is now adjusted from the `SELECT` encoder when its role is set to `Drum Grid`.
 
 ## NOTE Mode
 
@@ -208,6 +212,7 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
 | `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge held chord material |
 | `SHIFT + BANK LEFT/RIGHT` | Fine-nudge visible chord material |
 
@@ -264,6 +269,7 @@ Current generators:
 | Tap step | Toggle or select step |
 | `SHIFT + STEP SEQ` hold | Accent gesture for melodic steps |
 | `BANK LEFT/RIGHT` | Rotate phrase left / right |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | `PATTERN UP` | Generate new pitch pool |
 | `ALT + PATTERN UP` | Mutate pitch pool |
 | `PATTERN DOWN` | Generate new phrase |

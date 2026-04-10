@@ -60,12 +60,14 @@ public final class FireControlPreferences {
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
     public static final String MAIN_ENCODER_NOTE_REPEAT = "Note Repeat";
     public static final String MAIN_ENCODER_TRACK_SELECT = "Track Select";
+    public static final String MAIN_ENCODER_DRUM_GRID = "Drum Grid";
     public static final String[] MAIN_ENCODER_ROLES = {
             MAIN_ENCODER_LAST_TOUCHED,
             MAIN_ENCODER_SHUFFLE,
             MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT,
-            MAIN_ENCODER_TRACK_SELECT
+            MAIN_ENCODER_TRACK_SELECT,
+            MAIN_ENCODER_DRUM_GRID
     };
     public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
     public static final String MAIN_ENCODER_STARTUP_FUNCTION_SET = "Function Set";
@@ -180,6 +182,9 @@ public final class FireControlPreferences {
         }
         if (MAIN_ENCODER_NOTE_REPEAT.equals(normalizedRole)) {
             return MAIN_ENCODER_TRACK_SELECT;
+        }
+        if (MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)) {
+            return MAIN_ENCODER_DRUM_GRID;
         }
         return MAIN_ENCODER_SHUFFLE;
     }

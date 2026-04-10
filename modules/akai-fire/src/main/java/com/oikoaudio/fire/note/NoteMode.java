@@ -205,6 +205,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int selectedNoteClipSlotIndex = -1;
     private boolean chordObservationResyncQueued = false;
     private boolean pendingBankFineMove = false;
+    private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
     private int bankMoveGeneration = 0;
     private RgbLigthState oikordStepBaseColor = OCCUPIED_STEP;
@@ -1516,6 +1517,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private void clearPendingBankAction() {
         pendingBankDir = 0;
         pendingBankFineMove = false;
+        pendingBankLengthAdjust = false;
         pendingBankTargetSteps.clear();
         pendingBankFineStarts.clear();
         pendingBankChordEvents.clear();
@@ -1868,6 +1870,16 @@ public class NoteMode extends Layer implements StepSequencerHost {
             clearShiftBankFineNudgeSession();
         }
         if (noteStepActive) {
+            if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP && driver.isGlobalAltHeld()) {
+                if (pressed) {
+                    pendingBankLengthAdjust = true;
+                    adjustChordClipLength(amount);
+                } else if (pendingBankLengthAdjust) {
+                    pendingBankLengthAdjust = false;
+                }
+                clearPendingBankAction();
+                return;
+            }
             if (bankMoveInFlight) {
                 if (!pressed) {
                     clearPendingBankAction();
@@ -1921,6 +1933,39 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         adjustOctave(amount);
+    }
+
+    private void adjustChordClipLength(final int direction) {
+        if (!ensureSelectedNoteClipSlot()) {
+            return;
+        }
+        final double currentLength = noteStepClip.getLoopLength().get();
+        if (direction < 0) {
+            if (currentLength <= STEP_LENGTH) {
+                oled.valueInfo("Clip Length", "Min");
+                return;
+            }
+            final double newLength = Math.max(STEP_LENGTH, currentLength / 2.0);
+            noteStepClip.getLoopLength().set(newLength);
+            oled.valueInfo("Clip Length", formatBars(newLength));
+            return;
+        }
+        final double newLength = Math.min(MAX_CHORD_STEPS * STEP_LENGTH, currentLength * 2.0);
+        if (newLength <= currentLength) {
+            oled.valueInfo("Clip Length", "Max");
+            return;
+        }
+        noteStepClip.duplicateContent();
+        noteStepClip.getLoopLength().set(newLength);
+        oled.valueInfo("Clip Length", formatBars(newLength));
+    }
+
+    private String formatBars(final double beatLength) {
+        final double bars = beatLength / 4.0;
+        if (Math.rint(bars) == bars) {
+            return Integer.toString((int) bars) + " Bars";
+        }
+        return String.format("%.2f Bars", bars);
     }
 
     private void handleLiveModeAdvance(final boolean pressed) {
@@ -2222,6 +2267,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
             driver.adjustGrooveShuffleAmount(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            oled.valueInfo("Drum Grid", "Drum only");
         } else {
             driver.adjustMainCursorParameter(inc, fine);
         }
@@ -2265,6 +2312,12 @@ public class NoteMode extends Layer implements StepSequencerHost {
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Drum Grid", "Drum only");
             } else {
                 oled.clearScreenDelayed();
             }

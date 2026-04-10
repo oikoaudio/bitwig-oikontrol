@@ -35,6 +35,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
     public static final String MAIN_ENCODER_NOTE_REPEAT_ROLE = FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT;
     public static final String MAIN_ENCODER_TRACK_SELECT_ROLE = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
+    public static final String MAIN_ENCODER_DRUM_GRID_ROLE = FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
 
     private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
@@ -1234,6 +1235,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (activeMode == TopLevelMode.DRUM && shouldAutoPinFirstDrumMachine()) {
+            oled.valueInfo("Track Sel.", "Pinned");
+            notifyPopup("Track Sel.", "Pinned");
             return;
         }
         final CursorTrack cursorTrack = viewControl.getCursorTrack();
