@@ -189,6 +189,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private int oikordOctaveOffset = 0;
     private Integer heldStepAnchor = null;
     private int liveVelocity = DEFAULT_LIVE_VELOCITY;
+    private int liveVelocitySensitivity = 100;
     private int livePressure = MIN_MIDI_VALUE;
     private int liveTimbre = DEFAULT_TIMBRE;
     private int liveModulation = MIN_MIDI_VALUE;
@@ -366,7 +367,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
         final RgbButton[] pads = driver.getRgbButtons();
         for (int index = 0; index < pads.length; index++) {
             final int padIndex = index;
-            pads[index].bindPressed(this, pressed -> handlePadPress(padIndex, pressed), () -> getPadLight(padIndex));
+            pads[index].bindPressedVelocity(this, velocity -> handlePadPress(padIndex, true, velocity),
+                    () -> handlePadPress(padIndex, false, 0), () -> getPadLight(padIndex));
         }
     }
 
@@ -493,13 +495,22 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         markEncoderAdjusted(1);
-        final int nextVelocity = Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, liveVelocity + steps));
-        if (nextVelocity == liveVelocity) {
+        if (driver.isGlobalShiftHeld()) {
+            final int nextVelocity = Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, liveVelocity + steps));
+            if (nextVelocity == liveVelocity) {
+                return;
+            }
+            liveVelocity = nextVelocity;
+            applyLiveVelocity();
+            oled.paramInfo("Default Velocity", liveVelocity, "Live Note", MIN_VELOCITY, MAX_MIDI_VALUE);
             return;
         }
-        liveVelocity = nextVelocity;
-        applyLiveVelocity();
-        oled.paramInfo("Velocity", liveVelocity, "Live Note", MIN_VELOCITY, MAX_MIDI_VALUE);
+        final int nextSensitivity = LiveVelocityLogic.clampSensitivity(liveVelocitySensitivity + steps);
+        if (nextSensitivity == liveVelocitySensitivity) {
+            return;
+        }
+        liveVelocitySensitivity = nextSensitivity;
+        oled.paramInfo("Velocity Sens", liveVelocitySensitivity, "Live Note", 0, 100);
     }
 
     private void handleEncoder1(final int inc) {
@@ -624,7 +635,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void handleLiveVelocityTouch(final boolean pressed) {
         handleResettableTouch(2, pressed,
-                () -> oled.valueInfo("Velocity", Integer.toString(liveVelocity)),
+                this::showLiveVelocityInfo,
                 liveVelocityEncoder::reset);
     }
 
@@ -759,9 +770,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
     }
 
-    private void handlePadPress(final int padIndex, final boolean pressed) {
+    private void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
         if (!noteStepActive) {
-            handleLivePadPress(padIndex, pressed);
+            handleLivePadPress(padIndex, pressed, velocity);
             return;
         }
         if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
@@ -771,10 +782,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         handleClipStepRecordPadPress(padIndex, pressed);
     }
 
-    private void handleLivePadPress(final int padIndex, final boolean pressed) {
+    private void handleLivePadPress(final int padIndex, final boolean pressed, final int velocity) {
         if (pressed) {
             heldPads.add(padIndex);
-            triggerLivePadNoteOn(padIndex);
+            triggerLivePadNoteOn(padIndex, velocity);
         } else {
             heldPads.remove(padIndex);
             triggerLivePadNoteOff(padIndex);
@@ -2271,18 +2282,22 @@ public class NoteMode extends Layer implements StepSequencerHost {
         heldNotes.keySet().stream()
                 .filter(heldPads::contains)
                 .sorted()
-                .forEach(this::triggerLivePadNoteOn);
+                .forEach(padIndex -> triggerLivePadNoteOn(padIndex, heldNotes.get(padIndex).velocity()));
     }
 
     private void triggerLivePadNoteOn(final int padIndex) {
+        triggerLivePadNoteOn(padIndex, resolveLivePadVelocity(liveVelocity, 127));
+    }
+
+    private void triggerLivePadNoteOn(final int padIndex, final int rawVelocity) {
         triggerLivePadNoteOff(padIndex);
         final int midiNote = getLivePadMidiNote(padIndex);
         if (midiNote < 0) {
             return;
         }
-        final int velocity = liveVelocity;
-        noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, velocity);
-        soundingLiveNotesByPad.put(padIndex, new LivePadNote(midiNote, velocity));
+        final int appliedVelocity = resolveLivePadVelocity(liveVelocity, rawVelocity);
+        noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, appliedVelocity);
+        soundingLiveNotesByPad.put(padIndex, new LivePadNote(midiNote, appliedVelocity));
     }
 
     private void triggerLivePadNoteOff(final int padIndex) {
@@ -2295,6 +2310,18 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private int getLivePadMidiNote(final int padIndex) {
         return applyLivePitchOffset(createLayout().noteForPad(padIndex));
+    }
+
+    private int resolveLivePadVelocity(final int configuredVelocity, final int rawVelocity) {
+        return LiveVelocityLogic.resolveVelocity(configuredVelocity, liveVelocitySensitivity, rawVelocity);
+    }
+
+    private void showLiveVelocityInfo() {
+        if (driver.isGlobalShiftHeld()) {
+            oled.valueInfo("Default Velocity", Integer.toString(liveVelocity));
+            return;
+        }
+        oled.valueInfo("Velocity", "Sens %d%% / Def %d".formatted(liveVelocitySensitivity, liveVelocity));
     }
 
     private RgbLigthState getPadLight(final int padIndex) {

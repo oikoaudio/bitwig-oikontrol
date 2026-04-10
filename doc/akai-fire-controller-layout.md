@@ -154,6 +154,8 @@ Current `User 2` Euclid assignments:
 
 The default note octave is initialized from the `Default Note Input Octave` preference.
 
+In live NOTE mode, Encoder 3 adjusts `Velocity Sensitivity` and `SHIFT + Encoder 3` adjusts `Default Velocity`.
+
 ### Live Note Encoder Pages
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
