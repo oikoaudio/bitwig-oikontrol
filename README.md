@@ -26,7 +26,7 @@ High-level controller summary:
 
 - **Launch Control XL (Mk2)** keeps the Bitwig factory-template workflow intact, while adding user-templates for drum machine control, the Richie Hawtin / Eric Ahrens arp workflow from `rhbitwig` and a mode targeting 6-7 remote pages in one view.
 
-- **Akai Fire** provides OLED and optional on-screen feedback for most parameters, step micro-timing, configurable device pinning and four top-level modes: 
+- **Akai Fire** provides OLED and optional on-screen feedback for most parameters, shared root/scale control, step micro-timing, configurable device pinning and four top-level modes: 
 
 `STEP` - a generative melodic step sequencer
 
@@ -35,6 +35,8 @@ High-level controller summary:
 `PERFORM` - clip launching and clip management
 
 `DRUM` - an X0X sequencer mode forked from the rhbitwig extension (see attribution section)
+
+`SHIFT + PERFORM` - a latched global `Settings` page for shared `Root Key` and `Scale`
 
 ## Requirements
 

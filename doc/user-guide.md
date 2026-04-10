@@ -109,10 +109,11 @@ Quick start:
 
 The Akai Fire extension is a clip, note, and sequencer workflow built around four top-level modes:
 
+- `STEP`
 - `DRUM`
 - `NOTE`
 - `PERFORM`
-- `STEP`
+- `SETTINGS` (not a full mode)
 
 ### DRUM mode
 
@@ -131,7 +132,7 @@ Main gestures:
 - `ALT + STEP SEQ`: Fill
 - `BANK LEFT/RIGHT`: pattern shift and movement
 - `SHIFT + BANK LEFT/RIGHT`: fine nudge
-- `ALT + BANK LEFT/RIGHT`: grid resolution
+- `ALT + BANK LEFT/RIGHT`: halve / double clip length
 
 In `DRUM`, hold `Paste` and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:
 
@@ -169,8 +170,10 @@ Quick start:
 `NOTE` provides a 16x4 isomorphic playing surface.
 
 - `Chromatic` and `In Key` layouts
-- local root note, scale, and octave controls
+- shared root key and scale, with local octave and layout controls
 - LED and OLED note feedback
+- `Pitch Gliss` on the Channel encoder page
+- `Velocity Sensitivity` with `SHIFT + Encoder 3` for `Default Velocity`
 
 Useful live-note controls:
 
@@ -190,7 +193,7 @@ Quick start:
 1. Enter `NOTE`.
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
-4. Use the current note layout controls to change scale, root, and octave.
+4. Use `PATTERN UP/DOWN` for octave, `SHIFT + PATTERN UP/DOWN` for shared root, and the Channel page for `Scale`, `Pitch Gliss`, and live velocity response.
 
 ### Chord Step workflow
 To get to this mode from the Note live input mode, press the `NOTE` controller button. From any other mode, press the `NOTE` button twice to cycle past the Note input mode.
@@ -199,6 +202,7 @@ To get to this mode from the Note live input mode, press the `NOTE` controller b
 
 - Upper two rows: chord definition or curated chord slots
 - Lower two rows: 16 visible steps
+- the builder defaults to in-key view and uses the same shared root/scale as live NOTE
 - In chord definition mode, first pick which notes that should be in the chord on the top two rows, then place it on steps on the bottom two rows.
 - If you select one of the pre-defined chord families (using the `PATTERN` buttons), the workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
 - Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord
@@ -215,6 +219,8 @@ Important gestures:
 - tap a lit step pad: remove the chord from that step
 - `BANK LEFT/RIGHT`: move written step content left or right
 - `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
+- `ALT + BANK LEFT/RIGHT`: halve / double clip length
+- `SHIFT + ALT + PATTERN DOWN`: clear the selected clip contents
 
 In `Chord Step`, hold `Paste` (Mute_2) and press a step. The currently selected step is used as the source to copy from.
 
@@ -245,8 +251,9 @@ Important gestures:
 - `PATTERN DOWN`: generate a new phrase from the current mode
 - `ALT + PATTERN DOWN`: mutate the current phrase
 - `SHIFT + PATTERN UP` and `SHIFT + PATTERN DOWN`: cycle the current view between `Notes`, `Expression`, and `Process`
-- `BANK LEFT/RIGHT`: shorten or lengthen the visible loop
-- `SHIFT + BANK LEFT/RIGHT`: halve or double the loop region where possible
+- `BANK LEFT/RIGHT`: rotate the phrase
+- `ALT + BANK LEFT/RIGHT`: halve or double the clip length
+- `SHIFT + ALT + PATTERN DOWN`: clear the selected clip contents
 
 Encoder pages:
 
@@ -287,10 +294,17 @@ Important gestures:
 
 Encoder pages:
 
-- `Channel`: project remotes
-- `Mixer`: selected track volume, pan, send 1, send 2
-- `User 1`: selected track remotes
-- `User 2`: selected device remotes
+- `Channel`: global remotes 1-4
+- `Mixer`: volume, pan, send 1, send 2
+- `User 1`: track remotes 1-4
+- `User 2`: master / cue controls
+
+`SHIFT + PERFORM` opens a latched `Settings` page. From there:
+
+- Encoder 1 adjusts the shared `Root Key`
+- Encoder 2 adjusts the shared `Scale`
+- the pad grid becomes a non-performance settings display
+- press `PERFORM` again to leave `Settings`
 
 ### Main encoder and transport
 
@@ -303,6 +317,7 @@ Press `SHIFT + SELECT` to choose that alternate role by cycling through the full
 - `Tempo`
 - `Note Repeat`
 - `Track Select`
+- `Drum Grid`
 
 When `Note Repeat` is active:
 
@@ -313,6 +328,12 @@ When `Track Select` is active:
 
 - Turn `SELECT` to move to the previous or next track
 - Hold `SELECT` while turning to jump by track pages
+- In `DRUM` mode with automatic drum pinning enabled, the encoder falls back to `Drum Grid`
+
+When `Drum Grid` is active:
+
+- turn `SELECT` to change Drum Step grid resolution
+- this role is only meaningful in `DRUM` mode
 
 When `Shuffle` is active:
 
@@ -343,8 +364,10 @@ Shared transport behavior:
 - `Clip Launch Quantization`
 - `Default Clip Length`
 - `SELECT Encoder Startup`
+- `Default Root Key`
 - `Default Scale`
 - `Default Note Input Octave`
+- `Default Velocity Sensitivity`
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`

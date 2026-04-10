@@ -34,6 +34,8 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT,
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_DRUM_GRID,
+                FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_DRUM_GRID));
         assertEquals(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED,
                 FireControlPreferences.normalizeMainEncoderRole("unexpected"));
     }
@@ -46,8 +48,10 @@ class FireControlPreferencesTest {
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT));
-        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+        assertEquals(FireControlPreferences.MAIN_ENCODER_DRUM_GRID,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_DRUM_GRID));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
@@ -109,6 +113,51 @@ class FireControlPreferencesTest {
         assertEquals(16.0,
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_4_BARS));
         assertEquals(8.0, FireControlPreferences.toClipLengthBeats("unexpected"));
+    }
+
+    @Test
+    void normalizesDefaultRootKeyPreferenceValues() {
+        assertEquals(FireControlPreferences.DEFAULT_ROOT_KEY,
+                FireControlPreferences.normalizeDefaultRootKey(FireControlPreferences.DEFAULT_ROOT_KEY));
+        assertEquals("F#",
+                FireControlPreferences.normalizeDefaultRootKey("F#"));
+        assertEquals(FireControlPreferences.DEFAULT_ROOT_KEY,
+                FireControlPreferences.normalizeDefaultRootKey("unexpected"));
+    }
+
+    @Test
+    void mapsDefaultRootKeyPreferenceToPitchClass() {
+        assertEquals(0, FireControlPreferences.toDefaultRootKey("C"));
+        assertEquals(6, FireControlPreferences.toDefaultRootKey("F#"));
+        assertEquals(11, FireControlPreferences.toDefaultRootKey("B"));
+        assertEquals(0, FireControlPreferences.toDefaultRootKey("unexpected"));
+    }
+
+    @Test
+    void normalizesDefaultNoteInputOctavePreferenceToSupportedRange() {
+        assertEquals("2", FireControlPreferences.normalizeDefaultNoteInputOctave("2"));
+        assertEquals("3", FireControlPreferences.normalizeDefaultNoteInputOctave("3"));
+        assertEquals("4", FireControlPreferences.normalizeDefaultNoteInputOctave("4"));
+        assertEquals(FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE,
+                FireControlPreferences.normalizeDefaultNoteInputOctave("7"));
+    }
+
+    @Test
+    void normalizesDefaultVelocitySensitivityPreferenceValues() {
+        assertEquals(FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY,
+                FireControlPreferences.normalizeDefaultVelocitySensitivity(
+                        FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY));
+        assertEquals("50", FireControlPreferences.normalizeDefaultVelocitySensitivity("50"));
+        assertEquals(FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY,
+                FireControlPreferences.normalizeDefaultVelocitySensitivity("85"));
+    }
+
+    @Test
+    void mapsDefaultVelocitySensitivityPreferenceToPercent() {
+        assertEquals(0, FireControlPreferences.toDefaultVelocitySensitivity("0"));
+        assertEquals(80, FireControlPreferences.toDefaultVelocitySensitivity("80"));
+        assertEquals(100, FireControlPreferences.toDefaultVelocitySensitivity("100"));
+        assertEquals(80, FireControlPreferences.toDefaultVelocitySensitivity("unexpected"));
     }
 
     @Test
