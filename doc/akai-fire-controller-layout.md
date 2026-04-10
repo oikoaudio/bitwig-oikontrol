@@ -158,7 +158,7 @@ The default note octave is initialized from the `Default Note Input Octave` pref
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Pitch offset | Live velocity | Scale | Layout / note family |
+| `Channel` | Mod | Pitch Gliss | Live velocity | Scale selector |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Mod | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |

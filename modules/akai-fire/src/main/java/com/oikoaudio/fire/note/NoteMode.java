@@ -126,7 +126,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
     private final Integer[] noteTranslationTable = new Integer[128];
     private final Set<Integer> heldPads = new HashSet<>();
-    private final Map<Integer, Integer> soundingLiveNotesByPad = new HashMap<>();
+    private final Map<Integer, LivePadNote> soundingLiveNotesByPad = new HashMap<>();
     private final Set<Integer> heldStepPads = new HashSet<>();
     private final Set<Integer> addedStepPads = new HashSet<>();
     private final Set<Integer> modifiedStepPads = new HashSet<>();
@@ -271,6 +271,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
         }
     }
 
+    private record LivePadNote(int midiNote, int velocity) {
+    }
+
     public NoteMode(final AkaiFireOikontrolExtension driver, final NoteRepeatHandler noteRepeatHandler) {
         super(driver.getLayers(), "NOTE_MODE_LAYER");
         this.driver = driver;
@@ -406,17 +409,17 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void bindLiveChannelEncoders(final TouchEncoder[] encoders) {
-        encoders[0].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
-        encoders[0].bindTouched(liveChannelLayer, this::handleLivePitchOffsetTouch);
+        bindLiveMidiEncoder(encoders[0], liveChannelLayer, "Mod",
+                this::adjustLiveModulation, () -> liveModulation);
 
-        encoders[1].bindEncoder(liveChannelLayer, this::handleLiveVelocityEncoder);
-        encoders[1].bindTouched(liveChannelLayer, this::handleLiveVelocityTouch);
+        encoders[1].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
+        encoders[1].bindTouched(liveChannelLayer, this::handleLivePitchOffsetTouch);
 
-        encoders[2].bindEncoder(liveChannelLayer, this::handleEncoder1);
-        encoders[2].bindTouched(liveChannelLayer, this::handleEncoder1Touch);
+        encoders[2].bindEncoder(liveChannelLayer, this::handleLiveVelocityEncoder);
+        encoders[2].bindTouched(liveChannelLayer, this::handleLiveVelocityTouch);
 
-        encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder3);
-        encoders[3].bindTouched(liveChannelLayer, this::handleEncoder3Touch);
+        encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
+        encoders[3].bindTouched(liveChannelLayer, this::handleEncoder1Touch);
     }
 
     private void bindLiveExpressionEncoders(final TouchEncoder[] encoders) {
@@ -573,23 +576,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
         if (nextIndex == livePitchOffsetIndex) {
             return;
         }
-        markEncoderAdjusted(0);
-        final Map<Integer, Integer> oldHeldNotes = collectHeldNotes(createLayout());
-        final boolean retuneHeld = driver.shouldRetuneHeldLiveNotes();
-        if (retuneHeld) {
-            sendHeldNotes(oldHeldNotes, false);
-        }
-        livePitchOffsetIndex = nextIndex;
-        applyLayout();
-        if (retuneHeld) {
-            sendHeldNotes(collectHeldNotes(createLayout()), true);
-        }
-        oled.valueInfo("Pitch Offs", formatSignedValue(getLivePitchOffset()));
+        markEncoderAdjusted(1);
+        retuneLivePads(() -> livePitchOffsetIndex = nextIndex);
+        oled.valueInfo("Pitch Gliss", formatSignedValue(getLivePitchOffset()));
     }
 
     private void handleLivePitchOffsetTouch(final boolean touched) {
-        handleResettableTouch(0, touched,
-                () -> oled.valueInfo("Pitch Offs", formatSignedValue(getLivePitchOffset())),
+        handleResettableTouch(1, touched,
+                () -> oled.valueInfo("Pitch Gliss", formatSignedValue(getLivePitchOffset())),
                 livePitchOffsetEncoder::reset);
     }
 
@@ -629,7 +623,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleLiveVelocityTouch(final boolean pressed) {
-        handleResettableTouch(1, pressed,
+        handleResettableTouch(2, pressed,
                 () -> oled.valueInfo("Velocity", Integer.toString(liveVelocity)),
                 liveVelocityEncoder::reset);
     }
@@ -730,7 +724,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleEncoder1Touch(final boolean pressed) {
-        handleResettableTouch(2, pressed, () -> showState("Scale"), liveScaleEncoder::reset);
+        handleResettableTouch(3, pressed, () -> showState("Scale"), liveScaleEncoder::reset);
     }
 
     private void handleEncoder2Touch(final boolean pressed) {
@@ -780,8 +774,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private void handleLivePadPress(final int padIndex, final boolean pressed) {
         if (pressed) {
             heldPads.add(padIndex);
+            triggerLivePadNoteOn(padIndex);
         } else {
             heldPads.remove(padIndex);
+            triggerLivePadNoteOff(padIndex);
         }
     }
 
@@ -2243,13 +2239,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void applyLayout() {
-        final NoteGridLayout layout = createLayout();
         for (int i = 0; i < noteTranslationTable.length; i++) {
             noteTranslationTable[i] = -1;
-        }
-        for (int padIndex = 0; padIndex < NoteGridLayout.PAD_COUNT; padIndex++) {
-            final int translatedNote = applyLivePitchOffset(layout.noteForPad(padIndex));
-            noteTranslationTable[0x36 + padIndex] = translatedNote;
         }
         noteInput.setKeyTranslationTable(noteTranslationTable);
     }
@@ -2260,37 +2251,50 @@ public class NoteMode extends Layer implements StepSequencerHost {
             showContextInfo();
             return;
         }
-        final Map<Integer, Integer> oldHeldNotes = collectHeldNotes(createLayout());
-        sendHeldNotes(oldHeldNotes, false);
-        stateChange.run();
-        applyLayout();
-        sendHeldNotes(collectHeldNotes(createLayout()), true);
-    }
-
-    private Map<Integer, Integer> collectHeldNotes(final NoteGridLayout layout) {
-        final Map<Integer, Integer> heldNotes = new HashMap<>();
-        for (final int padIndex : heldPads) {
-            final int midiNote = applyLivePitchOffset(layout.noteForPad(padIndex));
-            if (midiNote >= 0) {
-                heldNotes.merge(midiNote, 1, Integer::sum);
-            }
-        }
-        return heldNotes;
-    }
-
-    private void sendHeldNotes(final Map<Integer, Integer> notes, final boolean noteOn) {
-        final int status = noteOn ? Midi.NOTE_ON : Midi.NOTE_OFF;
-        final int velocity = noteOn ? HELD_NOTE_VELOCITY : 0;
-        for (final int midiNote : notes.keySet()) {
-            noteInput.sendRawMidiEvent(status, midiNote, velocity);
-        }
+        retuneLivePads(stateChange);
     }
 
     private void releaseHeldLiveNotes() {
-        sendHeldNotes(collectHeldNotes(createLayout()), false);
+        for (final int padIndex : new ArrayList<>(soundingLiveNotesByPad.keySet())) {
+            triggerLivePadNoteOff(padIndex);
+        }
         soundingLiveNotesByPad.clear();
         heldPads.clear();
         stopAuditionNotes();
+    }
+
+    private void retuneLivePads(final Runnable stateChange) {
+        final Map<Integer, LivePadNote> heldNotes = new HashMap<>(soundingLiveNotesByPad);
+        heldNotes.keySet().forEach(this::triggerLivePadNoteOff);
+        stateChange.run();
+        applyLayout();
+        heldNotes.keySet().stream()
+                .filter(heldPads::contains)
+                .sorted()
+                .forEach(this::triggerLivePadNoteOn);
+    }
+
+    private void triggerLivePadNoteOn(final int padIndex) {
+        triggerLivePadNoteOff(padIndex);
+        final int midiNote = getLivePadMidiNote(padIndex);
+        if (midiNote < 0) {
+            return;
+        }
+        final int velocity = liveVelocity;
+        noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, velocity);
+        soundingLiveNotesByPad.put(padIndex, new LivePadNote(midiNote, velocity));
+    }
+
+    private void triggerLivePadNoteOff(final int padIndex) {
+        final LivePadNote activeNote = soundingLiveNotesByPad.remove(padIndex);
+        if (activeNote == null) {
+            return;
+        }
+        noteInput.sendRawMidiEvent(Midi.NOTE_OFF, activeNote.midiNote(), 0);
+    }
+
+    private int getLivePadMidiNote(final int padIndex) {
+        return applyLivePitchOffset(createLayout().noteForPad(padIndex));
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -3505,7 +3509,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private String getLiveModeInfo(final EncoderMode mode) {
         return switch (mode) {
-            case CHANNEL -> "1: Pitch Offs\n2: Velocity\n3: Scale\n4: Layout";
+            case CHANNEL -> "1: Mod\n2: Pitch Gliss\n3: Velocity\n4: Scale";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
             case USER_1 -> "1: Mod\n2: Pressure\n3: Timbre\n4: Pitch Expr";
             case USER_2 -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
