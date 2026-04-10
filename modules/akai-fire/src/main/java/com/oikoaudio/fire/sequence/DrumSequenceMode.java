@@ -571,10 +571,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             return;
         }
         driver.markMainEncoderTurned();
-        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        final String mainEncoderRole = getEffectiveMainEncoderRole();
         final boolean fine = isShiftHeld();
         if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
             padHandler.handleMainEncoder(inc);
+        } else if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(mainEncoderRole)) {
+            resolutionHandler.adjust(inc);
         } else if (FireControlPreferences.MAIN_ENCODER_TEMPO.equals(mainEncoderRole)) {
             driver.adjustTempo(inc, fine);
         } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
@@ -584,6 +586,15 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
             driver.adjustMainCursorParameter(inc, fine);
         }
+    }
+
+    private String getEffectiveMainEncoderRole() {
+        final String preferredRole = driver.getMainEncoderRolePreference();
+        if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(preferredRole)
+                && driver.shouldAutoPinFirstDrumMachine()) {
+            return FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
+        }
+        return preferredRole;
     }
 
     public int getDefaultVelocity() {
@@ -743,7 +754,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             mainEncoderPressConsumed = false;
             return;
         }
-        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        final String mainEncoderRole = getEffectiveMainEncoderRole();
         if (!press && !driver.wasMainEncoderTurnedWhilePressed()) {
             driver.toggleMainEncoderRolePreference();
             return;
@@ -760,6 +771,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
             }
         } else if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
             padHandler.getNoteRepeaterHandler().handlePressed(press);
+        } else if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(mainEncoderRole)) {
+            resolutionHandler.handlePressed(press);
         } else if (FireControlPreferences.MAIN_ENCODER_SHUFFLE.equals(mainEncoderRole)) {
             if (press) {
                 driver.showGrooveShuffleInfo();
@@ -1578,7 +1591,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
                 }
             });
             if (pendingBankWasAlt) {
-                resolutionHandler.adjust(dir);
+                adjustRelativeClipLength(dir);
             }
             return;
         }
@@ -1592,6 +1605,38 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
                 new HashMap<>(pendingBankHeldFineStarts));
         pendingBankHeldSteps.clear();
         pendingBankHeldFineStarts.clear();
+    }
+
+    private void adjustRelativeClipLength(final int direction) {
+        final double currentLength = cursorClip.getLoopLength().get();
+        if (direction < 0) {
+            if (currentLength <= 0.25) {
+                oled.valueInfo("Clip Length", "Min");
+                return;
+            }
+            final double newLength = Math.max(0.25, currentLength / 2.0);
+            adjustMode(newLength);
+            cursorClip.getLoopLength().set(newLength);
+            oled.valueInfo("Clip Length", formatBars(newLength));
+            return;
+        }
+        if (currentLength >= 256.0) {
+            oled.valueInfo("Clip Length", "Max");
+            return;
+        }
+        final double newLength = Math.min(256.0, currentLength * 2.0);
+        cursorClip.duplicateContent();
+        adjustMode(newLength);
+        cursorClip.getLoopLength().set(newLength);
+        oled.valueInfo("Clip Length", formatBars(newLength));
+    }
+
+    private String formatBars(final double beatLength) {
+        final double bars = beatLength / 4.0;
+        if (Math.rint(bars) == bars) {
+            return Integer.toString((int) bars) + " Bars";
+        }
+        return String.format("%.2f Bars", bars);
     }
 
     private void bindPatternButtons(AkaiFireOikontrolExtension driver) {

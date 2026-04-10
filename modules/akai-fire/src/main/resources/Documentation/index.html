@@ -171,11 +171,12 @@
 
     <section class="section">
       <h2>Akai Fire</h2>
-      <p>The Akai Fire extension is a clip, note, and sequencer workflow built around three top-level modes:</p>
+      <p>The Akai Fire extension is a clip, note, and sequencer workflow built around four top-level modes:</p>
       <ul>
         <li><code>DRUM</code></li>
         <li><code>NOTE</code></li>
         <li><code>PERFORM</code></li>
+        <li><code>STEP</code></li>
       </ul>
 
       <h3>DRUM mode</h3>
@@ -193,7 +194,7 @@
         <li><code>ALT + STEP SEQ</code>: Fill</li>
         <li><code>BANK LEFT/RIGHT</code>: pattern shift and movement</li>
         <li><code>SHIFT + BANK LEFT/RIGHT</code>: fine nudge</li>
-        <li><code>ALT + BANK LEFT/RIGHT</code>: grid resolution</li>
+        <li><code>ALT + BANK LEFT/RIGHT</code>: halve / double clip length</li>
       </ul>
       <p>In <code>DRUM</code>, hold <code>Paste</code> and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:</p>
       <ul>
@@ -231,8 +232,10 @@
       <p><code>NOTE</code> provides a 16x4 isomorphic playing surface.</p>
       <ul>
         <li><code>Chromatic</code> and <code>In Key</code> layouts</li>
-        <li>local root note, scale, and octave controls</li>
+        <li>shared root key and scale, with local octave and layout controls</li>
         <li>LED and OLED note feedback</li>
+        <li><code>Pitch Gliss</code> on the Channel encoder page</li>
+        <li><code>Velocity Sensitivity</code> with <code>SHIFT + Encoder 3</code> for <code>Default Velocity</code></li>
       </ul>
       <p>Useful live-note controls:</p>
       <ul>
@@ -252,7 +255,7 @@
         <li>Enter <code>NOTE</code>.</li>
         <li>Play notes directly on the pad grid.</li>
         <li>Press <code>NOTE</code> again to move between the primary note-family surfaces.</li>
-        <li>Use the current note layout controls to change scale, root, and octave.</li>
+        <li>Use <code>PATTERN UP/DOWN</code> for octave, <code>SHIFT + PATTERN UP/DOWN</code> for shared root, and the Channel page for <code>Scale</code>, <code>Pitch Gliss</code>, and live velocity response.</li>
       </ol>
 
       <h3>Melodic Step workflow</h3>
@@ -281,8 +284,9 @@
         <li><code>PATTERN DOWN</code>: generate a new phrase from the current mode</li>
         <li><code>ALT + PATTERN DOWN</code>: mutate the current phrase</li>
         <li><code>SHIFT + PATTERN UP</code> and <code>SHIFT + PATTERN DOWN</code>: cycle the current view between <code>Notes</code>, <code>Expression</code>, and <code>Process</code></li>
-        <li><code>BANK LEFT/RIGHT</code>: shorten or lengthen the visible loop</li>
-        <li><code>SHIFT + BANK LEFT/RIGHT</code>: halve or double the loop region where possible</li>
+        <li><code>BANK LEFT/RIGHT</code>: rotate the phrase</li>
+        <li><code>ALT + BANK LEFT/RIGHT</code>: halve or double the clip length</li>
+        <li><code>SHIFT + ALT + PATTERN DOWN</code>: clear the selected clip contents</li>
       </ul>
       <p>Encoder pages:</p>
       <ul>
@@ -305,6 +309,7 @@
       <ul>
         <li>Upper two rows: curated chord slots</li>
         <li>Lower two rows: 16 visible steps</li>
+        <li>The builder defaults to in-key view and uses the same shared root/scale as live NOTE</li>
         <li>The default workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like</li>
         <li>Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord</li>
       </ul>
@@ -320,6 +325,8 @@
         <li>tap a lit step pad: remove the chord from that step</li>
         <li><code>BANK LEFT/RIGHT</code>: move written step content left or right</li>
         <li><code>SHIFT + BANK LEFT/RIGHT</code>: adjust held chord-step note duration</li>
+        <li><code>ALT + BANK LEFT/RIGHT</code>: halve / double clip length</li>
+        <li><code>SHIFT + ALT + PATTERN DOWN</code>: clear the selected clip contents</li>
       </ul>
       <p>In <code>Chord Step</code>, hold <code>Paste</code> and press a step. The currently selected step is used as the source to copy from.</p>
 
@@ -344,11 +351,12 @@
       </ul>
       <p>Encoder pages:</p>
       <ul>
-        <li><code>Channel</code>: project remotes</li>
-        <li><code>Mixer</code>: selected track volume, pan, send 1, send 2</li>
-        <li><code>User 1</code>: selected track remotes</li>
-        <li><code>User 2</code>: selected device remotes</li>
+        <li><code>Channel</code>: global remotes 1-4</li>
+        <li><code>Mixer</code>: volume, pan, send 1, send 2</li>
+        <li><code>User 1</code>: track remotes 1-4</li>
+        <li><code>User 2</code>: master / cue controls</li>
       </ul>
+      <p><code>SHIFT + PERFORM</code> opens a latched <code>Settings</code> page. From there, Encoder 1 adjusts the shared <code>Root Key</code>, Encoder 2 adjusts the shared <code>Scale</code>, and the pad grid becomes a non-performance settings display. Press <code>PERFORM</code> again to leave <code>Settings</code>.</p>
 
       <h3>Main encoder and transport</h3>
       <p>Tap <code>SELECT</code> to swap the <code>SELECT</code> encoder between <code>Last Touched Parameter</code> and the currently selected alternate role.</p>
@@ -359,6 +367,7 @@
         <li><code>Tempo</code></li>
         <li><code>Note Repeat</code></li>
         <li><code>Track Select</code></li>
+        <li><code>Drum Grid</code></li>
       </ul>
       <p>When <code>Note Repeat</code> is active:</p>
       <ul>
@@ -369,6 +378,12 @@
       <ul>
         <li>Turn <code>SELECT</code> to move to the previous or next track</li>
         <li>Hold <code>SELECT</code> while turning to jump by track pages</li>
+        <li>In <code>DRUM</code> mode with automatic drum pinning enabled, the encoder falls back to <code>Drum Grid</code></li>
+      </ul>
+      <p>When <code>Drum Grid</code> is active:</p>
+      <ul>
+        <li>turn <code>SELECT</code> to change Drum Step grid resolution</li>
+        <li>this role is only meaningful in <code>DRUM</code> mode</li>
       </ul>
       <p>When <code>Shuffle</code> is active:</p>
       <ul>
@@ -405,7 +420,10 @@
         <li><code>Clip Launch Quantization</code></li>
         <li><code>Default Clip Length</code></li>
         <li><code>SELECT Encoder Startup</code></li>
+        <li><code>Default Root Key</code></li>
         <li><code>Default Scale</code></li>
+        <li><code>Default Note Input Octave</code></li>
+        <li><code>Default Velocity Sensitivity</code></li>
         <li><code>Pad Brightness</code></li>
         <li><code>Pad Saturation</code></li>
         <li><code>Encoder touch reset</code></li>

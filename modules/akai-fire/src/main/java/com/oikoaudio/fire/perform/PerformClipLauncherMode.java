@@ -38,6 +38,14 @@ public class PerformClipLauncherMode extends Layer {
     private static final int SCENES = 4;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
+    private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
+    private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
+    private static final boolean[][] SETTINGS_LOGO = {
+            {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
+            {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
+            {true, true, false, false, false, true, false, false, true, true, false, false, true, true, true, false},
+            {true, false, false, false, true, true, true, false, true, false, true, false, true, true, true, true}
+    };
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
@@ -71,6 +79,7 @@ public class PerformClipLauncherMode extends Layer {
     private int totalSceneCount = SCENES;
     private int selectedTrackIndex = -1;
     private int selectedSceneIndex = -1;
+    private boolean settingsMode = false;
 
     public PerformClipLauncherMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "PERFORM_CLIP_LAUNCHER");
@@ -157,10 +166,59 @@ public class PerformClipLauncherMode extends Layer {
         modeMapping.put(EncoderMode.USER_1, user1Layer);
         modeMapping.put(EncoderMode.USER_2, user2Layer);
 
-        bindRemotePage(channelLayer, projectRemoteControls, "Global");
+        bindChannelPage(channelLayer, projectRemoteControls, "Global");
         bindMixerPage(mixerLayer);
         bindRemotePage(user1Layer, trackRemoteControls, "Track");
         bindRemotePage(user2Layer, deviceRemoteControls, "Device");
+    }
+
+    public void enterOverview() {
+        settingsMode = true;
+        switchMode(EncoderMode.CHANNEL);
+        showOverview();
+    }
+
+    private void showOverview() {
+        oled.detailInfo("Settings",
+                "1: Root %s\n2: Scale %s".formatted(
+                        com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()),
+                        driver.getSharedScaleDisplayName()));
+        oled.clearScreenDelayed();
+    }
+
+    public void exitOverview() {
+        if (!settingsMode) {
+            return;
+        }
+        settingsMode = false;
+        showCurrentModeInfo();
+    }
+
+    public boolean isSettingsMode() {
+        return settingsMode;
+    }
+
+    private void bindChannelPage(final Layer layer, final CursorRemoteControlsPage page, final String fallbackPrefix) {
+        final TouchEncoder[] encoders = driver.getEncoders();
+        for (int i = 0; i < encoders.length; i++) {
+            final int index = i;
+            final Parameter parameter = page.getParameter(i);
+            markParameterInterested(parameter);
+            encoders[i].bindEncoder(layer, inc -> {
+                if (settingsMode) {
+                    adjustOverviewPitch(index, inc);
+                    return;
+                }
+                adjustParameter(index, parameter, fallbackPrefix + " " + (index + 1), inc);
+            });
+            encoders[i].bindTouched(layer, touched -> {
+                if (settingsMode) {
+                    handleOverviewTouch(index, touched);
+                    return;
+                }
+                handleParameterTouch(index, parameter, fallbackPrefix + " " + (index + 1), touched);
+            });
+        }
     }
 
     private void bindRemotePage(final Layer layer, final CursorRemoteControlsPage page, final String fallbackPrefix) {
@@ -174,6 +232,39 @@ public class PerformClipLauncherMode extends Layer {
             encoders[i].bindTouched(layer, touched -> handleParameterTouch(index, parameter,
                     fallbackPrefix + " " + (index + 1), touched));
         }
+    }
+
+    private void adjustOverviewPitch(final int encoderIndex, final int inc) {
+        if (inc == 0) {
+            return;
+        }
+        if (encoderIndex == 0) {
+            driver.adjustSharedRootNote(inc);
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()));
+            return;
+        }
+        if (encoderIndex == 1) {
+            driver.getNoteMode().adjustSharedScaleFromOverview(inc);
+            oled.valueInfo("Scale", driver.getNoteMode().getCurrentScaleDisplayName());
+            return;
+        }
+        showOverview();
+    }
+
+    private void handleOverviewTouch(final int encoderIndex, final boolean touched) {
+        if (!touched) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        if (encoderIndex == 0) {
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()));
+            return;
+        }
+        if (encoderIndex == 1) {
+            oled.valueInfo("Scale", driver.getNoteMode().getCurrentScaleDisplayName());
+            return;
+        }
+        showOverview();
     }
 
     private void bindMixerPage(final Layer layer) {
@@ -257,6 +348,10 @@ public class PerformClipLauncherMode extends Layer {
     private void handleSlotPressed(final Track track, final ClipLauncherSlot slot, final int visibleTrackIndex,
                                    final int visibleSceneIndex, final boolean pressed) {
         if (!pressed || !track.exists().get() || !slot.exists().get()) {
+            return;
+        }
+        if (settingsMode) {
+            oled.valueInfo("Settings", "Encoders adjust globals");
             return;
         }
 
@@ -387,7 +482,12 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         if (selectHeld.get()) {
-            oled.detailInfo("Encoder Mode", modeInfo(encoderMode));
+            showCurrentModeInfo();
+            return;
+        }
+        if (settingsMode) {
+            settingsMode = false;
+            showCurrentModeInfo();
             return;
         }
         switchMode(nextMode());
@@ -399,7 +499,7 @@ public class PerformClipLauncherMode extends Layer {
         currentEncoderLayer = modeMapping.get(newMode);
         applyEncoderStepSizes();
         currentEncoderLayer.activate();
-        oled.detailInfo("Encoder Mode", modeInfo(newMode));
+        showCurrentModeInfo();
         oled.clearScreenDelayed();
     }
 
@@ -423,12 +523,31 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private String modeInfo(final EncoderMode mode) {
+        if (settingsMode) {
+            return "1: Root Key\n2: Scale\n3: Shared Pitch\n4: Shared Pitch";
+        }
         return switch (mode) {
-            case CHANNEL -> "1: Global 1\n2: Global 2\n3: Global 3\n4: Global 4";
+            case CHANNEL -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
             case USER_1 -> "1: Track Remote 1\n2: Track Remote 2\n3: Track Remote 3\n4: Track Remote 4";
             case USER_2 -> "1: Master Vol\n2: Master Pan\n3: Cue Vol\n4: Cue Mix";
         };
+    }
+
+    private String modeTitle(final EncoderMode mode) {
+        if (settingsMode) {
+            return "Settings";
+        }
+        return switch (mode) {
+            case CHANNEL -> "Global Remotes";
+            case MIXER -> "Mixer";
+            case USER_1 -> "Track Remotes";
+            case USER_2 -> "Master/Cue";
+        };
+    }
+
+    private void showCurrentModeInfo() {
+        oled.detailInfo(modeTitle(encoderMode), modeInfo(encoderMode));
     }
 
     private void adjustParameter(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
@@ -549,14 +668,19 @@ public class PerformClipLauncherMode extends Layer {
     protected void onActivate() {
         applyEncoderStepSizes();
         currentEncoderLayer.activate();
+        showCurrentModeInfo();
     }
 
     @Override
     protected void onDeactivate() {
+        settingsMode = false;
         currentEncoderLayer.deactivate();
     }
 
     private RgbLigthState getSlotState(final ClipLauncherSlot slot, final int padIndex) {
+        if (settingsMode) {
+            return settingsLogoState(padIndex);
+        }
         if (!slot.exists().get()) {
             return RgbLigthState.OFF;
         }
@@ -579,6 +703,15 @@ public class PerformClipLauncherMode extends Layer {
                     : blinkSlow(baseColor, baseColor.getDimmed());
         }
         return slot.isSelected().get() ? baseColor.getBrightend() : baseColor.getSoftDimmed();
+    }
+
+    private RgbLigthState settingsLogoState(final int padIndex) {
+        final int row = padIndex / TRACKS;
+        final int column = padIndex % TRACKS;
+        if (row < 0 || row >= SETTINGS_LOGO.length || column < 0 || column >= TRACKS) {
+            return RgbLigthState.OFF;
+        }
+        return SETTINGS_LOGO[row][column] ? SETTINGS_LOGO_ON : SETTINGS_LOGO_OFF;
     }
 
     private RgbLigthState blinkSlow(final RgbLigthState on, final RgbLigthState off) {

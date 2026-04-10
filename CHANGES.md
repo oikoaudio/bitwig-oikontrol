@@ -2,6 +2,16 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.2.0 - Akai Fire shared pitch and safer performance workflows
+- Added live NOTE `Pitch Gliss` with held-note retuning and a dedicated velocity response model based on `Velocity Sensitivity` and `Default Velocity`
+- Added shared global `Root Key` and `Scale` across live NOTE, Chord Step, and the latched `SHIFT + PERFORM` `Settings` page
+- Added Fire startup preferences for `Default Root Key` and `Default Velocity Sensitivity`, and narrowed the default note-input octave choices to `2`, `3`, and `4`
+- Applied the same velocity-sensitivity model to Chord Step and made its builder default to in-key with visible-only auto-seeding
+- Added clearer safety checks in Chord Step and Melodic Step for missing clips, wrong track types, hanging live notes, and explicit clip clearing
+- Added relative clip halve/double gestures on `ALT + BANK LEFT/RIGHT` across Drum, Chord Step, and Melodic Step workflows
+- Added a latched Fire `Settings` mode with dedicated OLED/button feedback and refreshed Perform encoder-page labeling
+- Updated tests and Fire documentation to match the new shared pitch, settings, and sequencing workflow
+
 ## 2.1.0 - Akai Fire melodic generation and workflow pass
 - Added `Melodic Step` mode under `STEP` with phrase engines for `Acid`, `Motif`, `Call/Resp`, `Euclid`, `Rolling`, and `Octave`
 - Added editable melodic pitch-pool generation, mutation, note audition, and cleaner preservation of manual pool edits

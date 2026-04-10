@@ -9,6 +9,7 @@ import com.bitwig.extension.controller.api.SettableBooleanValue;
 import com.bitwig.extensions.framework.Layer;
 
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
 import static com.oikoaudio.fire.AkaiFireOikontrolExtension.*;
@@ -48,6 +49,15 @@ public class RgbButton {
                             final Supplier<RgbLigthState> lightSource) {
         layer.bind(hwButton, hwButton.pressedAction(), () -> target.accept(true));
         layer.bind(hwButton, hwButton.releasedAction(), () -> target.accept(false));
+        layer.bindLightState(lightSource::get, light);
+    }
+
+    public void bindPressedVelocity(final Layer layer, final IntConsumer pressedVelocityTarget,
+                                    final Runnable releasedTarget,
+                                    final Supplier<RgbLigthState> lightSource) {
+        layer.bind(hwButton, hwButton.pressedAction(),
+                pressure -> pressedVelocityTarget.accept(Math.max(1, Math.min(127, (int) Math.round(pressure * 127.0)))));
+        layer.bind(hwButton, hwButton.releasedAction(), releasedTarget);
         layer.bindLightState(lightSource::get, light);
     }
 

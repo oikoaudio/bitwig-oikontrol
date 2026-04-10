@@ -60,12 +60,14 @@ public final class FireControlPreferences {
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
     public static final String MAIN_ENCODER_NOTE_REPEAT = "Note Repeat";
     public static final String MAIN_ENCODER_TRACK_SELECT = "Track Select";
+    public static final String MAIN_ENCODER_DRUM_GRID = "Drum Grid";
     public static final String[] MAIN_ENCODER_ROLES = {
             MAIN_ENCODER_LAST_TOUCHED,
             MAIN_ENCODER_SHUFFLE,
             MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT,
-            MAIN_ENCODER_TRACK_SELECT
+            MAIN_ENCODER_TRACK_SELECT,
+            MAIN_ENCODER_DRUM_GRID
     };
     public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
     public static final String MAIN_ENCODER_STARTUP_FUNCTION_SET = "Function Set";
@@ -96,17 +98,41 @@ public final class FireControlPreferences {
             DEFAULT_SCALE_MINOR,
             DEFAULT_SCALE_MAJOR
     };
+    public static final String[] DEFAULT_ROOT_KEYS = {
+            "C",
+            "C#",
+            "D",
+            "D#",
+            "E",
+            "F",
+            "F#",
+            "G",
+            "G#",
+            "A",
+            "A#",
+            "B"
+    };
+    public static final String DEFAULT_ROOT_KEY = "C";
     public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {
-            "0",
-            "1",
             "2",
             "3",
-            "4",
-            "5",
-            "6",
-            "7"
+            "4"
     };
     public static final String DEFAULT_NOTE_INPUT_OCTAVE = "3";
+    public static final String[] DEFAULT_VELOCITY_SENSITIVITIES = {
+            "0",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+    };
+    public static final String DEFAULT_VELOCITY_SENSITIVITY = "80";
 
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
@@ -157,6 +183,9 @@ public final class FireControlPreferences {
         if (MAIN_ENCODER_NOTE_REPEAT.equals(normalizedRole)) {
             return MAIN_ENCODER_TRACK_SELECT;
         }
+        if (MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)) {
+            return MAIN_ENCODER_DRUM_GRID;
+        }
         return MAIN_ENCODER_SHUFFLE;
     }
 
@@ -194,6 +223,38 @@ public final class FireControlPreferences {
             }
         }
         return DEFAULT_SCALE_PIANO;
+    }
+
+    public static String normalizeDefaultRootKey(final String preferenceValue) {
+        for (final String value : DEFAULT_ROOT_KEYS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_ROOT_KEY;
+    }
+
+    public static int toDefaultRootKey(final String preferenceValue) {
+        final String normalized = normalizeDefaultRootKey(preferenceValue);
+        for (int i = 0; i < DEFAULT_ROOT_KEYS.length; i++) {
+            if (DEFAULT_ROOT_KEYS[i].equals(normalized)) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    public static String normalizeDefaultVelocitySensitivity(final String preferenceValue) {
+        for (final String value : DEFAULT_VELOCITY_SENSITIVITIES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_VELOCITY_SENSITIVITY;
+    }
+
+    public static int toDefaultVelocitySensitivity(final String preferenceValue) {
+        return Integer.parseInt(normalizeDefaultVelocitySensitivity(preferenceValue));
     }
 
     public static String normalizeDefaultNoteInputOctave(final String preferenceValue) {
