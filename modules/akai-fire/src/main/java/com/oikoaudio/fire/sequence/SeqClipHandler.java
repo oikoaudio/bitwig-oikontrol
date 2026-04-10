@@ -16,6 +16,8 @@ public class SeqClipHandler {
     private int selectedSlotIndex = -1;
     private final ClipLauncherSlotBank slotBank;
     private final RgbLigthState[] slotColors = new RgbLigthState[16];
+    private final boolean[] playingSlots = new boolean[16];
+    private final boolean[] recordingSlots = new boolean[16];
     private int blinkState = 0;
 
     public SeqClipHandler(final SeqClipRowHost host) {
@@ -47,6 +49,8 @@ public class SeqClipHandler {
                     selectedSlotIndex = index;
                 }
             });
+            cs.isPlaying().addValueObserver(playing -> playingSlots[index] = playing);
+            cs.isRecording().addValueObserver(recording -> recordingSlots[index] = recording);
             slotColors[index] = ColorLookup.getColor(cs.color().get());
             cs.exists().markInterested();
             cs.hasContent().markInterested();
@@ -117,10 +121,11 @@ public class SeqClipHandler {
     }
 
     private void handleClip(final int index, final ClipLauncherSlot slot, final boolean pressed) {
+        final int copySourceIndex = SeqClipCopySourceResolver.resolve(selectedSlotIndex, playingSlots, recordingSlots);
         final boolean hasContent = slot.hasContent().get();
         switch (SeqClipRowActionResolver.resolve(pressed, hasContent,
                 host.isDeleteHeld(), host.isCopyHeld(), host.isSelectHeld(), host.isShiftHeld(),
-                selectedSlotIndex, index)) {
+                copySourceIndex, index)) {
             case IGNORE -> {
             }
             case DELETE_OBJECT -> slot.deleteObject();
@@ -133,9 +138,9 @@ public class SeqClipHandler {
                 }
             }
             case COPY_TO_TARGET -> {
-                slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(selectedSlotIndex));
+                slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(copySourceIndex));
                 host.getOled().valueInfo("Copy Clip", "Select target");
-                host.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
+                host.notifyPopup("Copy Clip", slotLabel(copySourceIndex) + " -> " + slotLabel(index));
             }
             case SELECT_ONLY -> slot.select();
             case CYCLE_COLOR -> slot.color().set(getSlotColor(slot));

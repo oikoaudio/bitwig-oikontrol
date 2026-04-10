@@ -210,7 +210,7 @@ To get to this mode from the Note live input mode, press the `NOTE` controller b
 
 Important gestures:
 
-- top row clip pads: launch, select, create, copy, and delete clips using the same clip-row behavior as Drum mode
+- top row clip pads: launch, select, create, and paste clips; `Delete` clears clip contents and `Shift + Delete` removes the clip object
 - `PATTERN DOWN/UP`: previous/next visible step page
 - `STEP SEQ`: enter `Melodic Step`
 - `SHIFT + STEP SEQ`: accent toggle/edit
@@ -250,7 +250,7 @@ Main ideas:
 
 Important gestures:
 
-- top row clip pads: launch, select, create, copy, and delete clips using the same clip-row behavior as Drum mode
+- top row clip pads: launch, select, create, and paste clips; `Delete` clears clip contents and `Shift + Delete` removes the clip object
 - tap a pitch pad: add or remove that note from the pool
 - tap a step pad: place, clear, or load that step depending on state
 - hold a step pad and turn encoders: edit that held step directly
