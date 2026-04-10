@@ -135,6 +135,8 @@ Current `User 2` Euclid assignments:
 
 `NOTE` is the live note-input surface, with note-step workflows behind `STEP SEQ`.
 
+`NOTE`, `Chord Step`, and `SHIFT + PERFORM` now share one global pitch context for `Root Key` and `Scale`. Octave and layout remain mode-local.
+
 ### Live Note Layout
 
 | Area / Control | Role |
@@ -154,13 +156,18 @@ Current `User 2` Euclid assignments:
 
 The default note octave is initialized from the `Default Note Input Octave` preference.
 
-In live NOTE mode, Encoder 3 adjusts `Velocity Sensitivity` and `SHIFT + Encoder 3` adjusts `Default Velocity`.
+In live NOTE mode:
+
+- Encoder 2 is `Pitch Gliss`
+- Encoder 3 adjusts `Velocity Sensitivity`
+- `SHIFT + Encoder 3` adjusts `Default Velocity`
+- Encoder 4 adjusts the shared `Scale`
 
 ### Live Note Encoder Pages
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Mod | Pitch Gliss | Live velocity | Scale selector |
+| `Channel` | Mod | Pitch Gliss | Velocity sensitivity (`SHIFT`: Default velocity) | Shared scale |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Mod | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
@@ -180,6 +187,8 @@ The current note-step sub-modes are:
 
 `Chord Step` repurposes the `NOTE` surface into a chord-and-step editor.
 
+It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERFORM`. Changing key or scale in one of those places updates all of them.
+
 ### Pad Layout
 
 | Pad row | Role |
@@ -198,6 +207,7 @@ The current note-step sub-modes are:
 | `STEP SEQ` | Toggle `As Is` / `Cast` rendering |
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
+| `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
 | Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge held chord material |
 | `SHIFT + BANK LEFT/RIGHT` | Fine-nudge visible chord material |
 
@@ -210,7 +220,18 @@ The current note-step sub-modes are:
 | `MUTE_3` | Last Step target mode |
 | `MUTE_4` | Invert selected chord (`ALT` inverts the other direction) |
 
-Chord root and octave offsets still exist in `Chord Step`, but they are adjusted from the pitch-context controls rather than the `MUTE` buttons. Plain coarse nudge is currently disabled in this mode.
+The chord builder defaults to showing in-key notes only. If it auto-seeds a note into an empty builder, that note must be visible on the current builder rows.
+
+### Chord Step Encoders
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family | Chord render / interpretation |
+| `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
+| `User 1` | Note velocity edit | Note chance edit | Note recurrence length | Note recurrence count |
+| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
+
+`Chord Step` no longer owns a separate root/key state. `ALT + Encoder 1` updates the same shared root used by live NOTE input.
 
 ## Melodic Step
 
@@ -247,6 +268,7 @@ Current generators:
 | `ALT + PATTERN UP` | Mutate pitch pool |
 | `PATTERN DOWN` | Generate new phrase |
 | `ALT + PATTERN DOWN` | Mutate phrase |
+| `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
 | `SHIFT + PATTERN UP/DOWN` | Cycle view between `Notes`, `Expression`, and `Process` |
 
 If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions that note.
@@ -267,6 +289,8 @@ If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions 
 ## PERFORM Mode
 
 `PERFORM` is the `16x4` clip-launch and performance surface.
+
+`SHIFT + PERFORM` opens a latched `Settings` page on the `Channel` encoder page. From there, Encoder 1 adjusts the shared `Root Key` and Encoder 2 adjusts the shared `Scale`. Press `PERFORM` again to leave `Settings`.
 
 ### Pad Layout
 
@@ -307,6 +331,19 @@ Pad LEDs follow Bitwig clip and track colors plus launch state.
 | `User 1` | Selected track remote 1 | Remote 2 | Remote 3 | Remote 4 |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
+Perform OLED page titles are:
+
+- `Channel`: `Global Remotes`
+- `Mixer`: `Mixer`
+- `User 1`: `Track Remotes`
+- `User 2`: `Master/Cue`
+
+While `Settings` is active in `PERFORM`:
+
+- Encoder 1 edits shared `Root Key`
+- Encoder 2 edits shared `Scale`
+- Encoders 3-4 are reserved for future shared settings
+
 ## Preferences That Affect Layout
 
 These preferences materially change how the Fire feels in use:
@@ -314,6 +351,7 @@ These preferences materially change how the Fire feels in use:
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
 - `Default Clip Length`
+- `Default Root Key`
 - `Default Note Input Octave`
 - `SELECT Encoder Startup`
 - `SELECT Encoder`
@@ -322,6 +360,8 @@ These preferences materially change how the Fire feels in use:
 - `Euclid Scope`
 - `Pad Brightness`
 - `Pad Saturation`
+
+`Default Root Key`, `Default Scale`, and `Default Note Input Octave` are startup defaults. They initialize the shared pitch context when the script starts; changing key or scale from the controller does not currently write those defaults back into Bitwig preferences.
 
 ## Known Gaps
 

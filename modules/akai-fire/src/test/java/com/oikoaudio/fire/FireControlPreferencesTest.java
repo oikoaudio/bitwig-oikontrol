@@ -112,6 +112,24 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesDefaultRootKeyPreferenceValues() {
+        assertEquals(FireControlPreferences.DEFAULT_ROOT_KEY,
+                FireControlPreferences.normalizeDefaultRootKey(FireControlPreferences.DEFAULT_ROOT_KEY));
+        assertEquals("F#",
+                FireControlPreferences.normalizeDefaultRootKey("F#"));
+        assertEquals(FireControlPreferences.DEFAULT_ROOT_KEY,
+                FireControlPreferences.normalizeDefaultRootKey("unexpected"));
+    }
+
+    @Test
+    void mapsDefaultRootKeyPreferenceToPitchClass() {
+        assertEquals(0, FireControlPreferences.toDefaultRootKey("C"));
+        assertEquals(6, FireControlPreferences.toDefaultRootKey("F#"));
+        assertEquals(11, FireControlPreferences.toDefaultRootKey("B"));
+        assertEquals(0, FireControlPreferences.toDefaultRootKey("unexpected"));
+    }
+
+    @Test
     void normalizesPadBrightnessToSupportedRange() {
         assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MIN,
                 FireControlPreferences.normalizePadBrightness(0));

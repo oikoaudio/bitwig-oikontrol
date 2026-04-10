@@ -96,6 +96,21 @@ public final class FireControlPreferences {
             DEFAULT_SCALE_MINOR,
             DEFAULT_SCALE_MAJOR
     };
+    public static final String[] DEFAULT_ROOT_KEYS = {
+            "C",
+            "C#",
+            "D",
+            "D#",
+            "E",
+            "F",
+            "F#",
+            "G",
+            "G#",
+            "A",
+            "A#",
+            "B"
+    };
+    public static final String DEFAULT_ROOT_KEY = "C";
     public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {
             "0",
             "1",
@@ -194,6 +209,25 @@ public final class FireControlPreferences {
             }
         }
         return DEFAULT_SCALE_PIANO;
+    }
+
+    public static String normalizeDefaultRootKey(final String preferenceValue) {
+        for (final String value : DEFAULT_ROOT_KEYS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_ROOT_KEY;
+    }
+
+    public static int toDefaultRootKey(final String preferenceValue) {
+        final String normalized = normalizeDefaultRootKey(preferenceValue);
+        for (int i = 0; i < DEFAULT_ROOT_KEYS.length; i++) {
+            if (DEFAULT_ROOT_KEYS[i].equals(normalized)) {
+                return i;
+            }
+        }
+        return 0;
     }
 
     public static String normalizeDefaultNoteInputOctave(final String preferenceValue) {

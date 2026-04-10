@@ -148,6 +148,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         final ControllerHost host = driver.getHost();
         this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melodic Step", 8, 8, true);
         this.cursorTrack.name().markInterested();
+        this.cursorTrack.canHoldNoteData().markInterested();
         this.clipSlotBank = cursorTrack.clipLauncherSlotBank();
         this.cursorClip = cursorTrack.createLauncherCursorClip("MELODIC_STEP_CLIP", "MELODIC_STEP_CLIP", STEP_COUNT, 128);
         this.cursorClip.scrollToKey(0);
@@ -1642,6 +1643,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
     }
 
     private boolean ensureClipAvailable() {
+        if (!cursorTrack.canHoldNoteData().get()) {
+            oled.valueInfo("Audio Track", "Use note track");
+            driver.notifyPopup("Audio Track", "Use note track");
+            return false;
+        }
         refreshSelectedClipState();
         if (selectedClipSlotIndex >= 0) {
             refreshClipCursor();
@@ -1913,7 +1919,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }, () -> BiColorLightState.GREEN_HALF);
         patternButtons.setDownCallback(pressed -> {
             if (pressed) {
-                if (driver.isGlobalShiftHeld()) {
+                if (driver.isGlobalShiftHeld() && driver.isGlobalAltHeld()) {
+                    clearCurrentClip();
+                } else if (driver.isGlobalShiftHeld()) {
                     setView(view == View.NOTES ? View.PROCESS : view == View.EXPRESSION ? View.NOTES : View.EXPRESSION);
                 } else if (driver.isGlobalAltHeld()) {
                     mutatePattern(false);
@@ -1924,7 +1932,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         }, () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
         selectedStep = Math.min(selectedStep, Math.max(0, loopSteps - 1));
-        oled.lineInfo("Melodic Step", "Up Pool  Alt+Up MutPool\nDown Phrase  Alt+Down Mut");
+        oled.lineInfo("Melodic Step", "Up Pool  Alt+Up MutPool\nDown Phrase  Sh+Alt+Dn Clear");
     }
 
     @Override
@@ -1937,6 +1945,21 @@ public class MelodicStepMode extends Layer implements StepSequencerHost {
         stopPitchPoolAuditions();
         encoderLayer.deactivate();
         noteRepeatHandler.deactivate();
+    }
+
+    private void clearCurrentClip() {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        refreshClipCursor();
+        cursorClip.clearSteps();
+        noteStepsByPosition.clear();
+        cachedPattern = MelodicPattern.empty(loopSteps);
+        basePattern = MelodicPattern.empty(loopSteps);
+        playingStep = -1;
+        selectedStep = Math.min(selectedStep, Math.max(0, loopSteps - 1));
+        oled.valueInfo("Clip", "Cleared");
+        driver.notifyPopup("Clip", "Cleared");
     }
 
     @Override

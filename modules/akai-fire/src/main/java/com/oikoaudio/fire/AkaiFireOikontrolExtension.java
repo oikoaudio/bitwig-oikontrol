@@ -16,6 +16,7 @@ import com.bitwig.extension.api.util.midi.ShortMidiMessage;
 import com.bitwig.extension.callback.ShortMidiMessageReceivedCallback;
 import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.api.*;
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.Layers;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
@@ -84,6 +85,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
     private SettableEnumValue defaultScalePref;
+    private SettableEnumValue defaultRootKeyPref;
     private SettableEnumValue defaultNoteInputOctavePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
@@ -104,6 +106,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
+    private int sharedRootNote = 0;
+    private int sharedScaleIndex = -1;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -276,6 +280,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_SCALES,
                 FireControlPreferences.DEFAULT_SCALE_PIANO);
         defaultScalePref.markInterested();
+
+        defaultRootKeyPref = preferences.getEnumSetting("Default Root Key",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.DEFAULT_ROOT_KEYS,
+                FireControlPreferences.DEFAULT_ROOT_KEY);
+        defaultRootKeyPref.markInterested();
 
         defaultNoteInputOctavePref = preferences.getEnumSetting("Default Note Input Octave",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -500,7 +510,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private BiColorLightState getPerformState() {
-        return activeMode == TopLevelMode.PERFORM ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+        if (activeMode != TopLevelMode.PERFORM) {
+            return BiColorLightState.OFF;
+        }
+        return performMode != null && performMode.isSettingsMode()
+                ? BiColorLightState.AMBER_FULL
+                : BiColorLightState.GREEN_FULL;
     }
 
     private void dummyAction(final boolean pressed) {
@@ -645,7 +660,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        if (isGlobalShiftHeld()) {
+            if (activeMode != TopLevelMode.PERFORM) {
+                activeMode = TopLevelMode.PERFORM;
+                switchActiveMode();
+            }
+            performMode.enterOverview();
+            notifyAction("Mode", "Settings");
+            return;
+        }
         if (activeMode == TopLevelMode.PERFORM) {
+            final boolean leavingSettings = performMode.isSettingsMode();
+            performMode.exitOverview();
+            if (leavingSettings) {
+                notifyAction("Mode", "Perform");
+            }
             return;
         }
         activeMode = TopLevelMode.PERFORM;
@@ -730,6 +759,38 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public TouchEncoder getMainEncoder() {
         return mainEncoder;
+    }
+
+    public int getSharedRootNote() {
+        return sharedRootNote;
+    }
+
+    public void setSharedRootNote(final int rootNote) {
+        sharedRootNote = Math.floorMod(rootNote, 12);
+    }
+
+    public void adjustSharedRootNote(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        setSharedRootNote(sharedRootNote + amount);
+    }
+
+    public int getSharedScaleIndex() {
+        return sharedScaleIndex;
+    }
+
+    public void setSharedScaleIndex(final int scaleIndex) {
+        sharedScaleIndex = scaleIndex;
+    }
+
+    public String getSharedScaleDisplayName() {
+        if (sharedScaleIndex == -1) {
+            return "Piano";
+        }
+        final int safeIndex = Math.max(0, Math.min(MusicalScaleLibrary.getInstance().getMusicalScalesCount() - 1,
+                sharedScaleIndex));
+        return MusicalScaleLibrary.getInstance().getMusicalScale(safeIndex).getName();
     }
 
     private void onMidi0(final ShortMidiMessage msg) {
@@ -888,6 +949,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return defaultScalePref == null
                 ? FireControlPreferences.DEFAULT_SCALE_PIANO
                 : FireControlPreferences.normalizeDefaultScale(defaultScalePref.get());
+    }
+
+    public int getDefaultRootKeyPreference() {
+        return defaultRootKeyPref == null
+                ? FireControlPreferences.toDefaultRootKey(FireControlPreferences.DEFAULT_ROOT_KEY)
+                : FireControlPreferences.toDefaultRootKey(defaultRootKeyPref.get());
     }
 
     public int getDefaultNoteInputOctavePreference() {
