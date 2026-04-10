@@ -266,7 +266,7 @@
         <li>Row 2: compact 16-note in-scale pitch pool</li>
         <li>Rows 3-4: 32 visible steps</li>
         <li>generated phrases are constrained to the current pitch pool</li>
-        <li>different generator modes provide different phrase grammars such as <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Euclid</code>, <code>Rolling</code>, and <code>Octave</code></li>
+        <li>different generator modes provide different phrase grammars such as <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Rolling</code>, and <code>Octave</code></li>
       </ul>
       <p>Main ideas:</p>
       <ul>
@@ -293,10 +293,19 @@
       </ul>
       <p>Encoder pages:</p>
       <ul>
-        <li><code>Channel</code>: generator, density, shape, mutation type</li>
+        <li><code>Channel</code>: engine, density, engine macro, mutation type</li>
         <li><code>Mixer</code>: melodic process transforms</li>
         <li><code>User 1</code>: tension, Euclid pulses, Euclid rotation, mutation amount</li>
         <li><code>User 2</code>: selected or held step octave, gate, velocity, articulation</li>
+      </ul>
+      <p>Channel page details:</p>
+      <ul>
+        <li>Encoder 1: <code>Engine</code></li>
+        <li><code>ALT + Encoder 1</code>: engine subtype / family when available</li>
+        <li>Encoder 2: <code>Density</code></li>
+        <li>Encoder 3: engine-specific macro such as motion, contour, answer, movement, or jump</li>
+        <li>Encoder 4: <code>Mutation Type</code></li>
+        <li><code>ALT + Encoder 4</code>: mutation strength</li>
       </ul>
       <p>Melodic left-side buttons now align with the shared sequencer clip/edit workflow:</p>
       <ul>

@@ -86,7 +86,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final Set<Integer> auditioningPoolPitches = new HashSet<>();
     private final MotifGenerator motifGenerator = new MotifGenerator();
     private final CallResponseGenerator callResponseGenerator = new CallResponseGenerator();
-    private final EuclideanPhraseGenerator euclideanGenerator = new EuclideanPhraseGenerator();
     private final AcidGenerator acidGenerator = new AcidGenerator();
     private final RollingBassGenerator rollingBassGenerator = new RollingBassGenerator();
     private final OctaveJumpGenerator octaveJumpGenerator = new OctaveJumpGenerator();
@@ -135,7 +134,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         ACID("Acid"),
         MOTIF("Motif"),
         CALL_RESPONSE("Call/Resp"),
-        EUCLIDEAN("Euclid"),
         ROLLING("Rolling"),
         OCTAVE("Octave");
 
@@ -413,6 +411,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         oled.valueInfo("Generate", newGenerator.label);
     }
 
+    private MelodicGenerator activeGenerator() {
+        return switch (generator) {
+            case MOTIF -> motifGenerator;
+            case CALL_RESPONSE -> callResponseGenerator;
+            case ACID -> acidGenerator;
+            case ROLLING -> rollingBassGenerator;
+            case OCTAVE -> octaveJumpGenerator;
+        };
+    }
+
     private void loadGeneratorDefaults(final Generator selectedGenerator) {
         switch (selectedGenerator) {
             case MOTIF -> {
@@ -424,12 +432,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 density = 0.46;
                 tension = 0.28;
                 octaveActivity = 1.0;
-            }
-            case EUCLIDEAN -> {
-                density = 0.55;
-                tension = 0.30;
-                octaveActivity = 1.0;
-                euclideanPulses = Math.max(3, Math.min(loopSteps, 5));
             }
             case ACID -> {
                 density = 0.52;
@@ -632,7 +634,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final int[] offsetPool = switch (generator) {
             case MOTIF -> new int[]{0, 1, 2, 3, 4, 5, 6};
             case CALL_RESPONSE -> new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8};
-            case EUCLIDEAN -> new int[]{0, 1, 2, 3, 4};
             case ACID -> new int[]{0, 1, 2, 3, 4, 5, 6, 7};
             case ROLLING -> new int[]{0, 1, 2, 3, 4, 5, 6};
             case OCTAVE -> new int[]{0, 2, 4, 7, 9, 11, 13};
@@ -640,7 +641,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final int targetCount = switch (generator) {
             case MOTIF -> 3 + random.nextInt(tension >= 0.5 ? 3 : 2);
             case CALL_RESPONSE -> 4 + random.nextInt(tension >= 0.5 ? 3 : 2);
-            case EUCLIDEAN -> 2 + random.nextInt(2 + (tension >= 0.6 ? 1 : 0));
             case ACID -> 5 + random.nextInt(2 + (tension >= 0.6 ? 1 : 0));
             case ROLLING -> 3 + random.nextInt(2 + (density >= 0.65 ? 1 : 0));
             case OCTAVE -> 3 + random.nextInt(2);
@@ -709,14 +709,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             buildGeneratedPitchPool(generationSeed, false);
         }
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
-        final MelodicGenerator activeGenerator = switch (generator) {
-            case MOTIF -> motifGenerator;
-            case CALL_RESPONSE -> callResponseGenerator;
-            case EUCLIDEAN -> euclideanGenerator;
-            case ACID -> acidGenerator;
-            case ROLLING -> rollingBassGenerator;
-            case OCTAVE -> octaveJumpGenerator;
-        };
+        final MelodicGenerator activeGenerator = activeGenerator();
         MelodicPattern generated = activeGenerator.generate(context, parameters);
         generated = enrichLatentSteps(generated);
         generated = constrainPatternToPool(generated);
@@ -733,7 +726,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         return switch (selectedGenerator) {
             case MOTIF -> "Mtf";
             case CALL_RESPONSE -> "C&R";
-            case EUCLIDEAN -> "Euc";
             case ACID -> "Acd";
             case ROLLING -> "Rol";
             case OCTAVE -> "Oct";
@@ -747,9 +739,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             case CALL_RESPONSE -> new MelodicGenerator.GenerateParameters(
                     loopSteps, Math.max(0.35, density), Math.max(0.2, tension),
                     octaveActivity, euclideanPulses, euclideanRotation, generationSeed);
-            case EUCLIDEAN -> new MelodicGenerator.GenerateParameters(
-                    loopSteps, density, tension, octaveActivity,
-                    Math.max(1, euclideanPulses), euclideanRotation, generationSeed);
             case ACID -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
                     Math.max(0.35, density),
@@ -1068,25 +1057,17 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void adjustChannelShape(final int amount) {
-        if (generator == Generator.EUCLIDEAN) {
-            adjustEuclideanPulses(amount);
-            return;
-        }
-        if (generator == Generator.ROLLING) {
-            adjustDensity(amount);
-            return;
-        }
         adjustOctaveActivity(amount);
     }
 
     private String channelShapeLabel() {
-        if (generator == Generator.EUCLIDEAN) {
-            return "Pulses";
-        }
-        if (generator == Generator.ROLLING) {
-            return "Density";
-        }
-        return "Shape";
+        return switch (generator) {
+            case ACID -> "Motion";
+            case MOTIF -> "Contour";
+            case CALL_RESPONSE -> "Answer";
+            case ROLLING -> "Movement";
+            case OCTAVE -> "Jump";
+        };
     }
 
     private void adjustPostDensity(final int amount) {
@@ -1166,6 +1147,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final int nextIndex = Math.max(0, Math.min(values.length - 1, mutationMode.ordinal() + direction));
         mutationMode = values[nextIndex];
         oled.valueInfo("Mut Type", mutationLabel(mutationMode));
+    }
+
+    private void cycleGeneratorSubtype(final int direction) {
+        final MelodicGenerator activeGenerator = activeGenerator();
+        if (!activeGenerator.supportsSubtypeSelection()) {
+            oled.valueInfo("Subtype", "Any");
+            return;
+        }
+        activeGenerator.cycleSubtype(direction);
+        oled.valueInfo("Subtype", activeGenerator.currentSubtypeLabel());
     }
 
     private void adjustSeed(final int amount) {
@@ -1396,11 +1387,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 default -> 5;
             };
             case OCTAVE -> Math.floorMod(stepIndex, 2) == 0 ? 0 : 12;
-            case EUCLIDEAN -> switch (Math.floorMod(stepIndex, 3)) {
-                case 0 -> 0;
-                case 1 -> 2;
-                default -> 5;
-            };
             case MOTIF -> switch (Math.floorMod(stepIndex, 4)) {
                 case 0 -> 0;
                 case 1 -> 2;
@@ -1810,7 +1796,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Engine\n2: Density\n3: Shape\n4: Mut Type",
+                "1: Engine\n2: Density\n3: Motion\n4: Mut Type",
                 new EncoderSlotBinding[]{
                         engineSlot(),
                         valueSlot(this::adjustDensity, () -> "Density"),
@@ -1863,15 +1849,24 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     final int steps = accumulator.consume(inc);
-                    if (steps > 0) {
+                    if (steps == 0) {
+                        return;
+                    }
+                    if (driver.isGlobalAltHeld()) {
+                        cycleGeneratorSubtype(steps > 0 ? 1 : -1);
+                    } else if (steps > 0) {
                         cycleGenerator(1);
-                    } else if (steps < 0) {
+                    } else {
                         cycleGenerator(-1);
                     }
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        oled.valueInfo("Engine", generator.label);
+                        if (driver.isGlobalAltHeld()) {
+                            oled.valueInfo("Subtype", activeGenerator().currentSubtypeLabel());
+                        } else {
+                            oled.valueInfo("Engine", generator.label);
+                        }
                     } else {
                         accumulator.reset();
                         oled.clearScreenDelayed();
@@ -1893,6 +1888,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
+                    if (driver.isGlobalAltHeld()) {
+                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
+                        adjustMutateIntensity(inc);
+                        return;
+                    }
                     final int steps = accumulator.consume(inc);
                     if (steps > 0) {
                         cycleMutationMode(1);
@@ -1902,7 +1902,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        oled.valueInfo("Mut Type", mutationLabel(mutationMode));
+                        if (driver.isGlobalAltHeld()) {
+                            oled.valueInfo("Mut %", "%.2f".formatted(mutateIntensity));
+                        } else {
+                            oled.valueInfo("Mut Type", mutationLabel(mutationMode));
+                        }
                     } else {
                         accumulator.reset();
                         oled.clearScreenDelayed();

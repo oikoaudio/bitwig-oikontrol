@@ -239,7 +239,7 @@ It edits a 2-bar / 32-step window and does not expand beyond that range from wit
 - Row 2: compact 16-note in-scale pitch pool
 - Rows 3-4: 32 visible steps
 - generated phrases are constrained to the current pitch pool
-- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Euclid`, `Rolling`, and `Octave`
+- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Rolling`, and `Octave`
 
 Main ideas:
 
@@ -266,10 +266,19 @@ Important gestures:
 
 Encoder pages:
 
-- `Channel`: generator, density, shape, mutation type
+- `Channel`: engine, density, engine macro, mutation type
 - `Mixer`: melodic process transforms
 - `User 1`: tension, Euclid pulses, Euclid rotation, mutation amount
 - `User 2`: selected or held step octave, gate, velocity, articulation
+
+Channel page details:
+
+- Encoder 1: `Engine`
+- `ALT + Encoder 1`: engine subtype / family when available
+- Encoder 2: `Density`
+- Encoder 3: engine-specific macro such as motion, contour, answer, movement, or jump
+- Encoder 4: `Mutation Type`
+- `ALT + Encoder 4`: mutation strength
 
 Melodic left-side buttons now align with the shared sequencer clip/edit workflow:
 

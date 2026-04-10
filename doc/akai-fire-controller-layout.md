@@ -259,7 +259,6 @@ Current generators:
 - `Acid`
 - `Motif`
 - `Call/Resp`
-- `Euclid`
 - `Rolling`
 - `Octave`
 
@@ -301,6 +300,17 @@ Melodic transforms moved off the left-side buttons and now live on the `Mixer` e
 ### Melodic Step Encoders
 
 `Melodic Step` uses the shared step-encoder infrastructure with mode-specific pages for generation and phrase editing. The exact labels shown on OLED depend on the active view and the held-step state.
+
+Current `Channel` page:
+
+| Slot | Function |
+| --- | --- |
+| 1 | Engine |
+| `ALT + 1` | Engine subtype / family when available |
+| 2 | Density |
+| 3 | Engine-specific macro (`Motion`, `Contour`, `Answer`, `Movement`, `Jump`) |
+| 4 | Mutation type |
+| `ALT + 4` | Mutation strength |
 
 ## PERFORM Mode
 
