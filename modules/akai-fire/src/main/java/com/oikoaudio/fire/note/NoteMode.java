@@ -3134,6 +3134,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private BiColorLightState getPatternDownLight() {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
+            if (driver.isGlobalShiftHeld() && driver.isGlobalAltHeld()) {
+                return BiColorLightState.RED_HALF;
+            }
             return chordStepPosition.canScrollRight().get() ? BiColorLightState.GREEN_HALF : BiColorLightState.OFF;
         }
         return BiColorLightState.GREEN_HALF;
@@ -3337,7 +3340,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                         chordBuildVelocitySlot(),
                         oikordSlot(2, oikordFamilyEncoder,
                                 amount -> {
-                                    if (driver.isGlobalShiftHeld() || driver.isGlobalAltHeld()) {
+                                    if (driver.isGlobalAltHeld()) {
                                         adjustOikordPage(amount);
                                     } else {
                                         adjustOikordFamily(amount);

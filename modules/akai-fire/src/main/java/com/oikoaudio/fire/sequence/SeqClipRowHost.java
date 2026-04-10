@@ -8,6 +8,10 @@ import com.oikoaudio.fire.display.OledDisplay;
 public interface SeqClipRowHost {
     AkaiFireOikontrolExtension getDriver();
 
+    default int getClipCreateLengthBeats() {
+        return getDriver().getDefaultClipLengthBeats();
+    }
+
     OledDisplay getOled();
 
     ClipLauncherSlotBank getClipSlotBank();

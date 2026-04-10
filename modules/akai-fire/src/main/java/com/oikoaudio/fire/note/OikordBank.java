@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public final class OikordBank {
-    public static final int PAGE_SIZE = 32;
+    public static final int PAGE_SIZE = 16;
     public static final int MID_REGISTER_OCTAVE = 3;
     private static final int MID_REGISTER_CENTER = 64;
 

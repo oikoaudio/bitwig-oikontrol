@@ -58,6 +58,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private static final int STEP_COUNT = 32;
     private static final int DEFAULT_LOOP_STEPS = 16;
     private static final double STEP_LENGTH = 0.25;
+    private static final int MAX_CLIP_LENGTH_BEATS = (int) (STEP_COUNT * STEP_LENGTH);
     private static final int DEFAULT_VELOCITY = 96;
     private static final double DEFAULT_GATE = 0.8;
     private static final int ENGINE_ENCODER_THRESHOLD = 3;
@@ -1085,7 +1086,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (generator == Generator.ROLLING) {
             return "Density";
         }
-        return "Oct Span";
+        return "Shape";
     }
 
     private void adjustPostDensity(final int amount) {
@@ -1142,7 +1143,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private void adjustOctaveActivity(final int amount) {
         octaveActivity = clampUnit(octaveActivity + amount * 0.05);
-        oled.valueInfo("Octave", "%.2f".formatted(octaveActivity));
+        oled.valueInfo(channelShapeLabel(), "%.2f".formatted(octaveActivity));
     }
 
     private void adjustEuclideanPulses(final int amount) {
@@ -2109,6 +2110,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     @Override
     public AkaiFireOikontrolExtension getDriver() {
         return driver;
+    }
+
+    @Override
+    public int getClipCreateLengthBeats() {
+        return MAX_CLIP_LENGTH_BEATS;
     }
 
     @Override

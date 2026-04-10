@@ -143,7 +143,7 @@ public class SeqClipHandler {
                 slot.select();
                 slot.launch();
             }
-            case CREATE_EMPTY -> slot.createEmptyClip(host.getDriver().getDefaultClipLengthBeats());
+            case CREATE_EMPTY -> slot.createEmptyClip(host.getClipCreateLengthBeats());
         }
     }
 

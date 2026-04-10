@@ -232,7 +232,7 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family | Chord render / interpretation |
+| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family (`ALT`: family page) | Chord render / interpretation |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity edit | Note chance edit | Note recurrence length | Note recurrence count |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
@@ -242,6 +242,7 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 ## Melodic Step
 
 `Melodic Step` is a generated and editable mono phrase sequencer for basslines and melodic hooks.
+It edits a 2-bar / 32-step window and does not expand beyond that range from within the mode.
 
 ### Pad Layout
 
