@@ -261,8 +261,9 @@
       <h3>Melodic Step workflow</h3>
       <p><code>Melodic Step</code> is a generated and editable mono phrase sequencer for basslines, motifs, and melodic hooks.</p>
       <ul>
-        <li>Upper two rows: collapsed in-scale pitch pool</li>
-        <li>Lower two rows: 16 visible steps</li>
+        <li>Row 1: clip row</li>
+        <li>Row 2: compact 16-note in-scale pitch pool</li>
+        <li>Rows 3-4: 32 visible steps</li>
         <li>generated phrases are constrained to the current pitch pool</li>
         <li>different generator modes provide different phrase grammars such as <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Euclid</code>, <code>Rolling</code>, and <code>Octave</code></li>
       </ul>
@@ -275,6 +276,7 @@
       </ul>
       <p>Important gestures:</p>
       <ul>
+        <li>top row clip pads: launch, select, create, copy, and delete clips using the same clip-row behavior as Drum mode</li>
         <li>tap a pitch pad: add or remove that note from the pool</li>
         <li>tap a step pad: place, clear, or load that step depending on state</li>
         <li>hold a step pad and turn encoders: edit that held step directly</li>
@@ -291,9 +293,23 @@
       <p>Encoder pages:</p>
       <ul>
         <li><code>Channel</code>: generator, density, shape, mutation type</li>
-        <li><code>Mixer</code>: track volume, pan, send 1, send 2</li>
+        <li><code>Mixer</code>: melodic process transforms</li>
         <li><code>User 1</code>: tension, Euclid pulses, Euclid rotation, mutation amount</li>
         <li><code>User 2</code>: selected or held step octave, gate, velocity, articulation</li>
+      </ul>
+      <p>Melodic left-side buttons now align with the shared sequencer clip/edit workflow:</p>
+      <ul>
+        <li><code>MUTE_1</code>: select clip without launch</li>
+        <li><code>MUTE_2</code>: last-step target mode</li>
+        <li><code>MUTE_3</code>: paste to clip slot</li>
+        <li><code>MUTE_4</code>: delete step or clip</li>
+      </ul>
+      <p>Melodic transforms moved to the <code>Mixer</code> page:</p>
+      <ul>
+        <li>Encoder 1: halve / double length</li>
+        <li>Encoder 2: swivel / mirror-double</li>
+        <li>Encoder 3: reverse</li>
+        <li>Encoder 4: invert down / up</li>
       </ul>
       <p>Notes on generation:</p>
       <ul>
@@ -307,15 +323,16 @@
       <h3>Chord Step workflow</h3>
       <p><code>Chord Step</code> is the current chord-oriented note-step workflow.</p>
       <ul>
-        <li>Upper two rows: curated chord slots</li>
-        <li>Lower two rows: 16 visible steps</li>
+        <li>Row 1: clip row</li>
+        <li>Row 2: curated chord slots or builder notes</li>
+        <li>Rows 3-4: 32 visible steps</li>
         <li>The builder defaults to in-key view and uses the same shared root/scale as live NOTE</li>
         <li>The default workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like</li>
         <li>Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord</li>
       </ul>
       <p>Important gestures:</p>
       <ul>
-        <li><code>MUTE_1..4</code>: chord octave and root offsets</li>
+        <li>top row clip pads: launch, select, create, copy, and delete clips using the same clip-row behavior as Drum mode</li>
         <li><code>PATTERN DOWN/UP</code>: next/previous chord family</li>
         <li><code>ALT + PATTERN DOWN/UP</code>: next/previous page within the current family</li>
         <li><code>STEP SEQ</code>: enter <code>Melodic Step</code></li>
@@ -327,8 +344,13 @@
         <li><code>SHIFT + BANK LEFT/RIGHT</code>: adjust held chord-step note duration</li>
         <li><code>ALT + BANK LEFT/RIGHT</code>: halve / double clip length</li>
         <li><code>SHIFT + ALT + PATTERN DOWN</code>: clear the selected clip contents</li>
+        <li><code>MUTE_1</code>: select / load step</li>
+        <li><code>MUTE_2</code>: last-step target mode</li>
+        <li><code>MUTE_3</code>: paste to target step or clip slot</li>
+        <li><code>MUTE_4</code>: delete target step or clip</li>
+        <li><code>ALT + MUTE_4</code>: invert chord</li>
+        <li><code>SHIFT + ALT + MUTE_4</code>: invert chord in the opposite direction</li>
       </ul>
-      <p>In <code>Chord Step</code>, hold <code>Paste</code> and press a step. The currently selected step is used as the source to copy from.</p>
 
       <h3>PERFORM mode</h3>
       <p><code>PERFORM</code> is the clip-launch and performance surface.</p>

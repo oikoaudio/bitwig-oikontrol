@@ -173,7 +173,7 @@ In live NOTE mode:
 | --- | --- | --- | --- | --- |
 | `Channel` | Mod | Pitch Gliss | Velocity sensitivity (`SHIFT`: Default velocity) | Shared scale |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
-| `User 1` | Mod | Pressure | Timbre | Pitch expression |
+| `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 ## Note-Step Sub-Modes
@@ -197,8 +197,9 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 
 | Pad row | Role |
 | --- | --- |
-| Upper two rows | Curated chord slots |
-| Lower two rows | 32 visible steps |
+| Row 1 | Clip row |
+| Row 2 | Curated chord slots or builder notes |
+| Rows 3-4 | 32 visible steps |
 
 ### Main Chord Step Gestures
 
@@ -221,9 +222,9 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 | Button | Role |
 | --- | --- |
 | `MUTE_1` | Select / load step |
-| `MUTE_2` | Paste to target step |
-| `MUTE_3` | Last Step target mode |
-| `MUTE_4` | Invert selected chord (`ALT` inverts the other direction) |
+| `MUTE_2` | Last Step target mode |
+| `MUTE_3` | Paste to target step or clip slot |
+| `MUTE_4` | Delete step or clip (`ALT`: invert chord, `SHIFT + ALT`: invert opposite direction) |
 
 The chord builder defaults to showing in-key notes only. If it auto-seeds a note into an empty builder, that note must be visible on the current builder rows.
 
@@ -246,8 +247,9 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 
 | Pad row | Role |
 | --- | --- |
-| Upper two rows | Pitch pool |
-| Lower two rows | 32-step melodic phrase |
+| Row 1 | Clip row |
+| Row 2 | 16-note pitch pool |
+| Rows 3-4 | 32-step melodic phrase |
 
 ### Generator Modes
 
@@ -281,12 +283,19 @@ If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions 
 
 ### Melodic Step Left-Side Buttons
 
-| Button | Primary role | Alt / Shift variant |
-| --- | --- | --- |
-| `MUTE_1` | Repeat / double | `SHIFT`: halve, `ALT`: mirror-double |
-| `MUTE_2` | Reverse | `ALT`: swivel halves |
-| `MUTE_3` | Invert up | `ALT`: invert down |
-| `MUTE_4` | Last Step target mode | None |
+| Button | Role |
+| --- | --- |
+| `MUTE_1` | Select clip without launch |
+| `MUTE_2` | Last Step target mode |
+| `MUTE_3` | Paste to clip slot |
+| `MUTE_4` | Delete step or clip |
+
+Melodic transforms moved off the left-side buttons and now live on the `Mixer` encoder page:
+
+- Encoder 1: halve / double length
+- Encoder 2: swivel / mirror-double
+- Encoder 3: reverse
+- Encoder 4: invert down / up
 
 ### Melodic Step Encoders
 

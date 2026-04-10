@@ -21,7 +21,7 @@ import com.bitwig.extensions.framework.values.StepViewPosition;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class DrumSequenceMode extends Layer implements StepSequencerHost {
+public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqClipRowHost {
     private final ControllerHost host;
     private final AkaiFireOikontrolExtension driver;
     private Application app;
@@ -142,7 +142,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
 
         padHandler = new PadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
-        clipHandler = new SeqClipHandler(driver, this, mainLayer);
+        clipHandler = new SeqClipHandler(this);
+        clipHandler.bindClipRow(mainLayer, driver.getRgbButtons());
         recurrenceEditor = new RecurrenceEditor(driver, this);
 
         initSequenceSection(driver);
@@ -1233,11 +1234,22 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
         return positionHandler;
     }
 
+    @Override
+    public PinnableCursorClip getClipCursor() {
+        return cursorClip;
+    }
+
     PinnableCursorClip getCursorClip() {
         return cursorClip;
     }
 
-    boolean isShiftHeld() {
+    @Override
+    public ClipLauncherSlotBank getClipSlotBank() {
+        return clipSlotBank;
+    }
+
+    @Override
+    public boolean isShiftHeld() {
         return shiftActive.get();
     }
 
@@ -1246,11 +1258,13 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost {
     }
 
 
-    boolean isCopyHeld() {
+    @Override
+    public boolean isCopyHeld() {
         return copyHeld.get();
     }
 
-    boolean isDeleteHeld() {
+    @Override
+    public boolean isDeleteHeld() {
         return deleteHeld.get();
     }
 

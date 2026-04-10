@@ -224,6 +224,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         ensureDrumPinningStillValid();
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
+        noteMode.notifyBlink(blinkTicks);
+        melodicStepMode.notifyBlink(blinkTicks);
         performMode.notifyBlink(blinkTicks);
         host.scheduleTask(this::handlePing, 100);
     }
@@ -575,13 +577,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (getButton(NoteAssign.SHIFT).isPressed()) {
+            final boolean nextState = !transport.isMetronomeEnabled().get();
             transport.isMetronomeEnabled().toggle();
-            notifyAction("Metronome", transport.isMetronomeEnabled().get() ? "On" : "Off");
+            notifyAction("Metronome", nextState ? "On" : "Off");
             return;
         }
         if (isGlobalAltHeld()) {
+            final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
             transport.isClipLauncherOverdubEnabled().toggle();
-            notifyAction("Launcher Overdub", transport.isClipLauncherOverdubEnabled().get() ? "On" : "Off");
+            notifyAction("Launcher Overdub", nextState ? "On" : "Off");
             return;
         }
         toggleClipLauncherAutomationWriteEnabled(true);

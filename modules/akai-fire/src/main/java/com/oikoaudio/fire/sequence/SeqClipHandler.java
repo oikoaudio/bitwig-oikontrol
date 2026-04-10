@@ -1,40 +1,42 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 
 public class SeqClipHandler {
 
-    private final DrumSequenceMode parent;
+    private final SeqClipRowHost host;
     private final PinnableCursorClip cursorClip;
     private int selectedSlotIndex = -1;
     private final ClipLauncherSlotBank slotBank;
     private final RgbLigthState[] slotColors = new RgbLigthState[16];
-    private final CursorTrack cursorTrack;
     private int blinkState = 0;
 
-    public SeqClipHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer clipLayer) {
-        this.parent = parent;
-        this.cursorClip = parent.getCursorClip();
-        cursorTrack = driver.getViewControl().getCursorTrack();
-        slotBank = cursorTrack.clipLauncherSlotBank();
-        initClipControlButtons(clipLayer, driver);
+    public SeqClipHandler(final SeqClipRowHost host) {
+        this.host = host;
+        this.cursorClip = host.getClipCursor();
+        this.slotBank = host.getClipSlotBank();
+        initSlotObservers();
     }
 
-    private void initClipControlButtons(final Layer clipLayer, final AkaiFireOikontrolExtension driver) {
-        final RgbButton[] rgbButtons = driver.getRgbButtons();
+    public void bindClipRow(final Layer clipLayer, final RgbButton[] rgbButtons) {
         for (int i = 0; i < 16; i++) {
             final RgbButton button = rgbButtons[i];
             final int index = i;
+            final ClipLauncherSlot cs = slotBank.getItemAt(index);
+            button.bindPressed(clipLayer, p -> handleClip(index, cs, p), () -> getClipSate(index, cs));
+        }
+    }
 
+    private void initSlotObservers() {
+        for (int i = 0; i < 16; i++) {
+            final int index = i;
             final ClipLauncherSlot cs = slotBank.getItemAt(index);
 
             cs.color().addValueObserver((r, g, b) -> {
@@ -55,8 +57,21 @@ public class SeqClipHandler {
             cs.isSelected().markInterested();
             cs.isStopQueued().markInterested();
 
-            button.bindPressed(clipLayer, p -> handleClip(index, cs, p), () -> getClipSate(index, cs));
         }
+    }
+
+    public void handlePadPress(final int index, final boolean pressed) {
+        if (index < 0 || index >= 16) {
+            return;
+        }
+        handleClip(index, slotBank.getItemAt(index), pressed);
+    }
+
+    public RgbLigthState getPadLight(final int index) {
+        if (index < 0 || index >= 16) {
+            return RgbLigthState.OFF;
+        }
+        return getClipSate(index, slotBank.getItemAt(index));
     }
 
     private RgbLigthState getClipSate(final int index, final ClipLauncherSlot slot) {
@@ -102,46 +117,33 @@ public class SeqClipHandler {
     }
 
     private void handleClip(final int index, final ClipLauncherSlot slot, final boolean pressed) {
-        if (!pressed) {
-            return;
-        }
         final boolean hasContent = slot.hasContent().get();
-        if (hasContent) {
-            if (parent.isDeleteHeld()) {
-                if (parent.isShiftHeld()) { // SHIFT + DELETE => remove clip
-                    slot.deleteObject();
-                } else { // SHIFT + DELETE => clear all steps
-                    final int previous = selectedSlotIndex;
-                    slot.select();
-                    cursorClip.clearSteps();
-                    if (previous != -1) {
-                        slotBank.getItemAt(previous).select();
-                    }
-                }
-            } else if (parent.isCopyHeld()) { // copies note
-                if (selectedSlotIndex != -1 && selectedSlotIndex != index) {
-                    slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(selectedSlotIndex));
-                    parent.getOled().valueInfo("Copy Clip", "Select target");
-                    parent.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
-                }
-            } else if (parent.isSelectHeld()) {
+        switch (SeqClipRowActionResolver.resolve(pressed, hasContent,
+                host.isDeleteHeld(), host.isCopyHeld(), host.isSelectHeld(), host.isShiftHeld(),
+                selectedSlotIndex, index)) {
+            case IGNORE -> {
+            }
+            case DELETE_OBJECT -> slot.deleteObject();
+            case CLEAR_STEPS -> {
+                final int previous = selectedSlotIndex;
                 slot.select();
-            } else if (parent.isShiftHeld()) {
-                slot.color().set(getSlotColor(slot));
-            } else {
+                cursorClip.clearSteps();
+                if (previous != -1) {
+                    slotBank.getItemAt(previous).select();
+                }
+            }
+            case COPY_TO_TARGET -> {
+                slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(selectedSlotIndex));
+                host.getOled().valueInfo("Copy Clip", "Select target");
+                host.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
+            }
+            case SELECT_ONLY -> slot.select();
+            case CYCLE_COLOR -> slot.color().set(getSlotColor(slot));
+            case SELECT_AND_LAUNCH -> {
                 slot.select();
                 slot.launch();
             }
-        } else {
-            if (parent.isCopyHeld()) {
-                if (selectedSlotIndex != -1 && selectedSlotIndex != index) {
-                    slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(selectedSlotIndex));
-                    parent.getOled().valueInfo("Copy Clip", "Select target");
-                    parent.notifyPopup("Copy Clip", slotLabel(selectedSlotIndex) + " -> " + slotLabel(index));
-                }
-            } else {
-                slot.createEmptyClip(parent.getDriver().getDefaultClipLengthBeats());
-            }
+            case CREATE_EMPTY -> slot.createEmptyClip(host.getDriver().getDefaultClipLengthBeats());
         }
     }
 

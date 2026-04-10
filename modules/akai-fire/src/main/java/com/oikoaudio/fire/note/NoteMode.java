@@ -40,6 +40,8 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
+import com.oikoaudio.fire.sequence.SeqClipHandler;
+import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
@@ -56,7 +58,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class NoteMode extends Layer implements StepSequencerHost {
+public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost {
+    private static final int CLIP_ROW_PAD_COUNT = 16;
+    private static final int OIKORD_SOURCE_PAD_OFFSET = 16;
+    private static final int OIKORD_SOURCE_PAD_COUNT = 16;
     private static final int BUILDER_FAMILY_INDEX = 0;
     private static final String BUILDER_FAMILY_LABEL = "Builder";
     private static final int PIANO_HIGHLIGHT_INDEX = -1;
@@ -146,6 +151,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
+    private final SeqClipHandler clipHandler;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
     private final Clip observedNoteClip;
@@ -289,7 +295,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         this.liveUser2Layer = new Layer(driver.getLayers(), "NOTE_MODE_LIVE_USER2");
 
         final ControllerHost host = driver.getHost();
-        this.cursorTrack = host.createCursorTrack("NOTE_VIEW", "Note View", 8, 8, true);
+        this.cursorTrack = host.createCursorTrack("NOTE_VIEW", "Note View", 8, CLIP_ROW_PAD_COUNT, true);
         this.cursorTrack.name().markInterested();
         this.cursorTrack.color().markInterested();
         this.cursorTrack.canHoldNoteData().markInterested();
@@ -311,6 +317,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         this.observedNoteClip.addStepDataObserver(this::handleObservedStepData);
         this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
         observeSelectedNoteClip();
+        this.clipHandler = new SeqClipHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
         this.currentLiveEncoderLayer = liveChannelLayer;
@@ -374,6 +381,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
         liveVelocitySensitivity = driver.getDefaultVelocitySensitivityPreference();
     }
 
+    public void notifyBlink(final int blinkTicks) {
+        clipHandler.notifyBlink(blinkTicks);
+    }
+
     private void bindPads() {
         final RgbButton[] pads = driver.getRgbButtons();
         for (int index = 0; index < pads.length; index++) {
@@ -422,8 +433,8 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void bindLiveChannelEncoders(final TouchEncoder[] encoders) {
-        bindLiveMidiEncoder(encoders[0], liveChannelLayer, "Mod",
-                this::adjustLiveModulation, () -> liveModulation);
+        bindResettableLiveMidiEncoder(encoders[0], liveChannelLayer, 0, "Mod",
+                this::adjustLiveModulation, () -> Integer.toString(liveModulation), this::resetLiveModulation);
 
         encoders[1].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
         encoders[1].bindTouched(liveChannelLayer, this::handleLivePitchOffsetTouch);
@@ -436,14 +447,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void bindLiveExpressionEncoders(final TouchEncoder[] encoders) {
-        bindLiveMidiEncoder(encoders[0], liveUser1Layer, "Mod",
-                this::adjustLiveModulation, () -> liveModulation);
-        bindLiveMidiEncoder(encoders[1], liveUser1Layer, "Pressure",
-                this::adjustLivePressure, () -> livePressure);
-        bindLiveMidiEncoder(encoders[2], liveUser1Layer, "Timbre",
-                this::adjustLiveTimbre, () -> liveTimbre);
-        bindLiveMidiEncoder(encoders[3], liveUser1Layer, "Pitch Expr",
-                this::adjustLivePitchExpression, () -> livePitchExpression);
+        bindResettableLiveMidiEncoder(encoders[0], liveUser1Layer, 0, "Aftertouch",
+                this::adjustLivePressure, () -> Integer.toString(livePressure), this::resetLivePressure);
+        bindResettableLiveMidiEncoder(encoders[1], liveUser1Layer, 1, "Pressure",
+                this::adjustLivePressure, () -> Integer.toString(livePressure), this::resetLivePressure);
+        bindResettableLiveMidiEncoder(encoders[2], liveUser1Layer, 2, "Timbre",
+                this::adjustLiveTimbre, () -> Integer.toString(liveTimbre), this::resetLiveTimbre);
+        bindResettableLiveMidiEncoder(encoders[3], liveUser1Layer, 3, "Pitch Expr",
+                this::adjustLivePitchExpression, this::formatLivePitchExpressionDisplay, this::resetLivePitchExpression);
     }
 
     private void bindLiveRemoteEncoders(final TouchEncoder[] encoders) {
@@ -500,6 +511,22 @@ public class NoteMode extends Layer implements StepSequencerHost {
                 Integer.toString(valueSupplier.getAsInt())));
     }
 
+    private void bindResettableLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final int encoderIndex,
+                                               final String label, final java.util.function.IntConsumer adjuster,
+                                               final java.util.function.Supplier<String> valueSupplier,
+                                               final Runnable resetAction) {
+        encoder.bindEncoder(layer, inc -> {
+            if (inc == 0) {
+                return;
+            }
+            markEncoderAdjusted(encoderIndex);
+            adjuster.accept(inc);
+        });
+        encoder.bindTouched(layer, touched -> handleResettableTouch(encoderIndex, touched,
+                () -> oled.valueInfo(label, valueSupplier.get()),
+                resetAction));
+    }
+
     private void handleLiveVelocityEncoder(final int inc) {
         final int steps = liveVelocityEncoder.consume(inc);
         if (steps == 0) {
@@ -549,7 +576,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void adjustLivePressure(final int inc) {
-        adjustLiveMidiValue(inc, "Pressure", value -> {
+        adjustLiveMidiValue(inc, "Aftertouch", value -> {
             livePressure = value;
             noteInput.sendRawMidiEvent(Midi.CHANNEL_AT, livePressure, 0);
         }, livePressure);
@@ -570,10 +597,16 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void adjustLivePitchExpression(final int inc) {
-        adjustLiveMidiValue(inc, "Pitch Expr", value -> {
-            livePitchExpression = value;
-            sendPitchExpressionValue(value);
-        }, livePitchExpression);
+        if (inc == 0) {
+            return;
+        }
+        final int nextValue = Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, livePitchExpression + inc));
+        if (nextValue == livePitchExpression) {
+            return;
+        }
+        livePitchExpression = nextValue;
+        sendPitchExpressionValue(nextValue);
+        oled.valueInfo("Pitch Expr", formatLivePitchExpressionDisplay());
     }
 
     private void adjustLiveMidiValue(final int inc, final String label,
@@ -619,6 +652,30 @@ public class NoteMode extends Layer implements StepSequencerHost {
                     * (16383.0 - 8192.0));
         }
         noteInput.sendRawMidiEvent(Midi.PITCH_BEND, bend & 0x7F, (bend >> 7) & 0x7F);
+    }
+
+    private String formatLivePitchExpressionDisplay() {
+        return formatSignedValue(livePitchExpression - DEFAULT_LIVE_PITCH_EXPRESSION);
+    }
+
+    private void resetLivePressure() {
+        livePressure = MIN_MIDI_VALUE;
+        noteInput.sendRawMidiEvent(Midi.CHANNEL_AT, livePressure, 0);
+    }
+
+    private void resetLiveModulation() {
+        liveModulation = MIN_MIDI_VALUE;
+        noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_MOD, liveModulation);
+    }
+
+    private void resetLiveTimbre() {
+        liveTimbre = DEFAULT_TIMBRE;
+        noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_TIMBRE, liveTimbre);
+    }
+
+    private void resetLivePitchExpression() {
+        livePitchExpression = DEFAULT_LIVE_PITCH_EXPRESSION;
+        sendPitchExpressionValue(livePitchExpression);
     }
 
     private void resetLivePerformanceToggles() {
@@ -673,9 +730,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void handleMute2Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            copyHeld.set(pressed);
+            fixedLengthHeld.set(pressed);
             if (pressed) {
-                oled.valueInfo("Paste", "Target step");
+                oled.valueInfo("Last Step", "Target step");
             } else {
                 oled.clearScreenDelayed();
             }
@@ -691,9 +748,9 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void handleMute3Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            fixedLengthHeld.set(pressed);
+            copyHeld.set(pressed);
             if (pressed) {
-                oled.valueInfo("Last Step", "Target step");
+                oled.valueInfo("Paste", "Clip / step target");
             } else {
                 oled.clearScreenDelayed();
             }
@@ -706,9 +763,16 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void handleMute4Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            invertHeld.set(pressed);
             if (pressed) {
-                invertCurrentChord(driver.isGlobalAltHeld() ? -1 : 1);
+                if (driver.isGlobalAltHeld()) {
+                    invertCurrentChord(driver.isGlobalShiftHeld() ? -1 : 1);
+                    return;
+                }
+                deleteHeld.set(true);
+                oled.valueInfo("Delete", "Clip / step target");
+            } else {
+                deleteHeld.set(false);
+                oled.clearScreenDelayed();
             }
             return;
         }
@@ -723,24 +787,23 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private BiColorLightState getMute2LightState() {
         if (isChordStepModeActive()) {
-            return copyHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
         return sostenutoActive ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     private BiColorLightState getMute3LightState() {
         if (isChordStepModeActive()) {
-            return fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
         }
         return noteRepeatHandler.getNoteRepeatActive().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     private BiColorLightState getMute4LightState() {
         if (isChordStepModeActive()) {
-            if (invertHeld.get()) {
-                return driver.isGlobalAltHeld() ? BiColorLightState.RED_FULL : BiColorLightState.RED_FULL;
-            }
-            return driver.isGlobalAltHeld() ? BiColorLightState.RED_HALF : BiColorLightState.RED_FULL;
+            return driver.isGlobalAltHeld()
+                    ? BiColorLightState.RED_HALF
+                    : (deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF);
         }
         return BiColorLightState.OFF;
     }
@@ -804,16 +867,21 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private void handleOikordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
+        if (padIndex < CLIP_ROW_PAD_COUNT) {
+            clipHandler.handlePadPress(padIndex, pressed);
+            return;
+        }
         if (padIndex < STEP_PAD_OFFSET) {
+            final int sourcePadIndex = padIndex - OIKORD_SOURCE_PAD_OFFSET;
             if (isBuilderFamily()) {
-                handleBuilderSourcePadPress(padIndex, pressed);
+                handleBuilderSourcePadPress(sourcePadIndex, pressed);
                 return;
             }
-            if (!oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, padIndex)) {
+            if (!oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, sourcePadIndex)) {
                 return;
             }
             if (pressed) {
-                selectedOikordSlot = padIndex;
+                selectedOikordSlot = sourcePadIndex;
                 final boolean hasHeldSteps = !heldStepPads.isEmpty();
                 final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
                 final boolean transportStopped = !driver.isTransportPlaying();
@@ -864,6 +932,11 @@ public class NoteMode extends Layer implements StepSequencerHost {
             }
             if (copyHeld.get()) {
                 pasteCurrentChordToStep(stepIndex);
+                modifierHandledStepPads.add(stepIndex);
+                return;
+            }
+            if (deleteHeld.get()) {
+                clearChordStep(stepIndex);
                 modifierHandledStepPads.add(stepIndex);
                 return;
             }
@@ -2438,18 +2511,22 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private RgbLigthState getOikordStepPadLight(final int padIndex) {
+        if (padIndex < CLIP_ROW_PAD_COUNT) {
+            return clipHandler.getPadLight(padIndex);
+        }
         if (padIndex < STEP_PAD_OFFSET) {
+            final int sourcePadIndex = padIndex - OIKORD_SOURCE_PAD_OFFSET;
             if (isBuilderFamily()) {
-                return getBuilderSourcePadLight(padIndex);
+                return getBuilderSourcePadLight(sourcePadIndex);
             }
-            if (!oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, padIndex)) {
+            if (!oikordBank.hasSlot(currentPresetFamilyIndex(), oikordPage, sourcePadIndex)) {
                 return RgbLigthState.OFF;
             }
-            final OikordBank.Slot slot = oikordBank.slot(currentPresetFamilyIndex(), oikordPage, padIndex);
-            final int groupIndex = padIndex / 8;
+            final OikordBank.Slot slot = oikordBank.slot(currentPresetFamilyIndex(), oikordPage, sourcePadIndex);
+            final int groupIndex = sourcePadIndex / 8;
             final RgbLigthState grouped = getFamilyGroupColor(slot.family(), groupIndex, oikordPage,
                     currentOikordPageCount());
-            return padIndex == selectedOikordSlot ? SELECTED_CHORD : grouped.getDimmed();
+            return sourcePadIndex == selectedOikordSlot ? SELECTED_CHORD : grouped.getDimmed();
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
         final boolean occupied = hasVisibleStepContent(stepIndex);
@@ -2461,10 +2538,16 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return HELD_STEP.getBrightest();
         }
         if (occupied) {
-            return StepPadLightHelper.renderOccupiedStep(occupiedStepColor, accented, stepIndex == playingStep);
+            if (stepIndex == playingStep) {
+                return StepPadLightHelper.renderPlayheadHighlight(
+                        accented ? occupiedStepColor.getBrightend() : occupiedStepColor);
+            }
+            return StepPadLightHelper.renderOccupiedStep(occupiedStepColor, accented, false);
         }
         if (sustained) {
-            return stepIndex == playingStep ? sustainedStepColor.getBrightend() : sustainedStepColor;
+            return stepIndex == playingStep
+                    ? StepPadLightHelper.renderPlayheadHighlight(sustainedStepColor)
+                    : sustainedStepColor;
         }
         return StepPadLightHelper.renderEmptyStep(stepIndex, playingStep);
     }
@@ -2715,7 +2798,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
             return;
         }
         final int builderRoot = Math.floorMod(firstVisibleNote, 12);
-        for (int padIndex = 0; padIndex < STEP_PAD_OFFSET; padIndex++) {
+        for (int padIndex = 0; padIndex < OIKORD_SOURCE_PAD_COUNT; padIndex++) {
             final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
             if (midiNote >= 0 && getScale().isRootMidiNote(builderRoot, midiNote)) {
                 builderSelectedNotes.add(midiNote);
@@ -2789,7 +2872,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     private int getBuilderNoteMidiForPad(final int padIndex) {
-        if (padIndex < 0 || padIndex >= STEP_PAD_OFFSET) {
+        if (padIndex < 0 || padIndex >= OIKORD_SOURCE_PAD_COUNT) {
             return -1;
         }
         final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
@@ -3174,6 +3257,46 @@ public class NoteMode extends Layer implements StepSequencerHost {
     }
 
     @Override
+    public boolean isCopyHeld() {
+        return copyHeld.get();
+    }
+
+    @Override
+    public boolean isDeleteHeld() {
+        return deleteHeld.get();
+    }
+
+    @Override
+    public boolean isShiftHeld() {
+        return driver.isGlobalShiftHeld();
+    }
+
+    @Override
+    public AkaiFireOikontrolExtension getDriver() {
+        return driver;
+    }
+
+    @Override
+    public OledDisplay getOled() {
+        return oled;
+    }
+
+    @Override
+    public ClipLauncherSlotBank getClipSlotBank() {
+        return noteClipSlotBank;
+    }
+
+    @Override
+    public PinnableCursorClip getClipCursor() {
+        return noteStepClip;
+    }
+
+    @Override
+    public void notifyPopup(final String title, final String value) {
+        driver.notifyPopup(title, value);
+    }
+
+    @Override
     public String getPadInfo() {
         return currentStepSubMode.displayName();
     }
@@ -3442,10 +3565,14 @@ public class NoteMode extends Layer implements StepSequencerHost {
             slot.hasContent().markInterested();
             slot.isSelected().markInterested();
             slot.color().markInterested();
+            slot.isPlaying().markInterested();
+            slot.isRecording().markInterested();
             slot.exists().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.hasContent().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.isSelected().addValueObserver(ignored -> refreshSelectedNoteClipState());
             slot.color().addValueObserver((r, g, b) -> refreshSelectedNoteClipState());
+            slot.isPlaying().addValueObserver(ignored -> refreshSelectedNoteClipState());
+            slot.isRecording().addValueObserver(ignored -> refreshSelectedNoteClipState());
         }
         refreshSelectedNoteClipState();
     }
@@ -3491,26 +3618,46 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void refreshChordStepObservationPass() {
         clearObservedChordCaches();
+        boolean clipSelected = false;
         final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
         if (preferredSlotIndex >= 0 && preferredSlotIndex < noteClipSlotBank.getSizeOfBank()) {
-            noteClipSlotBank.cursorIndex().set(preferredSlotIndex);
             final ClipLauncherSlot preferredSlot = noteClipSlotBank.getItemAt(preferredSlotIndex);
             if (preferredSlot.exists().get()) {
                 preferredSlot.select();
+                clipSelected = true;
             }
-        } else {
-            for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
-                final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
-                if (slot.exists().get() && slot.isSelected().get()) {
-                    slot.select();
-                    break;
-                }
-            }
+        }
+        if (!clipSelected) {
+            clipSelected = selectPlayingNoteClipSlot();
+        }
+        if (!clipSelected) {
+            selectSelectedNoteClipSlot();
         }
         noteStepClip.scrollToKey(0);
         observedNoteClip.scrollToKey(0);
         noteStepClip.scrollToStep(chordStepOffset());
         observedNoteClip.scrollToStep(0);
+    }
+
+    private boolean selectPlayingNoteClipSlot() {
+        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
+            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
+            if (slot.exists().get() && (slot.isPlaying().get() || slot.isRecording().get())) {
+                slot.select();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void selectSelectedNoteClipSlot() {
+        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
+            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
+            if (slot.exists().get() && slot.isSelected().get()) {
+                slot.select();
+                return;
+            }
+        }
     }
 
     private void clearObservedChordCaches() {
@@ -3715,7 +3862,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         return switch (mode) {
             case CHANNEL -> "1: Mod\n2: Pitch Gliss\n3: Velocity\n4: Scale";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
-            case USER_1 -> "1: Mod\n2: Pressure\n3: Timbre\n4: Pitch Expr";
+            case USER_1 -> "1: Aftertouch\n2: Pressure\n3: Timbre\n4: Pitch Expr";
             case USER_2 -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
         };
     }
