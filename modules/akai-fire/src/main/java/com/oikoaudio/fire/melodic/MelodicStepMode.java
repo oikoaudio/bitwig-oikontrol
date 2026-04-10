@@ -240,7 +240,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> {
             if (pressed) {
                 copyHeld.set(true);
-                oled.valueInfo("Paste", "Clip / step target");
+                oled.valueInfo("Paste", "Clip target");
             } else {
                 copyHeld.set(false);
                 oled.clearScreenDelayed();
@@ -2057,7 +2057,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }, () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
         selectedStep = Math.min(selectedStep, Math.max(0, loopSteps - 1));
-        oled.lineInfo("Melodic Step", "Up Pool  Alt+Up MutPool\nDown Phrase  Sh+Alt+Dn Clear");
     }
 
     @Override
