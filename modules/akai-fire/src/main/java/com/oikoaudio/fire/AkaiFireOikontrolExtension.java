@@ -87,6 +87,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue defaultScalePref;
     private SettableEnumValue defaultRootKeyPref;
     private SettableEnumValue defaultNoteInputOctavePref;
+    private SettableEnumValue defaultVelocitySensitivityPref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableRangedValue padBrightnessPref;
@@ -292,6 +293,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVES,
                 FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE);
         defaultNoteInputOctavePref.markInterested();
+
+        defaultVelocitySensitivityPref = preferences.getEnumSetting("Default Velocity Sensitivity",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITIES,
+                FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY);
+        defaultVelocitySensitivityPref.markInterested();
 
         drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
                 FireControlPreferences.CATEGORY_PINNING,
@@ -961,6 +968,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return defaultNoteInputOctavePref == null
                 ? FireControlPreferences.toDefaultNoteInputOctave(FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE)
                 : FireControlPreferences.toDefaultNoteInputOctave(defaultNoteInputOctavePref.get());
+    }
+
+    public int getDefaultVelocitySensitivityPreference() {
+        return defaultVelocitySensitivityPref == null
+                ? FireControlPreferences.toDefaultVelocitySensitivity(
+                FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY)
+                : FireControlPreferences.toDefaultVelocitySensitivity(defaultVelocitySensitivityPref.get());
     }
 
     public void exitMelodicStepMode() {

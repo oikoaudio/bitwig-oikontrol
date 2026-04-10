@@ -130,6 +130,33 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesDefaultNoteInputOctavePreferenceToSupportedRange() {
+        assertEquals("2", FireControlPreferences.normalizeDefaultNoteInputOctave("2"));
+        assertEquals("3", FireControlPreferences.normalizeDefaultNoteInputOctave("3"));
+        assertEquals("4", FireControlPreferences.normalizeDefaultNoteInputOctave("4"));
+        assertEquals(FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE,
+                FireControlPreferences.normalizeDefaultNoteInputOctave("7"));
+    }
+
+    @Test
+    void normalizesDefaultVelocitySensitivityPreferenceValues() {
+        assertEquals(FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY,
+                FireControlPreferences.normalizeDefaultVelocitySensitivity(
+                        FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY));
+        assertEquals("50", FireControlPreferences.normalizeDefaultVelocitySensitivity("50"));
+        assertEquals(FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY,
+                FireControlPreferences.normalizeDefaultVelocitySensitivity("85"));
+    }
+
+    @Test
+    void mapsDefaultVelocitySensitivityPreferenceToPercent() {
+        assertEquals(0, FireControlPreferences.toDefaultVelocitySensitivity("0"));
+        assertEquals(80, FireControlPreferences.toDefaultVelocitySensitivity("80"));
+        assertEquals(100, FireControlPreferences.toDefaultVelocitySensitivity("100"));
+        assertEquals(80, FireControlPreferences.toDefaultVelocitySensitivity("unexpected"));
+    }
+
+    @Test
     void normalizesPadBrightnessToSupportedRange() {
         assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MIN,
                 FireControlPreferences.normalizePadBrightness(0));

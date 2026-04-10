@@ -331,6 +331,7 @@ public class NoteMode extends Layer implements StepSequencerHost {
         applyDefaultScalePreference();
         applyDefaultRootKeyPreference();
         applyDefaultNoteInputOctavePreference();
+        applyDefaultVelocitySensitivityPreference();
     }
 
     private void applyDefaultScalePreference() {
@@ -366,6 +367,10 @@ public class NoteMode extends Layer implements StepSequencerHost {
 
     private void applyDefaultNoteInputOctavePreference() {
         transposeBase = driver.getDefaultNoteInputOctavePreference() * 12 + getRootNote();
+    }
+
+    private void applyDefaultVelocitySensitivityPreference() {
+        liveVelocitySensitivity = driver.getDefaultVelocitySensitivityPreference();
     }
 
     private void bindPads() {

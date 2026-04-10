@@ -353,6 +353,7 @@ These preferences materially change how the Fire feels in use:
 - `Default Clip Length`
 - `Default Root Key`
 - `Default Note Input Octave`
+- `Default Velocity Sensitivity`
 - `SELECT Encoder Startup`
 - `SELECT Encoder`
 - `Drum Mode Pinning`
@@ -361,7 +362,7 @@ These preferences materially change how the Fire feels in use:
 - `Pad Brightness`
 - `Pad Saturation`
 
-`Default Root Key`, `Default Scale`, and `Default Note Input Octave` are startup defaults. They initialize the shared pitch context when the script starts; changing key or scale from the controller does not currently write those defaults back into Bitwig preferences.
+`Default Root Key`, `Default Scale`, `Default Note Input Octave`, and `Default Velocity Sensitivity` are startup defaults. They initialize the shared pitch context and live NOTE response when the script starts; changing key, scale, or velocity sensitivity from the controller does not currently write those defaults back into Bitwig preferences.
 
 ## Known Gaps
 

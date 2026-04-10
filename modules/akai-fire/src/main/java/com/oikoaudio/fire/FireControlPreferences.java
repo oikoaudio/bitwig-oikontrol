@@ -112,16 +112,25 @@ public final class FireControlPreferences {
     };
     public static final String DEFAULT_ROOT_KEY = "C";
     public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {
-            "0",
-            "1",
             "2",
             "3",
-            "4",
-            "5",
-            "6",
-            "7"
+            "4"
     };
     public static final String DEFAULT_NOTE_INPUT_OCTAVE = "3";
+    public static final String[] DEFAULT_VELOCITY_SENSITIVITIES = {
+            "0",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+    };
+    public static final String DEFAULT_VELOCITY_SENSITIVITY = "80";
 
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
@@ -228,6 +237,19 @@ public final class FireControlPreferences {
             }
         }
         return 0;
+    }
+
+    public static String normalizeDefaultVelocitySensitivity(final String preferenceValue) {
+        for (final String value : DEFAULT_VELOCITY_SENSITIVITIES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return DEFAULT_VELOCITY_SENSITIVITY;
+    }
+
+    public static int toDefaultVelocitySensitivity(final String preferenceValue) {
+        return Integer.parseInt(normalizeDefaultVelocitySensitivity(preferenceValue));
     }
 
     public static String normalizeDefaultNoteInputOctave(final String preferenceValue) {
