@@ -2,13 +2,9 @@ package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.bitwig.extension.controller.api.NoteStep;
-import com.bitwig.extensions.framework.values.BooleanValueObject;
 
 public class AccentHandler {
-	private static final int ACCENTED_VELOCITY = 127;
-	private final BooleanValueObject accentActive = new BooleanValueObject();
-	private boolean accenButtonHeld = false;
-	private boolean modified = false;
+	private final AccentButtonModel model = new AccentButtonModel();
 	private final DrumSequenceMode parent;
 
 	public AccentHandler(final DrumSequenceMode drumSequenceMode) {
@@ -16,7 +12,7 @@ public class AccentHandler {
 	}
 
 	public int getCurrenVel() {
-		return accentActive.get() ? ACCENTED_VELOCITY : parent.getDefaultVelocity();
+		return model.currentVelocity(parent.getDefaultVelocity());
 	}
 
 	public int getStandardVelocity() {
@@ -24,7 +20,7 @@ public class AccentHandler {
 	}
 
 	public int getAccentedVelocity() {
-		return ACCENTED_VELOCITY;
+		return model.accentedVelocity();
 	}
 
 	public boolean isAccented(final NoteStep noteStep) {
@@ -35,33 +31,37 @@ public class AccentHandler {
 	}
 
 	public void markModified() {
-		modified = true;
+		model.markModified();
 	}
 
 	BiColorLightState getLightState() {
-		return accentActive.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+		return model.lightState();
 	}
 
 	public boolean isHolding() {
-		return accenButtonHeld;
+		return model.isHolding();
+	}
+
+	public boolean isActive() {
+		return model.isActive();
 	}
 
 	void handlePressed(final boolean pressed) {
-		if (!pressed) {
-			if (!modified) {
-				accentActive.toggle();
-				this.parent.getPadHandler().getNoteRepeaterHandler().setNoteInputVelocity(this.getCurrenVel());
-			}
-			parent.getOled().clearScreenDelayed();
-			modified = false;
-		} else {
+		final AccentLatchState.Transition transition = model.handlePressed(pressed);
+		if (transition == AccentLatchState.Transition.PRESSED) {
 			displayAccentInfo();
+			return;
 		}
-		accenButtonHeld = pressed;
+		if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
+			this.parent.getPadHandler().getNoteRepeaterHandler().setNoteInputVelocity(this.getCurrenVel());
+			displayAccentInfo();
+			return;
+		}
+		parent.getOled().clearScreenDelayed();
 	}
 
 	private void displayAccentInfo() {
-		parent.getOled().valueInfo("Accent", accentActive.get() ? "On" : "Off");
+		parent.getOled().valueInfo("Accent", model.label());
 	}
 
 }

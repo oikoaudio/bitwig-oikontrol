@@ -33,6 +33,7 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.SeqClipHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
+import com.oikoaudio.fire.sequence.AccentLatchState;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
@@ -103,9 +104,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final LinkedHashSet<Integer> allowedPitches = new LinkedHashSet<>();
     private boolean poolUserEdited = false;
     private Generator poolGeneratorSource = null;
-    private boolean accentActive = false;
-    private boolean accentButtonHeld = false;
-    private boolean accentModified = false;
+    private final AccentLatchState accentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
     private double density = 0.45;
     private double tension = 0.25;
@@ -274,18 +273,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
             return;
         }
-        accentButtonHeld = pressed;
-        if (pressed) {
-            oled.valueInfo("Accent", accentActive ? "On" : "Off");
-        } else {
-            if (!accentModified) {
-                accentActive = !accentActive;
-                oled.valueInfo("Accent", accentActive ? "On" : "Off");
-            } else {
-                oled.clearScreenDelayed();
-            }
-            accentModified = false;
+        final AccentLatchState.Transition transition = accentState.handlePressed(pressed);
+        if (transition == AccentLatchState.Transition.PRESSED) {
+            oled.valueInfo("Accent", accentState.isActive() ? "On" : "Off");
+            return;
         }
+        if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
+            oled.valueInfo("Accent", accentState.isActive() ? "On" : "Off");
+            return;
+        }
+        oled.clearScreenDelayed();
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
@@ -299,8 +296,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
         if (padIndex >= STEP_PAD_OFFSET && !pressed) {
             final int stepIndex = padIndex - STEP_PAD_OFFSET;
+            final boolean accentGesture = accentState.isHeld() || accentState.isActive();
             if (heldStep != null && heldStep == stepIndex) {
-                if (!heldStepConsumed && !accentButtonHeld && !fixedLengthHeld.get() && !deleteHeld.get()) {
+                if (!heldStepConsumed && !accentGesture && !fixedLengthHeld.get() && !deleteHeld.get()) {
                     toggleStep(stepIndex);
                 }
                 heldStep = null;
@@ -316,11 +314,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             return;
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
+        final boolean accentGesture = accentState.isHeld() || accentState.isActive();
         heldStep = stepIndex;
         heldStepConsumed = false;
-        if (accentButtonHeld) {
+        if (accentGesture) {
             heldStepConsumed = true;
-            accentModified = true;
+            if (accentState.isHeld()) {
+                accentState.markModified();
+            }
             toggleAccent(stepIndex);
             return;
         }
@@ -860,7 +861,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private MelodicPattern.Step applyCurrentAccentState(final MelodicPattern.Step step) {
-        return accentActive
+        return accentState.isActive()
                 ? step.withAccent(true).withVelocity(118)
                 : step.withAccent(false).withVelocity(DEFAULT_VELOCITY);
     }
@@ -1780,10 +1781,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (driver.isGlobalAltHeld()) {
             return driver.getStepFillLightState();
         }
-        if (accentButtonHeld) {
-            return accentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        if (accentState.isHeld()) {
+            return accentState.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
-        return accentActive ? BiColorLightState.AMBER_HALF : BiColorLightState.GREEN_FULL;
+        return accentState.isActive() ? BiColorLightState.AMBER_HALF : BiColorLightState.GREEN_FULL;
     }
 
     private String mutationLabel(final MelodicMutator.Mode mode) {
@@ -2067,7 +2068,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     protected void onDeactivate() {
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
-        accentButtonHeld = false;
+        accentState.clearHeld();
         fixedLengthHeld.set(false);
         deleteHeld.set(false);
         stopPitchPoolAuditions();

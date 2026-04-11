@@ -42,6 +42,7 @@ import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.SeqClipHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
+import com.oikoaudio.fire.sequence.AccentLatchState;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
@@ -179,9 +180,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private boolean pitchContextTouched = false;
     private boolean inKey = false;
     private boolean noteStepActive = false;
-    private boolean oikordAccentActive = false;
-    private boolean oikordAccentButtonHeld = false;
-    private boolean oikordAccentModified = false;
+    private final AccentLatchState oikordAccentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
     private boolean builderInKey = true;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
@@ -823,7 +822,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void handleStepSeqPressed(final boolean pressed) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-            if (driver.isGlobalShiftHeld()) {
+            if (driver.isGlobalShiftHeld() || oikordAccentState.isHeld()) {
                 handleOikordAccentPressed(pressed);
                 return;
             }
@@ -899,10 +898,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return;
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
+        final boolean accentGesture = oikordAccentState.isHeld() || oikordAccentState.isActive();
         if (pressed && !ensureSelectedNoteClipSlot()) {
             return;
         }
-        if (oikordAccentButtonHeld) {
+        if (accentGesture) {
             if (pressed) {
                 toggleOikordAccentForStep(stepIndex);
             }
@@ -2143,31 +2143,29 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return BiColorLightState.OFF;
         }
         if (driver.isGlobalShiftHeld()) {
-            return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return oikordAccentState.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
         if (driver.isGlobalAltHeld()) {
             return driver.getStepFillLightState();
         }
-        return oikordAccentActive ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+        return oikordAccentState.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     private void handleOikordAccentPressed(final boolean pressed) {
-        oikordAccentButtonHeld = pressed;
-        if (!pressed) {
-            if (!oikordAccentModified) {
-                oikordAccentActive = !oikordAccentActive;
-                oled.valueInfo("Accent", oikordAccentActive ? "On" : "Off");
-            } else {
-                oled.clearScreenDelayed();
-            }
-            oikordAccentModified = false;
+        final AccentLatchState.Transition transition = oikordAccentState.handlePressed(pressed);
+        if (transition == AccentLatchState.Transition.PRESSED) {
+            oled.valueInfo("Accent", oikordAccentState.isActive() ? "On" : "Off");
             return;
         }
-        oled.valueInfo("Accent", oikordAccentActive ? "On" : "Off");
+        if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
+            oled.valueInfo("Accent", oikordAccentState.isActive() ? "On" : "Off");
+            return;
+        }
+        oled.clearScreenDelayed();
     }
 
     private int currentOikordVelocity(final int rawVelocity) {
-        if (oikordAccentActive) {
+        if (oikordAccentState.isActive()) {
             return DEFAULT_OIKORD_ACCENTED_VELOCITY;
         }
         return LiveVelocityLogic.resolveVelocity(defaultOikordVelocity, oikordVelocitySensitivity, rawVelocity);
@@ -2181,7 +2179,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         final boolean accented = notesAtStep.values().stream().allMatch(this::isOikordAccented);
         final double targetVelocity = (accented ? defaultOikordVelocity : DEFAULT_OIKORD_ACCENTED_VELOCITY) / 127.0;
         notesAtStep.values().forEach(note -> note.setVelocity(targetVelocity));
-        oikordAccentModified = true;
+        oikordAccentState.markModified();
         oled.valueInfo("Accent", accented ? "Normal" : "Accented");
     }
 

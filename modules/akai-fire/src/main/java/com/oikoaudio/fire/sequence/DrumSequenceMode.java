@@ -29,6 +29,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final IntSetValue heldSteps = new IntSetValue();
     private final Set<Integer> addedSteps = new HashSet<>();
     private final Set<Integer> modifiedSteps = new HashSet<>();
+    private final Set<Integer> gestureConsumedSteps = new HashSet<>();
     private final HashMap<Integer, NoteStep> expectedNoteChanges = new HashMap<>();
     // Maintain fractional offsets for held notes.
     private final Map<NoteStep, Double> fractionalOffsets = new HashMap<>();
@@ -248,14 +249,20 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void handleSeqSelection(final int index, final boolean pressed) {
         final NoteStep note = assignments[index];
+        final boolean accentGesture = accentHandler.isHolding() || accentHandler.isActive();
         if (!pressed) {
             heldSteps.remove(index);
             heldStepFineStarts.remove(index);
             if (copyHeld.get() || fixedLengthHeld.get()) {
                 // do nothing
+            } else if (accentGesture) {
+                // Accent mode applies on press and should not fall through to normal step toggling on release.
+                gestureConsumedSteps.remove(index);
+            } else if (gestureConsumedSteps.remove(index)) {
+                // A non-toggle gesture already handled this step on press.
             } else if (note != null && note.state() == State.NoteOn && !addedSteps.contains(index)) {
                 if (!modifiedSteps.contains(index)) {
-                    cursorClip.toggleStep(index, 0, accentHandler.getCurrenVel());
+                    cursorClip.clearStep(index, 0);
                 } else {
                     modifiedSteps.remove(index);
                 }
@@ -268,7 +275,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 stepActionFixedLength(index);
             } else if (copyHeld.get()) {
                 handleNoteCopyAction(index, note);
-            } else if (accentHandler.isHolding()) {
+            } else if (accentGesture) {
                 handleAccentStepAction(index, note);
             } else {
                 if (note == null || note.state() == State.Empty || note.state() == State.NoteSustain) {
@@ -739,7 +746,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 ? accentHandler.getStandardVelocity()
                 : accentHandler.getAccentedVelocity();
         note.setVelocity(targetVelocity / 127.0);
-        modifiedSteps.add(index);
+        gestureConsumedSteps.add(index);
     }
 
     private void handeMainEncoderPress(final boolean press) {
@@ -1557,7 +1564,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
-        if (shiftActive.get()) {
+        if (shiftActive.get() || accentHandler.isHolding()) {
             accentHandler.handlePressed(pressed);
             return;
         }
@@ -1580,9 +1587,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (altActive.get()) {
             return driver.getStepFillLightState();
         }
-        return accentHandler.getLightState() == BiColorLightState.AMBER_FULL
-                ? BiColorLightState.AMBER_FULL
-                : BiColorLightState.OFF;
+        return accentHandler.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     private void handleBankButton(final boolean pressed, final int dir) {
