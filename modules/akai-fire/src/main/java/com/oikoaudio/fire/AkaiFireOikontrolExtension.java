@@ -869,9 +869,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (activeMode == TopLevelMode.DRUM) {
             applyDrumPinningIfEnabled();
             drumSequenceMode.activate();
+            refreshSurfaceLights();
             return;
         }
-        clearPads();
         if (activeMode == TopLevelMode.NOTE) {
             noteMode.activate();
         } else if (activeMode == TopLevelMode.MELODIC_STEP) {
@@ -879,12 +879,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         } else {
             performMode.activate();
         }
+        refreshSurfaceLights();
     }
 
-    private void clearPads() {
-        for (int index = 0; index < rgbButtons.length; index++) {
-            updateRgbPad(index, RgbLigthState.OFF);
-        }
+    private void refreshSurfaceLights() {
+        flush();
+        host.scheduleTask(this::flush, 0);
+        host.scheduleTask(this::flush, 8);
     }
 
     private void applyLaunchQuantizationPreference(final String preferenceValue) {
