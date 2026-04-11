@@ -198,7 +198,7 @@
       </ul>
       <p>In <code>DRUM</code>, hold <code>Paste</code> and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:</p>
       <ul>
-        <li>clip-row paste uses the currently selected clip slot as the source to copy from</li>
+        <li>clip-row paste uses the currently selected clip slot as the source to copy from, or falls back to the playing clip on that track if no clip was explicitly selected</li>
         <li>drum-pad paste uses the currently selected drum pad as the source to copy from</li>
         <li>step paste uses the currently selected step as the source to copy from</li>
       </ul>
@@ -294,7 +294,7 @@
       <ul>
         <li><code>Channel</code>: engine, density, engine macro, mutation type</li>
         <li><code>Mixer</code>: melodic process transforms</li>
-        <li><code>User 1</code>: tension, Euclid pulses, Euclid rotation, mutation amount</li>
+        <li><code>User 1</code>: reserved for future melodic advanced controls</li>
         <li><code>User 2</code>: selected or held step octave, gate, velocity, articulation</li>
       </ul>
       <p>Channel page details:</p>
@@ -311,7 +311,8 @@
         <li><code>MUTE_1</code>: select clip without launch</li>
         <li><code>MUTE_2</code>: last-step target mode</li>
         <li><code>MUTE_3</code>: paste to clip slot</li>
-        <li><code>MUTE_4</code>: delete step or clip</li>
+        <li><code>MUTE_4</code>: clear step or clear clip contents</li>
+        <li><code>SHIFT + MUTE_4</code> on a clip pad: remove the clip object</li>
       </ul>
       <p>Melodic transforms moved to the <code>Mixer</code> page:</p>
       <ul>

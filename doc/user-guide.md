@@ -136,7 +136,7 @@ Main gestures:
 
 In `DRUM`, hold `Paste` and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:
 
-- clip-row paste uses the currently selected clip slot as the source to copy from
+- clip-row paste uses the currently selected clip slot as the source to copy from, or falls back to the playing clip on that track if no clip was explicitly selected
 - drum-pad paste uses the currently selected drum pad as the source to copy from
 - step paste uses the currently selected step as the source to copy from
 
@@ -266,7 +266,7 @@ Encoder pages:
 
 - `Channel`: engine, density, engine macro, mutation type
 - `Mixer`: melodic process transforms
-- `User 1`: tension, Euclid pulses, Euclid rotation, mutation amount
+- `User 1`: reserved for future melodic advanced controls
 - `User 2`: selected or held step octave, gate, velocity, articulation
 
 Channel page details:
@@ -283,7 +283,8 @@ Melodic left-side buttons now align with the shared sequencer clip/edit workflow
 - `MUTE_1`: select clip without launch
 - `MUTE_2`: last-step target mode
 - `MUTE_3`: paste to clip slot
-- `MUTE_4`: delete step or clip
+- `MUTE_4`: clear step or clear clip contents
+- `SHIFT + MUTE_4` on a clip pad: remove the clip object
 
 Melodic transform controls moved to the `Mixer` page:
 

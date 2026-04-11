@@ -70,6 +70,8 @@ When the popup browser is open, the main `SELECT` encoder is temporarily remappe
 | `SELECT` press | Commit selected result |
 | `BROWSER` | Close popup browser |
 
+Opening the browser keeps Bitwig's remembered search/filter state intact. Result navigation is immediately available from the `SELECT` encoder without needing keyboard or mouse focus first.
+
 Browser insert mode follows modifiers when opening:
 
 | Action | Browser open mode |
@@ -286,7 +288,9 @@ If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions 
 | `MUTE_1` | Select clip without launch |
 | `MUTE_2` | Last Step target mode |
 | `MUTE_3` | Paste to clip slot |
-| `MUTE_4` | Delete step or clip |
+| `MUTE_4` | Clear step or clip contents |
+
+On the top-row clip pads, `SHIFT + MUTE_4` removes the clip object.
 
 Melodic transforms moved off the left-side buttons and now live on the `Mixer` encoder page:
 
