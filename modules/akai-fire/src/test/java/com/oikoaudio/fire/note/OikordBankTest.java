@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OikordBankTest {
@@ -47,17 +48,47 @@ class OikordBankTest {
         assertEquals("Q stack 1", bank.slot(1, 0, 0).shortLabel());
         assertEquals("Q stack 8", bank.slot(1, 0, 7).shortLabel());
         assertEquals("quartal stack with b7 and 9", bank.slot(1, 0, 8).name());
-        assertEquals("quartal add6 with upper 10", bank.slot(1, 1, 31).name());
+        assertEquals("quartal add6 with upper 10", bank.slot(1, 3, 15).name());
     }
 
     @Test
     void audibleUsesAllSeventeenConcreteSourceEntries() {
         final OikordBank bank = new OikordBank();
 
-        assertEquals(1, bank.pageCount(0));
+        assertEquals(2, bank.pageCount(0));
         assertEquals("Oct", bank.slot(0, 0, 0).shortLabel());
         assertEquals("Major 7th", bank.slot(0, 0, 7).name());
-        assertEquals("Fully diminished", bank.slot(0, 0, 16).name());
+        assertEquals("Fully diminished", bank.slot(0, 1, 0).name());
+    }
+
+    @Test
+    void respectsSixteenSlotPageBoundariesForCuratedFamilies() {
+        final OikordBank bank = new OikordBank();
+
+        assertTrue(bank.hasSlot(0, 0, 15));
+        assertFalse(bank.hasSlot(0, 0, 16));
+        assertTrue(bank.hasSlot(0, 1, 0));
+        assertFalse(bank.hasSlot(0, 1, 1));
+
+        assertThrows(IllegalArgumentException.class, () -> bank.slot(0, 0, 16));
+    }
+
+    @Test
+    void lastBarkerVariantLivesOnFourthSixteenSlotPage() {
+        final OikordBank bank = new OikordBank();
+
+        assertEquals(4, bank.pageCount(1));
+        assertTrue(bank.hasSlot(1, 3, 15));
+        assertFalse(bank.hasSlot(1, 4, 0));
+        assertEquals("quartal add6 with upper 10", bank.slot(1, 3, 15).name());
+    }
+
+    @Test
+    void rejectsOutOfRangePageRequests() {
+        final OikordBank bank = new OikordBank();
+
+        assertThrows(IllegalArgumentException.class, () -> bank.slot(0, 2, 0));
+        assertThrows(IllegalArgumentException.class, () -> bank.slot(1, 4, 0));
     }
 
     @Test

@@ -136,7 +136,7 @@ Main gestures:
 
 In `DRUM`, hold `Paste` and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:
 
-- clip-row paste uses the currently selected clip slot as the source to copy from
+- clip-row paste uses the currently selected clip slot as the source to copy from, or falls back to the playing clip on that track if no clip was explicitly selected
 - drum-pad paste uses the currently selected drum pad as the source to copy from
 - step paste uses the currently selected step as the source to copy from
 
@@ -200,38 +200,50 @@ To get to this mode from the Note live input mode, press the `NOTE` controller b
 
 `Chord Step` is the chord-oriented note-step workflow.
 
-- Upper two rows: chord definition or curated chord slots
-- Lower two rows: 16 visible steps
+- Row 1: clip row
+- Row 2: chord definition or curated chord slots
+- Rows 3-4: 32 visible steps
 - the builder defaults to in-key view and uses the same shared root/scale as live NOTE
-- In chord definition mode, first pick which notes that should be in the chord on the top two rows, then place it on steps on the bottom two rows.
-- If you select one of the pre-defined chord families (using the `PATTERN` buttons), the workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
+- In chord definition mode, first pick which notes should be in the chord on row 2, then place it on steps on the lower two rows.
+- If you select one of the pre-defined chord families, the workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
 - Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord
 
 Important gestures:
 
-- `MUTE_1..4`: chord octave and root offsets
-- `PATTERN DOWN/UP`: next/previous chord family
-- `ALT + PATTERN DOWN/UP`: next/previous page within the current family
+- top row clip pads: launch, select, create, and paste clips; `Delete` clears clip contents and `Shift + Delete` removes the clip object
+- `PATTERN DOWN/UP`: previous/next visible step page
 - `STEP SEQ`: enter `Melodic Step`
 - `SHIFT + STEP SEQ`: accent toggle/edit
 - `ALT + STEP SEQ`: Fill
 - tap an empty step pad: place the selected chord
 - tap a lit step pad: remove the chord from that step
 - `BANK LEFT/RIGHT`: move written step content left or right
-- `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
+- `SHIFT + BANK LEFT/RIGHT`: experimental micro-timing nudge for chord material; behavior is currently temperamental
 - `ALT + BANK LEFT/RIGHT`: halve / double clip length
-- `SHIFT + ALT + PATTERN DOWN`: clear the selected clip contents
+- `MUTE_1`: select / load step
+- `MUTE_2`: last-step target mode
+- `MUTE_3`: paste to target step or clip slot
+- `MUTE_4`: delete target step or clip
+- `ALT + MUTE_4`: invert chord
+- `SHIFT + ALT + MUTE_4`: invert chord in the opposite direction
+- `Encoder 3`: chord family
+- `ALT + Encoder 3`: chord family page
 
-In `Chord Step`, hold `Paste` (Mute_2) and press a step. The currently selected step is used as the source to copy from.
+Timing note:
+
+- coarse nudge is intentionally disabled in `Chord Step`
+- chord-step micro-timing is currently temperamental and should be treated as experimental
 
 ### Melodic STEP mode
 
 `STEP` is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks.
+It edits a 2-bar / 32-step window and does not expand beyond that range from within the mode.
 
-- Upper two rows: collapsed in-scale pitch pool
-- Lower two rows: 16 visible steps
+- Row 1: clip row
+- Row 2: compact 16-note in-scale pitch pool
+- Rows 3-4: 32 visible steps
 - generated phrases are constrained to the current pitch pool
-- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Euclid`, `Rolling`, and `Octave`
+- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Rolling`, and `Octave`
 
 Main ideas:
 
@@ -242,6 +254,7 @@ Main ideas:
 
 Important gestures:
 
+- top row clip pads: launch, select, create, and paste clips; `Delete` clears clip contents and `Shift + Delete` removes the clip object
 - tap a pitch pad: add or remove that note from the pool
 - tap a step pad: place, clear, or load that step depending on state
 - hold a step pad and turn encoders: edit that held step directly
@@ -253,14 +266,37 @@ Important gestures:
 - `SHIFT + PATTERN UP` and `SHIFT + PATTERN DOWN`: cycle the current view between `Notes`, `Expression`, and `Process`
 - `BANK LEFT/RIGHT`: rotate the phrase
 - `ALT + BANK LEFT/RIGHT`: halve or double the clip length
-- `SHIFT + ALT + PATTERN DOWN`: clear the selected clip contents
 
 Encoder pages:
 
-- `Channel`: generator, density, shape, mutation type
-- `Mixer`: track volume, pan, send 1, send 2
-- `User 1`: tension, Euclid pulses, Euclid rotation, mutation amount
+- `Channel`: engine, density, engine macro, mutation type
+- `Mixer`: melodic process transforms
+- `User 1`: reserved for future melodic advanced controls
 - `User 2`: selected or held step octave, gate, velocity, articulation
+
+Channel page details:
+
+- Encoder 1: `Engine`
+- `ALT + Encoder 1`: engine subtype / family when available
+- Encoder 2: `Density`
+- Encoder 3: engine-specific macro such as motion, contour, answer, movement, or jump
+- Encoder 4: `Mutation Type`
+- `ALT + Encoder 4`: mutation strength
+
+Melodic left-side buttons now align with the shared sequencer clip/edit workflow:
+
+- `MUTE_1`: select clip without launch
+- `MUTE_2`: last-step target mode
+- `MUTE_3`: paste to clip slot
+- `MUTE_4`: clear step or clear clip contents
+- `SHIFT + MUTE_4` on a clip pad: remove the clip object
+
+Melodic transform controls moved to the `Mixer` page:
+
+- Encoder 1: halve / double length
+- Encoder 2: swivel / mirror-double
+- Encoder 3: reverse
+- Encoder 4: invert down / up
 
 Notes on generation:
 

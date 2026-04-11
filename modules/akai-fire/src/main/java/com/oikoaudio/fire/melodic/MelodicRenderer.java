@@ -26,14 +26,17 @@ public final class MelodicRenderer {
         }
         final RgbLigthState baseColor = clipColor != null ? clipColor : ACTIVE_STEP;
         if (step.tieFromPrevious()) {
-            final RgbLigthState tied = baseColor.getSoftDimmed();
-            return playing ? tied.getBrightend() : tied;
+            final RgbLigthState tied = baseColor.getDimmed();
+            return playing ? StepPadLightHelper.renderPlayheadHighlight(tied) : tied;
         }
         if (!step.active()) {
             return StepPadLightHelper.renderEmptyStep(stepIndex, playing ? stepIndex : -1);
         }
-        final RgbLigthState base = step.accent() ? baseColor.getBrightend() : baseColor.getSoftDimmed();
-        return playing ? base.getBrightest() : base;
+        if (playing) {
+            return StepPadLightHelper.renderPlayheadHighlight(
+                    step.accent() ? baseColor.getBrightend() : baseColor);
+        }
+        return StepPadLightHelper.renderOccupiedStep(baseColor, step.accent(), false);
     }
 
     public static RgbLigthState pitchPoolLight(final boolean enabled, final boolean root, final boolean usedInPattern) {

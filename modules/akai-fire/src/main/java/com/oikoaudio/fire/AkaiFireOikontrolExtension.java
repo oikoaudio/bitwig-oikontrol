@@ -30,6 +30,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_STEP = 0.01;
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
+    private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
     public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
     public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
@@ -175,6 +176,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         popupBrowser.exists().markInterested();
         browserResultsCursor = popupBrowser.resultsColumn().createCursorItem();
         browserResultsCursor.exists().markInterested();
+        browserResultsCursor.isSelected().markInterested();
         browserResultsCursor.name().markInterested();
 
         layers = new Layers(this);
@@ -224,6 +226,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         ensureDrumPinningStillValid();
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
+        noteMode.notifyBlink(blinkTicks);
+        melodicStepMode.notifyBlink(blinkTicks);
         performMode.notifyBlink(blinkTicks);
         host.scheduleTask(this::handlePing, 100);
     }
@@ -575,13 +579,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (getButton(NoteAssign.SHIFT).isPressed()) {
+            final boolean nextState = !transport.isMetronomeEnabled().get();
             transport.isMetronomeEnabled().toggle();
-            notifyAction("Metronome", transport.isMetronomeEnabled().get() ? "On" : "Off");
+            notifyAction("Metronome", nextState ? "On" : "Off");
             return;
         }
         if (isGlobalAltHeld()) {
+            final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
             transport.isClipLauncherOverdubEnabled().toggle();
-            notifyAction("Launcher Overdub", transport.isClipLauncherOverdubEnabled().get() ? "On" : "Off");
+            notifyAction("Launcher Overdub", nextState ? "On" : "Off");
             return;
         }
         toggleClipLauncherAutomationWriteEnabled(true);
@@ -863,9 +869,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (activeMode == TopLevelMode.DRUM) {
             applyDrumPinningIfEnabled();
             drumSequenceMode.activate();
+            refreshSurfaceLights();
             return;
         }
-        clearPads();
         if (activeMode == TopLevelMode.NOTE) {
             noteMode.activate();
         } else if (activeMode == TopLevelMode.MELODIC_STEP) {
@@ -873,12 +879,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         } else {
             performMode.activate();
         }
+        refreshSurfaceLights();
     }
 
-    private void clearPads() {
-        for (int index = 0; index < rgbButtons.length; index++) {
-            updateRgbPad(index, RgbLigthState.OFF);
-        }
+    private void refreshSurfaceLights() {
+        flush();
+        host.scheduleTask(this::flush, 0);
+        host.scheduleTask(this::flush, 8);
     }
 
     private void applyLaunchQuantizationPreference(final String preferenceValue) {
@@ -1294,6 +1301,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             } else {
                 viewControl.getCursorTrack().startOfDeviceChainInsertionPoint().browse();
             }
+            scheduleBrowserResultsSelectionPrime();
             notifyAction("Browser", "Before");
             return;
         }
@@ -1303,15 +1311,40 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             } else {
                 viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
             }
+            scheduleBrowserResultsSelectionPrime();
             notifyAction("Browser", "After");
             return;
         }
         if (primaryDevice.exists().get()) {
             primaryDevice.replaceDeviceInsertionPoint().browse();
+            scheduleBrowserResultsSelectionPrime();
             notifyAction("Browser", "Replace");
         } else {
             viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
+            scheduleBrowserResultsSelectionPrime();
             notifyAction("Browser", "Add");
+        }
+    }
+
+    private void scheduleBrowserResultsSelectionPrime() {
+        for (final int delayMs : BROWSER_RESULTS_PRIME_DELAYS_MS) {
+            host.scheduleTask(this::primeBrowserResultsSelection, delayMs);
+        }
+    }
+
+    private void primeBrowserResultsSelection() {
+        if (!isPopupBrowserActive()) {
+            return;
+        }
+        if (browserResultsCursor.exists().get()) {
+            if (!browserResultsCursor.isSelected().get()) {
+                browserResultsCursor.isSelected().set(true);
+            }
+            return;
+        }
+        popupBrowser.selectFirstFile();
+        if (browserResultsCursor.exists().get()) {
+            browserResultsCursor.isSelected().set(true);
         }
     }
 
@@ -1331,6 +1364,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Browser", browserResultsCursor.exists().get() ? browserResultsCursor.name().get() : "No Results");
     }
 
+    public void routeBrowserMainEncoder(final int inc) {
+        handleGlobalMainEncoder(inc);
+    }
+
     private void handleGlobalMainEncoderPress(final boolean press) {
         if (!isPopupBrowserActive()) {
             return;
@@ -1339,6 +1376,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             popupBrowser.commit();
             notifyAction("Browser", "Commit");
         }
+    }
+
+    public void routeBrowserMainEncoderPress(final boolean press) {
+        handleGlobalMainEncoderPress(press);
     }
 
     public static AkaiFireOikontrolExtension getInstance() {

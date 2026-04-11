@@ -70,6 +70,8 @@ When the popup browser is open, the main `SELECT` encoder is temporarily remappe
 | `SELECT` press | Commit selected result |
 | `BROWSER` | Close popup browser |
 
+Opening the browser keeps Bitwig's remembered search/filter state intact. Result navigation is immediately available from the `SELECT` encoder without needing keyboard or mouse focus first.
+
 Browser insert mode follows modifiers when opening:
 
 | Action | Browser open mode |
@@ -173,7 +175,7 @@ In live NOTE mode:
 | --- | --- | --- | --- | --- |
 | `Channel` | Mod | Pitch Gliss | Velocity sensitivity (`SHIFT`: Default velocity) | Shared scale |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
-| `User 1` | Mod | Pressure | Timbre | Pitch expression |
+| `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 ## Note-Step Sub-Modes
@@ -197,8 +199,9 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 
 | Pad row | Role |
 | --- | --- |
-| Upper two rows | Curated chord slots |
-| Lower two rows | 32 visible steps |
+| Row 1 | Clip row |
+| Row 2 | Curated chord slots or builder notes |
+| Rows 3-4 | 32 visible steps |
 
 ### Main Chord Step Gestures
 
@@ -211,19 +214,23 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 | `STEP SEQ` | Toggle `As Is` / `Cast` rendering |
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
-| `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
-| Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge held chord material |
-| `SHIFT + BANK LEFT/RIGHT` | Fine-nudge visible chord material |
+| Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
+| `SHIFT + BANK LEFT/RIGHT` | Experimental micro-timing nudge for visible chord material |
+
+Chord-step timing note:
+
+- coarse nudge is intentionally disabled
+- chord-step micro-timing is currently temperamental and should be treated as experimental
 
 ### Chord Step Left-Side Buttons
 
 | Button | Role |
 | --- | --- |
 | `MUTE_1` | Select / load step |
-| `MUTE_2` | Paste to target step |
-| `MUTE_3` | Last Step target mode |
-| `MUTE_4` | Invert selected chord (`ALT` inverts the other direction) |
+| `MUTE_2` | Last Step target mode |
+| `MUTE_3` | Paste to target step or clip slot |
+| `MUTE_4` | Delete step or clip (`ALT`: invert chord, `SHIFT + ALT`: invert opposite direction) |
 
 The chord builder defaults to showing in-key notes only. If it auto-seeds a note into an empty builder, that note must be visible on the current builder rows.
 
@@ -231,7 +238,7 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family | Chord render / interpretation |
+| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family (`ALT`: family page) | Chord render / interpretation |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity edit | Note chance edit | Note recurrence length | Note recurrence count |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
@@ -241,13 +248,15 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 ## Melodic Step
 
 `Melodic Step` is a generated and editable mono phrase sequencer for basslines and melodic hooks.
+It edits a 2-bar / 32-step window and does not expand beyond that range from within the mode.
 
 ### Pad Layout
 
 | Pad row | Role |
 | --- | --- |
-| Upper two rows | Pitch pool |
-| Lower two rows | 32-step melodic phrase |
+| Row 1 | Clip row |
+| Row 2 | 16-note pitch pool |
+| Rows 3-4 | 32-step melodic phrase |
 
 ### Generator Modes
 
@@ -256,7 +265,6 @@ Current generators:
 - `Acid`
 - `Motif`
 - `Call/Resp`
-- `Euclid`
 - `Rolling`
 - `Octave`
 
@@ -274,23 +282,42 @@ Current generators:
 | `ALT + PATTERN UP` | Mutate pitch pool |
 | `PATTERN DOWN` | Generate new phrase |
 | `ALT + PATTERN DOWN` | Mutate phrase |
-| `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
 | `SHIFT + PATTERN UP/DOWN` | Cycle view between `Notes`, `Expression`, and `Process` |
 
 If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions that note.
 
 ### Melodic Step Left-Side Buttons
 
-| Button | Primary role | Alt / Shift variant |
-| --- | --- | --- |
-| `MUTE_1` | Repeat / double | `SHIFT`: halve, `ALT`: mirror-double |
-| `MUTE_2` | Reverse | `ALT`: swivel halves |
-| `MUTE_3` | Invert up | `ALT`: invert down |
-| `MUTE_4` | Last Step target mode | None |
+| Button | Role |
+| --- | --- |
+| `MUTE_1` | Select clip without launch |
+| `MUTE_2` | Last Step target mode |
+| `MUTE_3` | Paste to clip slot |
+| `MUTE_4` | Clear step or clip contents |
+
+On the top-row clip pads, `SHIFT + MUTE_4` removes the clip object.
+
+Melodic transforms moved off the left-side buttons and now live on the `Mixer` encoder page:
+
+- Encoder 1: halve / double length
+- Encoder 2: swivel / mirror-double
+- Encoder 3: reverse
+- Encoder 4: invert down / up
 
 ### Melodic Step Encoders
 
 `Melodic Step` uses the shared step-encoder infrastructure with mode-specific pages for generation and phrase editing. The exact labels shown on OLED depend on the active view and the held-step state.
+
+Current `Channel` page:
+
+| Slot | Function |
+| --- | --- |
+| 1 | Engine |
+| `ALT + 1` | Engine subtype / family when available |
+| 2 | Density |
+| 3 | Engine-specific macro (`Motion`, `Contour`, `Answer`, `Movement`, `Jump`) |
+| 4 | Mutation type |
+| `ALT + 4` | Mutation strength |
 
 ## PERFORM Mode
 

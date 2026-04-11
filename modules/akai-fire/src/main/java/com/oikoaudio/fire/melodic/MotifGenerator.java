@@ -33,6 +33,7 @@ public final class MotifGenerator implements MelodicGenerator {
     }
 
     private String lastFamilyLabel = "";
+    private int subtypeIndex = -1;
 
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
@@ -41,7 +42,9 @@ public final class MotifGenerator implements MelodicGenerator {
         final int sectionLength = phraseSectionLength(loopSteps);
         final int[] baseRhythm = projectPositions(RHYTHM_CELLS[random.nextInt(RHYTHM_CELLS.length)], sectionLength);
         final int[] baseCell = buildBaseCell(baseRhythm.length, parameters.tension(), random);
-        final MotifFamily family = MotifFamily.values()[random.nextInt(MotifFamily.values().length)];
+        final MotifFamily family = subtypeIndex < 0
+                ? MotifFamily.values()[random.nextInt(MotifFamily.values().length)]
+                : MotifFamily.values()[subtypeIndex];
         lastFamilyLabel = familyLabel(family);
 
         final boolean[] active = new boolean[loopSteps];
@@ -87,6 +90,23 @@ public final class MotifGenerator implements MelodicGenerator {
     @Override
     public String lastFamilyLabel() {
         return lastFamilyLabel;
+    }
+
+    @Override
+    public boolean supportsSubtypeSelection() {
+        return true;
+    }
+
+    @Override
+    public void cycleSubtype(final int direction) {
+        final int variantCount = MotifFamily.values().length + 1;
+        final int next = Math.floorMod(subtypeIndex + 1 + direction, variantCount);
+        subtypeIndex = next - 1;
+    }
+
+    @Override
+    public String currentSubtypeLabel() {
+        return subtypeIndex < 0 ? "Any" : familyLabel(MotifFamily.values()[subtypeIndex]);
     }
 
     private String familyLabel(final MotifFamily family) {
