@@ -2321,6 +2321,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void handleMainEncoder(final int inc) {
         if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoder(inc);
             return;
         }
         driver.markMainEncoderTurned();
@@ -2349,6 +2350,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void handleMainEncoderPress(final boolean pressed) {
         if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
         driver.setMainEncoderPressed(pressed);

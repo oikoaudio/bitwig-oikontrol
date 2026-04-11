@@ -979,6 +979,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private void handleMainEncoder(final int inc) {
         if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoder(inc);
             return;
         }
         driver.markMainEncoderTurned();
@@ -1001,6 +1002,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private void handleMainEncoderPress(final boolean pressed) {
         if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
         driver.setMainEncoderPressed(pressed);

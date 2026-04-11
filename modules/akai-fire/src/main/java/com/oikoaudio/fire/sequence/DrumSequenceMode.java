@@ -569,6 +569,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void handleMainEncoder(final int inc) {
         if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoder(inc);
             return;
         }
         driver.markMainEncoderTurned();
@@ -743,6 +744,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void handeMainEncoderPress(final boolean press) {
         if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoderPress(press);
             return;
         }
         driver.setMainEncoderPressed(press);
