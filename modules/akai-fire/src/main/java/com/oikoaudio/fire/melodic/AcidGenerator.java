@@ -23,13 +23,16 @@ public final class AcidGenerator implements MelodicGenerator {
     }
 
     private String lastFamilyLabel = "";
+    private int subtypeIndex = -1;
 
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
         final int loopSteps = Math.max(1, Math.min(MelodicPattern.MAX_STEPS, parameters.loopSteps()));
         final Random random = new Random(parameters.seed());
         final boolean[] active = buildActivity(loopSteps, parameters.density(), random);
-        final Family family = Family.values()[random.nextInt(Family.values().length)];
+        final Family family = subtypeIndex < 0
+                ? Family.values()[random.nextInt(Family.values().length)]
+                : Family.values()[subtypeIndex];
         lastFamilyLabel = familyLabel(family);
         final int[] degrees = new int[loopSteps];
         final int[] octaveOffsets = new int[loopSteps];
@@ -74,6 +77,23 @@ public final class AcidGenerator implements MelodicGenerator {
     @Override
     public String lastFamilyLabel() {
         return lastFamilyLabel;
+    }
+
+    @Override
+    public boolean supportsSubtypeSelection() {
+        return true;
+    }
+
+    @Override
+    public void cycleSubtype(final int direction) {
+        final int variantCount = Family.values().length + 1;
+        final int next = Math.floorMod(subtypeIndex + 1 + direction, variantCount);
+        subtypeIndex = next - 1;
+    }
+
+    @Override
+    public String currentSubtypeLabel() {
+        return subtypeIndex < 0 ? "Any" : familyLabel(Family.values()[subtypeIndex]);
     }
 
     private String familyLabel(final Family family) {

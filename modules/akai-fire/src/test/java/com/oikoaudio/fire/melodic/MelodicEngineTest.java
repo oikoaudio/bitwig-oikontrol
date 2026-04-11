@@ -171,6 +171,25 @@ class MelodicEngineTest {
         assertTrue(mirroredHits >= 3);
     }
 
+    @Test
+    void generatorsWithFamiliesExposeAnyAndNamedSubtypeCycling() {
+        final MelodicGenerator[] generators = {
+                new AcidGenerator(),
+                new MotifGenerator(),
+                new CallResponseGenerator(),
+                new RollingBassGenerator()
+        };
+
+        for (final MelodicGenerator generator : generators) {
+            assertTrue(generator.supportsSubtypeSelection());
+            assertEquals("Any", generator.currentSubtypeLabel());
+            generator.cycleSubtype(1);
+            assertNotEquals("Any", generator.currentSubtypeLabel());
+            generator.cycleSubtype(-1);
+            assertEquals("Any", generator.currentSubtypeLabel());
+        }
+    }
+
     private MelodicPhraseContext context() {
         return new MelodicPhraseContext(
                 MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"),

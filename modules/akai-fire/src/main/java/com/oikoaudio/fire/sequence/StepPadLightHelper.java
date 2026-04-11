@@ -3,6 +3,8 @@ package com.oikoaudio.fire.sequence;
 import com.oikoaudio.fire.lights.RgbLigthState;
 
 public final class StepPadLightHelper {
+    private static final int PLAYHEAD_WHITE_FLOOR = 96;
+
     private StepPadLightHelper() {
     }
 
@@ -22,5 +24,14 @@ public final class StepPadLightHelper {
             return base.getBrightend();
         }
         return base;
+    }
+
+    public static RgbLigthState renderPlayheadHighlight(final RgbLigthState base) {
+        final RgbLigthState brightest = base.getBrightest();
+        return new RgbLigthState(
+                Math.max(brightest.getRed() & 0xFF, PLAYHEAD_WHITE_FLOOR),
+                Math.max(brightest.getGreen() & 0xFF, PLAYHEAD_WHITE_FLOOR),
+                Math.max(brightest.getBlue() & 0xFF, PLAYHEAD_WHITE_FLOOR),
+                true);
     }
 }

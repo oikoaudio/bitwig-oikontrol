@@ -25,6 +25,7 @@ public final class RollingBassGenerator implements MelodicGenerator {
     }
 
     private String lastFamilyLabel = "";
+    private int subtypeIndex = -1;
 
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
@@ -43,7 +44,7 @@ public final class RollingBassGenerator implements MelodicGenerator {
                 continue;
             }
             if (i > 0 && i % cellLength == 0) {
-                cellRoot = nextCellRoot(cellRoot, parameters.tension(), random);
+                cellRoot = nextCellRoot(cellRoot, parameters.tension(), parameters.octaveActivity(), random);
             }
 
             final int inCell = i % cellLength;
@@ -53,7 +54,8 @@ public final class RollingBassGenerator implements MelodicGenerator {
                 continue;
             }
 
-            final int degree = degreeAt(inCell, family, cellRoot, previousDegree, parameters.tension(), random);
+            final int degree = degreeAt(inCell, family, cellRoot, previousDegree,
+                    parameters.tension(), parameters.octaveActivity(), random);
             previousDegree = degree;
             final boolean anchor = inCell == 0 || i == loopSteps - 1;
             final int octaveOffset = chooseOctaveOffset(inCell, parameters.octaveActivity(), random);
@@ -72,6 +74,23 @@ public final class RollingBassGenerator implements MelodicGenerator {
         return lastFamilyLabel;
     }
 
+    @Override
+    public boolean supportsSubtypeSelection() {
+        return true;
+    }
+
+    @Override
+    public void cycleSubtype(final int direction) {
+        final int variantCount = Family.values().length + 1;
+        final int next = Math.floorMod(subtypeIndex + 1 + direction, variantCount);
+        subtypeIndex = next - 1;
+    }
+
+    @Override
+    public String currentSubtypeLabel() {
+        return subtypeIndex < 0 ? "Any" : familyLabel(Family.values()[subtypeIndex]);
+    }
+
     private String familyLabel(final Family family) {
         return switch (family) {
             case ROOT_DRIVE -> "RootDrive";
@@ -81,6 +100,9 @@ public final class RollingBassGenerator implements MelodicGenerator {
     }
 
     private Family chooseFamily(final double density, final Random random) {
+        if (subtypeIndex >= 0) {
+            return Family.values()[subtypeIndex];
+        }
         if (density >= 0.999) {
             final int pick = random.nextInt(10);
             if (pick < 5) {
@@ -94,11 +116,12 @@ public final class RollingBassGenerator implements MelodicGenerator {
         return Family.values()[random.nextInt(Family.values().length)];
     }
 
-    private int nextCellRoot(final int currentRoot, final double tension, final Random random) {
-        if (random.nextDouble() < 0.55 - tension * 0.12) {
+    private int nextCellRoot(final int currentRoot, final double tension, final double movement, final Random random) {
+        final double stayChance = Math.max(0.12, 0.62 - tension * 0.10 - movement * 0.45);
+        if (random.nextDouble() < stayChance) {
             return currentRoot;
         }
-        final int limit = tension >= 0.45 ? CELL_SHIFTS.length : CELL_SHIFTS.length - 1;
+        final int limit = tension + movement >= 0.55 ? CELL_SHIFTS.length : CELL_SHIFTS.length - 1;
         final int shift = CELL_SHIFTS[random.nextInt(limit)];
         return clampDegree(currentRoot + shift);
     }
@@ -114,20 +137,27 @@ public final class RollingBassGenerator implements MelodicGenerator {
     }
 
     private int degreeAt(final int inCell, final Family family, final int cellRoot, final int previousDegree,
-                         final double tension, final Random random) {
+                         final double tension, final double movement, final Random random) {
         final int pattern = FAMILY_PATTERNS[family.ordinal()][inCell];
         if (pattern == 0) {
             return cellRoot;
         }
         if (pattern == 1) {
-            final int[] offsets = tension >= 0.45 ? new int[]{1, -1, 2, 0} : new int[]{1, -1, 0};
+            final int[] offsets = movement >= 0.55
+                    ? new int[]{1, -1, 2, -2, 3, 0}
+                    : tension >= 0.45 ? new int[]{1, -1, 2, 0} : new int[]{1, -1, 0};
             return clampDegree(cellRoot + offsets[random.nextInt(offsets.length)]);
         }
         if (pattern == 2) {
+            if (movement >= 0.55 && random.nextDouble() < 0.45) {
+                return clampDegree(cellRoot + (family == Family.LATE_LIFT ? 4 : 3));
+            }
             return clampDegree(cellRoot + (family == Family.LATE_LIFT && random.nextDouble() < 0.55 ? 3
                     : random.nextDouble() < 0.72 ? 1 : 2));
         }
-        final int answer = random.nextDouble() < 0.68 ? previousDegree : cellRoot + (family == Family.LATE_LIFT ? 4 : 2);
+        final int answer = random.nextDouble() < Math.max(0.25, 0.78 - movement * 0.40)
+                ? previousDegree
+                : cellRoot + (family == Family.LATE_LIFT ? 4 : movement >= 0.6 ? 3 : 2);
         return clampDegree(answer);
     }
 

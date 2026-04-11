@@ -16,6 +16,7 @@ public final class CallResponseGenerator implements MelodicGenerator {
     }
 
     private String lastFamilyLabel = "";
+    private int subtypeIndex = -1;
 
     @Override
     public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
@@ -24,7 +25,9 @@ public final class CallResponseGenerator implements MelodicGenerator {
         final int half = Math.max(1, loopSteps / 2);
         final boolean[] active = new boolean[loopSteps];
         final int[] degrees = new int[loopSteps];
-        final ResponseTransform transform = ResponseTransform.values()[random.nextInt(ResponseTransform.values().length)];
+        final ResponseTransform transform = subtypeIndex < 0
+                ? ResponseTransform.values()[random.nextInt(ResponseTransform.values().length)]
+                : ResponseTransform.values()[subtypeIndex];
         lastFamilyLabel = transformLabel(transform);
 
         buildCall(active, degrees, half, parameters.density(), parameters.tension(), random);
@@ -55,6 +58,23 @@ public final class CallResponseGenerator implements MelodicGenerator {
     @Override
     public String lastFamilyLabel() {
         return lastFamilyLabel;
+    }
+
+    @Override
+    public boolean supportsSubtypeSelection() {
+        return true;
+    }
+
+    @Override
+    public void cycleSubtype(final int direction) {
+        final int variantCount = ResponseTransform.values().length + 1;
+        final int next = Math.floorMod(subtypeIndex + 1 + direction, variantCount);
+        subtypeIndex = next - 1;
+    }
+
+    @Override
+    public String currentSubtypeLabel() {
+        return subtypeIndex < 0 ? "Any" : transformLabel(ResponseTransform.values()[subtypeIndex]);
     }
 
     private String transformLabel(final ResponseTransform transform) {
