@@ -212,7 +212,6 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 | `STEP SEQ` | Toggle `As Is` / `Cast` rendering |
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
-| `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge held chord material |
 | `SHIFT + BANK LEFT/RIGHT` | Fine-nudge visible chord material |
@@ -276,7 +275,6 @@ Current generators:
 | `ALT + PATTERN UP` | Mutate pitch pool |
 | `PATTERN DOWN` | Generate new phrase |
 | `ALT + PATTERN DOWN` | Mutate phrase |
-| `SHIFT + ALT + PATTERN DOWN` | Clear current selected clip contents |
 | `SHIFT + PATTERN UP/DOWN` | Cycle view between `Notes`, `Expression`, and `Process` |
 
 If `Step Seq Pad Audition` is enabled, pressing a pitch-pool pad also auditions that note.

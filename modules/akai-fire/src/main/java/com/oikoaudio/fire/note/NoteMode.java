@@ -3115,9 +3115,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return;
         }
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-            if (driver.isGlobalShiftHeld() && driver.isGlobalAltHeld()) {
-                clearCurrentChordClip();
-            } else if (!driver.isGlobalAltHeld()) {
+            if (!driver.isGlobalAltHeld()) {
                 pageChordSteps(1);
             }
             return;
@@ -3134,9 +3132,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private BiColorLightState getPatternDownLight() {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-            if (driver.isGlobalShiftHeld() && driver.isGlobalAltHeld()) {
-                return BiColorLightState.RED_HALF;
-            }
             return chordStepPosition.canScrollRight().get() ? BiColorLightState.GREEN_HALF : BiColorLightState.OFF;
         }
         return BiColorLightState.GREEN_HALF;
@@ -3668,23 +3663,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         observedFineOccupancyByStep.clear();
         observedFineNoteStartsByStep.clear();
         pendingMovedNotes.clear();
-    }
-
-    private void clearCurrentChordClip() {
-        if (!ensureSelectedNoteClip()) {
-            return;
-        }
-        refreshChordStepObservationPass();
-        noteStepClip.clearSteps();
-        clipNotesByStep.clear();
-        noteStepsByPosition.clear();
-        clearObservedChordCaches();
-        heldStepPads.clear();
-        heldStepAnchor = null;
-        selectedPresetStepIndex = null;
-        queueChordObservationResync();
-        oled.valueInfo("Clip", "Cleared");
-        driver.notifyPopup("Clip", "Cleared");
     }
 
     private record ObservedChordNote(int localStep, int globalStep, int fineStart, int midiNote, int velocity,

@@ -2048,9 +2048,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }, () -> BiColorLightState.GREEN_HALF);
         patternButtons.setDownCallback(pressed -> {
             if (pressed) {
-                if (driver.isGlobalShiftHeld() && driver.isGlobalAltHeld()) {
-                    clearCurrentClip();
-                } else if (driver.isGlobalShiftHeld()) {
+                if (driver.isGlobalShiftHeld()) {
                     setView(view == View.NOTES ? View.PROCESS : view == View.EXPRESSION ? View.NOTES : View.EXPRESSION);
                 } else if (driver.isGlobalAltHeld()) {
                     mutatePattern(false);
@@ -2073,21 +2071,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         stopPitchPoolAuditions();
         encoderLayer.deactivate();
         noteRepeatHandler.deactivate();
-    }
-
-    private void clearCurrentClip() {
-        if (!ensureClipAvailable()) {
-            return;
-        }
-        refreshClipCursor();
-        cursorClip.clearSteps();
-        noteStepsByPosition.clear();
-        cachedPattern = MelodicPattern.empty(loopSteps);
-        basePattern = MelodicPattern.empty(loopSteps);
-        playingStep = -1;
-        selectedStep = Math.min(selectedStep, Math.max(0, loopSteps - 1));
-        oled.valueInfo("Clip", "Cleared");
-        driver.notifyPopup("Clip", "Cleared");
     }
 
     @Override

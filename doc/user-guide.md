@@ -220,7 +220,6 @@ Important gestures:
 - `BANK LEFT/RIGHT`: move written step content left or right
 - `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
 - `ALT + BANK LEFT/RIGHT`: halve / double clip length
-- `SHIFT + ALT + PATTERN DOWN`: clear the selected clip contents
 - `MUTE_1`: select / load step
 - `MUTE_2`: last-step target mode
 - `MUTE_3`: paste to target step or clip slot
@@ -262,7 +261,6 @@ Important gestures:
 - `SHIFT + PATTERN UP` and `SHIFT + PATTERN DOWN`: cycle the current view between `Notes`, `Expression`, and `Process`
 - `BANK LEFT/RIGHT`: rotate the phrase
 - `ALT + BANK LEFT/RIGHT`: halve or double the clip length
-- `SHIFT + ALT + PATTERN DOWN`: clear the selected clip contents
 
 Encoder pages:
 
