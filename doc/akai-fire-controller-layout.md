@@ -215,8 +215,13 @@ It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERF
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
-| Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge held chord material |
-| `SHIFT + BANK LEFT/RIGHT` | Fine-nudge visible chord material |
+| Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
+| `SHIFT + BANK LEFT/RIGHT` | Experimental micro-timing nudge for visible chord material |
+
+Chord-step timing note:
+
+- coarse nudge is intentionally disabled
+- chord-step micro-timing is currently temperamental and should be treated as experimental
 
 ### Chord Step Left-Side Buttons
 

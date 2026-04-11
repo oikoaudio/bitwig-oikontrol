@@ -218,7 +218,7 @@ Important gestures:
 - tap an empty step pad: place the selected chord
 - tap a lit step pad: remove the chord from that step
 - `BANK LEFT/RIGHT`: move written step content left or right
-- `SHIFT + BANK LEFT/RIGHT`: adjust held chord-step note duration
+- `SHIFT + BANK LEFT/RIGHT`: experimental micro-timing nudge for chord material; behavior is currently temperamental
 - `ALT + BANK LEFT/RIGHT`: halve / double clip length
 - `MUTE_1`: select / load step
 - `MUTE_2`: last-step target mode
@@ -228,6 +228,11 @@ Important gestures:
 - `SHIFT + ALT + MUTE_4`: invert chord in the opposite direction
 - `Encoder 3`: chord family
 - `ALT + Encoder 3`: chord family page
+
+Timing note:
+
+- coarse nudge is intentionally disabled in `Chord Step`
+- chord-step micro-timing is currently temperamental and should be treated as experimental
 
 ### Melodic STEP mode
 
