@@ -1692,7 +1692,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
         if (preferredSlotIndex >= 0 && preferredSlotIndex < clipSlotBank.getSizeOfBank()) {
             final ClipLauncherSlot preferredSlot = clipSlotBank.getItemAt(preferredSlotIndex);
-            if (preferredSlot.exists().get()) {
+            if (preferredSlot.exists().get() && preferredSlot.isSelected().get()) {
                 preferredSlot.select();
                 clipSelected = true;
             }
