@@ -180,9 +180,10 @@ public class PerformClipLauncherMode extends Layer {
 
     private void showOverview() {
         oled.detailInfo("Settings",
-                "1: Root %s\n2: Scale %s".formatted(
+                "1: Root %s\n2: Scale %s\n3: Oct %d".formatted(
                         com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()),
-                        driver.getSharedScaleDisplayName()));
+                        driver.getSharedScaleDisplayName(),
+                        driver.getSharedOctave()));
         oled.clearScreenDelayed();
     }
 
@@ -244,8 +245,13 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         if (encoderIndex == 1) {
-            driver.getNoteMode().adjustSharedScaleFromOverview(inc);
-            oled.valueInfo("Scale", driver.getNoteMode().getCurrentScaleDisplayName());
+            driver.adjustSharedScaleIndex(inc, -1);
+            oled.valueInfo("Scale", driver.getSharedScaleDisplayName());
+            return;
+        }
+        if (encoderIndex == 2) {
+            driver.adjustSharedOctave(inc);
+            oled.valueInfo("Octave", Integer.toString(driver.getSharedOctave()));
             return;
         }
         showOverview();
@@ -261,7 +267,11 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         if (encoderIndex == 1) {
-            oled.valueInfo("Scale", driver.getNoteMode().getCurrentScaleDisplayName());
+            oled.valueInfo("Scale", driver.getSharedScaleDisplayName());
+            return;
+        }
+        if (encoderIndex == 2) {
+            oled.valueInfo("Octave", Integer.toString(driver.getSharedOctave()));
             return;
         }
         showOverview();
@@ -524,7 +534,7 @@ public class PerformClipLauncherMode extends Layer {
 
     private String modeInfo(final EncoderMode mode) {
         if (settingsMode) {
-            return "1: Root Key\n2: Scale\n3: Shared Pitch\n4: Shared Pitch";
+            return "1: Root Key\n2: Scale\n3: Octave\n4: Global";
         }
         return switch (mode) {
             case CHANNEL -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";

@@ -95,7 +95,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
-    private static final int LEGACY_MELODIC_STEP_DEFAULT_BASE = 48;
     private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_STANDARD_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_ACCENTED_VELOCITY = 127;
@@ -176,8 +175,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
 
-    private int transposeBase = LEGACY_MELODIC_STEP_DEFAULT_BASE;
-    private boolean pitchContextTouched = false;
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private final AccentLatchState oikordAccentState = new AccentLatchState();
@@ -335,45 +332,12 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         bindPads();
         bindButtons();
         bindEncoders();
-        applyDefaultScalePreference();
-        applyDefaultRootKeyPreference();
-        applyDefaultNoteInputOctavePreference();
+        applyDefaultLayoutPreference();
         applyDefaultVelocitySensitivityPreference();
     }
 
-    private void applyDefaultScalePreference() {
-        final String defaultScale = driver.getDefaultScalePreference();
-        switch (defaultScale) {
-            case FireControlPreferences.DEFAULT_SCALE_MINOR -> {
-                driver.setSharedScaleIndex(findScaleIndex("Aeolian (Minor)", 2));
-                inKey = true;
-            }
-            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> {
-                driver.setSharedScaleIndex(findScaleIndex("Ionan (Major)", 1));
-                inKey = true;
-            }
-            default -> {
-                driver.setSharedScaleIndex(PIANO_HIGHLIGHT_INDEX);
-                inKey = false;
-            }
-        }
-    }
-
-    private int findScaleIndex(final String scaleName, final int fallbackIndex) {
-        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
-            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
-                return i;
-            }
-        }
-        return fallbackIndex;
-    }
-
-    private void applyDefaultRootKeyPreference() {
-        driver.setSharedRootNote(driver.getDefaultRootKeyPreference());
-    }
-
-    private void applyDefaultNoteInputOctavePreference() {
-        transposeBase = driver.getDefaultNoteInputOctavePreference() * 12 + getRootNote();
+    private void applyDefaultLayoutPreference() {
+        inKey = !FireControlPreferences.DEFAULT_SCALE_PIANO.equals(driver.getDefaultScalePreference());
     }
 
     private void applyDefaultVelocitySensitivityPreference() {
@@ -554,7 +518,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         final int steps = liveScaleEncoder.consume(inc);
         if (steps != 0) {
             markEncoderAdjusted(2);
-            adjustScale(steps);
+            if (driver.isGlobalAltHeld()) {
+                adjustTransposeSemitone(steps);
+            } else {
+                adjustScale(steps);
+            }
         }
     }
 
@@ -808,7 +776,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void handleEncoder1Touch(final boolean pressed) {
-        handleResettableTouch(3, pressed, () -> showState("Scale"), liveScaleEncoder::reset);
+        handleResettableTouch(3, pressed,
+                () -> showState(driver.isGlobalAltHeld() ? "Root" : "Scale"),
+                liveScaleEncoder::reset);
     }
 
     private void handleEncoder2Touch(final boolean pressed) {
@@ -2280,15 +2250,8 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     public void adjustSharedScaleFromOverview(final int amount) {
-        if (amount == 0) {
-            return;
-        }
         final int minScale = inKey ? 1 : PIANO_HIGHLIGHT_INDEX;
-        final int nextScale = driver.getSharedScaleIndex() + amount;
-        if (nextScale < minScale || nextScale >= scaleLibrary.getMusicalScalesCount()) {
-            return;
-        }
-        driver.setSharedScaleIndex(nextScale);
+        driver.adjustSharedScaleIndex(amount, minScale);
     }
 
     private void adjustOctave(final int amount) {
@@ -2299,8 +2262,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         if (nextOctave == getOctave()) {
             return;
         }
-        pitchContextTouched = true;
-        applyLayoutChange(() -> transposeBase = nextOctave * 12 + getRootNote());
+        applyLayoutChange(() -> driver.setSharedOctave(nextOctave));
         showState("Octave");
     }
 
@@ -2308,12 +2270,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         if (amount == 0) {
             return;
         }
-        final int currentOctave = getOctave();
-        pitchContextTouched = true;
-        applyLayoutChange(() -> {
-            driver.adjustSharedRootNote(amount);
-            transposeBase = currentOctave * 12 + getRootNote();
-        });
+        applyLayoutChange(() -> driver.adjustSharedRootNote(amount));
         showState("Root");
     }
 
@@ -3041,7 +2998,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private int getOctave() {
-        return transposeBase / 12;
+        return driver.getSharedOctave();
     }
 
     public int getCurrentOctave() {
@@ -3049,15 +3006,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     public int getCurrentBaseMidiNote() {
-        return getOctave() * 12 + getRootNote();
-    }
-
-    public int getMelodicStepRootNoteClass() {
-        return pitchContextTouched ? getRootNote() : Math.floorMod(LEGACY_MELODIC_STEP_DEFAULT_BASE, 12);
-    }
-
-    public int getMelodicStepBaseMidiNote() {
-        return pitchContextTouched ? getCurrentBaseMidiNote() : LEGACY_MELODIC_STEP_DEFAULT_BASE;
+        return driver.getSharedBaseMidiNote();
     }
 
     private NoteGridLayout createLayout() {
@@ -3107,7 +3056,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             }
             return;
         }
-        handlePitchContextButton(true, 1, driver.isGlobalShiftHeld());
+        adjustOctave(1);
     }
 
     private void handlePatternDown(final boolean pressed) {
@@ -3120,7 +3069,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             }
             return;
         }
-        handlePitchContextButton(true, -1, driver.isGlobalShiftHeld());
+        adjustOctave(-1);
     }
 
     private BiColorLightState getPatternUpLight() {

@@ -91,13 +91,23 @@ public final class FireControlPreferences {
             LIVE_PITCH_OFFSET_RETUNE_HELD
     };
 
-    public static final String DEFAULT_SCALE_PIANO = "Piano";
+    public static final String DEFAULT_SCALE_PIANO = "Piano/Chromatic";
     public static final String DEFAULT_SCALE_MINOR = "Minor";
+    public static final String DEFAULT_SCALE_HARMONIC_MINOR = "Harmonic Minor";
+    public static final String DEFAULT_SCALE_MELODIC_MINOR = "Melodic Minor";
     public static final String DEFAULT_SCALE_MAJOR = "Major";
+    public static final String DEFAULT_SCALE_MINOR_PENTATONIC = "Minor Pentatonic";
+    public static final String DEFAULT_SCALE_DORIAN = "Dorian";
+    public static final String DEFAULT_SCALE_MIXOLYDIAN = "Mixolydian";
     public static final String[] DEFAULT_SCALES = {
             DEFAULT_SCALE_PIANO,
+            DEFAULT_SCALE_MAJOR,
             DEFAULT_SCALE_MINOR,
-            DEFAULT_SCALE_MAJOR
+            DEFAULT_SCALE_HARMONIC_MINOR,
+            DEFAULT_SCALE_MELODIC_MINOR,
+            DEFAULT_SCALE_MINOR_PENTATONIC,
+            DEFAULT_SCALE_DORIAN,
+            DEFAULT_SCALE_MIXOLYDIAN
     };
     public static final String[] DEFAULT_ROOT_KEYS = {
             "C",

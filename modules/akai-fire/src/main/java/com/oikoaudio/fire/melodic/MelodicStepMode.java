@@ -120,6 +120,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private int euclideanRotation = 0;
     private double mutateIntensity = 0.45;
     private long seed;
+    private int poolLayoutRootPitch = -1;
     private View view = View.PROCESS;
     private Generator generator = Generator.ACID;
     private MelodicMutator.Mode mutationMode = MelodicMutator.Mode.PRESERVE_RHYTHM;
@@ -138,10 +139,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private enum Generator {
         ACID("Acid"),
-        MOTIF("Motif"),
         CALL_RESPONSE("Call/Resp"),
         ROLLING("Rolling"),
-        OCTAVE("Octave");
+        OCTAVE("Octave"),
+        MOTIF("Motif");
 
         private final String label;
 
@@ -190,6 +191,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
         this.seed = driver.initialMelodicSeed();
+        this.poolLayoutRootPitch = nearestPhraseRootPitch(phraseContext().baseMidiNote());
     }
 
     private void bindPads() {
@@ -1192,6 +1194,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (amount == 0) {
             return;
         }
+        poolLayoutRootPitch = shiftedPoolLayoutRootPitch(amount);
         if (allowedPitches.isEmpty()) {
             buildGeneratedPitchPool(seed, false);
         }
@@ -1209,13 +1212,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             shifted.add(nearestLayoutPitch(targetPitch, layout));
         }
         if (shifted.equals(allowedPitches)) {
-            oled.valueInfo("Pool Oct", poolOctaveSummary(shifted));
+            oled.valueInfo("Pool Oct", poolOctaveSummary());
             return;
         }
         allowedPitches.clear();
         allowedPitches.addAll(shifted);
         poolUserEdited = true;
-        revoiceCurrentPatternToPool("Pool Oct", poolOctaveSummary(shifted));
+        oled.valueInfo("Pool Oct", poolOctaveSummary());
+        driver.notifyPopup("Pool Oct", poolOctaveSummary());
     }
 
     private void adjustTimeVariance(final int amount) {
@@ -1359,12 +1363,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         return phraseContext().baseMidiNote();
     }
 
-    private String poolOctaveSummary(final Iterable<Integer> pitches) {
-        int lowestPitch = Integer.MAX_VALUE;
-        for (final int pitch : pitches) {
-            lowestPitch = Math.min(lowestPitch, pitch);
-        }
-        return lowestPitch == Integer.MAX_VALUE ? "No pool" : pitchName(lowestPitch);
+    private String poolOctaveSummary() {
+        final int rootPitch = currentPoolLayoutRootPitch();
+        return rootPitch < 0 ? "No pool" : pitchName(rootPitch);
     }
 
     private void seedPitchPoolFromPattern(final MelodicPattern pattern) {
@@ -1636,7 +1637,68 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private List<Integer> pitchPoolLayoutPitches() {
-        return phraseContext().collapsedScaleRange(PITCH_POOL_PAD_COUNT);
+        final MelodicPhraseContext context = phraseContext();
+        final int rootPitch = currentPoolLayoutRootPitch();
+        final List<Integer> notes = new ArrayList<>(PITCH_POOL_PAD_COUNT);
+        int candidate = rootPitch - 1;
+        while (notes.size() < 4 && candidate >= 0) {
+            if (context.scale().isMidiNoteInScale(context.rootNote(), candidate)) {
+                notes.add(0, candidate);
+            }
+            candidate--;
+        }
+        notes.add(rootPitch);
+        candidate = rootPitch + 1;
+        while (notes.size() < PITCH_POOL_PAD_COUNT && candidate <= 127) {
+            if (context.scale().isMidiNoteInScale(context.rootNote(), candidate)) {
+                notes.add(candidate);
+            }
+            candidate++;
+        }
+        candidate = notes.isEmpty() ? rootPitch - 1 : notes.get(0) - 1;
+        while (notes.size() < PITCH_POOL_PAD_COUNT && candidate >= 0) {
+            if (context.scale().isMidiNoteInScale(context.rootNote(), candidate)) {
+                notes.add(0, candidate);
+            }
+            candidate--;
+        }
+        while (notes.size() < PITCH_POOL_PAD_COUNT) {
+            notes.add(notes.isEmpty() ? Math.max(0, Math.min(127, rootPitch)) : notes.get(notes.size() - 1));
+        }
+        return notes;
+    }
+
+    private int currentPoolLayoutRootPitch() {
+        final MelodicPhraseContext context = phraseContext();
+        final int fallback = nearestPhraseRootPitch(context.baseMidiNote());
+        if (poolLayoutRootPitch < 0
+                || Math.floorMod(poolLayoutRootPitch, 12) != context.rootNote()
+                || !context.scale().isRootMidiNote(context.rootNote(), poolLayoutRootPitch)) {
+            poolLayoutRootPitch = fallback;
+        }
+        return poolLayoutRootPitch;
+    }
+
+    private int shiftedPoolLayoutRootPitch(final int octaveDelta) {
+        final int targetPitch = currentPoolLayoutRootPitch() + octaveDelta * 12;
+        return nearestPhraseRootPitch(targetPitch);
+    }
+
+    private int nearestPhraseRootPitch(final int targetPitch) {
+        final MelodicPhraseContext context = phraseContext();
+        int bestPitch = Math.max(0, Math.min(127, targetPitch));
+        int bestDistance = Integer.MAX_VALUE;
+        for (int pitch = 0; pitch <= 127; pitch++) {
+            if (!context.scale().isRootMidiNote(context.rootNote(), pitch)) {
+                continue;
+            }
+            final int distance = Math.abs(pitch - targetPitch);
+            if (distance < bestDistance || (distance == bestDistance && pitch < bestPitch)) {
+                bestPitch = pitch;
+                bestDistance = distance;
+            }
+        }
+        return bestPitch;
     }
 
     private String pitchName(final int midiPitch) {
@@ -1924,8 +1986,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
     private MelodicPhraseContext phraseContext() {
         final NoteMode noteMode = driver.getNoteMode();
-        return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getMelodicStepRootNoteClass(),
-                noteMode.getMelodicStepBaseMidiNote());
+        return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getCurrentRootNoteClass(),
+                noteMode.getCurrentBaseMidiNote());
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -2131,7 +2193,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 new EncoderSlotBinding[]{
                         engineSlot(),
                         densitySlot(),
-                        valueSlot(this::adjustPoolOctave, () -> "Pool Oct"),
+                        poolContextSlot(),
                         mutationModeSlot()
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
@@ -2283,6 +2345,38 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         return "%s S%d".formatted(label, selectedStep + 1);
     }
 
+    private EncoderSlotBinding poolContextSlot() {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                encoder.bindEncoder(layer, inc -> {
+                    if (driver.isGlobalAltHeld()) {
+                        adjustGlobalRootKey(inc);
+                    } else {
+                        adjustPoolOctave(inc);
+                    }
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        if (driver.isGlobalAltHeld()) {
+                            oled.valueInfo("Root", NoteAssignHelper.noteName(driver.getSharedRootNote()));
+                        } else {
+                            oled.valueInfo("Pool Oct", poolOctaveSummary());
+                        }
+                    } else {
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
     private EncoderSlotBinding valueSlot(final java.util.function.IntConsumer adjuster,
                                          final java.util.function.Supplier<String> label) {
         return new EncoderSlotBinding() {
@@ -2304,6 +2398,24 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 });
             }
         };
+    }
+
+    private void adjustGlobalRootKey(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        driver.adjustSharedRootNote(amount);
+        final String rootName = NoteAssignHelper.noteName(driver.getSharedRootNote());
+        oled.valueInfo("Root", rootName);
+        driver.notifyPopup("Root", rootName);
+    }
+
+    private static final class NoteAssignHelper {
+        private static final String[] NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
+        private static String noteName(final int note) {
+            return NAMES[Math.floorMod(note, 12)];
+        }
     }
 
     private EncoderSlotBinding stepValueSlot(final java.util.function.IntConsumer adjuster,
