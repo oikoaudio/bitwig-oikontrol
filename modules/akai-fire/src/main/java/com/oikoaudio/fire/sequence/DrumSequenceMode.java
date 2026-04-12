@@ -611,7 +611,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private List<NoteStep> getExpressionTargetNotes() {
-        return isPadBeingHeld() ? getOnNotes() : getHeldNotes();
+        return isPadBeingHeld() ? getHeldNotes() : getOnNotes();
     }
 
     private void adjustDefaultVelocity(final int inc) {
