@@ -1,6 +1,8 @@
-package com.bitwig.extensions.framework.values;
+package com.oikoaudio.fire.values;
 
 import org.junit.jupiter.api.Test;
+
+import com.bitwig.extensions.framework.values.Scale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

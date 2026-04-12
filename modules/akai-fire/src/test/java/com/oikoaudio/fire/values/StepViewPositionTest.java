@@ -1,4 +1,4 @@
-package com.bitwig.extensions.framework.values;
+package com.oikoaudio.fire.values;
 
 import com.bitwig.extension.callback.DoubleValueChangedCallback;
 import com.bitwig.extension.controller.api.Clip;

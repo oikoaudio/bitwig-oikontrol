@@ -16,7 +16,7 @@ import com.bitwig.extension.controller.api.*;
 import com.bitwig.extension.controller.api.NoteStep.State;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
-import com.bitwig.extensions.framework.values.StepViewPosition;
+import com.oikoaudio.fire.values.StepViewPosition;
 
 import java.util.*;
 import java.util.stream.Collectors;

@@ -7,7 +7,7 @@ import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
-import com.bitwig.extensions.framework.values.DawColor;
+import com.oikoaudio.fire.values.DawColor;
 
 class PadContainer {
 
