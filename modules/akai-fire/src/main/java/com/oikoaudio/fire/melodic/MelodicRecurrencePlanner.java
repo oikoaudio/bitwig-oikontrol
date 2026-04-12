@@ -27,19 +27,17 @@ public final class MelodicRecurrencePlanner {
         MelodicPattern out = clearRecurrence(pattern);
         final MelodicPatternAnalyzer.Analysis analysis = MelodicPatternAnalyzer.analyze(out);
         final int span = timeVariance < 0.34 ? 2 : timeVariance < 0.67 ? 4 : 8;
-        final RoleBuckets buckets = bucketize(out, analysis, style);
+        final RoleBuckets buckets = bucketize(out, analysis, style, timeVariance);
 
         final int themeTarget = targetCount(buckets.themeSteps().size(), out.loopSteps(), timeVariance, style, 0.12, 0.32);
         final int alternateTarget = targetCount(buckets.alternateSteps().size(), out.loopSteps(), timeVariance, style, 0.08, 0.26);
 
-        for (int i = 0; i < themeTarget && i < buckets.themeSteps().size(); i++) {
-            final int stepIndex = buckets.themeSteps().get(i);
+        for (final int stepIndex : selectRecurringSteps(buckets.themeSteps(), themeTarget, timeVariance, random)) {
             final MelodicPattern.Step step = out.step(stepIndex);
             out = out.withStep(step.withRecurrence(span, chooseThemeMask(span, style, timeVariance, random)));
         }
 
-        for (int i = 0; i < alternateTarget && i < buckets.alternateSteps().size(); i++) {
-            final int stepIndex = buckets.alternateSteps().get(i);
+        for (final int stepIndex : selectRecurringSteps(buckets.alternateSteps(), alternateTarget, timeVariance, random)) {
             final MelodicPattern.Step step = out.step(stepIndex);
             out = out.withStep(step.withRecurrence(span, chooseAlternateMask(span, style, timeVariance, random)));
         }
@@ -61,6 +59,53 @@ public final class MelodicRecurrencePlanner {
         return out;
     }
 
+    private static List<Integer> selectRecurringSteps(final List<Integer> rankedCandidates, final int targetCount,
+                                                      final double timeVariance, final Random random) {
+        if (targetCount <= 0 || rankedCandidates.isEmpty()) {
+            return List.of();
+        }
+        final List<Integer> pool = new ArrayList<>(rankedCandidates);
+        final List<Integer> selected = new ArrayList<>();
+        while (selected.size() < targetCount && !pool.isEmpty()) {
+            final int limit = Math.min(pool.size(), Math.max(1, 2 + (int) Math.round(timeVariance * 6.0)));
+            double totalWeight = 0.0;
+            final double[] cumulative = new double[limit];
+            for (int i = 0; i < limit; i++) {
+                final int stepIndex = pool.get(i);
+                final double rankWeight = Math.max(0.35, limit - i);
+                final double spacingWeight = spacingWeight(stepIndex, selected, timeVariance);
+                totalWeight += rankWeight * spacingWeight;
+                cumulative[i] = totalWeight;
+            }
+
+            final double roll = random.nextDouble() * totalWeight;
+            int chosen = 0;
+            while (chosen < limit - 1 && roll > cumulative[chosen]) {
+                chosen++;
+            }
+            selected.add(pool.remove(chosen));
+        }
+        selected.sort(Integer::compareTo);
+        return selected;
+    }
+
+    private static double spacingWeight(final int stepIndex, final List<Integer> selected, final double timeVariance) {
+        if (selected.isEmpty()) {
+            return 1.0;
+        }
+        int nearestDistance = Integer.MAX_VALUE;
+        for (final int chosen : selected) {
+            nearestDistance = Math.min(nearestDistance, Math.abs(stepIndex - chosen));
+        }
+        if (nearestDistance <= 1) {
+            return 0.35 + timeVariance * 0.25;
+        }
+        if (nearestDistance == 2) {
+            return 0.65 + timeVariance * 0.2;
+        }
+        return 1.0 + Math.min(0.4, nearestDistance * 0.06);
+    }
+
     private static int targetCount(final int available, final double timeVariance, final Style style,
                                    final double baseFactor, final double varianceFactor) {
         if (available <= 0) {
@@ -77,20 +122,30 @@ public final class MelodicRecurrencePlanner {
 
     private static int targetCount(final int available, final int loopSteps, final double timeVariance, final Style style,
                                    final double baseFactor, final double varianceFactor) {
-        final int baseTarget = targetCount(available, timeVariance, style, baseFactor, varianceFactor);
+        int baseTarget = targetCount(available, timeVariance, style, baseFactor, varianceFactor);
         if (style == Style.ACID && loopSteps >= 24) {
-            return Math.max(1, Math.min(available, (int) Math.round(baseTarget * 0.6)));
+            baseTarget = Math.max(1, Math.min(available, (int) Math.round(baseTarget * 0.6)));
+        }
+        if (timeVariance >= 0.85 && loopSteps >= 24) {
+            final int minimum = style == Style.ACID ? 2 : 3;
+            baseTarget = Math.max(baseTarget, Math.min(available, minimum));
+        } else if (timeVariance >= 0.65 && loopSteps >= 24) {
+            baseTarget = Math.max(baseTarget, Math.min(available, 2));
         }
         return baseTarget;
     }
 
     private static RoleBuckets bucketize(final MelodicPattern pattern, final MelodicPatternAnalyzer.Analysis analysis,
-                                         final Style style) {
+                                         final Style style, final double timeVariance) {
         final List<Integer> themeSteps = new ArrayList<>();
         final List<Integer> alternateSteps = new ArrayList<>();
         final int responseStart = pattern.loopSteps() / 2;
+        final boolean allowAnchors = timeVariance >= 0.72;
         for (final int stepIndex : analysis.activeSteps()) {
-            if (analysis.anchorSteps().contains(stepIndex)) {
+            if (!allowAnchors && analysis.anchorSteps().contains(stepIndex)) {
+                continue;
+            }
+            if (allowAnchors && isBoundaryAnchor(stepIndex, pattern.loopSteps())) {
                 continue;
             }
             final MelodicPattern.Step step = pattern.step(stepIndex);
@@ -113,7 +168,43 @@ public final class MelodicRecurrencePlanner {
         }
         themeSteps.sort(Comparator.comparingInt(stepIndex -> priorityForTheme(stepIndex, pattern.loopSteps(), style)));
         alternateSteps.sort(Comparator.comparingInt(stepIndex -> priorityForAlternate(stepIndex, pattern.loopSteps(), style)));
+        backfillCandidateBuckets(themeSteps, alternateSteps, analysis.activeSteps(), pattern.loopSteps(), style, timeVariance);
         return new RoleBuckets(themeSteps, alternateSteps);
+    }
+
+    private static void backfillCandidateBuckets(final List<Integer> themeSteps, final List<Integer> alternateSteps,
+                                                 final List<Integer> activeSteps, final int loopSteps,
+                                                 final Style style, final double timeVariance) {
+        if (timeVariance < 0.72) {
+            return;
+        }
+        final int minimumTotal = timeVariance >= 0.9 ? 6 : 4;
+        if (themeSteps.size() + alternateSteps.size() >= minimumTotal) {
+            return;
+        }
+        for (final int stepIndex : activeSteps) {
+            if (isBoundaryAnchor(stepIndex, loopSteps)
+                    || themeSteps.contains(stepIndex)
+                    || alternateSteps.contains(stepIndex)) {
+                continue;
+            }
+            if (style == Style.CALL_RESPONSE && stepIndex < loopSteps / 2) {
+                alternateSteps.add(stepIndex);
+            } else if (stepIndex % 4 == 0 || stepIndex % 8 == 0) {
+                themeSteps.add(stepIndex);
+            } else {
+                alternateSteps.add(stepIndex);
+            }
+            if (themeSteps.size() + alternateSteps.size() >= minimumTotal) {
+                break;
+            }
+        }
+        themeSteps.sort(Comparator.comparingInt(stepIndex -> priorityForTheme(stepIndex, loopSteps, style)));
+        alternateSteps.sort(Comparator.comparingInt(stepIndex -> priorityForAlternate(stepIndex, loopSteps, style)));
+    }
+
+    private static boolean isBoundaryAnchor(final int stepIndex, final int loopSteps) {
+        return stepIndex == 0 || stepIndex == loopSteps - 1;
     }
 
     private static int priorityForTheme(final int stepIndex, final int loopSteps, final Style style) {

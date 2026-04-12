@@ -35,7 +35,7 @@ public final class MelodicClipAdapter {
             final double duration = Math.max(stepLength * 0.25, note.duration());
             final int tiedSteps = (int) Math.floor((duration - stepLength * 0.98) / stepLength);
             steps.set(i, new MelodicPattern.Step(i, true, false, note.y(), (int) Math.round(note.velocity() * 127.0),
-                    Math.max(0.1, duration / stepLength), note.velocity() >= 0.87,
+                    Math.max(0.1, duration / stepLength), note.chance(), note.velocity() >= 0.87,
                     duration > stepLength * 1.05, note.recurrenceLength(), note.recurrenceMask()));
             for (int offset = 1; offset <= tiedSteps && i + offset < MelodicPattern.MAX_STEPS; offset++) {
                 steps.set(i + offset, MelodicPattern.Step.rest(i + offset).withTieFromPrevious(true));
