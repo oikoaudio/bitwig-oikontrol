@@ -277,12 +277,23 @@ public final class MelodicMutator {
     private MelodicPattern ensurePhraseAlternatePresence(final MelodicPattern pattern, final MelodicPhraseContext context,
                                                          final List<Integer> pitchChoices,
                                                          final MelodicRecurrencePlanner.Style style, final long seed) {
-        if (style != MelodicRecurrencePlanner.Style.ACID || hasAlternateVoices(pattern)) {
+        if (style != MelodicRecurrencePlanner.Style.ACID || alternateVoiceCount(pattern) >= 2) {
             return pattern;
         }
-        final List<Integer> recurrent = recurrentCandidateIndices(pattern);
+        final List<Integer> recurrent = recurrentCandidateIndices(pattern, true);
         if (recurrent.size() < 2) {
-            return pattern;
+            final List<Integer> fallback = recurrentCandidateIndices(pattern, false);
+            if (fallback.size() < 2) {
+                return pattern;
+            }
+            final List<Integer> phraseIndices = forcedPhraseIndices(fallback);
+            if (phraseIndices.size() < 2) {
+                return pattern;
+            }
+            final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
+            applyAlternatePhraseRun(steps, context, pitchChoices, new Random(seed ^ 0x2E8E7C5DL),
+                    new boolean[pattern.loopSteps()], phraseIndices);
+            return new MelodicPattern(steps, pattern.loopSteps());
         }
         final List<Integer> phraseIndices = forcedPhraseIndices(recurrent);
         if (phraseIndices.size() < 2) {
@@ -294,20 +305,24 @@ public final class MelodicMutator {
         return new MelodicPattern(steps, pattern.loopSteps());
     }
 
-    private boolean hasAlternateVoices(final MelodicPattern pattern) {
+    private int alternateVoiceCount(final MelodicPattern pattern) {
+        int count = 0;
         for (int i = 0; i < pattern.loopSteps(); i++) {
             if (pattern.step(i).hasAlternate()) {
-                return true;
+                count++;
             }
         }
-        return false;
+        return count;
     }
 
-    private List<Integer> recurrentCandidateIndices(final MelodicPattern pattern) {
+    private List<Integer> recurrentCandidateIndices(final MelodicPattern pattern, final boolean preferHookWindow) {
         final List<Integer> recurrent = new ArrayList<>();
         for (int i = 0; i < pattern.loopSteps(); i++) {
             final MelodicPattern.Step step = pattern.step(i);
             if (step.active() && step.pitch() != null && step.recurrenceLength() > 1 && !step.tieFromPrevious()) {
+                if (preferHookWindow && !isAcidHookWindow(i, pattern.loopSteps())) {
+                    continue;
+                }
                 recurrent.add(i);
             }
         }
