@@ -213,7 +213,7 @@ It uses the shared `Root Key`, `Scale`, and `Octave` from live NOTE input and `S
 | Tap lit step | Remove chord from that step |
 | Hold step pad(s) + tap chord pad | Rewrite held steps with that chord |
 | Tap chord pad with no held step | Audition chord, if enabled |
-| `STEP SEQ` | Toggle `As Is` / `Cast` rendering |
+| `STEP SEQ` | Toggle `As Is` / `In Scale` rendering |
 | `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
@@ -240,12 +240,14 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family (`ALT`: family page) | Chord render / interpretation |
+| `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family (`ALT`: family page) | Interpretation (`SHIFT`: Shared scale, `ALT`: Shared root key) |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity edit | Note chance edit | Recurrence-oriented note editing | Recurrence-oriented note editing |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
-`Chord Step` no longer owns a separate root/key state. `ALT + Encoder 1` updates the same shared root used by live NOTE input.
+`Chord Step` no longer owns a separate root/key state. `ALT + Encoder 1` and `ALT + Encoder 4` both update the same shared root used by live NOTE input, while `SHIFT + Encoder 4` updates the shared scale that `In Scale` interpretation uses.
+
+Chord banks themselves are static. Changing shared `Root Key` or `Scale` does not select a different bank, page, or slot; it only changes how the current slot is rendered. `As Is` transposes the stored chord shape from the current root. `In Scale` rebuilds that same slot against the current shared scale and root, so scale changes can reharmonize the chord.
 
 ## Melodic Step
 

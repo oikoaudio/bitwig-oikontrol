@@ -257,7 +257,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private enum OikordInterpretation {
         AS_IS("As Is"),
-        CAST("Cast");
+        IN_SCALE("In Scale");
 
         private final String displayName;
 
@@ -1865,7 +1865,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void toggleOikordInterpretation() {
         oikordInterpretation = oikordInterpretation == OikordInterpretation.AS_IS
-                ? OikordInterpretation.CAST
+                ? OikordInterpretation.IN_SCALE
                 : OikordInterpretation.AS_IS;
         oled.valueInfo("Chord Step Mode", oikordInterpretation.displayName());
         driver.notifyPopup("Chord Step Mode", oikordInterpretation.displayName());
@@ -1879,9 +1879,19 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             toggleOikordInterpretation();
             return;
         }
-        if (amount < 0 && oikordInterpretation == OikordInterpretation.CAST) {
+        if (amount < 0 && oikordInterpretation == OikordInterpretation.IN_SCALE) {
             toggleOikordInterpretation();
         }
+    }
+
+    private void adjustOikordSharedScale(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        final int minScale = inKey ? 1 : PIANO_HIGHLIGHT_INDEX;
+        applyLayoutChange(() -> driver.adjustSharedScaleIndex(amount, minScale));
+        oled.valueInfo("Scale", getScaleDisplayName());
+        driver.notifyPopup("Scale", getScaleDisplayName());
     }
 
     private void startAuditionSelectedOikord() {
@@ -2686,7 +2696,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private String oikordInterpretationSuffix() {
         return "F%d %s K%s O%s".formatted(selectedOikordFamily + 1,
-                oikordInterpretation == OikordInterpretation.AS_IS ? "Raw" : "Cast",
+                oikordInterpretation == OikordInterpretation.AS_IS ? "Raw" : "InKey",
                 NoteGridLayout.noteName(getRootNote()),
                 formatSignedValue(oikordOctaveOffset));
     }
@@ -2728,7 +2738,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return renderBuilderOikord();
         }
         final OikordBank.Slot slot = currentOikordSlot();
-        if (oikordInterpretation == OikordInterpretation.CAST) {
+        if (oikordInterpretation == OikordInterpretation.IN_SCALE) {
             final int shiftedRoot = getRootNote();
             final int castRoot = Math.floorMod(shiftedRoot, 12);
             final int castOctaveOffset = oikordOctaveOffset;
@@ -3758,11 +3768,27 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0) {
                         handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                        adjustOikordInterpretation(inc);
+                        if (driver.isGlobalShiftHeld()) {
+                            adjustOikordSharedScale(inc);
+                        } else if (driver.isGlobalAltHeld()) {
+                            adjustOikordRoot(inc);
+                        } else {
+                            adjustOikordInterpretation(inc);
+                        }
                     }
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
+                        if (driver.isGlobalShiftHeld()) {
+                            handler.beginTouchReset(slotIndex, () -> { });
+                            oled.valueInfo("Scale", getScaleDisplayName());
+                            return;
+                        }
+                        if (driver.isGlobalAltHeld()) {
+                            handler.beginTouchReset(slotIndex, () -> { });
+                            showOikordRootInfo();
+                            return;
+                        }
                         handler.beginTouchReset(slotIndex, () -> {
                             oikordInterpretation = OikordInterpretation.AS_IS;
                             oled.valueInfo("Interpret", oikordInterpretation.displayName());

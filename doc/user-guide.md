@@ -230,6 +230,11 @@ Important gestures:
 - `SHIFT + ALT + MUTE_4`: invert chord in the opposite direction
 - `Encoder 3`: chord family
 - `ALT + Encoder 3`: chord family page
+- `Encoder 4`: interpretation (`As Is` / `In Scale`)
+- `SHIFT + Encoder 4`: shared scale
+- `ALT + Encoder 4`: shared root
+
+Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch to a different bank or slot; it only changes how the selected slot is rendered. In `As Is`, the stored chord shape is transposed from the current root. In `In Scale`, the same slot is rebuilt from the current shared scale and root, so changing scale can reharmonize the result.
 
 Timing note:
 
