@@ -816,7 +816,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     octaveActivity, legato, euclideanPulses, euclideanRotation, timeVariance, generationSeed);
             case ACID -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
-                    density,
+                    Math.max(0.35, density),
                     Math.max(0.55, tension),
                     Math.max(0.15, octaveActivity),
                     legato,
@@ -858,7 +858,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
         final long mutationSeed = seed;
         MelodicPattern mutated = mutator.mutate(sourcePattern, phraseContext(), recurrenceStyle(),
-                mutationMode, mutateIntensity, 0.7, mutationSeed);
+                mutationMode, mutateIntensity, 0.7, mutationSeed, new ArrayList<>(allowedPitches));
         mutated = enrichLatentSteps(mutated);
         mutated = mutationMode == MelodicMutator.Mode.PRESERVE_RHYTHM
                 ? revoicePatternToPoolVariant(mutated, mutateIntensity, mutationSeed)
@@ -1334,11 +1334,20 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
             final MelodicPattern.Step step = pattern.step(i);
             if (step.pitch() == null) {
-                steps.add(step);
+                if (step.hasAlternate()) {
+                    steps.add(step.withAlternatePitch(nearestAllowedPitch(step.alternatePitch())));
+                } else {
+                    steps.add(step);
+                }
                 continue;
             }
             final Integer mappedPitch = broadPoolMapping.get(step.pitch());
-            steps.add(step.withPitch(mappedPitch != null ? mappedPitch : nearestAllowedPitch(step.pitch())));
+            MelodicPattern.Step constrained = step.withPitch(
+                    mappedPitch != null ? mappedPitch : nearestAllowedPitch(step.pitch()));
+            if (constrained.hasAlternate()) {
+                constrained = constrained.withAlternatePitch(nearestAllowedPitch(constrained.alternatePitch()));
+            }
+            steps.add(constrained);
         }
         return new MelodicPattern(steps, pattern.loopSteps());
     }
@@ -1351,10 +1360,18 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
             final MelodicPattern.Step step = pattern.step(i);
             if (step.pitch() == null) {
-                steps.add(step);
+                if (step.hasAlternate()) {
+                    steps.add(step.withAlternatePitch(nearestAllowedPitch(step.alternatePitch())));
+                } else {
+                    steps.add(step);
+                }
                 continue;
             }
-            steps.add(step.withPitch(nearestAllowedPitch(step.pitch())));
+            MelodicPattern.Step constrained = step.withPitch(nearestAllowedPitch(step.pitch()));
+            if (constrained.hasAlternate()) {
+                constrained = constrained.withAlternatePitch(nearestAllowedPitch(constrained.alternatePitch()));
+            }
+            steps.add(constrained);
         }
         return new MelodicPattern(steps, pattern.loopSteps());
     }

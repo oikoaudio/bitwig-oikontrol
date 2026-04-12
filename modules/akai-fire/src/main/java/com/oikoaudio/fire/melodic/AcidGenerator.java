@@ -111,13 +111,25 @@ public final class AcidGenerator implements MelodicGenerator {
         for (int i = 0; i < loopSteps; i++) {
             active[i] = skeleton[i % skeleton.length];
         }
+        if (density < 0.5) {
+            final List<Integer> removable = primaryRemovableSteps(active, loopSteps);
+            final int removals = Math.min(removable.size(), (int) Math.round((0.5 - density) * 8.0));
+            removeByMainStride(active, removable, removals);
+        } else if (density > 0.72) {
+            for (int i = 1; i < loopSteps - 1; i++) {
+                if (!active[i] && activeAt(active, i - 1) && activeAt(active, i + 1)
+                        && random.nextDouble() < (density - 0.72) * 0.8) {
+                    active[i] = true;
+                }
+            }
+        }
         active[0] = true;
         if (loopSteps > 1) {
             active[loopSteps - 1] = true;
         }
         final int targetHits = targetActiveCount(loopSteps, density);
         while (countActive(active) > targetHits) {
-            final int removeIndex = bestRemovableIndex(active, loopSteps, random);
+            final int removeIndex = bestSecondaryRemovalIndex(active, loopSteps, random);
             if (removeIndex < 0) {
                 break;
             }
@@ -131,6 +143,25 @@ public final class AcidGenerator implements MelodicGenerator {
             active[fillIndex] = true;
         }
         return active;
+    }
+
+    private List<Integer> primaryRemovableSteps(final boolean[] active, final int loopSteps) {
+        final List<Integer> removable = new ArrayList<>();
+        for (int i = 1; i < loopSteps - 1; i++) {
+            if (active[i] && !isAnchorStep(i, loopSteps) && activeAt(active, i - 1) && activeAt(active, i + 1)) {
+                removable.add(i);
+            }
+        }
+        return removable;
+    }
+
+    private void removeByMainStride(final boolean[] active, final List<Integer> removable, final int removals) {
+        if (removable.isEmpty() || removals <= 0) {
+            return;
+        }
+        for (int i = 0; i < removals; i++) {
+            active[removable.get((i * 2) % removable.size())] = false;
+        }
     }
 
     private int targetActiveCount(final int loopSteps, final double density) {
@@ -150,14 +181,14 @@ public final class AcidGenerator implements MelodicGenerator {
         return count;
     }
 
-    private int bestRemovableIndex(final boolean[] active, final int loopSteps, final Random random) {
+    private int bestSecondaryRemovalIndex(final boolean[] active, final int loopSteps, final Random random) {
         int bestIndex = -1;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (int i = 1; i < loopSteps - 1; i++) {
             if (!active[i] || isAnchorStep(i, loopSteps)) {
                 continue;
             }
-            final double score = removalScore(active, i, random);
+            final double score = secondaryRemovalScore(active, i, loopSteps, random);
             if (score > bestScore) {
                 bestScore = score;
                 bestIndex = i;
@@ -166,26 +197,31 @@ public final class AcidGenerator implements MelodicGenerator {
         return bestIndex;
     }
 
-    private double removalScore(final boolean[] active, final int index, final Random random) {
+    private double secondaryRemovalScore(final boolean[] active, final int index, final int loopSteps, final Random random) {
         double score = 0.0;
         final boolean prev = activeAt(active, index - 1);
         final boolean next = activeAt(active, index + 1);
-        if (prev && next) {
-            score += 6.0;
-        } else if (prev || next) {
-            score += 2.5;
+        if (!startsCluster(active, index)) {
+            score += 2.8;
+        } else {
+            score -= 1.8;
         }
-        if (index % 4 != 0) {
-            score += 1.8;
+        if (prev && next) {
+            score += 2.4;
+        } else if (prev || next) {
+            score += 0.9;
         }
         if (index % 2 == 1) {
-            score += 0.8;
+            score += 1.4;
         }
-        if (prev && index > 1 && activeAt(active, index - 2)) {
-            score += 1.0;
+        if (index % 4 == 3) {
+            score += 0.6;
         }
-        if (next && index < active.length - 2 && activeAt(active, index + 2)) {
-            score += 1.0;
+        if (isAnchorNeighbor(index, loopSteps)) {
+            score -= 1.0;
+        }
+        if (isHookInterior(index, loopSteps)) {
+            score -= 0.6;
         }
         return score + random.nextDouble() * 0.25;
     }
@@ -211,19 +247,39 @@ public final class AcidGenerator implements MelodicGenerator {
         final boolean prev = activeAt(active, index - 1);
         final boolean next = activeAt(active, index + 1);
         if (prev && next) {
-            score += 5.5;
+            score += 2.6;
         } else if (prev || next) {
-            score += 2.2;
-        }
-        if (index % 4 == 2) {
-            score += 1.6;
-        } else if (index % 4 != 0) {
             score += 0.8;
         }
-        if (index > 0 && isAnchorStep(index - 1, loopSteps) || index + 1 < loopSteps && isAnchorStep(index + 1, loopSteps)) {
-            score += 0.9;
+        if (index % 4 == 2) {
+            score += 1.8;
+        }
+        if (isHookInterior(index, loopSteps)) {
+            score += 1.2;
+        }
+        if (isLatePhraseWindow(index, loopSteps) && index % 2 == 0) {
+            score += 1.0;
+        }
+        if (isAnchorNeighbor(index, loopSteps)) {
+            score += 0.8;
         }
         return score + random.nextDouble() * 0.25;
+    }
+
+    private boolean isLatePhraseWindow(final int index, final int loopSteps) {
+        final int start = Math.max(loopSteps / 2, loopSteps - Math.max(5, loopSteps / 3));
+        return index >= start && index < loopSteps - 1;
+    }
+
+    private boolean isHookInterior(final int index, final int loopSteps) {
+        final int start = Math.max(4, loopSteps / 4);
+        final int end = Math.min(loopSteps - 2, start + Math.max(3, loopSteps / 5));
+        return index >= start && index < end;
+    }
+
+    private boolean isAnchorNeighbor(final int index, final int loopSteps) {
+        return (index > 0 && isAnchorStep(index - 1, loopSteps))
+                || (index + 1 < loopSteps && isAnchorStep(index + 1, loopSteps));
     }
 
     private void buildLowLine(final boolean[] active, final int[] degrees, final boolean[] accents,
