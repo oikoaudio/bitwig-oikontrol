@@ -82,7 +82,9 @@ class MelodicRecurrencePlannerTest {
         final MelodicPattern out = MelodicRecurrencePlanner.apply(
                 base, testContext(), MelodicRecurrencePlanner.Style.ACID, 0.9, 23L);
 
-        assertTrue(countRecurrent(out, 0, 32) <= 6);
+        assertTrue(countRecurrent(out, 0, 32) >= 4);
+        assertTrue(countRecurrent(out, 16, 32) >= countRecurrent(out, 0, 8));
+        assertTrue(countRecurrent(out, 0, 32) <= 10);
     }
 
     private static MelodicPattern patternWithNotes(final int... activeSteps) {

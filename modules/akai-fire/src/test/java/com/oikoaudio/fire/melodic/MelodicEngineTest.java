@@ -179,6 +179,19 @@ class MelodicEngineTest {
     }
 
     @Test
+    void acidGeneratorDensityHasRealRange() {
+        final MelodicPhraseContext context = context();
+        final MelodicPattern sparse = new AcidGenerator().generate(context,
+                new MelodicGenerator.GenerateParameters(16, 0.0, 0.6, 0.15, 0.2, 5, 0, 0.0, 17L));
+        final MelodicPattern dense = new AcidGenerator().generate(context,
+                new MelodicGenerator.GenerateParameters(16, 1.0, 0.6, 0.15, 0.2, 5, 0, 0.0, 17L));
+
+        assertTrue(activeCount(sparse) <= 8);
+        assertTrue(activeCount(dense) >= 11);
+        assertTrue(activeCount(dense) >= activeCount(sparse) + 3);
+    }
+
+    @Test
     void acidGeneratorUsesMoreThanOnePitch() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
@@ -187,6 +200,36 @@ class MelodicEngineTest {
         final MelodicPattern pattern = new AcidGenerator().generate(context, parameters);
 
         assertTrue(distictActivePitchCount(pattern) >= 3);
+    }
+
+    @Test
+    void acidVaryTimeMutationIntroducesRecurrenceOrAlternates() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(32, 0.55, 0.62, 0.3, 0.36, 5, 0, 0.0, 17L);
+        final MelodicPattern original = new AcidGenerator().generate(context, parameters).withLoopSteps(32);
+
+        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
+                MelodicRecurrencePlanner.Style.ACID, MelodicMutator.Mode.VARY_TIME, 1.0, 0.6, 77L);
+
+        assertNotEquals(original, mutated);
+        assertTrue(hasRecurrenceOrAlternate(mutated));
+        assertTrue(recurringCarrierCount(mutated) >= 3);
+    }
+
+    @Test
+    void acidDefaultStrengthVaryTimeMutationStillDoesSomething() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(16, 0.5, 0.62, 0.15, 0.36, 5, 0, 0.0, 17L);
+        final MelodicPattern original = new AcidGenerator().generate(context, parameters);
+
+        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
+                MelodicRecurrencePlanner.Style.ACID, MelodicMutator.Mode.VARY_TIME, 0.45, 0.7, 17L);
+
+        assertNotEquals(original, mutated);
+        assertTrue(hasRecurrenceOrAlternate(mutated));
+        assertTrue(recurringCarrierCount(mutated) >= 2);
     }
 
     @Test
@@ -268,5 +311,25 @@ class MelodicEngineTest {
             }
         }
         return pitches.size();
+    }
+
+    private boolean hasRecurrenceOrAlternate(final MelodicPattern pattern) {
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.recurrenceLength() > 1 || step.hasAlternate()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int recurringCarrierCount(final MelodicPattern pattern) {
+        int count = 0;
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            if (pattern.step(i).recurrenceLength() > 1) {
+                count++;
+            }
+        }
+        return count;
     }
 }

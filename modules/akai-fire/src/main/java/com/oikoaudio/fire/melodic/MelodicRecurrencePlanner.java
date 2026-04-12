@@ -123,14 +123,20 @@ public final class MelodicRecurrencePlanner {
     private static int targetCount(final int available, final int loopSteps, final double timeVariance, final Style style,
                                    final double baseFactor, final double varianceFactor) {
         int baseTarget = targetCount(available, timeVariance, style, baseFactor, varianceFactor);
-        if (style == Style.ACID && loopSteps >= 24) {
-            baseTarget = Math.max(1, Math.min(available, (int) Math.round(baseTarget * 0.6)));
+        if (style == Style.ACID) {
+            if (timeVariance >= 0.9 && loopSteps >= 24) {
+                baseTarget = Math.max(baseTarget, Math.min(available, 4));
+            } else if (timeVariance >= 0.72) {
+                baseTarget = Math.max(baseTarget, Math.min(available, loopSteps >= 24 ? 3 : 2));
+            } else if (timeVariance >= 0.45) {
+                baseTarget = Math.max(baseTarget, Math.min(available, 2));
+            }
         }
         if (timeVariance >= 0.85 && loopSteps >= 24) {
-            final int minimum = style == Style.ACID ? 2 : 3;
+            final int minimum = style == Style.ACID ? 4 : 3;
             baseTarget = Math.max(baseTarget, Math.min(available, minimum));
         } else if (timeVariance >= 0.65 && loopSteps >= 24) {
-            baseTarget = Math.max(baseTarget, Math.min(available, 2));
+            baseTarget = Math.max(baseTarget, Math.min(available, style == Style.ACID ? 3 : 2));
         }
         return baseTarget;
     }
@@ -149,7 +155,7 @@ public final class MelodicRecurrencePlanner {
                 continue;
             }
             final MelodicPattern.Step step = pattern.step(stepIndex);
-            if (style == Style.ACID && shouldSkipAcidPulse(stepIndex, pattern.loopSteps())) {
+            if (style == Style.ACID && timeVariance < 0.45 && shouldSkipAcidPulse(stepIndex, pattern.loopSteps())) {
                 continue;
             }
             final boolean themeCandidate = step.accent()
@@ -175,10 +181,13 @@ public final class MelodicRecurrencePlanner {
     private static void backfillCandidateBuckets(final List<Integer> themeSteps, final List<Integer> alternateSteps,
                                                  final List<Integer> activeSteps, final int loopSteps,
                                                  final Style style, final double timeVariance) {
-        if (timeVariance < 0.72) {
+        final double backfillThreshold = style == Style.ACID ? 0.5 : 0.72;
+        if (timeVariance < backfillThreshold) {
             return;
         }
-        final int minimumTotal = timeVariance >= 0.9 ? 6 : 4;
+        final int minimumTotal = style == Style.ACID
+                ? (timeVariance >= 0.9 ? 6 : 5)
+                : (timeVariance >= 0.9 ? 6 : 4);
         if (themeSteps.size() + alternateSteps.size() >= minimumTotal) {
             return;
         }
