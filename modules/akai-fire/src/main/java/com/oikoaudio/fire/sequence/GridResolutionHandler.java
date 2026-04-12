@@ -63,7 +63,7 @@ public class GridResolutionHandler {
 		adjust(inc);
 	}
 
-	public void handeMainEncoderPress(final boolean press) {
+	public void handleMainEncoderPress(final boolean press) {
 
 	}
 

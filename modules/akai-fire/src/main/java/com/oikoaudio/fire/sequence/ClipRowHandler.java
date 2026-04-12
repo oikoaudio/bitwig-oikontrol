@@ -37,7 +37,7 @@ public class ClipRowHandler {
             final RgbButton button = rgbButtons[i];
             final int index = i;
             final ClipLauncherSlot cs = slotBank.getItemAt(index);
-            button.bindPressed(clipLayer, p -> handleClip(index, cs, p), () -> getClipSate(index, cs));
+            button.bindPressed(clipLayer, p -> handleClip(index, cs, p), () -> getClipState(index, cs));
         }
     }
 
@@ -80,10 +80,10 @@ public class ClipRowHandler {
         if (index < 0 || index >= 16) {
             return RgbLigthState.OFF;
         }
-        return getClipSate(index, slotBank.getItemAt(index));
+        return getClipState(index, slotBank.getItemAt(index));
     }
 
-    private RgbLigthState getClipSate(final int index, final ClipLauncherSlot slot) {
+    private RgbLigthState getClipState(final int index, final ClipLauncherSlot slot) {
         if (slot.hasContent().get()) {
             if (slotColors[index] == null) {
                 return RgbLigthState.OFF;

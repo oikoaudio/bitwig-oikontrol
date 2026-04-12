@@ -201,7 +201,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 noteInput,
                 oled,
                 () -> drumSequenceMode != null ? drumSequenceMode.getActiveRemoteControlsPage() : null,
-                () -> drumSequenceMode != null ? drumSequenceMode.getAccentHandler().getCurrenVel() : 100);
+                () -> drumSequenceMode != null ? drumSequenceMode.getAccentHandler().getCurrentVelocity() : 100);
 
 
         setUpHardware();

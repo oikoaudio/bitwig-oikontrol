@@ -177,7 +177,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         final TouchEncoder mainEncoder = driver.getMainEncoder();
         mainEncoder.setStepSize(0.4);
         mainEncoder.bindEncoder(mainLayer, this::handleMainEncoder);
-        mainEncoder.bindTouched(mainLayer, this::handeMainEncoderPress);
+        mainEncoder.bindTouched(mainLayer, this::handleMainEncoderPress);
     }
 
 
@@ -284,7 +284,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         heldStepFineStarts.remove(index);
                         return;
                     }
-                    cursorClip.setStep(index, 0, accentHandler.getCurrenVel(),
+                    cursorClip.setStep(index, 0, accentHandler.getCurrentVelocity(),
                             positionHandler.getGridResolution() * gatePercent);
                     addedSteps.add(index);
                     heldStepFineStarts.put(index, coarseLower(index));
@@ -623,7 +623,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         defaultVelocity = nextValue;
-        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrenVel());
+        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrentVelocity());
         oled.paramInfo("Velocity", defaultVelocity, "Drum Default", 1, accentHandler.getAccentedVelocity() - 1);
     }
 
@@ -653,7 +653,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void resetDefaultVelocity() {
         defaultVelocity = 100;
-        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrenVel());
+        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrentVelocity());
     }
 
     private void resetDefaultPressure() {
@@ -749,7 +749,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         gestureConsumedSteps.add(index);
     }
 
-    private void handeMainEncoderPress(final boolean press) {
+    private void handleMainEncoderPress(final boolean press) {
         if (driver.isPopupBrowserActive()) {
             driver.routeBrowserMainEncoderPress(press);
             return;
