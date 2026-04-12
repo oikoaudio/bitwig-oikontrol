@@ -1689,20 +1689,20 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void refreshClipCursor() {
+        refreshSelectedClipState();
         boolean clipSelected = false;
         final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
         if (preferredSlotIndex >= 0 && preferredSlotIndex < clipSlotBank.getSizeOfBank()) {
             final ClipLauncherSlot preferredSlot = clipSlotBank.getItemAt(preferredSlotIndex);
             if (preferredSlot.exists().get() && preferredSlot.isSelected().get()) {
-                preferredSlot.select();
                 clipSelected = true;
             }
         }
-        if (!clipSelected) {
-            clipSelected = selectPlayingClipSlot();
+        if (!clipSelected && selectedClipSlotIndex >= 0) {
+            clipSelected = true;
         }
         if (!clipSelected) {
-            selectSelectedClipSlot();
+            clipSelected = selectPlayingClipSlot();
         }
         cursorClip.scrollToKey(0);
         cursorClip.scrollToStep(0);
@@ -1717,16 +1717,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
         }
         return false;
-    }
-
-    private void selectSelectedClipSlot() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                slot.select();
-                return;
-            }
-        }
     }
 
     private MelodicPhraseContext phraseContext() {
