@@ -78,6 +78,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final StepSequencerEncoderHandler encoderLayer;
     private final EncoderBankLayout encoderBankLayout;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
+    private final Map<Integer, MelodicPattern.Step> pendingWrittenSteps = new HashMap<>();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
@@ -97,6 +98,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private int selectedStep = 0;
     private Integer heldStep = null;
     private boolean heldStepConsumed = false;
+    private boolean recurrenceSpanAnchorHeld = false;
+    private boolean recurrenceSpanGestureUsed = false;
     private int playingStep = -1;
     private int selectedClipSlotIndex = -1;
     private RgbLigthState selectedClipColor = MelodicRenderer.ACTIVE_STEP;
@@ -107,6 +110,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final AccentLatchState accentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
     private double density = 0.45;
+    private double timeVariance = 0.0;
     private double tension = 0.25;
     private double octaveActivity = 0.1;
     private int euclideanPulses = 5;
@@ -286,6 +290,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
+        if (heldStep != null && padIndex < CLIP_ROW_PAD_COUNT && handleRecurrencePadPress(padIndex, pressed)) {
+            return;
+        }
         if (padIndex < CLIP_ROW_PAD_COUNT) {
             clipHandler.handlePadPress(padIndex, pressed);
             return;
@@ -303,6 +310,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 }
                 heldStep = null;
                 heldStepConsumed = false;
+                recurrenceSpanAnchorHeld = false;
+                recurrenceSpanGestureUsed = false;
             }
             return;
         }
@@ -401,6 +410,48 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         applyPattern(cachedPattern.withStep(step.withPitch(pitch)), "Pitch", pitchName(pitch));
     }
 
+    private boolean handleRecurrencePadPress(final int padIndex, final boolean pressed) {
+        if (heldStep == null || heldStep < 0 || heldStep >= STEP_COUNT || padIndex >= 8) {
+            return false;
+        }
+        if (padIndex == 0 && !pressed && recurrenceSpanAnchorHeld) {
+            recurrenceSpanAnchorHeld = false;
+            if (recurrenceSpanGestureUsed) {
+                recurrenceSpanGestureUsed = false;
+                return true;
+            }
+        } else if (!pressed) {
+            return true;
+        }
+        final MelodicPattern.Step step = cachedPattern.step(heldStep);
+        if (!step.active() || step.pitch() == null) {
+            return true;
+        }
+        heldStepConsumed = true;
+        if (padIndex == 0) {
+            recurrenceSpanAnchorHeld = true;
+            recurrenceSpanGestureUsed = false;
+            return true;
+        }
+        if (recurrenceSpanAnchorHeld) {
+            recurrenceSpanGestureUsed = true;
+            applyHeldRecurrenceSpan(heldStep, step, padIndex + 1);
+            return true;
+        }
+        final int span = effectiveRecurrenceSpan(step);
+        final int bit = 1 << padIndex;
+        int mask = effectiveRecurrenceMask(step, span);
+        if (padIndex >= span) {
+            return true;
+        }
+        mask ^= bit;
+        if ((mask & ((1 << span) - 1)) == 0) {
+            mask = bit;
+        }
+        applyStepRecurrence(heldStep, step.withRecurrence(span, mask), "Recurrence");
+        return true;
+    }
+
     private void setView(final View newView) {
         view = newView;
         oled.valueInfo("View", newView.label);
@@ -426,26 +477,31 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         switch (selectedGenerator) {
             case MOTIF -> {
                 density = 0.40;
+                timeVariance = 0.18;
                 tension = 0.25;
                 octaveActivity = 1.0;
             }
             case CALL_RESPONSE -> {
                 density = 0.46;
+                timeVariance = 0.38;
                 tension = 0.28;
                 octaveActivity = 1.0;
             }
             case ACID -> {
                 density = 0.52;
+                timeVariance = 0.32;
                 tension = 0.62;
                 octaveActivity = 1.0;
             }
             case ROLLING -> {
                 density = 1.0;
+                timeVariance = 0.24;
                 tension = 0.24;
                 octaveActivity = 1.0;
             }
             case OCTAVE -> {
                 density = 0.48;
+                timeVariance = 0.48;
                 tension = 0.22;
                 octaveActivity = 0.60;
             }
@@ -712,6 +768,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
         final MelodicGenerator activeGenerator = activeGenerator();
         MelodicPattern generated = activeGenerator.generate(context, parameters);
+        generated = MelodicRecurrencePlanner.apply(generated, context, timeVariance, generationSeed);
         generated = enrichLatentSteps(generated);
         generated = constrainPatternToPool(generated);
         basePattern = generated;
@@ -736,10 +793,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private MelodicGenerator.GenerateParameters generatorParametersForCurrentEngine(final long generationSeed) {
         return switch (generator) {
             case MOTIF -> new MelodicGenerator.GenerateParameters(
-                    loopSteps, density, tension, octaveActivity, euclideanPulses, euclideanRotation, generationSeed);
+                    loopSteps, density, tension, octaveActivity, euclideanPulses, euclideanRotation, timeVariance, generationSeed);
             case CALL_RESPONSE -> new MelodicGenerator.GenerateParameters(
                     loopSteps, Math.max(0.35, density), Math.max(0.2, tension),
-                    octaveActivity, euclideanPulses, euclideanRotation, generationSeed);
+                    octaveActivity, euclideanPulses, euclideanRotation, timeVariance, generationSeed);
             case ACID -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
                     Math.max(0.35, density),
@@ -747,6 +804,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     Math.max(0.15, octaveActivity),
                     Math.max(4, euclideanPulses),
                     euclideanRotation,
+                    timeVariance,
                     generationSeed);
             case ROLLING -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
@@ -755,6 +813,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     Math.min(0.25, Math.max(0.05, octaveActivity)),
                     Math.max(6, euclideanPulses),
                     euclideanRotation,
+                    timeVariance,
                     generationSeed);
             case OCTAVE -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
@@ -763,6 +822,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     Math.max(0.45, octaveActivity),
                     Math.max(4, euclideanPulses),
                     euclideanRotation,
+                    timeVariance,
                     generationSeed);
         };
     }
@@ -878,9 +938,32 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         refreshClipCursor();
         loopSteps = pattern.loopSteps();
         cachedPattern = pattern.withLoopSteps(loopSteps);
+        pendingWrittenSteps.clear();
+        for (int i = 0; i < cachedPattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = cachedPattern.step(i);
+            if (step.active() && !step.tieFromPrevious() && step.pitch() != null) {
+                pendingWrittenSteps.put(i, step);
+            }
+        }
         MelodicClipAdapter.writeToClip(cursorClip, cachedPattern, STEP_LENGTH);
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
+    }
+
+    private void applyStepRecurrence(final int stepIndex, final MelodicPattern.Step updated, final String label) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        final NoteStep liveStep = primaryNoteStepAt(stepIndex);
+        if (liveStep == null) {
+            oled.valueInfo(label, "No note");
+            return;
+        }
+        cachedPattern = cachedPattern.withStep(updated);
+        basePattern = basePattern.withStep(updated.withIndex(stepIndex));
+        liveStep.setRecurrence(updated.bitwigRecurrenceLength(), updated.bitwigRecurrenceMask());
+        oled.valueInfo(label, recurrenceSummary(updated));
+        driver.notifyPopup(label, recurrenceSummary(updated));
     }
 
     private void applyTransform(final MelodicPattern pattern, final String label, final String value,
@@ -1059,6 +1142,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         oled.valueInfo("Density", "%.2f".formatted(density));
     }
 
+    private void adjustTimeVariance(final int amount) {
+        timeVariance = clampUnit(timeVariance + amount * 0.05);
+        oled.valueInfo("Time Var", "%.2f".formatted(timeVariance));
+    }
+
     private void adjustChannelShape(final int amount) {
         adjustOctaveActivity(amount);
     }
@@ -1143,6 +1231,33 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private void adjustMutateIntensity(final int amount) {
         mutateIntensity = clampUnit(mutateIntensity + amount * 0.05);
         oled.valueInfo("Mut %", "%.2f".formatted(mutateIntensity));
+    }
+
+    private void showRecurrenceEditInfo(final int ignored) {
+        if (heldStep == null) {
+            oled.valueInfo("Recurrence", "Hold step");
+            return;
+        }
+        final MelodicPattern.Step step = cachedPattern.step(heldStep);
+        oled.valueInfo("Recurrence", recurrenceSummary(step));
+    }
+
+    private void applyHeldRecurrenceSpan(final int stepIndex, final MelodicPattern.Step step, final int newSpan) {
+        final int currentSpan = effectiveRecurrenceSpan(step);
+        if (step.recurrenceLength() <= 1) {
+            applyStepRecurrence(stepIndex, step.withRecurrence(newSpan, 0b1), "Recurrence");
+            return;
+        }
+        if (newSpan == currentSpan) {
+            applyStepRecurrence(stepIndex, step.withRecurrence(0, 0), "Recurrence");
+            return;
+        }
+        final int currentMask = effectiveRecurrenceMask(step, currentSpan);
+        final int resizedMask = newSpan < currentSpan
+                ? currentMask & ((1 << newSpan) - 1)
+                : currentMask | (((1 << (newSpan - currentSpan)) - 1) << currentSpan);
+        final int normalizedMask = resizedMask == ((1 << newSpan) - 1) ? 0 : resizedMask;
+        applyStepRecurrence(stepIndex, step.withRecurrence(newSpan, normalizedMask), "Recurrence");
     }
 
     private void cycleMutationMode(final int direction) {
@@ -1608,6 +1723,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
         } else {
             notesAtStep.put(y, noteStep);
+            final MelodicPattern.Step pending = pendingWrittenSteps.get(x);
+            if (pending != null && pending.pitch() != null && pending.pitch() == y) {
+                if (noteStep.recurrenceLength() != pending.bitwigRecurrenceLength()
+                        || noteStep.recurrenceMask() != pending.bitwigRecurrenceMask()) {
+                    noteStep.setRecurrence(pending.bitwigRecurrenceLength(), pending.bitwigRecurrenceMask());
+                }
+                pendingWrittenSteps.remove(x);
+            }
         }
         rebuildCachedPattern();
     }
@@ -1718,7 +1841,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
         return false;
     }
-
     private MelodicPhraseContext phraseContext() {
         final NoteMode noteMode = driver.getNoteMode();
         return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getMelodicStepRootNoteClass(),
@@ -1727,6 +1849,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private RgbLigthState getPadLight(final int padIndex) {
         if (padIndex < CLIP_ROW_PAD_COUNT) {
+            if (heldStep != null) {
+                return getRecurrencePadLight(padIndex);
+            }
             return clipHandler.getPadLight(padIndex);
         }
         if (padIndex < STEP_PAD_OFFSET) {
@@ -1735,6 +1860,50 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
         return MelodicRenderer.stepLight(cachedPattern.step(stepIndex), heldStep != null && heldStep == stepIndex,
                 stepIndex < loopSteps, stepIndex == playingStep, stepIndex, selectedClipColor);
+    }
+
+    private RgbLigthState getRecurrencePadLight(final int padIndex) {
+        if (heldStep == null || heldStep < 0 || heldStep >= STEP_COUNT || padIndex >= 8) {
+            return RgbLigthState.OFF;
+        }
+        final MelodicPattern.Step step = cachedPattern.step(heldStep);
+        if (!step.active() || step.pitch() == null) {
+            return RgbLigthState.OFF;
+        }
+        final int span = effectiveRecurrenceSpan(step);
+        if (padIndex >= span) {
+            return RgbLigthState.OFF;
+        }
+        final int mask = effectiveRecurrenceMask(step, span);
+        return ((mask >> padIndex) & 0x1) == 1 ? selectedClipColor.getBrightend() : selectedClipColor.getDimmed();
+    }
+
+    private int effectiveRecurrenceSpan(final MelodicPattern.Step step) {
+        return step.recurrenceLength() > 1 ? step.recurrenceLength() : 8;
+    }
+
+    private int effectiveRecurrenceMask(final MelodicPattern.Step step, final int span) {
+        if (step.recurrenceLength() <= 1) {
+            return (1 << span) - 1;
+        }
+        return step.recurrenceMask() & ((1 << span) - 1);
+    }
+
+    private String recurrenceSummary(final MelodicPattern.Step step) {
+        final int span = effectiveRecurrenceSpan(step);
+        final int mask = effectiveRecurrenceMask(step, span);
+        return "%d:%s".formatted(span, Integer.toBinaryString((1 << span) | mask).substring(1));
+    }
+
+    private NoteStep primaryNoteStepAt(final int stepIndex) {
+        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
+        if (notesAtStep == null || notesAtStep.isEmpty()) {
+            return null;
+        }
+        return notesAtStep.values().stream()
+                .filter(step -> step.state() == NoteStep.State.NoteOn)
+                .min(Comparator.comparingInt(NoteStep::y))
+                .orElse(null);
     }
 
     private RgbLigthState getPitchPoolPadLight(final int padIndex) {
@@ -1805,12 +1974,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         actionSlot("Invert", this::adjustInvertProcess)
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Tension\n2: Pulses\n3: Rotation\n4: Mut %",
+                "1: TimeVar\n2: Tension\n3: Recurrence\n4: Span via Row",
                 new EncoderSlotBinding[]{
+                        valueSlot(this::adjustTimeVariance, () -> "Time Var"),
                         valueSlot(this::adjustTension, () -> "Tension"),
-                        valueSlot(this::adjustEuclideanPulses, () -> "Pulses"),
-                        valueSlot(this::adjustEuclideanRotation, () -> "Rotation"),
-                        valueSlot(this::adjustMutateIntensity, () -> "Mut %")
+                        actionSlot("Recurrence", this::showRecurrenceEditInfo),
+                        actionSlot("Span via Row", this::showRecurrenceEditInfo)
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Octave\n2: Gate\n3: Velocity\n4: Artic",
@@ -1856,9 +2025,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         if (driver.isGlobalAltHeld()) {
-                            oled.valueInfo("Subtype", activeGenerator().currentSubtypeLabel());
+                            oled.valueInfo(view.label, activeGenerator().currentSubtypeLabel());
                         } else {
-                            oled.valueInfo("Engine", generator.label);
+                            oled.valueInfo(view.label, generator.label);
                         }
                     } else {
                         accumulator.reset();
@@ -1896,9 +2065,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         if (driver.isGlobalAltHeld()) {
-                            oled.valueInfo("Mut %", "%.2f".formatted(mutateIntensity));
+                            oled.valueInfo(view.label, "%.2f".formatted(mutateIntensity));
                         } else {
-                            oled.valueInfo("Mut Type", mutationLabel(mutationMode));
+                            oled.valueInfo(view.label, mutationLabel(mutationMode));
                         }
                     } else {
                         accumulator.reset();
@@ -1927,7 +2096,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindEncoder(layer, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        oled.valueInfo(label.get(), view.label);
+                        oled.valueInfo(view.label, label.get());
                     } else {
                         oled.clearScreenDelayed();
                     }
@@ -1983,7 +2152,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindEncoder(layer, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        oled.valueInfo(label, "Turn");
+                        oled.valueInfo(view.label, label);
                     } else {
                         oled.clearScreenDelayed();
                     }
