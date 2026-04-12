@@ -475,7 +475,9 @@
         <li><code>Default Root Key</code></li>
         <li><code>Default Scale</code></li>
         <li><code>Default Note Input Octave</code></li>
+        <li><code>Melodic Seed Mode</code></li>
         <li><code>Default Velocity Sensitivity</code></li>
+        <li><code>Melodic Fixed Seed</code></li>
         <li><code>Pad Brightness</code></li>
         <li><code>Pad Saturation</code></li>
         <li><code>Encoder touch reset</code></li>
@@ -486,6 +488,8 @@
         <li><code>On-screen action notifications</code></li>
       </ul>
       <p><code>Pad Brightness</code> and <code>Pad Saturation</code> interact with the Bitwig track colors used by <code>DRUM</code> and <code>PERFORM</code>, so the same settings can read differently across different project palettes.</p>
+      <p><code>Melodic Seed Mode</code> controls how <code>Melodic Step</code> chooses its initial generator seed when the controller session starts. <code>Random</code> starts each session from a new seed. <code>Fixed</code> starts from the configured <code>Melodic Fixed Seed</code> value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each <code>Generate</code> press still advances forward from that starting point.</p>
+      <p>The melodic seed controls are grouped into their own <code>Generative control</code> preference section so they stay together in Bitwig's settings UI.</p>
     </section>
 
     <section class="section">

@@ -5,6 +5,7 @@ public final class FireControlPreferences {
     public static final String CATEGORY_CLIP_LAUNCH = "Clip Launch";
     public static final String CATEGORY_PINNING = "Pinning";
     public static final String CATEGORY_HARDWARE = "Hardware";
+    public static final String CATEGORY_GENERATIVE_CONTROL = "Generative control";
 
     public static final double PAD_BRIGHTNESS_MIN = 20.0;
     public static final double PAD_BRIGHTNESS_MAX = 100.0;
@@ -134,6 +135,16 @@ public final class FireControlPreferences {
     };
     public static final String DEFAULT_VELOCITY_SENSITIVITY = "80";
 
+    public static final String MELODIC_SEED_MODE_RANDOM = "Random";
+    public static final String MELODIC_SEED_MODE_FIXED = "Fixed";
+    public static final String[] MELODIC_SEED_MODES = {
+            MELODIC_SEED_MODE_RANDOM,
+            MELODIC_SEED_MODE_FIXED
+    };
+    public static final long MELODIC_FIXED_SEED_DEFAULT = 1234L;
+    public static final long MELODIC_FIXED_SEED_MIN = 1L;
+    public static final long MELODIC_FIXED_SEED_MAX = 999999L;
+
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
     public static final String[] DRUM_PIN_MODES = {
@@ -224,6 +235,16 @@ public final class FireControlPreferences {
         }
         return DEFAULT_SCALE_PIANO;
     }
+
+    public static String normalizeMelodicSeedMode(final String preferenceValue) {
+        for (final String value : MELODIC_SEED_MODES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return MELODIC_SEED_MODE_RANDOM;
+    }
+
 
     public static String normalizeDefaultRootKey(final String preferenceValue) {
         for (final String value : DEFAULT_ROOT_KEYS) {

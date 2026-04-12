@@ -119,7 +119,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private int euclideanPulses = 5;
     private int euclideanRotation = 0;
     private double mutateIntensity = 0.45;
-    private long seed = 1L;
+    private long seed;
     private View view = View.PROCESS;
     private Generator generator = Generator.ACID;
     private MelodicMutator.Mode mutationMode = MelodicMutator.Mode.PRESERVE_RHYTHM;
@@ -189,6 +189,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
+        this.seed = driver.initialMelodicSeed();
     }
 
     private void bindPads() {

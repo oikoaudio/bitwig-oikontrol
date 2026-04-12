@@ -25,6 +25,7 @@ import com.bitwig.extensions.framework.values.Midi;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_STEP = 0.01;
@@ -90,10 +91,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue defaultRootKeyPref;
     private SettableEnumValue defaultNoteInputOctavePref;
     private SettableEnumValue defaultVelocitySensitivityPref;
+    private SettableEnumValue melodicSeedModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableRangedValue padBrightnessPref;
     private SettableRangedValue padSaturationPref;
+    private SettableRangedValue melodicFixedSeedPref;
     private SettableBooleanValue stepSeqPadAuditionPref;
     private SettableBooleanValue screenNotificationsPref;
     private String tempoDisplayValue = "";
@@ -299,11 +302,26 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE);
         defaultNoteInputOctavePref.markInterested();
 
+        melodicSeedModePref = preferences.getEnumSetting("Melodic Seed Mode",
+                FireControlPreferences.CATEGORY_GENERATIVE_CONTROL,
+                FireControlPreferences.MELODIC_SEED_MODES,
+                FireControlPreferences.MELODIC_SEED_MODE_RANDOM);
+        melodicSeedModePref.markInterested();
+
         defaultVelocitySensitivityPref = preferences.getEnumSetting("Default Velocity Sensitivity",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITIES,
                 FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY);
         defaultVelocitySensitivityPref.markInterested();
+
+        melodicFixedSeedPref = preferences.getNumberSetting("Melodic Fixed Seed",
+                FireControlPreferences.CATEGORY_GENERATIVE_CONTROL,
+                FireControlPreferences.MELODIC_FIXED_SEED_MIN,
+                FireControlPreferences.MELODIC_FIXED_SEED_MAX,
+                1,
+                "",
+                FireControlPreferences.MELODIC_FIXED_SEED_DEFAULT);
+        melodicFixedSeedPref.markInterested();
 
         drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
                 FireControlPreferences.CATEGORY_PINNING,
@@ -983,6 +1001,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 ? FireControlPreferences.toDefaultVelocitySensitivity(
                 FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY)
                 : FireControlPreferences.toDefaultVelocitySensitivity(defaultVelocitySensitivityPref.get());
+    }
+
+    public long initialMelodicSeed() {
+        final String seedMode = melodicSeedModePref == null
+                ? FireControlPreferences.MELODIC_SEED_MODE_RANDOM
+                : FireControlPreferences.normalizeMelodicSeedMode(melodicSeedModePref.get());
+        if (FireControlPreferences.MELODIC_SEED_MODE_FIXED.equals(seedMode)) {
+            final long fixedSeed = melodicFixedSeedPref == null
+                    ? FireControlPreferences.MELODIC_FIXED_SEED_DEFAULT
+                    : Math.round(melodicFixedSeedPref.getRaw());
+            return Math.max(FireControlPreferences.MELODIC_FIXED_SEED_MIN,
+                    Math.min(FireControlPreferences.MELODIC_FIXED_SEED_MAX, fixedSeed));
+        }
+        return ThreadLocalRandom.current().nextLong(
+                FireControlPreferences.MELODIC_FIXED_SEED_MIN,
+                FireControlPreferences.MELODIC_FIXED_SEED_MAX + 1);
     }
 
     public void exitMelodicStepMode() {

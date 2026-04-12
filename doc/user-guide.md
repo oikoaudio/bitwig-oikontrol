@@ -403,7 +403,9 @@ Shared transport behavior:
 - `Default Root Key`
 - `Default Scale`
 - `Default Note Input Octave`
+- `Melodic Seed Mode`
 - `Default Velocity Sensitivity`
+- `Melodic Fixed Seed`
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`
@@ -414,6 +416,10 @@ Shared transport behavior:
 - `On-screen action notifications`
 
 `Pad Brightness` and `Pad Saturation` interact with the Bitwig track colors used by `DRUM` and `PERFORM`, so the same settings can read differently across different project palettes.
+
+`Melodic Seed Mode` controls how `Melodic Step` chooses its initial generator seed when the controller session starts. `Random` starts each session from a new seed. `Fixed` starts from the configured `Melodic Fixed Seed` value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each `Generate` press still advances forward from that starting point.
+
+The melodic seed controls are grouped into their own `Generative control` preference section so they stay together in Bitwig's settings UI.
 
 ## Troubleshooting
 

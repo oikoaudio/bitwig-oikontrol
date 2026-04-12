@@ -386,7 +386,9 @@ These preferences materially change how the Fire feels in use:
 - `Default Clip Length`
 - `Default Root Key`
 - `Default Note Input Octave`
+- `Melodic Seed Mode`
 - `Default Velocity Sensitivity`
+- `Melodic Fixed Seed`
 - `SELECT Encoder Startup`
 - `SELECT Encoder`
 - `Drum Mode Pinning`
@@ -396,6 +398,10 @@ These preferences materially change how the Fire feels in use:
 - `Pad Saturation`
 
 `Default Root Key`, `Default Scale`, `Default Note Input Octave`, and `Default Velocity Sensitivity` are startup defaults. They initialize the shared pitch context and live NOTE response when the script starts; changing key, scale, or velocity sensitivity from the controller does not currently write those defaults back into Bitwig preferences.
+
+`Melodic Seed Mode` controls how `Melodic Step` chooses its initial generator seed when the controller session starts. `Random` starts each session from a new seed. `Fixed` starts from the configured `Melodic Fixed Seed` value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each `Generate` press still advances forward from that starting point.
+
+The melodic seed controls are grouped into their own `Generative control` preference section so they stay together in Bitwig's settings UI.
 
 ## Known Gaps
 
