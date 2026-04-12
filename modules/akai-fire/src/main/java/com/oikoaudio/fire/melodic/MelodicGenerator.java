@@ -19,6 +19,6 @@ public interface MelodicGenerator {
     }
 
     record GenerateParameters(int loopSteps, double density, double tension, double octaveActivity,
-                              int pulses, int rotation, long seed) {
+                              int pulses, int rotation, double timeVariance, long seed) {
     }
 }

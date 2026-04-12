@@ -6,6 +6,8 @@ import java.util.List;
 
 public final class MelodicPattern {
     public static final int MAX_STEPS = 32;
+    public static final int DEFAULT_RECURRENCE_LENGTH = 1;
+    public static final int DEFAULT_RECURRENCE_MASK = 0b1;
 
     private final List<Step> steps;
     private final int loopSteps;
@@ -94,43 +96,79 @@ public final class MelodicPattern {
     }
 
     public record Step(int index, boolean active, boolean tieFromPrevious, Integer pitch, int velocity,
-                       double gate, boolean accent, boolean slide) {
+                       double gate, boolean accent, boolean slide, int recurrenceLength, int recurrenceMask) {
+        public Step {
+            if (recurrenceLength <= 1) {
+                recurrenceLength = 0;
+                recurrenceMask = 0;
+            } else {
+                recurrenceLength = Math.min(8, recurrenceLength);
+                recurrenceMask &= (1 << recurrenceLength) - 1;
+                if (recurrenceMask == 0 || recurrenceMask == ((1 << recurrenceLength) - 1)) {
+                    recurrenceLength = 0;
+                    recurrenceMask = 0;
+                }
+            }
+        }
+
+        public Step(final int index, final boolean active, final boolean tieFromPrevious, final Integer pitch,
+                    final int velocity, final double gate, final boolean accent, final boolean slide) {
+            this(index, active, tieFromPrevious, pitch, velocity, gate, accent, slide, 0, 0);
+        }
+
         public static Step rest(final int index) {
-            return new Step(index, false, false, null, 96, 0.8, false, false);
+            return new Step(index, false, false, null, 96, 0.8, false, false, 0, 0);
         }
 
         public Step withIndex(final int newIndex) {
-            return new Step(newIndex, active, tieFromPrevious, pitch, velocity, gate, accent, slide);
+            return new Step(newIndex, active, tieFromPrevious, pitch, velocity, gate, accent, slide,
+                    recurrenceLength, recurrenceMask);
         }
 
         public Step withActive(final boolean newActive) {
-            return new Step(index, newActive, tieFromPrevious, pitch, velocity, gate, accent, slide);
+            return new Step(index, newActive, tieFromPrevious, pitch, velocity, gate, accent, slide,
+                    recurrenceLength, recurrenceMask);
         }
 
         public Step withTieFromPrevious(final boolean tie) {
-            return new Step(index, active, tie, pitch, velocity, gate, accent, slide);
+            return new Step(index, active, tie, pitch, velocity, gate, accent, slide, recurrenceLength, recurrenceMask);
         }
 
         public Step withPitch(final Integer newPitch) {
-            return new Step(index, active, tieFromPrevious, newPitch, velocity, gate, accent, slide);
+            return new Step(index, active, tieFromPrevious, newPitch, velocity, gate, accent, slide,
+                    recurrenceLength, recurrenceMask);
         }
 
         public Step withVelocity(final int newVelocity) {
             return new Step(index, active, tieFromPrevious, pitch, Math.max(1, Math.min(127, newVelocity)),
-                    gate, accent, slide);
+                    gate, accent, slide, recurrenceLength, recurrenceMask);
         }
 
         public Step withGate(final double newGate) {
             return new Step(index, active, tieFromPrevious, pitch, velocity, Math.max(0.1, Math.min(1.25, newGate)),
-                    accent, slide);
+                    accent, slide, recurrenceLength, recurrenceMask);
         }
 
         public Step withAccent(final boolean newAccent) {
-            return new Step(index, active, tieFromPrevious, pitch, velocity, gate, newAccent, slide);
+            return new Step(index, active, tieFromPrevious, pitch, velocity, gate, newAccent, slide,
+                    recurrenceLength, recurrenceMask);
         }
 
         public Step withSlide(final boolean newSlide) {
-            return new Step(index, active, tieFromPrevious, pitch, velocity, gate, accent, newSlide);
+            return new Step(index, active, tieFromPrevious, pitch, velocity, gate, accent, newSlide,
+                    recurrenceLength, recurrenceMask);
+        }
+
+        public Step withRecurrence(final int length, final int mask) {
+            return new Step(index, active, tieFromPrevious, pitch, velocity, gate, accent, slide, length, mask);
+        }
+
+        public int bitwigRecurrenceLength() {
+            return recurrenceLength > 1 ? recurrenceLength : DEFAULT_RECURRENCE_LENGTH;
+        }
+
+        public int bitwigRecurrenceMask() {
+            return recurrenceLength > 1 ? recurrenceMask : DEFAULT_RECURRENCE_MASK;
         }
     }
 }
