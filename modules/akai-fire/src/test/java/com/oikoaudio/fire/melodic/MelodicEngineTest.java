@@ -100,6 +100,27 @@ class MelodicEngineTest {
     }
 
     @Test
+    void varyTimeMutationDoesNotGetStuckOnRepeatedPasses() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(32, 0.5, 0.3, 0.6, 0.2, 5, 0, 0.0, 41L);
+        final MelodicMutator mutator = new MelodicMutator();
+        MelodicPattern current = new CallResponseGenerator().generate(context, parameters).withLoopSteps(32);
+
+        boolean changed = false;
+        for (int i = 0; i < 6; i++) {
+            final MelodicPattern next = mutator.mutate(current, context,
+                    MelodicRecurrencePlanner.Style.CALL_RESPONSE, MelodicMutator.Mode.VARY_TIME, 1.0, 0.6, 77L + i);
+            if (!next.equals(current)) {
+                changed = true;
+            }
+            current = next;
+        }
+
+        assertTrue(changed);
+    }
+
+    @Test
     void clipAdapterAlwaysBuildsExactlyThirtyTwoSteps() {
         final Map<Integer, Map<Integer, com.bitwig.extension.controller.api.NoteStep>> map = new HashMap<>();
         final MelodicPattern pattern = MelodicClipAdapter.fromNoteSteps(map, 16, 0.25);

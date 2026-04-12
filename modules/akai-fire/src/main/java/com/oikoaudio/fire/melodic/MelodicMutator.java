@@ -1,5 +1,7 @@
 package com.oikoaudio.fire.melodic;
 
+import com.oikoaudio.fire.sequence.RecurrencePattern;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +35,136 @@ public final class MelodicMutator {
                                     final MelodicRecurrencePlanner.Style recurrenceStyle,
                                     final double intensity, final long seed) {
         final double timeVariance = Math.max(0.18, Math.min(1.0, 0.2 + intensity * 0.8));
-        return MelodicRecurrencePlanner.apply(pattern, context, recurrenceStyle, timeVariance, seed);
+        final MelodicPattern base = stripAlternateVariants(pattern);
+        MelodicPattern varied = base;
+        for (int attempt = 0; attempt < 4; attempt++) {
+            final long attemptSeed = seed + attempt * 97L;
+            final MelodicPattern planned = MelodicRecurrencePlanner.apply(base, context, recurrenceStyle, timeVariance, attemptSeed);
+            varied = addAlternateRecurrenceVoices(planned, context, intensity, attemptSeed);
+            if (!varied.equals(pattern)) {
+                return varied;
+            }
+        }
+        return forceDifferentTimeVariation(varied, context, recurrenceStyle, timeVariance, seed);
+    }
+
+    private MelodicPattern stripAlternateVariants(final MelodicPattern pattern) {
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps().size());
+        for (final MelodicPattern.Step step : pattern.steps()) {
+            steps.add(step.hasAlternate() ? step.withoutAlternate() : step);
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private MelodicPattern addAlternateRecurrenceVoices(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                                        final double intensity, final long seed) {
+        final Random random = new Random(seed ^ 0x41A7E11AL);
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
+        final double alternateRate = 0.15 + intensity * 0.35;
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = steps.get(i);
+            if (!step.active() || step.pitch() == null || step.recurrenceLength() <= 1 || step.hasAlternate()) {
+                continue;
+            }
+            final RecurrencePattern recurrence = RecurrencePattern.of(step.recurrenceLength(), step.recurrenceMask());
+            final int span = recurrence.effectiveSpan();
+            final int[] splitMasks = splitRecurrenceMasks(recurrence.effectiveMask(span), span, random);
+            final int mainMask = splitMasks[0];
+            final int alternateMask = splitMasks[1];
+            if (alternateMask == 0 || alternateMask == ((1 << span) - 1)) {
+                continue;
+            }
+            final double roleBias = step.accent() ? -0.08 : 0.10;
+            if (random.nextDouble() >= Math.max(0.0, Math.min(0.75, alternateRate + roleBias))) {
+                continue;
+            }
+            final int targetPitch = chooseDifferentNearbyPitch(context, step.pitch(),
+                    nonZeroMotion(random, 1, 2 + (int) Math.round(intensity * 2)), step.pitch());
+            final MelodicPattern.Step updated = step
+                    .withRecurrence(span, mainMask)
+                    .withAlternate(targetPitch,
+                            Math.max(1, step.velocity() - (step.accent() ? 10 : 4)),
+                            Math.max(0.35, step.gate() - 0.06),
+                            step.chance(),
+                            false,
+                            false,
+                            span,
+                            alternateMask);
+            steps.set(i, updated);
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private int[] splitRecurrenceMasks(final int sourceMask, final int span, final Random random) {
+        final int fullMask = (1 << span) - 1;
+        int mainMask = sourceMask & fullMask;
+        if (mainMask == 0) {
+            mainMask = 0b1;
+        }
+
+        final List<Integer> movableBits = new ArrayList<>();
+        for (int bit = 1; bit < span; bit++) {
+            if (((mainMask >> bit) & 0x1) == 1) {
+                movableBits.add(bit);
+            }
+        }
+        Collections.shuffle(movableBits, random);
+
+        int alternateMask = 0;
+        final int transferCount = Math.max(1, movableBits.size() / 2);
+        for (int i = 0; i < Math.min(transferCount, movableBits.size()); i++) {
+            final int bit = movableBits.get(i);
+            mainMask &= ~(1 << bit);
+            alternateMask |= 1 << bit;
+        }
+
+        if (alternateMask == 0) {
+            for (int bit = 1; bit < span; bit++) {
+                if (((mainMask >> bit) & 0x1) == 0) {
+                    alternateMask |= 1 << bit;
+                    break;
+                }
+            }
+        }
+        if (alternateMask == 0) {
+            return new int[]{sourceMask & fullMask, 0};
+        }
+        return new int[]{mainMask, alternateMask};
+    }
+
+    private MelodicPattern forceDifferentTimeVariation(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                                       final MelodicRecurrencePlanner.Style recurrenceStyle,
+                                                       final double timeVariance, final long seed) {
+        final Random random = new Random(seed ^ 0x7711E5AAL);
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
+        final List<Integer> recurrent = new ArrayList<>();
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            if (pattern.step(i).recurrenceLength() > 1) {
+                recurrent.add(i);
+            }
+        }
+        if (!recurrent.isEmpty()) {
+            final int stepIndex = recurrent.get(random.nextInt(recurrent.size()));
+            final MelodicPattern.Step step = steps.get(stepIndex);
+            final int span = RecurrencePattern.of(step.recurrenceLength(), step.recurrenceMask()).effectiveSpan();
+            final int rotatedMask = rotateMask(step.recurrenceMask(), span, 1 + random.nextInt(Math.max(1, span - 1)));
+            steps.set(stepIndex, step.withoutAlternate().withRecurrence(span, rotatedMask));
+            return new MelodicPattern(steps, pattern.loopSteps());
+        }
+
+        final MelodicPattern replanned = MelodicRecurrencePlanner.apply(pattern, context, recurrenceStyle,
+                Math.min(1.0, timeVariance + 0.1), seed ^ 0x13579BDFL);
+        if (!replanned.equals(pattern)) {
+            return replanned;
+        }
+        return pattern;
+    }
+
+    private int rotateMask(final int mask, final int span, final int amount) {
+        final int normalizedAmount = Math.floorMod(amount, span);
+        final int fullMask = (1 << span) - 1;
+        final int normalizedMask = mask & fullMask;
+        return ((normalizedMask << normalizedAmount) | (normalizedMask >>> (span - normalizedAmount))) & fullMask;
     }
 
     private MelodicPattern preserveRhythm(final MelodicPattern pattern, final MelodicPhraseContext context,
