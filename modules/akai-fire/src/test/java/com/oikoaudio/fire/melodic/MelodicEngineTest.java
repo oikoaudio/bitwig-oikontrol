@@ -19,7 +19,7 @@ class MelodicEngineTest {
     void motifGeneratorIsDeterministicForSeed() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.45, 0.25, 0.1, 5, 0, 23L);
+                new MelodicGenerator.GenerateParameters(16, 0.45, 0.25, 0.1, 0.2, 5, 0, 0.0, 23L);
 
         final MelodicPattern a = new MotifGenerator().generate(context, parameters);
         final MelodicPattern b = new MotifGenerator().generate(context, parameters);
@@ -45,7 +45,7 @@ class MelodicEngineTest {
     void preserveRhythmMutationKeepsActiveMask() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 5, 0, 9L);
+                new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 0.2, 5, 0, 0.0, 9L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
         final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
@@ -58,7 +58,7 @@ class MelodicEngineTest {
     void simplifyAndDensifyMoveDensityInExpectedDirection() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.4, 0.2, 0.1, 5, 0, 12L);
+                new MelodicGenerator.GenerateParameters(16, 0.4, 0.2, 0.1, 0.2, 5, 0, 0.0, 12L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
         final MelodicMutator mutator = new MelodicMutator();
 
@@ -75,7 +75,7 @@ class MelodicEngineTest {
     void preserveRhythmMutationActuallyChangesPitchMaterial() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 5, 0, 9L);
+                new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 0.2, 5, 0, 0.0, 9L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
         final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
@@ -95,7 +95,7 @@ class MelodicEngineTest {
     void rollingGeneratorCreatesDenseConnectedPhrase() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.7, 0.25, 0.15, 6, 0, 31L);
+                new MelodicGenerator.GenerateParameters(16, 0.7, 0.25, 0.15, 0.2, 6, 0, 0.0, 31L);
 
         final MelodicPattern pattern = new RollingBassGenerator().generate(context, parameters);
 
@@ -111,7 +111,7 @@ class MelodicEngineTest {
     void rollingGeneratorUsesAtLeastThreePitches() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.72, 0.35, 1.0, 6, 0, 31L);
+                new MelodicGenerator.GenerateParameters(16, 0.72, 0.35, 1.0, 0.2, 6, 0, 0.0, 31L);
 
         final MelodicPattern pattern = new RollingBassGenerator().generate(context, parameters);
 
@@ -134,7 +134,7 @@ class MelodicEngineTest {
     void acidGeneratorLeavesPhraseSpace() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.45, 0.6, 0.15, 5, 0, 17L);
+                new MelodicGenerator.GenerateParameters(16, 0.45, 0.6, 0.15, 0.2, 5, 0, 0.0, 17L);
 
         final MelodicPattern pattern = new AcidGenerator().generate(context, parameters);
 
@@ -146,7 +146,7 @@ class MelodicEngineTest {
     void acidGeneratorUsesMoreThanOnePitch() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.52, 0.62, 1.0, 5, 0, 17L);
+                new MelodicGenerator.GenerateParameters(16, 0.52, 0.62, 1.0, 0.2, 5, 0, 0.0, 17L);
 
         final MelodicPattern pattern = new AcidGenerator().generate(context, parameters);
 
@@ -157,7 +157,7 @@ class MelodicEngineTest {
     void callResponseGeneratorAnswersTheCall() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
-                new MelodicGenerator.GenerateParameters(16, 0.5, 0.3, 0.6, 5, 0, 41L);
+                new MelodicGenerator.GenerateParameters(16, 0.5, 0.3, 0.6, 0.2, 5, 0, 0.0, 41L);
 
         final MelodicPattern pattern = new CallResponseGenerator().generate(context, parameters);
 

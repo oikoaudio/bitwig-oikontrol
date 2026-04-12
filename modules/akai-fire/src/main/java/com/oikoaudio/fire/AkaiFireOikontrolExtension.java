@@ -25,6 +25,7 @@ import com.bitwig.extensions.framework.values.Midi;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_STEP = 0.01;
@@ -90,10 +91,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue defaultRootKeyPref;
     private SettableEnumValue defaultNoteInputOctavePref;
     private SettableEnumValue defaultVelocitySensitivityPref;
+    private SettableEnumValue melodicSeedModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableRangedValue padBrightnessPref;
     private SettableRangedValue padSaturationPref;
+    private SettableRangedValue melodicFixedSeedPref;
     private SettableBooleanValue stepSeqPadAuditionPref;
     private SettableBooleanValue screenNotificationsPref;
     private String tempoDisplayValue = "";
@@ -111,6 +114,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
     private int sharedRootNote = 0;
     private int sharedScaleIndex = -1;
+    private int sharedOctave = 3;
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -203,6 +207,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         setUpHardware();
         setUpTransportControl();
         setUpPreferences();
+        initializeSharedPitchContext();
 
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
@@ -299,11 +304,26 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_NOTE_INPUT_OCTAVE);
         defaultNoteInputOctavePref.markInterested();
 
+        melodicSeedModePref = preferences.getEnumSetting("Melodic Seed Mode",
+                FireControlPreferences.CATEGORY_GENERATIVE_CONTROL,
+                FireControlPreferences.MELODIC_SEED_MODES,
+                FireControlPreferences.MELODIC_SEED_MODE_RANDOM);
+        melodicSeedModePref.markInterested();
+
         defaultVelocitySensitivityPref = preferences.getEnumSetting("Default Velocity Sensitivity",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITIES,
                 FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY);
         defaultVelocitySensitivityPref.markInterested();
+
+        melodicFixedSeedPref = preferences.getNumberSetting("Melodic Fixed Seed",
+                FireControlPreferences.CATEGORY_GENERATIVE_CONTROL,
+                FireControlPreferences.MELODIC_FIXED_SEED_MIN,
+                FireControlPreferences.MELODIC_FIXED_SEED_MAX,
+                1,
+                "",
+                FireControlPreferences.MELODIC_FIXED_SEED_DEFAULT);
+        melodicFixedSeedPref.markInterested();
 
         drumPinModePref = preferences.getEnumSetting("Drum Mode Pinning",
                 FireControlPreferences.CATEGORY_PINNING,
@@ -798,6 +818,38 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         sharedScaleIndex = scaleIndex;
     }
 
+    public boolean adjustSharedScaleIndex(final int amount, final int minimumScaleIndex) {
+        if (amount == 0) {
+            return false;
+        }
+        final int nextScaleIndex = sharedScaleIndex + amount;
+        if (nextScaleIndex < minimumScaleIndex
+                || nextScaleIndex >= MusicalScaleLibrary.getInstance().getMusicalScalesCount()) {
+            return false;
+        }
+        setSharedScaleIndex(nextScaleIndex);
+        return true;
+    }
+
+    public int getSharedOctave() {
+        return sharedOctave;
+    }
+
+    public void setSharedOctave(final int octave) {
+        sharedOctave = Math.max(0, Math.min(7, octave));
+    }
+
+    public void adjustSharedOctave(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        setSharedOctave(sharedOctave + amount);
+    }
+
+    public int getSharedBaseMidiNote() {
+        return sharedOctave * 12 + sharedRootNote;
+    }
+
     public String getSharedScaleDisplayName() {
         if (sharedScaleIndex == -1) {
             return "Piano";
@@ -805,6 +857,35 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final int safeIndex = Math.max(0, Math.min(MusicalScaleLibrary.getInstance().getMusicalScalesCount() - 1,
                 sharedScaleIndex));
         return MusicalScaleLibrary.getInstance().getMusicalScale(safeIndex).getName();
+    }
+
+    private void initializeSharedPitchContext() {
+        setSharedScaleIndex(resolveDefaultSharedScaleIndex());
+        setSharedRootNote(getDefaultRootKeyPreference());
+        setSharedOctave(getDefaultNoteInputOctavePreference());
+    }
+
+    private int resolveDefaultSharedScaleIndex() {
+        return switch (getDefaultScalePreference()) {
+            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Ionan (Major)", 1);
+            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Aeolian (Minor)", 2);
+            case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR -> findScaleIndex("Harmonic Minor", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Melodic Minor (ascending)", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
+            case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);
+            default -> -1;
+        };
+    }
+
+    private int findScaleIndex(final String scaleName, final int fallbackIndex) {
+        final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
+        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
+            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
+                return i;
+            }
+        }
+        return fallbackIndex;
     }
 
     private void onMidi0(final ShortMidiMessage msg) {
@@ -983,6 +1064,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 ? FireControlPreferences.toDefaultVelocitySensitivity(
                 FireControlPreferences.DEFAULT_VELOCITY_SENSITIVITY)
                 : FireControlPreferences.toDefaultVelocitySensitivity(defaultVelocitySensitivityPref.get());
+    }
+
+    public long initialMelodicSeed() {
+        final String seedMode = melodicSeedModePref == null
+                ? FireControlPreferences.MELODIC_SEED_MODE_RANDOM
+                : FireControlPreferences.normalizeMelodicSeedMode(melodicSeedModePref.get());
+        if (FireControlPreferences.MELODIC_SEED_MODE_FIXED.equals(seedMode)) {
+            final long fixedSeed = melodicFixedSeedPref == null
+                    ? FireControlPreferences.MELODIC_FIXED_SEED_DEFAULT
+                    : Math.round(melodicFixedSeedPref.getRaw());
+            return Math.max(FireControlPreferences.MELODIC_FIXED_SEED_MIN,
+                    Math.min(FireControlPreferences.MELODIC_FIXED_SEED_MAX, fixedSeed));
+        }
+        return ThreadLocalRandom.current().nextLong(
+                FireControlPreferences.MELODIC_FIXED_SEED_MIN,
+                FireControlPreferences.MELODIC_FIXED_SEED_MAX + 1);
     }
 
     public void exitMelodicStepMode() {

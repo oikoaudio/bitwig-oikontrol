@@ -79,8 +79,8 @@ public final class MotifGenerator implements MelodicGenerator {
             final boolean sectionStart = i % sectionLength == firstActiveOffset(active, i, sectionLength);
             final boolean cadence = i == lastActiveIndex(active, loopSteps);
             final boolean accent = cadence || sectionStart;
-            final boolean slide = shouldSlide(active, degrees, i, loopSteps, parameters.tension(), random);
-            final double gate = gateFor(accent, cadence, slide, parameters.density());
+            final boolean slide = shouldSlide(active, degrees, i, loopSteps, parameters.tension(), parameters.legato(), random);
+            final double gate = gateFor(accent, cadence, slide, parameters.density(), parameters.legato());
             final int velocity = accent ? 112 + random.nextInt(8) : 86 + random.nextInt(18);
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }
@@ -402,25 +402,26 @@ public final class MotifGenerator implements MelodicGenerator {
     }
 
     private boolean shouldSlide(final boolean[] active, final int[] degrees, final int step, final int loopSteps,
-                                final double tension, final Random random) {
+                                final double tension, final double legato, final Random random) {
         if (step >= loopSteps - 1 || !active[step + 1]) {
             return false;
         }
         final int interval = Math.abs(degrees[step + 1] - degrees[step]);
-        return interval == 1 && random.nextDouble() < 0.08 + tension * 0.08;
+        return interval == 1 && random.nextDouble() < 0.04 + tension * 0.06 + legato * 0.18;
     }
 
-    private double gateFor(final boolean accent, final boolean cadence, final boolean slide, final double density) {
+    private double gateFor(final boolean accent, final boolean cadence, final boolean slide,
+                           final double density, final double legato) {
         if (slide) {
-            return 1.02;
+            return 0.96 + legato * 0.20;
         }
         if (cadence) {
-            return 0.95;
+            return 0.90 + legato * 0.10;
         }
         if (accent) {
-            return 0.88;
+            return 0.82 + legato * 0.10;
         }
-        return 0.72 + density * 0.12;
+        return 0.68 + density * 0.12 + legato * 0.10;
     }
 
     private int firstActiveOffset(final boolean[] active, final int step, final int sectionLength) {
