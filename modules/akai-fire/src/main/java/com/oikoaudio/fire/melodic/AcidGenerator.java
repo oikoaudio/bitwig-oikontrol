@@ -111,29 +111,119 @@ public final class AcidGenerator implements MelodicGenerator {
         for (int i = 0; i < loopSteps; i++) {
             active[i] = skeleton[i % skeleton.length];
         }
-        if (density < 0.45) {
-            final List<Integer> removable = new ArrayList<>();
-            for (int i = 1; i < loopSteps - 1; i++) {
-                if (active[i] && !isAnchorStep(i, loopSteps) && activeAt(active, i - 1) && activeAt(active, i + 1)) {
-                    removable.add(i);
-                }
-            }
-            final int removals = Math.min(removable.size(), (int) Math.round((0.45 - density) * 6.0));
-            for (int i = 0; i < removals; i++) {
-                active[removable.get((i * 2) % removable.size())] = false;
-            }
-        } else if (density > 0.72) {
-            for (int i = 1; i < loopSteps - 1; i++) {
-                if (!active[i] && activeAt(active, i - 1) && activeAt(active, i + 1) && random.nextDouble() < (density - 0.72) * 0.8) {
-                    active[i] = true;
-                }
-            }
-        }
         active[0] = true;
         if (loopSteps > 1) {
             active[loopSteps - 1] = true;
         }
+        final int targetHits = targetActiveCount(loopSteps, density);
+        while (countActive(active) > targetHits) {
+            final int removeIndex = bestRemovableIndex(active, loopSteps, random);
+            if (removeIndex < 0) {
+                break;
+            }
+            active[removeIndex] = false;
+        }
+        while (countActive(active) < targetHits) {
+            final int fillIndex = bestFillIndex(active, loopSteps, random);
+            if (fillIndex < 0) {
+                break;
+            }
+            active[fillIndex] = true;
+        }
         return active;
+    }
+
+    private int targetActiveCount(final int loopSteps, final double density) {
+        final double clampedDensity = Math.max(0.0, Math.min(1.0, density));
+        final int minimum = Math.max(4, (int) Math.round(loopSteps * 0.34));
+        final int maximum = Math.min(loopSteps, Math.max(minimum + 2, (int) Math.round(loopSteps * 0.82)));
+        return (int) Math.round(minimum + (maximum - minimum) * clampedDensity);
+    }
+
+    private int countActive(final boolean[] active) {
+        int count = 0;
+        for (final boolean step : active) {
+            if (step) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int bestRemovableIndex(final boolean[] active, final int loopSteps, final Random random) {
+        int bestIndex = -1;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (int i = 1; i < loopSteps - 1; i++) {
+            if (!active[i] || isAnchorStep(i, loopSteps)) {
+                continue;
+            }
+            final double score = removalScore(active, i, random);
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }
+
+    private double removalScore(final boolean[] active, final int index, final Random random) {
+        double score = 0.0;
+        final boolean prev = activeAt(active, index - 1);
+        final boolean next = activeAt(active, index + 1);
+        if (prev && next) {
+            score += 6.0;
+        } else if (prev || next) {
+            score += 2.5;
+        }
+        if (index % 4 != 0) {
+            score += 1.8;
+        }
+        if (index % 2 == 1) {
+            score += 0.8;
+        }
+        if (prev && index > 1 && activeAt(active, index - 2)) {
+            score += 1.0;
+        }
+        if (next && index < active.length - 2 && activeAt(active, index + 2)) {
+            score += 1.0;
+        }
+        return score + random.nextDouble() * 0.25;
+    }
+
+    private int bestFillIndex(final boolean[] active, final int loopSteps, final Random random) {
+        int bestIndex = -1;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (int i = 1; i < loopSteps - 1; i++) {
+            if (active[i] || isAnchorStep(i, loopSteps)) {
+                continue;
+            }
+            final double score = fillScore(active, i, loopSteps, random);
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }
+
+    private double fillScore(final boolean[] active, final int index, final int loopSteps, final Random random) {
+        double score = 0.0;
+        final boolean prev = activeAt(active, index - 1);
+        final boolean next = activeAt(active, index + 1);
+        if (prev && next) {
+            score += 5.5;
+        } else if (prev || next) {
+            score += 2.2;
+        }
+        if (index % 4 == 2) {
+            score += 1.6;
+        } else if (index % 4 != 0) {
+            score += 0.8;
+        }
+        if (index > 0 && isAnchorStep(index - 1, loopSteps) || index + 1 < loopSteps && isAnchorStep(index + 1, loopSteps)) {
+            score += 0.9;
+        }
+        return score + random.nextDouble() * 0.25;
     }
 
     private void buildLowLine(final boolean[] active, final int[] degrees, final boolean[] accents,

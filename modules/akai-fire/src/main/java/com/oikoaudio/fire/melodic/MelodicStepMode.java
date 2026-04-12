@@ -773,6 +773,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         MelodicPattern generated = activeGenerator.generate(context, parameters);
         if (timeVariance > 0.0) {
             generated = MelodicRecurrencePlanner.apply(generated, context, recurrenceStyle(), timeVariance, generationSeed);
+        } else {
+            generated = stripRecurrenceAndAlternates(generated);
         }
         generated = enrichLatentSteps(generated);
         generated = constrainPatternToPool(generated);
@@ -814,7 +816,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     octaveActivity, legato, euclideanPulses, euclideanRotation, timeVariance, generationSeed);
             case ACID -> new MelodicGenerator.GenerateParameters(
                     loopSteps,
-                    Math.max(0.35, density),
+                    density,
                     Math.max(0.55, tension),
                     Math.max(0.15, octaveActivity),
                     legato,
@@ -1746,13 +1748,19 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 if (Math.abs(noteStep.chance() - pending.chance()) > 0.0001) {
                     noteStep.setChance(pending.chance());
                 }
-                if (noteStep.recurrenceLength() != pending.recurrenceLength()
+                final RecurrencePattern pendingRecurrence = RecurrencePattern.of(
+                        pending.recurrenceLength(), pending.recurrenceMask());
+                if (pendingRecurrence.isDefault()) {
+                    if (!RecurrencePattern.of(noteStep.recurrenceLength(), noteStep.recurrenceMask()).isDefault()) {
+                        noteStep.setRecurrence(0, 0);
+                    }
+                } else if (noteStep.recurrenceLength() != pending.recurrenceLength()
                         || noteStep.recurrenceMask() != pending.recurrenceMask()) {
                     noteStep.setRecurrence(pending.recurrenceLength(), pending.recurrenceMask());
                 }
                 pendingWrittenSteps.remove(stepNoteKey(x, y));
             }
-            normalizeLiveSameStepRecurrence(notesAtStep);
+            normalizeLiveSameStepRecurrence(x, notesAtStep);
         }
         rebuildCachedPattern();
     }
@@ -1761,7 +1769,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         return stepIndex + ":" + pitch;
     }
 
-    private void normalizeLiveSameStepRecurrence(final Map<Integer, NoteStep> notesAtStep) {
+    private void normalizeLiveSameStepRecurrence(final int stepIndex, final Map<Integer, NoteStep> notesAtStep) {
         final List<NoteStep> noteOns = notesAtStep.values().stream()
                 .filter(step -> step.state() == NoteStep.State.NoteOn)
                 .sorted(Comparator.comparingInt(NoteStep::y))
@@ -1772,6 +1780,13 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
         final NoteStep first = noteOns.get(0);
         final NoteStep second = noteOns.get(1);
+        final boolean liveExplicitRecurrence = hasExplicitRecurrence(first) || hasExplicitRecurrence(second);
+        final MelodicClipAdapter.PendingNoteWrite firstPending = pendingWrittenSteps.get(stepNoteKey(stepIndex, first.y()));
+        final MelodicClipAdapter.PendingNoteWrite secondPending = pendingWrittenSteps.get(stepNoteKey(stepIndex, second.y()));
+        final boolean pendingExplicitRecurrence = hasExplicitRecurrence(firstPending) || hasExplicitRecurrence(secondPending);
+        if (!liveExplicitRecurrence && !pendingExplicitRecurrence) {
+            return;
+        }
         final int[] normalized = normalizeSameStepRecurrence(
                 first.recurrenceLength(), first.recurrenceMask(),
                 second.recurrenceLength(), second.recurrenceMask());
@@ -1781,6 +1796,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (second.recurrenceLength() != normalized[2] || second.recurrenceMask() != normalized[3]) {
             second.setRecurrence(normalized[2], normalized[3]);
         }
+    }
+
+    private boolean hasExplicitRecurrence(final NoteStep step) {
+        return step != null && RecurrencePattern.of(step.recurrenceLength(), step.recurrenceMask()).length() > 0;
+    }
+
+    private boolean hasExplicitRecurrence(final MelodicClipAdapter.PendingNoteWrite pending) {
+        return pending != null && RecurrencePattern.of(pending.recurrenceLength(), pending.recurrenceMask()).length() > 0;
     }
 
     private int[] normalizeSameStepRecurrence(final int firstLength, final int firstMask,
@@ -1876,6 +1899,19 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
         }
         return new MelodicPattern(steps, observed.loopSteps());
+    }
+
+    private MelodicPattern stripRecurrenceAndAlternates(final MelodicPattern pattern) {
+        final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
+        for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (!step.active() || step.pitch() == null) {
+                steps.add(step.hasAlternate() ? step.withoutAlternate() : step);
+                continue;
+            }
+            steps.add(step.withoutAlternate().withRecurrence(0, 0));
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
     }
 
     private void observeSelectedClip() {
