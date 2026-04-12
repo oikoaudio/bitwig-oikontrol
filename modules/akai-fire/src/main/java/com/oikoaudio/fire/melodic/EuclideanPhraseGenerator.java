@@ -29,7 +29,7 @@ public final class EuclideanPhraseGenerator implements MelodicGenerator {
             final int pitch = context.pitchForDegree(octaveOffset, degree);
             final boolean accent = anchor || phraseIndex % 3 == 0;
             final boolean slide = !anchor && random.nextDouble() < parameters.tension() * 0.1;
-            final double gate = slide ? 1.08 : 0.7 + parameters.density() * 0.2;
+            final double gate = slide ? 0.96 + parameters.legato() * 0.18 : 0.7 + parameters.density() * 0.2;
             final int velocity = accent ? 116 : 82 + random.nextInt(20);
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
             phraseIndex++;
