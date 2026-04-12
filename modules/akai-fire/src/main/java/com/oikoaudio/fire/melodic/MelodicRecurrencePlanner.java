@@ -6,11 +6,19 @@ import java.util.List;
 import java.util.Random;
 
 public final class MelodicRecurrencePlanner {
+    public enum Style {
+        ACID,
+        MOTIF,
+        CALL_RESPONSE,
+        ROLLING,
+        OCTAVE
+    }
+
     private MelodicRecurrencePlanner() {
     }
 
     public static MelodicPattern apply(final MelodicPattern pattern, final MelodicPhraseContext context,
-                                       final double timeVariance, final long seed) {
+                                       final Style style, final double timeVariance, final long seed) {
         if (timeVariance < 0.12) {
             return clearRecurrence(pattern);
         }
@@ -18,23 +26,26 @@ public final class MelodicRecurrencePlanner {
         final Random random = new Random(seed ^ 0x5EEDC0DEL);
         MelodicPattern out = clearRecurrence(pattern);
         final MelodicPatternAnalyzer.Analysis analysis = MelodicPatternAnalyzer.analyze(out);
-        final List<Integer> candidates = new ArrayList<>(analysis.activeSteps());
-        candidates.removeAll(analysis.anchorSteps());
-        candidates.sort(Comparator.comparingInt(MelodicRecurrencePlanner::priorityForStep));
-
         final int span = timeVariance < 0.34 ? 2 : timeVariance < 0.67 ? 4 : 8;
-        final int assignmentTarget = Math.max(1,
-                Math.min(candidates.size(), (int) Math.round(candidates.size() * (0.15 + timeVariance * 0.55))));
+        final RoleBuckets buckets = bucketize(out, analysis, style);
 
-        for (int i = 0; i < assignmentTarget && i < candidates.size(); i++) {
-            final int stepIndex = candidates.get(i);
+        final int themeTarget = targetCount(buckets.themeSteps().size(), out.loopSteps(), timeVariance, style, 0.12, 0.32);
+        final int alternateTarget = targetCount(buckets.alternateSteps().size(), out.loopSteps(), timeVariance, style, 0.08, 0.26);
+
+        for (int i = 0; i < themeTarget && i < buckets.themeSteps().size(); i++) {
+            final int stepIndex = buckets.themeSteps().get(i);
             final MelodicPattern.Step step = out.step(stepIndex);
-            final int mask = chooseMask(span, step, timeVariance, random);
-            out = out.withStep(step.withRecurrence(span, mask));
+            out = out.withStep(step.withRecurrence(span, chooseThemeMask(span, style, timeVariance, random)));
+        }
+
+        for (int i = 0; i < alternateTarget && i < buckets.alternateSteps().size(); i++) {
+            final int stepIndex = buckets.alternateSteps().get(i);
+            final MelodicPattern.Step step = out.step(stepIndex);
+            out = out.withStep(step.withRecurrence(span, chooseAlternateMask(span, style, timeVariance, random)));
         }
 
         if (timeVariance >= 0.6) {
-            out = maybeInjectOrnament(out, context, span, random, timeVariance);
+            out = maybeInjectOrnament(out, context, style, span, random, timeVariance);
         }
         return out;
     }
@@ -50,27 +61,145 @@ public final class MelodicRecurrencePlanner {
         return out;
     }
 
-    private static int priorityForStep(final int stepIndex) {
-        final int beatBias = stepIndex % 4 == 0 ? 100 : stepIndex % 2 == 0 ? 50 : 0;
-        return beatBias + stepIndex;
+    private static int targetCount(final int available, final double timeVariance, final Style style,
+                                   final double baseFactor, final double varianceFactor) {
+        if (available <= 0) {
+            return 0;
+        }
+        final double styleBias = switch (style) {
+            case CALL_RESPONSE -> 0.18;
+            case ACID, MOTIF -> 0.10;
+            case ROLLING, OCTAVE -> 0.06;
+        };
+        return Math.max(1, Math.min(available,
+                (int) Math.round(available * (baseFactor + styleBias + timeVariance * varianceFactor))));
     }
 
-    private static int chooseMask(final int span, final MelodicPattern.Step step, final double timeVariance,
-                                  final Random random) {
+    private static int targetCount(final int available, final int loopSteps, final double timeVariance, final Style style,
+                                   final double baseFactor, final double varianceFactor) {
+        final int baseTarget = targetCount(available, timeVariance, style, baseFactor, varianceFactor);
+        if (style == Style.ACID && loopSteps >= 24) {
+            return Math.max(1, Math.min(available, (int) Math.round(baseTarget * 0.6)));
+        }
+        return baseTarget;
+    }
+
+    private static RoleBuckets bucketize(final MelodicPattern pattern, final MelodicPatternAnalyzer.Analysis analysis,
+                                         final Style style) {
+        final List<Integer> themeSteps = new ArrayList<>();
+        final List<Integer> alternateSteps = new ArrayList<>();
+        final int responseStart = pattern.loopSteps() / 2;
+        for (final int stepIndex : analysis.activeSteps()) {
+            if (analysis.anchorSteps().contains(stepIndex)) {
+                continue;
+            }
+            final MelodicPattern.Step step = pattern.step(stepIndex);
+            if (style == Style.ACID && shouldSkipAcidPulse(stepIndex, pattern.loopSteps())) {
+                continue;
+            }
+            final boolean themeCandidate = step.accent()
+                    || stepIndex % 8 == 0
+                    || (style == Style.CALL_RESPONSE && stepIndex >= pattern.loopSteps() / 2)
+                    || (style == Style.ACID && isAcidHookWindow(stepIndex, pattern.loopSteps()))
+                    || (style == Style.MOTIF && stepIndex % 4 == 2);
+            if (themeCandidate) {
+                themeSteps.add(stepIndex);
+            } else {
+                if (style == Style.CALL_RESPONSE && stepIndex < responseStart) {
+                    continue;
+                }
+                alternateSteps.add(stepIndex);
+            }
+        }
+        themeSteps.sort(Comparator.comparingInt(stepIndex -> priorityForTheme(stepIndex, pattern.loopSteps(), style)));
+        alternateSteps.sort(Comparator.comparingInt(stepIndex -> priorityForAlternate(stepIndex, pattern.loopSteps(), style)));
+        return new RoleBuckets(themeSteps, alternateSteps);
+    }
+
+    private static int priorityForTheme(final int stepIndex, final int loopSteps, final Style style) {
+        int score = stepIndex;
+        if (style == Style.CALL_RESPONSE && stepIndex >= loopSteps / 2) {
+            score -= 12;
+        }
+        if (style == Style.ACID) {
+            if (isAcidLateWindow(stepIndex, loopSteps)) {
+                score -= 16;
+            } else if (isAcidHookWindow(stepIndex, loopSteps)) {
+                score -= 10;
+            }
+        }
+        if (stepIndex % 8 == 0) {
+            score -= 10;
+        } else if (stepIndex % 4 == 0) {
+            score -= 4;
+        }
+        return score;
+    }
+
+    private static int priorityForAlternate(final int stepIndex, final int loopSteps, final Style style) {
+        int score = stepIndex;
+        if (style == Style.ACID) {
+            if (isAcidLateWindow(stepIndex, loopSteps)) {
+                score -= 14;
+            } else if (isAcidHookWindow(stepIndex, loopSteps)) {
+                score -= 8;
+            } else {
+                score += 8;
+            }
+        }
+        if (style == Style.ROLLING && stepIndex % 2 != 0) {
+            score -= 6;
+        }
+        if (style == Style.OCTAVE && stepIndex % 4 == 2) {
+            score -= 8;
+        }
+        if (style == Style.CALL_RESPONSE && stepIndex >= loopSteps / 2) {
+            score -= 6;
+        }
+        return score;
+    }
+
+    private static int chooseThemeMask(final int span, final Style style, final double timeVariance,
+                                       final Random random) {
+        final int[] masks = switch (span) {
+            case 2 -> new int[]{0b01};
+            case 4 -> switch (style) {
+                case CALL_RESPONSE -> new int[]{0b0011, 0b0101, 0b0111};
+                case ACID, MOTIF -> new int[]{0b0011, 0b0101};
+                case ROLLING, OCTAVE -> new int[]{0b0011, 0b0111};
+            };
+            default -> switch (style) {
+                case CALL_RESPONSE -> new int[]{0b00001111, 0b00110011, 0b01010101, 0b01110111};
+                case ACID -> new int[]{0b00001111, 0b00111100, 0b01010101};
+                case MOTIF -> new int[]{0b00001111, 0b00110011, 0b01110111};
+                case ROLLING -> new int[]{0b00001111, 0b00110011, 0b01101111};
+                case OCTAVE -> new int[]{0b00001111, 0b01010101, 0b01110111};
+            };
+        };
+        return masks[random.nextInt(masks.length)];
+    }
+
+    private static int chooseAlternateMask(final int span, final Style style, final double timeVariance,
+                                           final Random random) {
         final int[] masks = switch (span) {
             case 2 -> new int[]{0b01};
             case 4 -> timeVariance < 0.55
-                    ? new int[]{0b0011, 0b0101, 0b0111}
-                    : new int[]{0b0011, 0b0101, 0b0111, 0b1001, 0b1011};
-            default -> step.accent()
-                    ? new int[]{0b00001111, 0b01010101, 0b01110111}
-                    : new int[]{0b00001111, 0b00110011, 0b01010101, 0b01110111, 0b10011001};
+                    ? new int[]{0b0001, 0b0101, 0b1001}
+                    : new int[]{0b0001, 0b0101, 0b1001, 0b1010};
+            default -> switch (style) {
+                case CALL_RESPONSE -> new int[]{0b00000001, 0b00001001, 0b00100010, 0b10001000};
+                case ACID -> new int[]{0b00000001, 0b00001001, 0b00100010};
+                case MOTIF -> new int[]{0b00000001, 0b00010001, 0b01000100};
+                case ROLLING -> new int[]{0b00000001, 0b00100010, 0b10001000};
+                case OCTAVE -> new int[]{0b00000001, 0b00001010, 0b01000100};
+            };
         };
         return masks[random.nextInt(masks.length)];
     }
 
     private static MelodicPattern maybeInjectOrnament(final MelodicPattern pattern, final MelodicPhraseContext context,
-                                                      final int span, final Random random, final double timeVariance) {
+                                                      final Style style, final int span, final Random random,
+                                                      final double timeVariance) {
         final List<Integer> ornamentSlots = new ArrayList<>();
         for (int i = 1; i < pattern.loopSteps() - 1; i++) {
             if (pattern.step(i).active()) {
@@ -97,8 +226,46 @@ public final class MelodicRecurrencePlanner {
         final int pitch = lower == upper
                 ? context.pitchForDegree(0, 1)
                 : lower + Math.max(1, (upper - lower) / 2);
-        final int mask = span >= 8 && timeVariance > 0.8 ? 0b10101000 : 0b00001001;
+        final int mask = chooseOrnamentMask(span, style, timeVariance, random);
         return pattern.withStep(new MelodicPattern.Step(slot, true, false, pitch, 92, 0.55, false, false)
                 .withRecurrence(span, mask));
+    }
+
+    private static int chooseOrnamentMask(final int span, final Style style, final double timeVariance,
+                                          final Random random) {
+        if (span <= 2) {
+            return 0b01;
+        }
+        if (span == 4) {
+            return switch (style) {
+                case CALL_RESPONSE -> new int[]{0b0001, 0b1001}[random.nextInt(2)];
+                case ACID, ROLLING -> new int[]{0b0001, 0b0101}[random.nextInt(2)];
+                case MOTIF, OCTAVE -> new int[]{0b0001, 0b0010}[random.nextInt(2)];
+            };
+        }
+        return switch (style) {
+            case CALL_RESPONSE -> new int[]{0b00001001, 0b10000001, 0b00100010}[random.nextInt(3)];
+            case ACID -> new int[]{0b00001001, 0b00100010, 0b10100000}[random.nextInt(3)];
+            case MOTIF -> new int[]{0b00010001, 0b01000001, 0b00100100}[random.nextInt(3)];
+            case ROLLING -> new int[]{0b00001001, 0b10001000, 0b00100010}[random.nextInt(3)];
+            case OCTAVE -> new int[]{0b00000101, 0b01000100, 0b00100010}[random.nextInt(3)];
+        };
+    }
+
+    private static boolean shouldSkipAcidPulse(final int stepIndex, final int loopSteps) {
+        return stepIndex < Math.max(4, loopSteps / 4);
+    }
+
+    private static boolean isAcidHookWindow(final int stepIndex, final int loopSteps) {
+        final int start = loopSteps / 4;
+        final int end = loopSteps / 2;
+        return stepIndex >= start && stepIndex < end;
+    }
+
+    private static boolean isAcidLateWindow(final int stepIndex, final int loopSteps) {
+        return stepIndex >= Math.max(loopSteps / 2, loopSteps - Math.max(4, loopSteps / 4));
+    }
+
+    private record RoleBuckets(List<Integer> themeSteps, List<Integer> alternateSteps) {
     }
 }

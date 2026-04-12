@@ -12,10 +12,12 @@ public final class MelodicMutator {
         PRESERVE_RHYTHM,
         VARY_ENDING,
         SIMPLIFY,
-        DENSIFY
+        DENSIFY,
+        VARY_TIME
     }
 
     public MelodicPattern mutate(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                 final MelodicRecurrencePlanner.Style recurrenceStyle,
                                  final Mode mode, final double intensity, final double identityPreserve,
                                  final long seed) {
         return switch (mode) {
@@ -23,7 +25,15 @@ public final class MelodicMutator {
             case VARY_ENDING -> varyEnding(pattern, context, intensity, seed);
             case SIMPLIFY -> simplify(pattern, intensity, identityPreserve, seed);
             case DENSIFY -> densify(pattern, context, intensity, seed);
+            case VARY_TIME -> varyTime(pattern, context, recurrenceStyle, intensity, seed);
         };
+    }
+
+    private MelodicPattern varyTime(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                    final MelodicRecurrencePlanner.Style recurrenceStyle,
+                                    final double intensity, final long seed) {
+        final double timeVariance = Math.max(0.18, Math.min(1.0, 0.2 + intensity * 0.8));
+        return MelodicRecurrencePlanner.apply(pattern, context, recurrenceStyle, timeVariance, seed);
     }
 
     private MelodicPattern preserveRhythm(final MelodicPattern pattern, final MelodicPhraseContext context,
