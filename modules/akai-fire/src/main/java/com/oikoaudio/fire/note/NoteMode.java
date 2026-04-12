@@ -3616,20 +3616,20 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void refreshChordStepObservationPass() {
         clearObservedChordCaches();
+        refreshSelectedNoteClipState();
         boolean clipSelected = false;
         final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
         if (preferredSlotIndex >= 0 && preferredSlotIndex < noteClipSlotBank.getSizeOfBank()) {
             final ClipLauncherSlot preferredSlot = noteClipSlotBank.getItemAt(preferredSlotIndex);
-            if (preferredSlot.exists().get()) {
-                preferredSlot.select();
+            if (preferredSlot.exists().get() && preferredSlot.isSelected().get()) {
                 clipSelected = true;
             }
         }
-        if (!clipSelected) {
-            clipSelected = selectPlayingNoteClipSlot();
+        if (!clipSelected && selectedNoteClipSlotIndex >= 0) {
+            clipSelected = true;
         }
         if (!clipSelected) {
-            selectSelectedNoteClipSlot();
+            clipSelected = selectPlayingNoteClipSlot();
         }
         noteStepClip.scrollToKey(0);
         observedNoteClip.scrollToKey(0);
@@ -3647,17 +3647,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         }
         return false;
     }
-
-    private void selectSelectedNoteClipSlot() {
-        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                slot.select();
-                return;
-            }
-        }
-    }
-
     private void clearObservedChordCaches() {
         observedClipNotesByStep.clear();
         observedFineOccupancyByStep.clear();

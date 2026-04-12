@@ -19,6 +19,7 @@ public class ViewCursorControl {
 	private final DrumPadBank drumPadBank;
 	private final TrackBank trackBank;
 	private int selectedTrackIndex = -1;
+	private int selectedClipSlotIndex = -1;
 	// private final Device drumDevice;
 
 	public ViewCursorControl(final ControllerHost host, final int sends) {
@@ -44,11 +45,16 @@ public class ViewCursorControl {
 		cursorTrack.isPinned().markInterested();
 		cursorTrack.position().markInterested();
 		cursorTrack.name().markInterested();
-
-		cursorTrack.clipLauncherSlotBank().cursorIndex().addValueObserver(index -> {
-			// RemoteConsole.out.println(" => {}", index);
-		});
-		cursorTrack.clipLauncherSlotBank().cursorIndex().markInterested();
+		for (int index = 0; index < cursorTrack.clipLauncherSlotBank().getSizeOfBank(); index++) {
+			final int slotIndex = index;
+			cursorTrack.clipLauncherSlotBank().getItemAt(index).exists().markInterested();
+			cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().markInterested();
+			cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().addValueObserver(selected -> {
+				if (selected) {
+					selectedClipSlotIndex = slotIndex;
+				}
+			});
+		}
 
 		deviceBank = cursorTrack.createDeviceBank(8);
 		primaryDevice = cursorTrack.createCursorDevice("drumdetection", "Pad Device", 8,
@@ -72,7 +78,14 @@ public class ViewCursorControl {
 	}
 
 	public int getSelectedClipSlotIndex() {
-		return cursorTrack.clipLauncherSlotBank().cursorIndex().get();
+		for (int index = 0; index < cursorTrack.clipLauncherSlotBank().getSizeOfBank(); index++) {
+			if (cursorTrack.clipLauncherSlotBank().getItemAt(index).exists().get()
+					&& cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().get()) {
+				selectedClipSlotIndex = index;
+				return index;
+			}
+		}
+		return selectedClipSlotIndex;
 	}
 
 	public int getSelectedTrackIndex() {
