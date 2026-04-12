@@ -22,7 +22,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class PadHandler {
+/**
+ * Encapsulates drum-pad selection, note audition, mute/solo gestures, and drum-pad lighting for
+ * {@link DrumSequenceMode}.
+ */
+public class DrumPadHandler {
     private static final int DRUM_PAD_BUTTON_OFFSET = 16;
     private static final int PAD_NOTE_BASE = 0x36;
 
@@ -53,7 +57,7 @@ public class PadHandler {
     private final DisplayTarget displayTarget;
     private final DisplayInfo padDisplayInfo;
 
-    public PadHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
+    public DrumPadHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
                       final Layer muteLayer, final Layer soloLayer, final NoteRepeatHandler noteRepeatHandler) {
         this.driver = driver;
         this.parent = parent;

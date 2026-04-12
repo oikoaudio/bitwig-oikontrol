@@ -33,7 +33,9 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
-import com.oikoaudio.fire.sequence.SeqClipHandler;
+import com.oikoaudio.fire.sequence.SelectedClipSlotState;
+import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
+import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.AccentLatchState;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
@@ -86,7 +88,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
-    private final SeqClipHandler clipHandler;
+    private final ClipRowHandler clipHandler;
     private final Set<Integer> auditioningPoolPitches = new HashSet<>();
     private final MotifGenerator motifGenerator = new MotifGenerator();
     private final CallResponseGenerator callResponseGenerator = new CallResponseGenerator();
@@ -185,7 +187,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             parameter.value().markInterested();
         }
         observeSelectedClip();
-        this.clipHandler = new SeqClipHandler(this);
+        this.clipHandler = new ClipRowHandler(this);
         bindPads();
         bindButtons();
         bindMainEncoder();
@@ -1912,16 +1914,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void refreshSelectedClipState() {
-        selectedClipSlotIndex = -1;
-        selectedClipColor = MelodicRenderer.ACTIVE_STEP;
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                selectedClipSlotIndex = i;
-                selectedClipColor = ColorLookup.getColor(slot.color().get());
-                break;
-            }
-        }
+        final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, MelodicRenderer.ACTIVE_STEP);
+        selectedClipSlotIndex = state.slotIndex();
+        selectedClipColor = state.color();
     }
 
     private boolean ensureClipAvailable() {
@@ -1942,33 +1937,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private void refreshClipCursor() {
         refreshSelectedClipState();
-        boolean clipSelected = false;
-        final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
-        if (preferredSlotIndex >= 0 && preferredSlotIndex < clipSlotBank.getSizeOfBank()) {
-            final ClipLauncherSlot preferredSlot = clipSlotBank.getItemAt(preferredSlotIndex);
-            if (preferredSlot.exists().get() && preferredSlot.isSelected().get()) {
-                clipSelected = true;
-            }
-        }
-        if (!clipSelected && selectedClipSlotIndex >= 0) {
-            clipSelected = true;
-        }
-        if (!clipSelected) {
-            clipSelected = selectPlayingClipSlot();
-        }
+        ClipSlotSelectionResolver.resolve(clipSlotBank, driver.getViewControl().getSelectedClipSlotIndex(),
+                selectedClipSlotIndex);
         cursorClip.scrollToKey(0);
         cursorClip.scrollToStep(0);
-    }
-
-    private boolean selectPlayingClipSlot() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && (slot.isPlaying().get() || slot.isRecording().get())) {
-                slot.select();
-                return true;
-            }
-        }
-        return false;
     }
     private MelodicPhraseContext phraseContext() {
         final NoteMode noteMode = driver.getNoteMode();

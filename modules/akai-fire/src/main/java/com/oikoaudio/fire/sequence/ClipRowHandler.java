@@ -9,7 +9,12 @@ import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 
-public class SeqClipHandler {
+/**
+ * Owns the shared 16-pad clip row used by the Akai sequencer modes.
+ * Tracks clip-slot state, binds the row buttons, and renders the pad lights for selected, playing,
+ * queued, and empty clip slots.
+ */
+public class ClipRowHandler {
 
     private final SeqClipRowHost host;
     private final PinnableCursorClip cursorClip;
@@ -20,7 +25,7 @@ public class SeqClipHandler {
     private final boolean[] recordingSlots = new boolean[16];
     private int blinkState = 0;
 
-    public SeqClipHandler(final SeqClipRowHost host) {
+    public ClipRowHandler(final SeqClipRowHost host) {
         this.host = host;
         this.cursorClip = host.getClipCursor();
         this.slotBank = host.getClipSlotBank();
@@ -121,9 +126,9 @@ public class SeqClipHandler {
     }
 
     private void handleClip(final int index, final ClipLauncherSlot slot, final boolean pressed) {
-        final int copySourceIndex = SeqClipCopySourceResolver.resolve(selectedSlotIndex, playingSlots, recordingSlots);
+        final int copySourceIndex = ClipRowCopySourceResolver.resolve(selectedSlotIndex, playingSlots, recordingSlots);
         final boolean hasContent = slot.hasContent().get();
-        switch (SeqClipRowActionResolver.resolve(pressed, hasContent,
+        switch (ClipRowActionResolver.resolve(pressed, hasContent,
                 host.isDeleteHeld(), host.isCopyHeld(), host.isSelectHeld(), host.isShiftHeld(),
                 copySourceIndex, index)) {
             case IGNORE -> {

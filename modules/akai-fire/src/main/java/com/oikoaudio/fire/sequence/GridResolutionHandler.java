@@ -2,7 +2,12 @@ package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 
-public class ResolutionHander {
+/**
+ * Handles the temporary grid-resolution gesture in drum sequencing mode.
+ * While held, the main encoder adjusts the visible grid resolution and the button shows the current
+ * choice on the OLED.
+ */
+public class GridResolutionHandler {
 	private final DrumSequenceMode parent;
 	private boolean buttonHeld = false;
 	private static final double[] GRID_RATES = new double[] { 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, //
@@ -10,7 +15,7 @@ public class ResolutionHander {
 	private static final String[] GRID_RATES_STR = new String[] { "1/32", "1/16", "1/8", "1/4", "1/2", "1/1", //
 			"1/32T", "1/16T", "1/8T", "1/4T" };
 
-	public ResolutionHander(final DrumSequenceMode drumSequenceMode) {
+	public GridResolutionHandler(final DrumSequenceMode drumSequenceMode) {
 		this.parent = drumSequenceMode;
 	}
 

@@ -53,7 +53,7 @@ public class AccentHandler {
 			return;
 		}
 		if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
-			this.parent.getPadHandler().getNoteRepeaterHandler().setNoteInputVelocity(this.getCurrenVel());
+			this.parent.getDrumPadHandler().getNoteRepeaterHandler().setNoteInputVelocity(this.getCurrenVel());
 			displayAccentInfo();
 			return;
 		}

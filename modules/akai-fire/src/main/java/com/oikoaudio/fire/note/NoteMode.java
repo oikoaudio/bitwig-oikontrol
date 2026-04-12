@@ -41,7 +41,9 @@ import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
-import com.oikoaudio.fire.sequence.SeqClipHandler;
+import com.oikoaudio.fire.sequence.SelectedClipSlotState;
+import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
+import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.AccentLatchState;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
@@ -152,7 +154,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
-    private final SeqClipHandler clipHandler;
+    private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
     private final Clip observedNoteClip;
@@ -314,7 +316,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         this.observedNoteClip.addStepDataObserver(this::handleObservedStepData);
         this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
         observeSelectedNoteClip();
-        this.clipHandler = new SeqClipHandler(this);
+        this.clipHandler = new ClipRowHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
         this.currentLiveEncoderLayer = liveChannelLayer;
@@ -3523,18 +3525,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private void refreshSelectedNoteClipState() {
         final int previousSlotIndex = selectedNoteClipSlotIndex;
         final boolean previousHasContent = selectedNoteClipHasContent;
-        selectedNoteClipSlotIndex = -1;
-        selectedNoteClipHasContent = false;
-        selectedNoteClipColor = oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
-        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                selectedNoteClipSlotIndex = i;
-                selectedNoteClipHasContent = slot.hasContent().get();
-                selectedNoteClipColor = ColorLookup.getColor(slot.color().get());
-                break;
-            }
-        }
+        final RgbLigthState defaultColor = oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
+        final SelectedClipSlotState state = SelectedClipSlotState.scan(noteClipSlotBank, defaultColor);
+        selectedNoteClipSlotIndex = state.slotIndex();
+        selectedNoteClipHasContent = state.hasContent();
+        selectedNoteClipColor = state.color();
         if (previousSlotIndex != selectedNoteClipSlotIndex || previousHasContent != selectedNoteClipHasContent) {
             queueChordObservationResync();
         }
@@ -3562,35 +3557,12 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private void refreshChordStepObservationPass() {
         clearObservedChordCaches();
         refreshSelectedNoteClipState();
-        boolean clipSelected = false;
-        final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
-        if (preferredSlotIndex >= 0 && preferredSlotIndex < noteClipSlotBank.getSizeOfBank()) {
-            final ClipLauncherSlot preferredSlot = noteClipSlotBank.getItemAt(preferredSlotIndex);
-            if (preferredSlot.exists().get() && preferredSlot.isSelected().get()) {
-                clipSelected = true;
-            }
-        }
-        if (!clipSelected && selectedNoteClipSlotIndex >= 0) {
-            clipSelected = true;
-        }
-        if (!clipSelected) {
-            clipSelected = selectPlayingNoteClipSlot();
-        }
+        ClipSlotSelectionResolver.resolve(noteClipSlotBank, driver.getViewControl().getSelectedClipSlotIndex(),
+                selectedNoteClipSlotIndex);
         noteStepClip.scrollToKey(0);
         observedNoteClip.scrollToKey(0);
         noteStepClip.scrollToStep(chordStepOffset());
         observedNoteClip.scrollToStep(0);
-    }
-
-    private boolean selectPlayingNoteClipSlot() {
-        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
-            if (slot.exists().get() && (slot.isPlaying().get() || slot.isRecording().get())) {
-                slot.select();
-                return true;
-            }
-        }
-        return false;
     }
     private void clearObservedChordCaches() {
         observedClipNotesByStep.clear();

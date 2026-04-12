@@ -3,6 +3,10 @@ package com.oikoaudio.fire.sequence;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 
+/**
+ * Wires clip-slot observers needed to keep Akai mode state in sync with the currently selected clip.
+ * Callers choose whether color and playback state should also be observed based on their lighting needs.
+ */
 public final class SelectedClipSlotObserver {
     private SelectedClipSlotObserver() {
     }

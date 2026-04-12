@@ -26,7 +26,7 @@ class PadContainer {
             TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_YELLOW, TR_YELLOW, TR_YELLOW, TR_YELLOW, //
             TR_WHITE, TR_WHITE, TR_WHITE, TR_WHITE};
 
-    private final PadHandler padHandler;
+    private final DrumPadHandler padHandler;
 
     private RgbLigthState padColor;
     private RgbLigthState bitwigPadColor = RgbLigthState.OFF;
@@ -63,7 +63,7 @@ class PadContainer {
 //            "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G"
 //    };
 
-    public PadContainer(final PadHandler padHandler, final int index, final DrumPad pad,
+    public PadContainer(final DrumPadHandler padHandler, final int index, final DrumPad pad,
                         final BooleanValueObject playing) {
         super();
         this.padHandler = padHandler;

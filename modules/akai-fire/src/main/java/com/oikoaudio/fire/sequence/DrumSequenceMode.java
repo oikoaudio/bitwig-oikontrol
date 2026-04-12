@@ -56,10 +56,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 //    private Clip cursorClipLauncher;
 
     private final StepViewPosition positionHandler;
-    private final ResolutionHander resolutionHandler;
-    private final SeqClipHandler clipHandler;
+    private final GridResolutionHandler resolutionHandler;
+    private final ClipRowHandler clipHandler;
     private final RecurrenceEditor recurrenceEditor;
-    private final PadHandler padHandler;
+    private final DrumPadHandler padHandler;
 
     private final BooleanValueObject muteMode = new BooleanValueObject();
     private final BooleanValueObject soloMode = new BooleanValueObject();
@@ -116,7 +116,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         currentLayer = mainLayer;
         accentHandler = new AccentHandler(this);
-        resolutionHandler = new ResolutionHander(this);
+        resolutionHandler = new GridResolutionHandler(this);
 
         cursorTrack = driver.getViewControl().getCursorTrack();
         cursorTrack.name().markInterested();
@@ -142,8 +142,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
 
-        padHandler = new PadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
-        clipHandler = new SeqClipHandler(this);
+        padHandler = new DrumPadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
+        clipHandler = new ClipRowHandler(this);
         clipHandler.bindClipRow(mainLayer, driver.getRgbButtons());
         recurrenceEditor = new RecurrenceEditor(driver, this);
 
@@ -1322,7 +1322,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return accentHandler;
     }
 
-    public PadHandler getPadHandler() {
+    public DrumPadHandler getDrumPadHandler() {
         return padHandler;
     }
 
@@ -1341,14 +1341,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void refreshSelectedClipState() {
-        selectedClipHasContent = false;
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                selectedClipHasContent = slot.hasContent().get();
-                return;
-            }
-        }
+        selectedClipHasContent = SelectedClipSlotState.scan(clipSlotBank, null).hasContent();
     }
 
     private boolean ensureSelectedClip() {
