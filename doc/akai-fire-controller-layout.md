@@ -141,7 +141,7 @@ Drum grid resolution is now adjusted from the `SELECT` encoder when its role is 
 
 `NOTE` is the live note-input surface, with note-step workflows behind `STEP SEQ`.
 
-`NOTE`, `Chord Step`, and `SHIFT + PERFORM` now share one global pitch context for `Root Key` and `Scale`. Octave and layout remain mode-local.
+`NOTE`, `Chord Step`, `Melodic Step`, and `SHIFT + PERFORM` now share one global pitch context for `Root Key`, `Scale`, and `Octave`. Layout remains mode-local to NOTE-oriented surfaces.
 
 ### Live Note Layout
 
@@ -160,7 +160,7 @@ Drum grid resolution is now adjusted from the `SELECT` encoder when its role is 
 | `MUTE_3` | Note Repeat toggle |
 | `KNOB MODE` | Cycle live-note encoder pages |
 
-The default note octave is initialized from the `Default Note Input Octave` preference.
+The shared note octave is initialized from the `Default Note Input Octave` preference.
 
 In live NOTE mode:
 
@@ -168,12 +168,14 @@ In live NOTE mode:
 - Encoder 3 adjusts `Velocity Sensitivity`
 - `SHIFT + Encoder 3` adjusts `Default Velocity`
 - Encoder 4 adjusts the shared `Scale`
+- `ALT + Encoder 4` adjusts the shared `Root Key`
+- `PATTERN UP/DOWN` adjusts the shared `Octave`
 
 ### Live Note Encoder Pages
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Mod | Pitch Gliss | Velocity sensitivity (`SHIFT`: Default velocity) | Shared scale |
+| `Channel` | Mod | Pitch Gliss | Velocity sensitivity (`SHIFT`: Default velocity) | Shared scale (`ALT`: Shared root key) |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
@@ -193,7 +195,7 @@ The current note-step sub-modes are:
 
 `Chord Step` repurposes the `NOTE` surface into a chord-and-step editor.
 
-It uses the shared `Root Key` and `Scale` from live NOTE input and `SHIFT + PERFORM`. Changing key or scale in one of those places updates all of them.
+It uses the shared `Root Key`, `Scale`, and `Octave` from live NOTE input and `SHIFT + PERFORM`. Changing pitch context in one of those places updates all of them.
 
 ### Pad Layout
 
@@ -315,15 +317,25 @@ Current `Channel` page:
 | 1 | Engine |
 | `ALT + 1` | Engine subtype / family when available |
 | 2 | Density |
-| 3 | Engine-specific macro (`Motion`, `Contour`, `Answer`, `Movement`, `Jump`) |
+| 3 | Pitch-pool octave center |
+| `ALT + 3` | Shared root key |
 | 4 | Mutation type |
 | `ALT + 4` | Mutation strength |
+
+Current `User 1` page:
+
+| Slot | Function |
+| --- | --- |
+| 1 | Engine-specific macro (`Motion`, `Contour`, `Answer`, `Movement`, `Jump`) |
+| 2 | Tension |
+| 3 | Legato |
+| 4 | Recurrence span helper |
 
 ## PERFORM Mode
 
 `PERFORM` is the `16x4` clip-launch and performance surface.
 
-`SHIFT + PERFORM` opens a latched `Settings` page on the `Channel` encoder page. From there, Encoder 1 adjusts the shared `Root Key` and Encoder 2 adjusts the shared `Scale`. Press `PERFORM` again to leave `Settings`.
+`SHIFT + PERFORM` opens a latched `Settings` page on the `Channel` encoder page. From there, Encoder 1 adjusts the shared `Root Key`, Encoder 2 adjusts the shared `Scale`, and Encoder 3 adjusts the shared `Octave`. Press `PERFORM` again to leave `Settings`.
 
 ### Pad Layout
 
@@ -375,7 +387,8 @@ While `Settings` is active in `PERFORM`:
 
 - Encoder 1 edits shared `Root Key`
 - Encoder 2 edits shared `Scale`
-- Encoders 3-4 are reserved for future shared settings
+- Encoder 3 edits shared `Octave`
+- Encoder 4 is currently unused on the settings page
 
 ## Preferences That Affect Layout
 
@@ -397,7 +410,7 @@ These preferences materially change how the Fire feels in use:
 - `Pad Brightness`
 - `Pad Saturation`
 
-`Default Root Key`, `Default Scale`, `Default Note Input Octave`, and `Default Velocity Sensitivity` are startup defaults. They initialize the shared pitch context and live NOTE response when the script starts; changing key, scale, or velocity sensitivity from the controller does not currently write those defaults back into Bitwig preferences.
+`Default Root Key`, `Default Scale`, `Default Note Input Octave`, and `Default Velocity Sensitivity` are startup defaults. They initialize the shared pitch context and live NOTE response when the script starts; changing key, scale, octave, or velocity sensitivity from the controller does not currently write those defaults back into Bitwig preferences.
 
 `Melodic Seed Mode` controls how `Melodic Step` chooses its initial generator seed when the controller session starts. `Random` starts each session from a new seed. `Fixed` starts from the configured `Melodic Fixed Seed` value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each `Generate` press still advances forward from that starting point.
 

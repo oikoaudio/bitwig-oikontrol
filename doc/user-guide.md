@@ -170,30 +170,32 @@ Quick start:
 `NOTE` provides a 16x4 isomorphic playing surface.
 
 - `Chromatic` and `In Key` layouts
-- shared root key and scale, with local octave and layout controls
+- shared root key, scale, and octave center, with local layout controls
 - LED and OLED note feedback
 - `Pitch Gliss` on the Channel encoder page
 - `Velocity Sensitivity` with `SHIFT + Encoder 3` for `Default Velocity`
 
 Useful live-note controls:
 
-- `PATTERN UP/DOWN`: octave
-- `SHIFT + PATTERN UP/DOWN`: root
+- `PATTERN UP/DOWN`: shared octave
+- `Encoder 4`: shared scale
+- `ALT + Encoder 4`: shared root
 - `MUTE_1`: sustain
 - `MUTE_2`: sostenuto
 
 The current note-step sub-modes are:
 
-- `Melodic Step`
 - `Chord Step`
 - `Clip Step Record` placeholder
+
+`Melodic Step` is a separate top-level mode entered from `STEP SEQ`, not a NOTE sub-mode.
 
 Quick start:
 
 1. Enter `NOTE`.
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
-4. Use `PATTERN UP/DOWN` for octave, `SHIFT + PATTERN UP/DOWN` for shared root, and the Channel page for `Scale`, `Pitch Gliss`, and live velocity response.
+4. Use `PATTERN UP/DOWN` for shared octave, `Encoder 4` for shared scale, `ALT + Encoder 4` for shared root, and the Channel page for `Pitch Gliss` and live velocity response.
 
 ### Chord Step workflow
 To get to this mode from the Note live input mode, press the `NOTE` controller button. From any other mode, press the `NOTE` button twice to cycle past the Note input mode.
@@ -251,6 +253,7 @@ Main ideas:
 - `Pattern Down` works on the phrase
 - if you manually edit the pitch pool, it is treated as user-owned and is not auto-replaced on mode switch
 - if the pool was auto-generated, first generation in a different mode can rebuild it for that mode
+- changing pool octave center no longer rewrites the selected clip immediately
 
 Important gestures:
 
@@ -279,9 +282,17 @@ Channel page details:
 - Encoder 1: `Engine`
 - `ALT + Encoder 1`: engine subtype / family when available
 - Encoder 2: `Density`
-- Encoder 3: engine-specific macro such as motion, contour, answer, movement, or jump
+- Encoder 3: pitch-pool octave center
+- `ALT + Encoder 3`: shared root key
 - Encoder 4: `Mutation Type`
 - `ALT + Encoder 4`: mutation strength
+
+User 1 page details:
+
+- Encoder 1: engine-specific macro such as motion, contour, answer, movement, or jump
+- Encoder 2: tension
+- Encoder 3: legato
+- Encoder 4: recurrence span helper
 
 Melodic left-side buttons now align with the shared sequencer clip/edit workflow:
 
@@ -339,6 +350,7 @@ Encoder pages:
 
 - Encoder 1 adjusts the shared `Root Key`
 - Encoder 2 adjusts the shared `Scale`
+- Encoder 3 adjusts the shared `Octave`
 - the pad grid becomes a non-performance settings display
 - press `PERFORM` again to leave `Settings`
 
