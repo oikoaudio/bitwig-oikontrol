@@ -40,6 +40,7 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
+import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SeqClipHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.AccentLatchState;
@@ -3516,22 +3517,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void observeSelectedNoteClip() {
-        for (int i = 0; i < noteClipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = noteClipSlotBank.getItemAt(i);
-            slot.exists().markInterested();
-            slot.hasContent().markInterested();
-            slot.isSelected().markInterested();
-            slot.color().markInterested();
-            slot.isPlaying().markInterested();
-            slot.isRecording().markInterested();
-            slot.exists().addValueObserver(ignored -> refreshSelectedNoteClipState());
-            slot.hasContent().addValueObserver(ignored -> refreshSelectedNoteClipState());
-            slot.isSelected().addValueObserver(ignored -> refreshSelectedNoteClipState());
-            slot.color().addValueObserver((r, g, b) -> refreshSelectedNoteClipState());
-            slot.isPlaying().addValueObserver(ignored -> refreshSelectedNoteClipState());
-            slot.isRecording().addValueObserver(ignored -> refreshSelectedNoteClipState());
-        }
-        refreshSelectedNoteClipState();
+        SelectedClipSlotObserver.observe(noteClipSlotBank, true, true, this::refreshSelectedNoteClipState);
     }
 
     private void refreshSelectedNoteClipState() {

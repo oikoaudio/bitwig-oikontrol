@@ -1337,16 +1337,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void observeSelectedClip() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            slot.exists().markInterested();
-            slot.hasContent().markInterested();
-            slot.isSelected().markInterested();
-            slot.exists().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.hasContent().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.isSelected().addValueObserver(ignored -> refreshSelectedClipState());
-        }
-        refreshSelectedClipState();
+        SelectedClipSlotObserver.observe(clipSlotBank, false, false, this::refreshSelectedClipState);
     }
 
     private void refreshSelectedClipState() {

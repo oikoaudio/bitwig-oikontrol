@@ -32,6 +32,7 @@ import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
+import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SeqClipHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.AccentLatchState;
@@ -1907,22 +1908,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void observeSelectedClip() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            slot.exists().markInterested();
-            slot.isSelected().markInterested();
-            slot.hasContent().markInterested();
-            slot.color().markInterested();
-            slot.isPlaying().markInterested();
-            slot.isRecording().markInterested();
-            slot.exists().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.isSelected().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.hasContent().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.color().addValueObserver((r, g, b) -> refreshSelectedClipState());
-            slot.isPlaying().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.isRecording().addValueObserver(ignored -> refreshSelectedClipState());
-        }
-        refreshSelectedClipState();
+        SelectedClipSlotObserver.observe(clipSlotBank, true, true, this::refreshSelectedClipState);
     }
 
     private void refreshSelectedClipState() {
