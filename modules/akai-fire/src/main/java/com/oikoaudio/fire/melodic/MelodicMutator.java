@@ -22,16 +22,25 @@ public final class MelodicMutator {
                                  final MelodicRecurrencePlanner.Style recurrenceStyle,
                                  final Mode mode, final double intensity, final double identityPreserve,
                                  final long seed) {
+        return mutate(pattern, context, recurrenceStyle, mode, intensity, identityPreserve, seed, List.of());
+    }
+
+    public MelodicPattern mutate(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                 final MelodicRecurrencePlanner.Style recurrenceStyle,
+                                 final Mode mode, final double intensity, final double identityPreserve,
+                                 final long seed, final List<Integer> pitchPool) {
+        final List<Integer> pitchChoices = buildPitchChoices(context, pitchPool);
         return switch (mode) {
-            case PRESERVE_RHYTHM -> preserveRhythm(pattern, context, intensity, identityPreserve, seed);
-            case VARY_ENDING -> varyEnding(pattern, context, intensity, seed);
+            case PRESERVE_RHYTHM -> preserveRhythm(pattern, context, pitchChoices, intensity, identityPreserve, seed);
+            case VARY_ENDING -> varyEnding(pattern, context, pitchChoices, intensity, seed);
             case SIMPLIFY -> simplify(pattern, intensity, identityPreserve, seed);
-            case DENSIFY -> densify(pattern, context, intensity, seed);
-            case VARY_TIME -> varyTime(pattern, context, recurrenceStyle, intensity, seed);
+            case DENSIFY -> densify(pattern, context, pitchChoices, intensity, seed);
+            case VARY_TIME -> varyTime(pattern, context, pitchChoices, recurrenceStyle, intensity, seed);
         };
     }
 
     private MelodicPattern varyTime(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                    final List<Integer> pitchChoices,
                                     final MelodicRecurrencePlanner.Style recurrenceStyle,
                                     final double intensity, final long seed) {
         final double timeVariance = Math.max(0.18, Math.min(1.0, 0.2 + intensity * 0.8));
@@ -41,9 +50,10 @@ public final class MelodicMutator {
         for (int attempt = 0; attempt < 4; attempt++) {
             final long attemptSeed = seed + attempt * 97L;
             MelodicPattern planned = MelodicRecurrencePlanner.apply(base, context, recurrenceStyle, timeVariance, attemptSeed);
+            planned = constrainPatternToPitchChoices(planned, pitchChoices);
             planned = ensureRecurringDensity(base, planned, recurrenceStyle, timeVariance, intensity, attemptSeed);
-            varied = addAlternateRecurrenceVoices(planned, context, recurrenceStyle, profile, attemptSeed);
-            varied = ensurePhraseAlternatePresence(varied, context, recurrenceStyle, attemptSeed);
+            varied = addAlternateRecurrenceVoices(planned, context, pitchChoices, recurrenceStyle, profile, attemptSeed);
+            varied = ensurePhraseAlternatePresence(varied, context, pitchChoices, recurrenceStyle, attemptSeed);
             if (!varied.equals(pattern)) {
                 return varied;
             }
@@ -60,6 +70,7 @@ public final class MelodicMutator {
     }
 
     private MelodicPattern addAlternateRecurrenceVoices(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                                        final List<Integer> pitchChoices,
                                                         final MelodicRecurrencePlanner.Style style,
                                                         final TimeVariationProfile profile, final long seed) {
         final Random random = new Random(seed ^ 0x41A7E11AL);
@@ -73,11 +84,11 @@ public final class MelodicMutator {
             final List<Integer> phraseIndices = collectAlternatePhraseIndices(style, profile, pattern, i, claimed, random);
             if (phraseIndices.size() >= 2
                     && random.nextDouble() < phraseRateFor(style, profile, pattern, step, i)) {
-                applyAlternatePhraseRun(steps, context, random, claimed, phraseIndices);
+                applyAlternatePhraseRun(steps, context, pitchChoices, random, claimed, phraseIndices);
                 continue;
             }
             if (shouldAddSingleAlternate(style, profile, pattern, step, i, random)) {
-                applyAlternateAtStep(steps, context, random, i, null, nonZeroMotion(random, 1, 2 + profile.maxMotion()));
+                applyAlternateAtStep(steps, context, pitchChoices, random, i, null, nonZeroMotion(random, 1, 2 + profile.maxMotion()));
                 claimed[i] = true;
             }
         }
@@ -92,13 +103,19 @@ public final class MelodicMutator {
         if (minimumRecurringSteps <= 0 || recurringCarrierCount(planned) >= minimumRecurringSteps) {
             return planned;
         }
+        MelodicPattern out = planned;
+        if (style == MelodicRecurrencePlanner.Style.ACID) {
+            out = seedAcidRecurringPhrase(sourcePattern, out, minimumRecurringSteps, timeVariance, seed);
+            if (recurringCarrierCount(out) >= minimumRecurringSteps) {
+                return out;
+            }
+        }
         final List<Integer> candidates = rankedRecurringAugmentCandidates(sourcePattern, planned, style);
         if (candidates.isEmpty()) {
-            return planned;
+            return out;
         }
         final Random random = new Random(seed ^ 0x5A17B3D4L);
         final int span = recurrenceSpanFor(timeVariance);
-        MelodicPattern out = planned;
         int ordinal = 0;
         for (final int stepIndex : candidates) {
             if (recurringCarrierCount(out) >= minimumRecurringSteps) {
@@ -111,6 +128,64 @@ public final class MelodicMutator {
             out = out.withStep(step.withRecurrence(span, supplementalMask(style, span, ordinal++, random)));
         }
         return out;
+    }
+
+    private MelodicPattern seedAcidRecurringPhrase(final MelodicPattern sourcePattern, final MelodicPattern planned,
+                                                   final int minimumRecurringSteps, final double timeVariance,
+                                                   final long seed) {
+        final List<Integer> phraseRun = acidPhraseSeedRun(sourcePattern, planned);
+        if (phraseRun.size() < 2) {
+            return planned;
+        }
+        final Random random = new Random(seed ^ 0x3F51A2BCL);
+        final int span = recurrenceSpanFor(timeVariance);
+        MelodicPattern out = planned;
+        int ordinal = 0;
+        for (final int stepIndex : phraseRun) {
+            if (recurringCarrierCount(out) >= minimumRecurringSteps) {
+                break;
+            }
+            final MelodicPattern.Step step = out.step(stepIndex);
+            if (!step.active() || step.pitch() == null || step.recurrenceLength() > 1) {
+                continue;
+            }
+            out = out.withStep(step.withRecurrence(span, supplementalMask(MelodicRecurrencePlanner.Style.ACID, span, ordinal++, random)));
+        }
+        return out;
+    }
+
+    private List<Integer> acidPhraseSeedRun(final MelodicPattern sourcePattern, final MelodicPattern planned) {
+        final List<Integer> candidates = rankedRecurringAugmentCandidates(sourcePattern, planned, MelodicRecurrencePlanner.Style.ACID);
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        final List<Integer> sorted = new ArrayList<>(candidates);
+        Collections.sort(sorted);
+        List<Integer> bestRun = List.of();
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (int start = 0; start < sorted.size(); start++) {
+            final List<Integer> run = new ArrayList<>();
+            run.add(sorted.get(start));
+            for (int i = start + 1; i < sorted.size() && run.size() < 3; i++) {
+                final int candidate = sorted.get(i);
+                if (candidate - run.get(run.size() - 1) > 3) {
+                    break;
+                }
+                run.add(candidate);
+            }
+            if (run.size() < 2) {
+                continue;
+            }
+            double score = 0.0;
+            for (final int stepIndex : run) {
+                score += candidateAugmentScore(sourcePattern, MelodicRecurrencePlanner.Style.ACID, stepIndex);
+            }
+            if (run.size() > bestRun.size() || (run.size() == bestRun.size() && score > bestScore)) {
+                bestRun = List.copyOf(run);
+                bestScore = score;
+            }
+        }
+        return bestRun;
     }
 
     private int minimumRecurringSteps(final MelodicRecurrencePlanner.Style style, final int loopSteps,
@@ -200,6 +275,7 @@ public final class MelodicMutator {
     }
 
     private MelodicPattern ensurePhraseAlternatePresence(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                                         final List<Integer> pitchChoices,
                                                          final MelodicRecurrencePlanner.Style style, final long seed) {
         if (style != MelodicRecurrencePlanner.Style.ACID || hasAlternateVoices(pattern)) {
             return pattern;
@@ -213,7 +289,7 @@ public final class MelodicMutator {
             return pattern;
         }
         final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
-        applyAlternatePhraseRun(steps, context, new Random(seed ^ 0x2E8E7C5DL),
+        applyAlternatePhraseRun(steps, context, pitchChoices, new Random(seed ^ 0x2E8E7C5DL),
                 new boolean[pattern.loopSteps()], phraseIndices);
         return new MelodicPattern(steps, pattern.loopSteps());
     }
@@ -328,6 +404,7 @@ public final class MelodicMutator {
     }
 
     private void applyAlternatePhraseRun(final List<MelodicPattern.Step> steps, final MelodicPhraseContext context,
+                                         final List<Integer> pitchChoices,
                                          final Random random, final boolean[] claimed,
                                          final List<Integer> phraseIndices) {
         final int baseMotion = nonZeroMotion(random, 1, 3);
@@ -335,7 +412,7 @@ public final class MelodicMutator {
         for (int offset = 0; offset < phraseIndices.size(); offset++) {
             final int stepIndex = phraseIndices.get(offset);
             final int motion = offset == 0 ? baseMotion : adjustRunMotion(baseMotion, offset, random);
-            previousTargetPitch = applyAlternateAtStep(steps, context, random, stepIndex, previousTargetPitch, motion);
+            previousTargetPitch = applyAlternateAtStep(steps, context, pitchChoices, random, stepIndex, previousTargetPitch, motion);
             claimed[stepIndex] = true;
         }
     }
@@ -347,6 +424,7 @@ public final class MelodicMutator {
     }
 
     private Integer applyAlternateAtStep(final List<MelodicPattern.Step> steps, final MelodicPhraseContext context,
+                                         final List<Integer> pitchChoices,
                                          final Random random, final int stepIndex,
                                          final Integer previousTargetPitch, final int motion) {
         final MelodicPattern.Step step = steps.get(stepIndex);
@@ -359,8 +437,8 @@ public final class MelodicMutator {
             return previousTargetPitch;
         }
         final int targetPitch = previousTargetPitch != null
-                ? chooseDifferentNearbyPitch(context, previousTargetPitch, motion, step.pitch())
-                : chooseDifferentNearbyPitch(context, step.pitch(), motion, step.pitch());
+                ? chooseDifferentNearbyPitch(pitchChoices, previousTargetPitch, motion, step.pitch())
+                : chooseDifferentNearbyPitch(pitchChoices, step.pitch(), motion, step.pitch());
         final MelodicPattern.Step updated = step
                 .withRecurrence(span, mainMask)
                 .withAlternate(targetPitch,
@@ -484,6 +562,7 @@ public final class MelodicMutator {
     }
 
     private MelodicPattern preserveRhythm(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                          final List<Integer> pitchChoices,
                                           final double intensity, final double identityPreserve, final long seed) {
         final Random random = new Random(seed);
         final MelodicPatternAnalyzer.Analysis analysis = MelodicPatternAnalyzer.analyze(pattern);
@@ -503,7 +582,7 @@ public final class MelodicMutator {
                     ? step.pitch()
                     : previousPitch != null ? previousPitch : context.pitchForDegree(0, 0);
             final int motion = nonZeroMotion(random, 1, 1 + (int) Math.round(intensity * 2));
-            final int targetPitch = chooseDifferentNearbyPitch(context, sourcePitch, motion, previousPitch);
+            final int targetPitch = chooseDifferentNearbyPitch(pitchChoices, sourcePitch, motion, previousPitch);
             final MelodicPattern.Step updated = step.withPitch(targetPitch);
             if (!updated.equals(step)) {
                 changed = true;
@@ -515,17 +594,18 @@ public final class MelodicMutator {
             final int fallbackIndex = analysis.activeSteps().get(analysis.activeSteps().size() - 1);
             final MelodicPattern.Step step = steps.get(fallbackIndex);
             final int sourcePitch = step.pitch() != null ? step.pitch() : context.pitchForDegree(0, 0);
-            steps.set(fallbackIndex, step.withPitch(chooseDifferentNearbyPitch(context, sourcePitch, 1, null)));
+            steps.set(fallbackIndex, step.withPitch(chooseDifferentNearbyPitch(pitchChoices, sourcePitch, 1, null)));
         }
         return new MelodicPattern(steps, pattern.loopSteps());
     }
 
     private MelodicPattern varyEnding(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                      final List<Integer> pitchChoices,
                                       final double intensity, final long seed) {
         final Random random = new Random(seed);
         final int start = Math.max(0, pattern.loopSteps() - 4);
         final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
-        maybeMutateEndingRhythm(steps, pattern.loopSteps(), start, context, intensity, random);
+        maybeMutateEndingRhythm(steps, pattern.loopSteps(), start, context, pitchChoices, intensity, random);
         final List<Integer> candidates = new ArrayList<>();
         for (int i = start; i < pattern.loopSteps(); i++) {
             if (steps.get(i).active()) {
@@ -554,10 +634,10 @@ public final class MelodicMutator {
                         ? nonZeroMotion(random, 1, 2 + (int) Math.round(intensity * 2))
                         : nonZeroMotion(random, 1, 1 + (int) Math.round(intensity * 2));
                 final int octaveBias = actualLastStep && random.nextDouble() < 0.2 + intensity * 0.15 ? -1 : 0;
-                int targetPitch = shiftedScalePitch(context, sourcePitch, motion + octaveBias * 7);
+                int targetPitch = shiftedScalePitch(pitchChoices, sourcePitch, motion + octaveBias * 7);
                 if (previousPitch != null && targetPitch == previousPitch) {
                     final int rescueMotion = motion > 0 ? motion + 1 : motion - 1;
-                    targetPitch = shiftedScalePitch(context, sourcePitch, rescueMotion);
+                    targetPitch = shiftedScalePitch(pitchChoices, sourcePitch, rescueMotion);
                 }
                 final MelodicPattern.Step updated = step
                         .withPitch(targetPitch)
@@ -574,14 +654,16 @@ public final class MelodicMutator {
             final int lastIndex = pattern.loopSteps() - 1;
             final MelodicPattern.Step step = steps.get(lastIndex);
             if (step.active()) {
-                steps.set(lastIndex, step.withPitch(context.pitchForDegree(-1, 2)).withAccent(true).withGate(0.95));
+                steps.set(lastIndex, step.withPitch(chooseDifferentNearbyPitch(pitchChoices, step.pitch(), -2, null))
+                        .withAccent(true).withGate(0.95));
             }
         }
         return new MelodicPattern(steps, pattern.loopSteps());
     }
 
     private void maybeMutateEndingRhythm(final List<MelodicPattern.Step> steps, final int loopSteps, final int start,
-                                         final MelodicPhraseContext context, final double intensity, final Random random) {
+                                         final MelodicPhraseContext context, final List<Integer> pitchChoices,
+                                         final double intensity, final Random random) {
         if (random.nextDouble() >= 0.45 + intensity * 0.2) {
             return;
         }
@@ -598,7 +680,7 @@ public final class MelodicMutator {
         final double actionRoll = random.nextDouble();
         if (!inactive.isEmpty() && (active.size() <= 1 || actionRoll < 0.45)) {
             final int stepIndex = inactive.get(random.nextInt(inactive.size()));
-            final int sourcePitch = nearestTailPitch(steps, stepIndex, start, loopSteps, context);
+            final int sourcePitch = nearestTailPitch(steps, stepIndex, start, loopSteps, context, pitchChoices);
             steps.set(stepIndex, new MelodicPattern.Step(stepIndex, true, false, sourcePitch,
                     86 + random.nextInt(18), 0.76, false, false));
             return;
@@ -652,6 +734,7 @@ public final class MelodicMutator {
     }
 
     private MelodicPattern densify(final MelodicPattern pattern, final MelodicPhraseContext context,
+                                   final List<Integer> pitchChoices,
                                    final double intensity, final long seed) {
         final Random random = new Random(seed);
         final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps());
@@ -664,8 +747,9 @@ public final class MelodicMutator {
         Collections.shuffle(candidates, random);
         boolean added = false;
         for (final int i : candidates.subList(0, Math.min(changeBudget(intensity), candidates.size()))) {
-            final int degree = random.nextInt(4);
-            steps.set(i, new MelodicPattern.Step(i, true, false, context.pitchForDegree(0, degree),
+            final int sourcePitch = defaultPitchChoice(context, pitchChoices, random);
+            final int targetPitch = chooseDifferentNearbyPitch(pitchChoices, sourcePitch, nonZeroMotion(random, 1, 2), null);
+            steps.set(i, new MelodicPattern.Step(i, true, false, targetPitch,
                     84 + random.nextInt(18), 0.68, false, false));
             added = true;
         }
@@ -673,7 +757,7 @@ public final class MelodicMutator {
             for (int i = 0; i < pattern.loopSteps(); i++) {
                 final MelodicPattern.Step step = steps.get(i);
                 if (!step.active()) {
-                    steps.set(i, new MelodicPattern.Step(i, true, false, context.pitchForDegree(0, 1),
+                    steps.set(i, new MelodicPattern.Step(i, true, false, defaultPitchChoice(context, pitchChoices, random),
                             92, 0.68, false, false));
                     break;
                 }
@@ -691,28 +775,26 @@ public final class MelodicMutator {
         return random.nextBoolean() ? magnitude : -magnitude;
     }
 
-    private int shiftedScalePitch(final MelodicPhraseContext context, final int sourcePitch, final int scaleSteps) {
-        final List<Integer> scaleNotes = context.collapsedScaleNotes(SCALE_SEARCH_COUNT);
+    private int shiftedScalePitch(final List<Integer> pitchChoices, final int sourcePitch, final int scaleSteps) {
         int nearestIndex = 0;
         int nearestDistance = Integer.MAX_VALUE;
-        for (int i = 0; i < scaleNotes.size(); i++) {
-            final int distance = Math.abs(scaleNotes.get(i) - sourcePitch);
+        for (int i = 0; i < pitchChoices.size(); i++) {
+            final int distance = Math.abs(pitchChoices.get(i) - sourcePitch);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearestIndex = i;
             }
         }
-        final int targetIndex = Math.max(0, Math.min(scaleNotes.size() - 1, nearestIndex + scaleSteps));
-        return scaleNotes.get(targetIndex);
+        final int targetIndex = Math.max(0, Math.min(pitchChoices.size() - 1, nearestIndex + scaleSteps));
+        return pitchChoices.get(targetIndex);
     }
 
-    private int chooseDifferentNearbyPitch(final MelodicPhraseContext context, final int sourcePitch, final int motion,
+    private int chooseDifferentNearbyPitch(final List<Integer> pitchChoices, final int sourcePitch, final int motion,
                                            final Integer avoidPitch) {
-        final List<Integer> scaleNotes = context.collapsedScaleNotes(SCALE_SEARCH_COUNT);
         int nearestIndex = 0;
         int nearestDistance = Integer.MAX_VALUE;
-        for (int i = 0; i < scaleNotes.size(); i++) {
-            final int distance = Math.abs(scaleNotes.get(i) - sourcePitch);
+        for (int i = 0; i < pitchChoices.size(); i++) {
+            final int distance = Math.abs(pitchChoices.get(i) - sourcePitch);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearestIndex = i;
@@ -726,10 +808,10 @@ public final class MelodicMutator {
                 continue;
             }
             final int targetIndex = nearestIndex + preferredOffset + extra;
-            if (targetIndex < 0 || targetIndex >= scaleNotes.size()) {
+            if (targetIndex < 0 || targetIndex >= pitchChoices.size()) {
                 continue;
             }
-            final int candidate = scaleNotes.get(targetIndex);
+            final int candidate = pitchChoices.get(targetIndex);
             if (candidate == sourcePitch || (avoidPitch != null && candidate == avoidPitch)) {
                 continue;
             }
@@ -740,12 +822,13 @@ public final class MelodicMutator {
             return candidates.get(0);
         }
 
-        final int fallbackIndex = Math.max(0, Math.min(scaleNotes.size() - 1, nearestIndex + (motion >= 0 ? 1 : -1)));
-        return scaleNotes.get(fallbackIndex);
+        final int fallbackIndex = Math.max(0, Math.min(pitchChoices.size() - 1, nearestIndex + (motion >= 0 ? 1 : -1)));
+        return pitchChoices.get(fallbackIndex);
     }
 
     private int nearestTailPitch(final List<MelodicPattern.Step> steps, final int stepIndex, final int start,
-                                 final int loopSteps, final MelodicPhraseContext context) {
+                                 final int loopSteps, final MelodicPhraseContext context,
+                                 final List<Integer> pitchChoices) {
         for (int distance = 1; distance < loopSteps - start; distance++) {
             final int left = stepIndex - distance;
             if (left >= start) {
@@ -762,6 +845,59 @@ public final class MelodicMutator {
                 }
             }
         }
-        return context.pitchForDegree(0, 0);
+        return defaultPitchChoice(context, pitchChoices, new Random(stepIndex * 31L + loopSteps));
+    }
+
+    private List<Integer> buildPitchChoices(final MelodicPhraseContext context, final List<Integer> pitchPool) {
+        if (pitchPool == null || pitchPool.isEmpty()) {
+            return context.collapsedScaleNotes(SCALE_SEARCH_COUNT);
+        }
+        final List<Integer> ordered = new ArrayList<>(pitchPool);
+        Collections.sort(ordered);
+        return ordered;
+    }
+
+    private MelodicPattern constrainPatternToPitchChoices(final MelodicPattern pattern, final List<Integer> pitchChoices) {
+        final List<MelodicPattern.Step> steps = new ArrayList<>(pattern.steps().size());
+        for (final MelodicPattern.Step step : pattern.steps()) {
+            if (step.pitch() == null) {
+                steps.add(step.hasAlternate() ? step.withAlternatePitch(nearestPitchChoice(step.alternatePitch(), pitchChoices)) : step);
+                continue;
+            }
+            MelodicPattern.Step constrained = step.withPitch(nearestPitchChoice(step.pitch(), pitchChoices));
+            if (constrained.hasAlternate()) {
+                constrained = constrained.withAlternatePitch(nearestPitchChoice(constrained.alternatePitch(), pitchChoices));
+            }
+            steps.add(constrained);
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private int defaultPitchChoice(final MelodicPhraseContext context, final List<Integer> pitchChoices, final Random random) {
+        if (pitchChoices.isEmpty()) {
+            return context.pitchForDegree(0, 0);
+        }
+        final int base = context.pitchForDegree(0, 0);
+        final int nearest = nearestPitchChoice(base, pitchChoices);
+        if (pitchChoices.size() == 1) {
+            return nearest;
+        }
+        final int offset = random.nextBoolean() ? 1 : -1;
+        final int index = pitchChoices.indexOf(nearest);
+        final int shifted = Math.max(0, Math.min(pitchChoices.size() - 1, index + offset));
+        return pitchChoices.get(shifted);
+    }
+
+    private int nearestPitchChoice(final int pitch, final List<Integer> pitchChoices) {
+        int nearest = pitchChoices.get(0);
+        int nearestDistance = Math.abs(nearest - pitch);
+        for (final int candidate : pitchChoices) {
+            final int distance = Math.abs(candidate - pitch);
+            if (distance < nearestDistance) {
+                nearest = candidate;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
     }
 }

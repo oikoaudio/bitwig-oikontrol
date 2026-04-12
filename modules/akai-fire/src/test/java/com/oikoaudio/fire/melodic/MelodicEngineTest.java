@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -233,6 +234,21 @@ class MelodicEngineTest {
     }
 
     @Test
+    void varyTimeMutationRespectsProvidedPitchPool() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(32, 0.55, 0.62, 0.3, 0.36, 5, 0, 0.0, 17L);
+        final List<Integer> pool = List.of(36, 40, 43);
+        final MelodicPattern original = constrainToPool(
+                new AcidGenerator().generate(context, parameters).withLoopSteps(32), pool);
+
+        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
+                MelodicRecurrencePlanner.Style.ACID, MelodicMutator.Mode.VARY_TIME, 1.0, 0.6, 77L, pool);
+
+        assertTrue(allPitchesInPool(mutated, pool));
+    }
+
+    @Test
     void callResponseGeneratorAnswersTheCall() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
@@ -331,5 +347,44 @@ class MelodicEngineTest {
             }
         }
         return count;
+    }
+
+    private boolean allPitchesInPool(final MelodicPattern pattern, final List<Integer> pool) {
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.pitch() != null && !pool.contains(step.pitch())) {
+                return false;
+            }
+            if (step.hasAlternate() && !pool.contains(step.alternatePitch())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private MelodicPattern constrainToPool(final MelodicPattern pattern, final List<Integer> pool) {
+        final java.util.List<MelodicPattern.Step> steps = new java.util.ArrayList<>(MelodicPattern.MAX_STEPS);
+        for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
+            final MelodicPattern.Step step = pattern.step(i);
+            if (step.pitch() == null) {
+                steps.add(step);
+                continue;
+            }
+            steps.add(step.withPitch(nearestPoolPitch(step.pitch(), pool)));
+        }
+        return new MelodicPattern(steps, pattern.loopSteps());
+    }
+
+    private int nearestPoolPitch(final int pitch, final List<Integer> pool) {
+        int nearest = pool.get(0);
+        int nearestDistance = Math.abs(nearest - pitch);
+        for (final int candidate : pool) {
+            final int distance = Math.abs(candidate - pitch);
+            if (distance < nearestDistance) {
+                nearest = candidate;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
     }
 }
