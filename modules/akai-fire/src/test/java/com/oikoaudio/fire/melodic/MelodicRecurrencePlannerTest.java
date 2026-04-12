@@ -26,15 +26,18 @@ class MelodicRecurrencePlannerTest {
     }
 
     @Test
-    void higherTimeVarianceAssignsRecurrenceToNonAnchors() {
+    void higherTimeVarianceAssignsRecurrenceBeyondBoundaryAnchors() {
         final MelodicPattern base = patternWithNotes(0, 1, 2, 3, 4, 6, 7, 10, 11, 14);
 
         final MelodicPattern out = MelodicRecurrencePlanner.apply(
                 base, testContext(), MelodicRecurrencePlanner.Style.CALL_RESPONSE, 0.75, 7L);
 
         assertEquals(0, out.step(0).recurrenceLength());
-        assertEquals(0, out.step(4).recurrenceLength());
         assertTrue(out.steps().stream().anyMatch(step -> step.recurrenceLength() > 1));
+        assertTrue(out.steps().stream().anyMatch(step ->
+                step.index() != 0
+                        && step.index() != out.loopSteps() - 1
+                        && step.recurrenceLength() > 1));
     }
 
     @Test

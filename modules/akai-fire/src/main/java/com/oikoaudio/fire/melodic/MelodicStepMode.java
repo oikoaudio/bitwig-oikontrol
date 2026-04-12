@@ -79,7 +79,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final StepSequencerEncoderHandler encoderLayer;
     private final EncoderBankLayout encoderBankLayout;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
-    private final Map<Integer, MelodicPattern.Step> pendingWrittenSteps = new HashMap<>();
+    private final Map<String, MelodicClipAdapter.PendingNoteWrite> pendingWrittenSteps = new HashMap<>();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
@@ -958,11 +958,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         loopSteps = pattern.loopSteps();
         cachedPattern = pattern.withLoopSteps(loopSteps);
         pendingWrittenSteps.clear();
-        for (int i = 0; i < cachedPattern.loopSteps(); i++) {
-            final MelodicPattern.Step step = cachedPattern.step(i);
-            if (step.active() && !step.tieFromPrevious() && step.pitch() != null) {
-                pendingWrittenSteps.put(i, step);
-            }
+        for (final MelodicClipAdapter.PendingNoteWrite write : MelodicClipAdapter.pendingWrites(cachedPattern)) {
+            pendingWrittenSteps.put(stepNoteKey(write.stepIndex(), write.pitch()), write);
         }
         MelodicClipAdapter.writeToClip(cursorClip, cachedPattern, STEP_LENGTH);
         oled.valueInfo(label, value);
@@ -1744,19 +1741,113 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
         } else {
             notesAtStep.put(y, noteStep);
-            final MelodicPattern.Step pending = pendingWrittenSteps.get(x);
-            if (pending != null && pending.pitch() != null && pending.pitch() == y) {
+            final MelodicClipAdapter.PendingNoteWrite pending = pendingWrittenSteps.get(stepNoteKey(x, y));
+            if (pending != null) {
                 if (Math.abs(noteStep.chance() - pending.chance()) > 0.0001) {
                     noteStep.setChance(pending.chance());
                 }
-                if (noteStep.recurrenceLength() != pending.bitwigRecurrenceLength()
-                        || noteStep.recurrenceMask() != pending.bitwigRecurrenceMask()) {
-                    noteStep.setRecurrence(pending.bitwigRecurrenceLength(), pending.bitwigRecurrenceMask());
+                if (noteStep.recurrenceLength() != pending.recurrenceLength()
+                        || noteStep.recurrenceMask() != pending.recurrenceMask()) {
+                    noteStep.setRecurrence(pending.recurrenceLength(), pending.recurrenceMask());
                 }
-                pendingWrittenSteps.remove(x);
+                pendingWrittenSteps.remove(stepNoteKey(x, y));
             }
+            normalizeLiveSameStepRecurrence(notesAtStep);
         }
         rebuildCachedPattern();
+    }
+
+    private String stepNoteKey(final int stepIndex, final int pitch) {
+        return stepIndex + ":" + pitch;
+    }
+
+    private void normalizeLiveSameStepRecurrence(final Map<Integer, NoteStep> notesAtStep) {
+        final List<NoteStep> noteOns = notesAtStep.values().stream()
+                .filter(step -> step.state() == NoteStep.State.NoteOn)
+                .sorted(Comparator.comparingInt(NoteStep::y))
+                .limit(2)
+                .toList();
+        if (noteOns.size() < 2) {
+            return;
+        }
+        final NoteStep first = noteOns.get(0);
+        final NoteStep second = noteOns.get(1);
+        final int[] normalized = normalizeSameStepRecurrence(
+                first.recurrenceLength(), first.recurrenceMask(),
+                second.recurrenceLength(), second.recurrenceMask());
+        if (first.recurrenceLength() != normalized[0] || first.recurrenceMask() != normalized[1]) {
+            first.setRecurrence(normalized[0], normalized[1]);
+        }
+        if (second.recurrenceLength() != normalized[2] || second.recurrenceMask() != normalized[3]) {
+            second.setRecurrence(normalized[2], normalized[3]);
+        }
+    }
+
+    private int[] normalizeSameStepRecurrence(final int firstLength, final int firstMask,
+                                              final int secondLength, final int secondMask) {
+        final RecurrencePattern first = RecurrencePattern.of(firstLength, firstMask);
+        final RecurrencePattern second = RecurrencePattern.of(secondLength, secondMask);
+        final int span = Math.max(first.effectiveSpan(), second.effectiveSpan());
+        final int fullMask = (1 << span) - 1;
+        int normalizedFirst = first.effectiveMask(span);
+        int normalizedSecond = second.effectiveMask(span);
+
+        if (normalizedFirst == fullMask && normalizedSecond != fullMask) {
+            normalizedFirst = fullMask & ~normalizedSecond;
+        } else if (normalizedSecond == fullMask && normalizedFirst != fullMask) {
+            normalizedSecond = fullMask & ~normalizedFirst;
+        } else {
+            final int overlap = normalizedFirst & normalizedSecond;
+            if (overlap != 0) {
+                if (Integer.bitCount(normalizedFirst) >= Integer.bitCount(normalizedSecond)) {
+                    normalizedFirst &= ~overlap;
+                } else {
+                    normalizedSecond &= ~overlap;
+                }
+            }
+        }
+
+        if (normalizedFirst == 0 || normalizedSecond == 0) {
+            final int[] split = splitSameStepMask((normalizedFirst | normalizedSecond) & fullMask, span);
+            normalizedFirst = split[0];
+            normalizedSecond = split[1];
+        }
+
+        final RecurrencePattern repairedFirst = RecurrencePattern.of(span, normalizedFirst);
+        final RecurrencePattern repairedSecond = RecurrencePattern.of(span, normalizedSecond);
+        return new int[]{repairedFirst.bitwigLength(), repairedFirst.bitwigMask(),
+                repairedSecond.bitwigLength(), repairedSecond.bitwigMask()};
+    }
+
+    private int[] splitSameStepMask(final int sourceMask, final int span) {
+        final int fullMask = (1 << span) - 1;
+        final int mask = sourceMask == 0 ? fullMask : sourceMask;
+        int first = 0;
+        int second = 0;
+        boolean useFirst = true;
+        for (int bit = 0; bit < span; bit++) {
+            if (((mask >> bit) & 0x1) == 0) {
+                continue;
+            }
+            if (useFirst) {
+                first |= 1 << bit;
+            } else {
+                second |= 1 << bit;
+            }
+            useFirst = !useFirst;
+        }
+        if (first == 0) {
+            first = 1;
+        }
+        if (second == 0) {
+            for (int bit = 0; bit < span; bit++) {
+                if (((first >> bit) & 0x1) == 0) {
+                    second |= 1 << bit;
+                    break;
+                }
+            }
+        }
+        return new int[]{first, second};
     }
 
     private void handlePlayingStep(final int clipPlayingStep) {
