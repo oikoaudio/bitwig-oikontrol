@@ -40,6 +40,8 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
+import com.oikoaudio.fire.sequence.NoteClipAvailability;
+import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
@@ -3556,13 +3558,15 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void refreshChordStepObservationPass() {
         clearObservedChordCaches();
-        refreshSelectedNoteClipState();
-        ClipSlotSelectionResolver.resolve(noteClipSlotBank, driver.getViewControl().getSelectedClipSlotIndex(),
-                selectedNoteClipSlotIndex);
-        noteStepClip.scrollToKey(0);
-        observedNoteClip.scrollToKey(0);
-        noteStepClip.scrollToStep(chordStepOffset());
-        observedNoteClip.scrollToStep(0);
+        NoteClipCursorRefresher.refresh(
+                noteClipSlotBank,
+                driver.getViewControl().getSelectedClipSlotIndex(),
+                this::refreshSelectedNoteClipState,
+                () -> selectedNoteClipSlotIndex,
+                () -> noteStepClip.scrollToKey(0),
+                () -> observedNoteClip.scrollToKey(0),
+                () -> noteStepClip.scrollToStep(chordStepOffset()),
+                () -> observedNoteClip.scrollToStep(0));
     }
     private void clearObservedChordCaches() {
         observedClipNotesByStep.clear();
@@ -3608,27 +3612,29 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         if (!ensureSelectedNoteClipSlot()) {
             return false;
         }
-        if (selectedNoteClipHasContent || hasLoadedNoteClipContent()) {
-            return true;
+        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireClipContent(
+                selectedNoteClipHasContent || hasLoadedNoteClipContent());
+        if (failure != null) {
+            showClipAvailabilityFailure(failure);
+            return false;
         }
-        oled.valueInfo("No Clip", "Create or Select Clip");
-        driver.notifyPopup("No Clip", "Create or select clip");
-        return false;
+        return true;
     }
 
     private boolean ensureSelectedNoteClipSlot() {
-        if (!cursorTrack.canHoldNoteData().get()) {
-            oled.valueInfo("Audio Track", "Use note track");
-            driver.notifyPopup("Audio Track", "Use note track");
+        refreshSelectedNoteClipState();
+        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
+                cursorTrack.canHoldNoteData().get(), selectedNoteClipSlotIndex >= 0);
+        if (failure != null) {
+            showClipAvailabilityFailure(failure);
             return false;
         }
-        refreshSelectedNoteClipState();
-        if (selectedNoteClipSlotIndex >= 0) {
-            return true;
-        }
-        oled.valueInfo("No Clip", "Select clip");
-        driver.notifyPopup("No Clip", "Select clip");
-        return false;
+        return true;
+    }
+
+    private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
+        oled.valueInfo(failure.title(), failure.oledDetail());
+        driver.notifyPopup(failure.title(), failure.popupDetail());
     }
 
     private boolean hasLoadedNoteClipContent() {

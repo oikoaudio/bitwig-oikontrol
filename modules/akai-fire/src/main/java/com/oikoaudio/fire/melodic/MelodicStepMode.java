@@ -31,6 +31,8 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
+import com.oikoaudio.fire.sequence.NoteClipAvailability;
+import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
@@ -1920,27 +1922,30 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private boolean ensureClipAvailable() {
-        if (!cursorTrack.canHoldNoteData().get()) {
-            oled.valueInfo("Audio Track", "Use note track");
-            driver.notifyPopup("Audio Track", "Use note track");
+        refreshSelectedClipState();
+        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
+                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
+        if (failure != null) {
+            showClipAvailabilityFailure(failure);
             return false;
         }
-        refreshSelectedClipState();
-        if (selectedClipSlotIndex >= 0) {
-            refreshClipCursor();
-            return true;
-        }
-        oled.valueInfo("No Clip", "Select clip");
-        driver.notifyPopup("No Clip", "Select clip");
-        return false;
+        refreshClipCursor();
+        return true;
+    }
+
+    private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
+        oled.valueInfo(failure.title(), failure.oledDetail());
+        driver.notifyPopup(failure.title(), failure.popupDetail());
     }
 
     private void refreshClipCursor() {
-        refreshSelectedClipState();
-        ClipSlotSelectionResolver.resolve(clipSlotBank, driver.getViewControl().getSelectedClipSlotIndex(),
-                selectedClipSlotIndex);
-        cursorClip.scrollToKey(0);
-        cursorClip.scrollToStep(0);
+        NoteClipCursorRefresher.refresh(
+                clipSlotBank,
+                driver.getViewControl().getSelectedClipSlotIndex(),
+                this::refreshSelectedClipState,
+                () -> selectedClipSlotIndex,
+                () -> cursorClip.scrollToKey(0),
+                () -> cursorClip.scrollToStep(0));
     }
     private MelodicPhraseContext phraseContext() {
         final NoteMode noteMode = driver.getNoteMode();
