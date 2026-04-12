@@ -1017,6 +1017,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (amount == 0) {
             return;
         }
+        if (heldSteps.size() > 1) {
+            applyHeldStepValueEdit(heldEditableTargets(),
+                    step -> step.withPitch(Math.max(0, Math.min(127, step.pitch() + amount * 12))),
+                    "Octave", "%+d oct".formatted(amount));
+            return;
+        }
         final int stepIndex = editingStepIndex();
         final MelodicPattern.Step step = ensureStep(stepIndex);
         final int currentPitch = step.pitch() == null ? phraseContext().baseMidiNote() : step.pitch();
@@ -1029,6 +1035,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (amount == 0) {
             return;
         }
+        if (heldSteps.size() > 1) {
+            applyHeldStepValueEdit(heldEditableTargets(),
+                    step -> step.withGate(step.gate() + amount * 0.05),
+                    "Gate Len", "%+.2f".formatted(amount * 0.05));
+            return;
+        }
         final MelodicPattern.Step step = ensureStep(editingStepIndex());
         applyPattern(cachedPattern.withStep(step.withGate(step.gate() + amount * 0.05)),
                 "Gate Len", "%.2f".formatted(step.gate() + amount * 0.05));
@@ -1038,6 +1050,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (amount == 0) {
             return;
         }
+        if (heldSteps.size() > 1) {
+            applyHeldStepValueEdit(heldEditableTargets(),
+                    step -> step.withVelocity(step.velocity() + amount),
+                    "Velocity", "%+d".formatted(amount));
+            return;
+        }
         final MelodicPattern.Step step = ensureStep(editingStepIndex());
         applyPattern(cachedPattern.withStep(step.withVelocity(step.velocity() + amount)),
                 "Velocity", Integer.toString(step.velocity() + amount));
@@ -1045,6 +1063,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private void adjustSelectedChance(final int amount) {
         if (amount == 0) {
+            return;
+        }
+        if (heldSteps.size() > 1) {
+            applyHeldStepValueEdit(heldEditableTargets(),
+                    step -> step.withChance(step.chance() + amount * 0.05),
+                    "Chance", "%+d%%".formatted(amount * 5));
             return;
         }
         final MelodicPattern.Step step = ensureStep(editingStepIndex());
@@ -1954,6 +1978,20 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         return targets;
     }
 
+    private List<Integer> heldEditableTargets() {
+        final List<Integer> targets = new ArrayList<>();
+        for (final int stepIndex : heldSteps) {
+            if (stepIndex < 0 || stepIndex >= STEP_COUNT) {
+                continue;
+            }
+            final MelodicPattern.Step step = cachedPattern.step(stepIndex);
+            if (step.active() && step.pitch() != null) {
+                targets.add(stepIndex);
+            }
+        }
+        return targets;
+    }
+
     private void applyHeldRecurrence(final List<Integer> stepIndices,
                                      final java.util.function.UnaryOperator<RecurrencePattern> updater,
                                      final String label) {
@@ -1990,6 +2028,39 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final String value = updatedCount == 1 ? summary : "%d steps".formatted(updatedCount);
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
+    }
+
+    private void applyHeldStepValueEdit(final List<Integer> stepIndices,
+                                        final java.util.function.UnaryOperator<MelodicPattern.Step> updater,
+                                        final String label,
+                                        final String value) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        if (stepIndices.isEmpty()) {
+            oled.valueInfo(label, "No note");
+            return;
+        }
+        MelodicPattern nextCached = cachedPattern;
+        MelodicPattern nextBase = basePattern;
+        int updatedCount = 0;
+        for (final int stepIndex : stepIndices) {
+            final MelodicPattern.Step step = nextCached.step(stepIndex);
+            if (!step.active() || step.pitch() == null) {
+                continue;
+            }
+            final MelodicPattern.Step updatedStep = updater.apply(step);
+            nextCached = nextCached.withStep(updatedStep);
+            nextBase = nextBase.withStep(updatedStep.withIndex(stepIndex));
+            updatedCount++;
+        }
+        if (updatedCount == 0) {
+            oled.valueInfo(label, "No note");
+            return;
+        }
+        cachedPattern = nextCached;
+        basePattern = nextBase;
+        applyPattern(nextCached, label, updatedCount == 1 ? value : "%s (%d)".formatted(value, updatedCount));
     }
 
     private NoteStep primaryNoteStepAt(final int stepIndex) {
