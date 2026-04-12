@@ -49,7 +49,7 @@ class MelodicEngineTest {
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
         final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
-                MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
+                MelodicRecurrencePlanner.Style.MOTIF, MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
 
         assertArrayEquals(activeMask(original), activeMask(mutated));
     }
@@ -63,9 +63,9 @@ class MelodicEngineTest {
         final MelodicMutator mutator = new MelodicMutator();
 
         final MelodicPattern simplified = mutator.mutate(original, context,
-                MelodicMutator.Mode.SIMPLIFY, 0.9, 0.1, 4L);
+                MelodicRecurrencePlanner.Style.MOTIF, MelodicMutator.Mode.SIMPLIFY, 0.9, 0.1, 4L);
         final MelodicPattern densified = mutator.mutate(original, context,
-                MelodicMutator.Mode.DENSIFY, 0.9, 0.1, 4L);
+                MelodicRecurrencePlanner.Style.MOTIF, MelodicMutator.Mode.DENSIFY, 0.9, 0.1, 4L);
 
         assertTrue(activeCount(simplified) <= activeCount(original));
         assertTrue(activeCount(densified) >= activeCount(original));
@@ -79,9 +79,24 @@ class MelodicEngineTest {
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
         final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
-                MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
+                MelodicRecurrencePlanner.Style.MOTIF, MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
 
         assertNotEquals(java.util.Arrays.toString(pitchMask(original)), java.util.Arrays.toString(pitchMask(mutated)));
+    }
+
+    @Test
+    void varyTimeMutationAddsRecurrenceWithoutRewritingTheVisibleMotif() {
+        final MelodicPhraseContext context = context();
+        final MelodicGenerator.GenerateParameters parameters =
+                new MelodicGenerator.GenerateParameters(16, 0.5, 0.3, 0.6, 5, 0, 0.0, 41L);
+        final MelodicPattern original = new CallResponseGenerator().generate(context, parameters);
+
+        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
+                MelodicRecurrencePlanner.Style.CALL_RESPONSE, MelodicMutator.Mode.VARY_TIME, 0.8, 0.6, 77L);
+
+        assertTrue(activeCount(mutated) >= activeCount(original));
+        assertTrue(activeCount(mutated) <= activeCount(original) + 1);
+        assertTrue(mutated.steps().stream().anyMatch(step -> step.recurrenceLength() > 1));
     }
 
     @Test

@@ -1,13 +1,13 @@
 package com.oikoaudio.fire.melodic;
 
+import com.oikoaudio.fire.sequence.RecurrencePattern;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public final class MelodicPattern {
     public static final int MAX_STEPS = 32;
-    public static final int DEFAULT_RECURRENCE_LENGTH = 1;
-    public static final int DEFAULT_RECURRENCE_MASK = 0b1;
 
     private final List<Step> steps;
     private final int loopSteps;
@@ -98,17 +98,9 @@ public final class MelodicPattern {
     public record Step(int index, boolean active, boolean tieFromPrevious, Integer pitch, int velocity,
                        double gate, boolean accent, boolean slide, int recurrenceLength, int recurrenceMask) {
         public Step {
-            if (recurrenceLength <= 1) {
-                recurrenceLength = 0;
-                recurrenceMask = 0;
-            } else {
-                recurrenceLength = Math.min(8, recurrenceLength);
-                recurrenceMask &= (1 << recurrenceLength) - 1;
-                if (recurrenceMask == 0 || recurrenceMask == ((1 << recurrenceLength) - 1)) {
-                    recurrenceLength = 0;
-                    recurrenceMask = 0;
-                }
-            }
+            final RecurrencePattern recurrence = RecurrencePattern.of(recurrenceLength, recurrenceMask);
+            recurrenceLength = recurrence.length();
+            recurrenceMask = recurrence.mask();
         }
 
         public Step(final int index, final boolean active, final boolean tieFromPrevious, final Integer pitch,
@@ -164,11 +156,11 @@ public final class MelodicPattern {
         }
 
         public int bitwigRecurrenceLength() {
-            return recurrenceLength > 1 ? recurrenceLength : DEFAULT_RECURRENCE_LENGTH;
+            return RecurrencePattern.of(recurrenceLength, recurrenceMask).bitwigLength();
         }
 
         public int bitwigRecurrenceMask() {
-            return recurrenceLength > 1 ? recurrenceMask : DEFAULT_RECURRENCE_MASK;
+            return RecurrencePattern.of(recurrenceLength, recurrenceMask).bitwigMask();
         }
     }
 }
