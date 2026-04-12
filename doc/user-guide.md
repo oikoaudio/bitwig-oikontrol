@@ -272,9 +272,9 @@ Important gestures:
 
 Encoder pages:
 
-- `Channel`: engine, density, engine macro, mutation type
+- `Channel`: engine, density, pitch-pool octave center, mutation type
 - `Mixer`: melodic process transforms
-- `User 1`: reserved for future melodic advanced controls
+- `User 1`: engine macro, tension, legato, recurrence helper
 - `User 2`: selected or held step octave, gate, velocity, articulation
 
 Channel page details:
@@ -293,6 +293,15 @@ User 1 page details:
 - Encoder 2: tension
 - Encoder 3: legato
 - Encoder 4: recurrence span helper
+
+Recurrence editing:
+
+- hold one or more active melodic steps to enter recurrence targeting
+- while steps are held, the top clip row becomes an 8-pad recurrence editor instead of clip launch
+- tap pads on that top row to toggle recurrence hits within the current span
+- hold the first top-row pad as a span anchor, then tap another top-row pad to set the recurrence span
+- touch `User 1 / Encoder 4` to see the current recurrence summary for the held step set
+- recurrence editing currently applies only to held active note steps
 
 Melodic left-side buttons now align with the shared sequencer clip/edit workflow:
 

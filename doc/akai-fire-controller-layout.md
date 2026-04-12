@@ -242,7 +242,7 @@ The chord builder defaults to showing in-key notes only. If it auto-seeds a note
 | --- | --- | --- | --- | --- |
 | `Channel` | Chord octave (`ALT`: Shared root key) | Velocity sensitivity (`SHIFT`: Default velocity) | Chord family (`ALT`: family page) | Chord render / interpretation |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
-| `User 1` | Note velocity edit | Note chance edit | Note recurrence length | Note recurrence count |
+| `User 1` | Note velocity edit | Note chance edit | Recurrence-oriented note editing | Recurrence-oriented note editing |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 `Chord Step` no longer owns a separate root/key state. `ALT + Encoder 1` updates the same shared root used by live NOTE input.
@@ -330,6 +330,14 @@ Current `User 1` page:
 | 2 | Tension |
 | 3 | Legato |
 | 4 | Recurrence span helper |
+
+Melodic recurrence editing:
+
+- Hold one or more active melodic steps.
+- While those steps are held, the top clip row switches into an 8-pad recurrence editor.
+- Tap top-row pads to toggle recurrence hits within the current span.
+- Hold the first top-row pad as a span anchor, then tap another top-row pad to set the recurrence span.
+- `User 1 / Encoder 4` shows the current recurrence summary for the held target step(s).
 
 ## PERFORM Mode
 
