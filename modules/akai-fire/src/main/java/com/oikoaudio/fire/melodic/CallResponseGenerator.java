@@ -47,8 +47,10 @@ public final class CallResponseGenerator implements MelodicGenerator {
             final int pitch = context.pitchForDegree(octaveOffset, degrees[i]);
             final boolean accent = anchor || (responseSide && i % 4 == 2);
             final boolean slide = !anchor && responseSide && i < loopSteps - 1
-                    && active[i + 1] && random.nextDouble() < parameters.tension() * 0.08;
-            final double gate = slide ? 1.02 : (responseSide ? 0.80 : 0.88) + parameters.density() * 0.10;
+                    && active[i + 1] && random.nextDouble() < parameters.tension() * 0.05 + parameters.legato() * 0.14;
+            final double gate = slide
+                    ? 0.94 + parameters.legato() * 0.16
+                    : (responseSide ? 0.76 : 0.84) + parameters.density() * 0.10 + parameters.legato() * (responseSide ? 0.12 : 0.06);
             final int velocity = accent ? 114 : 86 + random.nextInt(12);
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }

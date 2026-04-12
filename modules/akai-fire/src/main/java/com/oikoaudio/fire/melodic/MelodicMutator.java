@@ -172,7 +172,8 @@ public final class MelodicMutator {
             final MelodicPattern.Step source = steps.get(fromIndex);
             steps.set(fromIndex, MelodicPattern.Step.rest(fromIndex));
             steps.set(toIndex, new MelodicPattern.Step(toIndex, true, false, source.pitch(),
-                    source.velocity(), source.gate(), source.accent(), source.slide()));
+                    source.velocity(), source.gate(), source.chance(), source.accent(), source.slide(),
+                    0, 0));
             if (fromIndex + 1 < loopSteps && steps.get(fromIndex + 1).tieFromPrevious()) {
                 steps.set(fromIndex + 1, steps.get(fromIndex + 1).withTieFromPrevious(false));
             }
