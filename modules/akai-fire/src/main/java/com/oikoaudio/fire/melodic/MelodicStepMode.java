@@ -80,6 +80,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final EncoderBankLayout encoderBankLayout;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, MelodicClipAdapter.PendingNoteWrite> pendingWrittenSteps = new HashMap<>();
+    private boolean forceClearObservedRecurrence = false;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
@@ -773,8 +774,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         MelodicPattern generated = activeGenerator.generate(context, parameters);
         if (timeVariance > 0.0) {
             generated = MelodicRecurrencePlanner.apply(generated, context, recurrenceStyle(), timeVariance, generationSeed);
+            forceClearObservedRecurrence = false;
         } else {
             generated = stripRecurrenceAndAlternates(generated);
+            forceClearObservedRecurrence = true;
         }
         generated = enrichLatentSteps(generated);
         generated = constrainPatternToPool(generated);
@@ -1760,6 +1763,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
         } else {
             notesAtStep.put(y, noteStep);
+            if (forceClearObservedRecurrence
+                    && !RecurrencePattern.of(noteStep.recurrenceLength(), noteStep.recurrenceMask()).isDefault()) {
+                clearLiveRecurrence(noteStep);
+            }
             final MelodicClipAdapter.PendingNoteWrite pending = pendingWrittenSteps.get(stepNoteKey(x, y));
             if (pending != null) {
                 if (Math.abs(noteStep.chance() - pending.chance()) > 0.0001) {
@@ -1769,7 +1776,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         pending.recurrenceLength(), pending.recurrenceMask());
                 if (pendingRecurrence.isDefault()) {
                     if (!RecurrencePattern.of(noteStep.recurrenceLength(), noteStep.recurrenceMask()).isDefault()) {
-                        noteStep.setRecurrence(0, 0);
+                        clearLiveRecurrence(noteStep);
                     }
                 } else if (noteStep.recurrenceLength() != pending.recurrenceLength()
                         || noteStep.recurrenceMask() != pending.recurrenceMask()) {
@@ -1779,6 +1786,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
             normalizeLiveSameStepRecurrence(x, notesAtStep);
         }
+        updateForcedRecurrenceClearState();
         rebuildCachedPattern();
     }
 
@@ -1808,10 +1816,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 first.recurrenceLength(), first.recurrenceMask(),
                 second.recurrenceLength(), second.recurrenceMask());
         if (first.recurrenceLength() != normalized[0] || first.recurrenceMask() != normalized[1]) {
-            first.setRecurrence(normalized[0], normalized[1]);
+            applyLiveRecurrence(first, normalized[0], normalized[1]);
         }
         if (second.recurrenceLength() != normalized[2] || second.recurrenceMask() != normalized[3]) {
-            second.setRecurrence(normalized[2], normalized[3]);
+            applyLiveRecurrence(second, normalized[2], normalized[3]);
         }
     }
 
@@ -1821,6 +1829,31 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private boolean hasExplicitRecurrence(final MelodicClipAdapter.PendingNoteWrite pending) {
         return pending != null && RecurrencePattern.of(pending.recurrenceLength(), pending.recurrenceMask()).length() > 0;
+    }
+
+    private void clearLiveRecurrence(final NoteStep noteStep) {
+        final RecurrencePattern cleared = RecurrencePattern.of(0, 0);
+        noteStep.setRecurrence(cleared.bitwigLength(), cleared.bitwigMask());
+    }
+
+    private void applyLiveRecurrence(final NoteStep noteStep, final int length, final int mask) {
+        final RecurrencePattern recurrence = RecurrencePattern.of(length, mask);
+        noteStep.setRecurrence(recurrence.bitwigLength(), recurrence.bitwigMask());
+    }
+
+    private void updateForcedRecurrenceClearState() {
+        if (!forceClearObservedRecurrence || !pendingWrittenSteps.isEmpty()) {
+            return;
+        }
+        for (final Map<Integer, NoteStep> notesAtStep : noteStepsByPosition.values()) {
+            for (final NoteStep noteStep : notesAtStep.values()) {
+                if (noteStep.state() == NoteStep.State.NoteOn
+                        && !RecurrencePattern.of(noteStep.recurrenceLength(), noteStep.recurrenceMask()).isDefault()) {
+                    return;
+                }
+            }
+        }
+        forceClearObservedRecurrence = false;
     }
 
     private int[] normalizeSameStepRecurrence(final int firstLength, final int firstMask,
