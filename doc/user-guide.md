@@ -170,30 +170,32 @@ Quick start:
 `NOTE` provides a 16x4 isomorphic playing surface.
 
 - `Chromatic` and `In Key` layouts
-- shared root key and scale, with local octave and layout controls
+- shared root key, scale, and octave center, with local layout controls
 - LED and OLED note feedback
 - `Pitch Gliss` on the Channel encoder page
 - `Velocity Sensitivity` with `SHIFT + Encoder 3` for `Default Velocity`
 
 Useful live-note controls:
 
-- `PATTERN UP/DOWN`: octave
-- `SHIFT + PATTERN UP/DOWN`: root
+- `PATTERN UP/DOWN`: shared octave
+- `Encoder 4`: shared scale
+- `ALT + Encoder 4`: shared root
 - `MUTE_1`: sustain
 - `MUTE_2`: sostenuto
 
 The current note-step sub-modes are:
 
-- `Melodic Step`
 - `Chord Step`
 - `Clip Step Record` placeholder
+
+`Melodic Step` is a separate top-level mode entered from `STEP SEQ`, not a NOTE sub-mode.
 
 Quick start:
 
 1. Enter `NOTE`.
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
-4. Use `PATTERN UP/DOWN` for octave, `SHIFT + PATTERN UP/DOWN` for shared root, and the Channel page for `Scale`, `Pitch Gliss`, and live velocity response.
+4. Use `PATTERN UP/DOWN` for shared octave, `Encoder 4` for shared scale, `ALT + Encoder 4` for shared root, and the Channel page for `Pitch Gliss` and live velocity response.
 
 ### Chord Step workflow
 To get to this mode from the Note live input mode, press the `NOTE` controller button. From any other mode, press the `NOTE` button twice to cycle past the Note input mode.
@@ -228,6 +230,11 @@ Important gestures:
 - `SHIFT + ALT + MUTE_4`: invert chord in the opposite direction
 - `Encoder 3`: chord family
 - `ALT + Encoder 3`: chord family page
+- `Encoder 4`: interpretation (`As Is` / `In Scale`)
+- `SHIFT + Encoder 4`: shared scale
+- `ALT + Encoder 4`: shared root
+
+Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch to a different bank or slot; it only changes how the selected slot is rendered. In `As Is`, the stored chord shape is transposed from the current root. In `In Scale`, the same slot is rebuilt from the current shared scale and root, so changing scale can reharmonize the result.
 
 Timing note:
 
@@ -251,6 +258,7 @@ Main ideas:
 - `Pattern Down` works on the phrase
 - if you manually edit the pitch pool, it is treated as user-owned and is not auto-replaced on mode switch
 - if the pool was auto-generated, first generation in a different mode can rebuild it for that mode
+- changing pool octave center no longer rewrites the selected clip immediately
 
 Important gestures:
 
@@ -269,9 +277,9 @@ Important gestures:
 
 Encoder pages:
 
-- `Channel`: engine, density, engine macro, mutation type
+- `Channel`: engine, density, pitch-pool octave center, mutation type
 - `Mixer`: melodic process transforms
-- `User 1`: reserved for future melodic advanced controls
+- `User 1`: engine macro, tension, legato, recurrence helper
 - `User 2`: selected or held step octave, gate, velocity, articulation
 
 Channel page details:
@@ -279,9 +287,26 @@ Channel page details:
 - Encoder 1: `Engine`
 - `ALT + Encoder 1`: engine subtype / family when available
 - Encoder 2: `Density`
-- Encoder 3: engine-specific macro such as motion, contour, answer, movement, or jump
+- Encoder 3: pitch-pool octave center
+- `ALT + Encoder 3`: shared root key
 - Encoder 4: `Mutation Type`
 - `ALT + Encoder 4`: mutation strength
+
+User 1 page details:
+
+- Encoder 1: engine-specific macro such as motion, contour, answer, movement, or jump
+- Encoder 2: tension
+- Encoder 3: legato
+- Encoder 4: recurrence span helper
+
+Recurrence editing:
+
+- hold one or more active melodic steps to enter recurrence targeting
+- while steps are held, the top clip row becomes an 8-pad recurrence editor instead of clip launch
+- tap pads on that top row to toggle recurrence hits within the current span
+- hold the first top-row pad as a span anchor, then tap another top-row pad to set the recurrence span
+- touch `User 1 / Encoder 4` to see the current recurrence summary for the held step set
+- recurrence editing currently applies only to held active note steps
 
 Melodic left-side buttons now align with the shared sequencer clip/edit workflow:
 
@@ -339,6 +364,7 @@ Encoder pages:
 
 - Encoder 1 adjusts the shared `Root Key`
 - Encoder 2 adjusts the shared `Scale`
+- Encoder 3 adjusts the shared `Octave`
 - the pad grid becomes a non-performance settings display
 - press `PERFORM` again to leave `Settings`
 
@@ -403,7 +429,9 @@ Shared transport behavior:
 - `Default Root Key`
 - `Default Scale`
 - `Default Note Input Octave`
+- `Melodic Seed Mode`
 - `Default Velocity Sensitivity`
+- `Melodic Fixed Seed`
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`
@@ -414,6 +442,10 @@ Shared transport behavior:
 - `On-screen action notifications`
 
 `Pad Brightness` and `Pad Saturation` interact with the Bitwig track colors used by `DRUM` and `PERFORM`, so the same settings can read differently across different project palettes.
+
+`Melodic Seed Mode` controls how `Melodic Step` chooses its initial generator seed when the controller session starts. `Random` starts each session from a new seed. `Fixed` starts from the configured `Melodic Fixed Seed` value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each `Generate` press still advances forward from that starting point.
+
+The melodic seed controls are grouped into their own `Generative control` preference section so they stay together in Bitwig's settings UI.
 
 ## Troubleshooting
 

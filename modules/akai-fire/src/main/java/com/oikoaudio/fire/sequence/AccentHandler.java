@@ -11,7 +11,7 @@ public class AccentHandler {
 		this.parent = drumSequenceMode;
 	}
 
-	public int getCurrenVel() {
+	public int getCurrentVelocity() {
 		return model.currentVelocity(parent.getDefaultVelocity());
 	}
 
@@ -53,7 +53,7 @@ public class AccentHandler {
 			return;
 		}
 		if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
-			this.parent.getPadHandler().getNoteRepeaterHandler().setNoteInputVelocity(this.getCurrenVel());
+			this.parent.getDrumPadHandler().getNoteRepeaterHandler().setNoteInputVelocity(this.getCurrentVelocity());
 			displayAccentInfo();
 			return;
 		}

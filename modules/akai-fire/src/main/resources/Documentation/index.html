@@ -292,19 +292,34 @@
       </ul>
       <p>Encoder pages:</p>
       <ul>
-        <li><code>Channel</code>: engine, density, engine macro, mutation type</li>
+        <li><code>Channel</code>: primary phrase setup, pool shaping, and mutation controls</li>
         <li><code>Mixer</code>: melodic process transforms</li>
-        <li><code>User 1</code>: reserved for future melodic advanced controls</li>
-        <li><code>User 2</code>: selected or held step octave, gate, velocity, articulation</li>
+        <li><code>User 1</code>: secondary generator-shaping controls</li>
+        <li><code>User 2</code>: selected or held step properties</li>
       </ul>
       <p>Channel page details:</p>
       <ul>
         <li>Encoder 1: <code>Engine</code></li>
         <li><code>ALT + Encoder 1</code>: engine subtype / family when available</li>
         <li>Encoder 2: <code>Density</code></li>
-        <li>Encoder 3: engine-specific macro such as motion, contour, answer, movement, or jump</li>
+        <li><code>ALT + Encoder 2</code>: thin or fill the current phrase without regenerating it</li>
+        <li>Encoder 3: <code>Pool Oct</code> to shift the melodic pitch pool up or down by octaves</li>
         <li>Encoder 4: <code>Mutation Type</code></li>
         <li><code>ALT + Encoder 4</code>: mutation strength</li>
+      </ul>
+      <p><code>User 1</code> is the secondary generator-shaping page:</p>
+      <ul>
+        <li>Encoder 1: engine-specific motion or contour control such as motion, answer, movement, or jump</li>
+        <li>Encoder 2: <code>Tension</code></li>
+        <li>Encoder 3: <code>Legato</code>, which biases slide and gate behavior inside the generator</li>
+        <li>Encoder 4: recurrence span entry; hold it and use the step rows to draw the recurrence mask for the selected step</li>
+      </ul>
+      <p><code>User 2</code> is the per-step property page:</p>
+      <ul>
+        <li>Encoder 1: selected or held step octave offset</li>
+        <li>Encoder 2: selected or held step gate length</li>
+        <li>Encoder 3: selected or held step velocity</li>
+        <li>Encoder 4: selected or held step chance</li>
       </ul>
       <p>Melodic left-side buttons now align with the shared sequencer clip/edit workflow:</p>
       <ul>
@@ -460,7 +475,9 @@
         <li><code>Default Root Key</code></li>
         <li><code>Default Scale</code></li>
         <li><code>Default Note Input Octave</code></li>
+        <li><code>Melodic Seed Mode</code></li>
         <li><code>Default Velocity Sensitivity</code></li>
+        <li><code>Melodic Fixed Seed</code></li>
         <li><code>Pad Brightness</code></li>
         <li><code>Pad Saturation</code></li>
         <li><code>Encoder touch reset</code></li>
@@ -471,6 +488,8 @@
         <li><code>On-screen action notifications</code></li>
       </ul>
       <p><code>Pad Brightness</code> and <code>Pad Saturation</code> interact with the Bitwig track colors used by <code>DRUM</code> and <code>PERFORM</code>, so the same settings can read differently across different project palettes.</p>
+      <p><code>Melodic Seed Mode</code> controls how <code>Melodic Step</code> chooses its initial generator seed when the controller session starts. <code>Random</code> starts each session from a new seed. <code>Fixed</code> starts from the configured <code>Melodic Fixed Seed</code> value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each <code>Generate</code> press still advances forward from that starting point.</p>
+      <p>The melodic seed controls are grouped into their own <code>Generative control</code> preference section so they stay together in Bitwig's settings UI.</p>
     </section>
 
     <section class="section">

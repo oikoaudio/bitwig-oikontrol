@@ -6,7 +6,7 @@ import com.bitwig.extension.controller.api.DeviceBank;
 import com.bitwig.extension.controller.api.DeviceMatcher;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
-import com.bitwig.extensions.framework.values.SpecialDevices;
+import com.oikoaudio.fire.values.SpecialDevices;
 
 /**
  * Finds the first drum machine in the project and focuses it on the shared Fire cursors.

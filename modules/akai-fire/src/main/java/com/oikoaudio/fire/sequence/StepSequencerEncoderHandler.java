@@ -16,6 +16,11 @@ import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 
+/**
+ * Shared encoder-page controller for step-sequencer-style modes.
+ * It manages encoder bank switching, touch gestures, OLED feedback, and the wiring between encoder
+ * slots and note or mixer parameters.
+ */
 public class StepSequencerEncoderHandler extends Layer {
     private static final long TOUCH_RESET_HOLD_MS = 1000L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;

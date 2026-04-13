@@ -5,7 +5,7 @@ import java.util.Map;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.api.Color;
-import com.bitwig.extensions.framework.values.DawColor;
+import com.oikoaudio.fire.values.DawColor;
 
 public class ColorLookup {
 	private static Map<Integer, DawColor> lookupMap = new HashMap<>();
