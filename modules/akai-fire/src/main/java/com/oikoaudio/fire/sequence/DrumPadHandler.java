@@ -56,6 +56,9 @@ public class DrumPadHandler {
     private final int[] padNotes = new int[16];
     private final DisplayTarget displayTarget;
     private final DisplayInfo padDisplayInfo;
+    private final Set<Layer> parameterBoundLayers = new HashSet<>();
+    private final Set<Layer> macroBoundLayers = new HashSet<>();
+    private final Set<Layer> macroShiftBoundLayers = new HashSet<>();
 
     public DrumPadHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
                       final Layer muteLayer, final Layer soloLayer, final NoteRepeatHandler noteRepeatHandler) {
@@ -480,18 +483,27 @@ public class DrumPadHandler {
     }
 
     public void bindPadParameters(final Layer layer) {
+        if (!parameterBoundLayers.add(layer)) {
+            return;
+        }
         for (final PadContainer pad : pads) {
             pad.bindParameters(layer);
         }
     }
 
     public void bindPadMacros(final Layer layer) {
+        if (!macroBoundLayers.add(layer)) {
+            return;
+        }
         for (final PadContainer pad : pads) {
             pad.bindMacros(layer);
         }
     }
 
     public void bindPadMacrosShift(final Layer layer) {
+        if (!macroShiftBoundLayers.add(layer)) {
+            return;
+        }
         for (final PadContainer pad : pads) {
             pad.bindMacrosShift(layer);
         }

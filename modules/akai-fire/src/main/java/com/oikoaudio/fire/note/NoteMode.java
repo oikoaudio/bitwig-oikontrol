@@ -144,9 +144,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final Set<Integer> builderSelectedNotes = new HashSet<>();
     private final Set<Integer> modifierHandledStepPads = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
-    private final Map<Integer, Set<Integer>> observedClipNotesByStep = new HashMap<>();
-    private final Map<Integer, Map<Integer, Set<Integer>>> observedFineOccupancyByStep = new HashMap<>();
-    private final Map<Integer, Map<Integer, Integer>> observedFineNoteStartsByStep = new HashMap<>();
+    private final ChordStepObservedState observedChordStepState = new ChordStepObservedState();
     private final Map<Integer, Map<Integer, Integer>> heldBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> heldBankChordEvents = new HashMap<>();
     private final Set<Integer> shiftBankTargetSteps = new HashSet<>();
@@ -156,6 +154,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
+    private final ChordStepObservationRefresher chordObservationRefresher;
     private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
@@ -209,7 +208,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private boolean sostenutoActive = false;
     private boolean selectedNoteClipHasContent = false;
     private int selectedNoteClipSlotIndex = -1;
-    private boolean chordObservationResyncQueued = false;
     private boolean pendingBankFineMove = false;
     private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
@@ -316,6 +314,10 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         this.noteStepClip.addNoteStepObserver(this::handleNoteStepObject);
         this.observedNoteClip.addStepDataObserver(this::handleObservedStepData);
         this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
+        this.chordObservationRefresher = new ChordStepObservationRefresher(
+                (task, delayTicks) -> driver.getHost().scheduleTask(task, delayTicks),
+                this::refreshSelectedNoteClipState,
+                this::refreshChordStepObservationPass);
         observeSelectedNoteClip();
         this.clipHandler = new ClipRowHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
@@ -1040,36 +1042,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void handleObservedStepData(final int x, final int y, final int state) {
-        final int coarseStep = Math.floorDiv(x, FINE_STEPS_PER_STEP);
-        final Map<Integer, Set<Integer>> notesAtStep =
-                observedFineOccupancyByStep.computeIfAbsent(coarseStep, ignored -> new HashMap<>());
-        final Set<Integer> occupiedFineSteps = notesAtStep.computeIfAbsent(y, ignored -> new HashSet<>());
-        if (state == NoteStep.State.Empty.ordinal()) {
-            occupiedFineSteps.remove(x);
-            if (occupiedFineSteps.isEmpty()) {
-                notesAtStep.remove(y);
-            }
-            if (notesAtStep.isEmpty()) {
-                observedFineOccupancyByStep.remove(coarseStep);
-                observedClipNotesByStep.remove(coarseStep);
-            } else {
-                observedClipNotesByStep.put(coarseStep, new HashSet<>(notesAtStep.keySet()));
-            }
-            final Map<Integer, Integer> noteStarts = observedFineNoteStartsByStep.get(coarseStep);
-            if (noteStarts != null && Integer.valueOf(x).equals(noteStarts.get(y))) {
-                noteStarts.remove(y);
-                if (noteStarts.isEmpty()) {
-                    observedFineNoteStartsByStep.remove(coarseStep);
-                }
-            }
-            return;
-        }
-
-        occupiedFineSteps.add(x);
-        observedClipNotesByStep.computeIfAbsent(coarseStep, ignored -> new HashSet<>()).add(y);
-        if (state == NoteStep.State.NoteOn.ordinal()) {
-            observedFineNoteStartsByStep.computeIfAbsent(coarseStep, ignored -> new HashMap<>()).put(y, x);
-        }
+        observedChordStepState.handleObservedStepData(x, y, state, FINE_STEPS_PER_STEP);
     }
 
     private void updateStepCache(final Map<Integer, Set<Integer>> cache, final int x, final int y, final int state) {
@@ -1295,18 +1268,13 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private Set<Integer> getVisibleOccupiedSteps() {
         final Set<Integer> occupiedSteps = new HashSet<>(noteStepsByPosition.keySet());
-        observedClipNotesByStep.keySet().stream()
-                .filter(this::isVisibleGlobalStep)
-                .map(this::globalToLocalStep)
-                .forEach(occupiedSteps::add);
+        occupiedSteps.addAll(observedChordStepState.visibleOccupiedSteps(this::isVisibleGlobalStep, this::globalToLocalStep));
         return occupiedSteps;
     }
 
     private Set<Integer> getVisibleStartedSteps() {
-        final Set<Integer> startedSteps = observedFineNoteStartsByStep.keySet().stream()
-                .filter(this::isVisibleGlobalStep)
-                .map(this::globalToLocalStep)
-                .collect(Collectors.toCollection(HashSet::new));
+        final Set<Integer> startedSteps =
+                observedChordStepState.visibleStartedSteps(this::isVisibleGlobalStep, this::globalToLocalStep);
         noteStepsByPosition.entrySet().stream()
                 .filter(entry -> entry.getValue().values().stream().anyMatch(note -> note.state() == NoteStep.State.NoteOn))
                 .map(Map.Entry::getKey)
@@ -1339,46 +1307,13 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void updateObservedFineStart(final int oldFineStart, final int newFineStart, final int midiNote,
                                          final double duration) {
-        final int oldGlobalStep = Math.floorDiv(oldFineStart, FINE_STEPS_PER_STEP);
-        final int newGlobalStep = Math.floorDiv(newFineStart, FINE_STEPS_PER_STEP);
-        final int occupiedFineSteps = Math.max(1, (int) Math.round(duration / FINE_STEP_LENGTH));
-        for (int offset = 0; offset < occupiedFineSteps; offset++) {
-            final int oldFineStep = oldFineStart + offset;
-            final int oldStep = Math.floorDiv(oldFineStep, FINE_STEPS_PER_STEP);
-            final Map<Integer, Set<Integer>> oldOccupancy = observedFineOccupancyByStep.get(oldStep);
-            if (oldOccupancy != null) {
-                final Set<Integer> occupied = oldOccupancy.get(midiNote);
-                if (occupied != null) {
-                    occupied.remove(oldFineStep);
-                    if (occupied.isEmpty()) {
-                        oldOccupancy.remove(midiNote);
-                    }
-                }
-                if (oldOccupancy.isEmpty()) {
-                    observedFineOccupancyByStep.remove(oldStep);
-                    observedClipNotesByStep.remove(oldStep);
-                } else {
-                    observedClipNotesByStep.put(oldStep, new HashSet<>(oldOccupancy.keySet()));
-                }
-            }
-        }
-        final Map<Integer, Integer> oldStarts = observedFineNoteStartsByStep.get(oldGlobalStep);
-        if (oldStarts != null && Integer.valueOf(oldFineStart).equals(oldStarts.get(midiNote))) {
-            oldStarts.remove(midiNote);
-            if (oldStarts.isEmpty()) {
-                observedFineNoteStartsByStep.remove(oldGlobalStep);
-            }
-        }
-        for (int offset = 0; offset < occupiedFineSteps; offset++) {
-            final int newFineStep = newFineStart + offset;
-            final int newStep = Math.floorDiv(newFineStep, FINE_STEPS_PER_STEP);
-            observedFineOccupancyByStep
-                    .computeIfAbsent(newStep, ignored -> new HashMap<>())
-                    .computeIfAbsent(midiNote, ignored -> new HashSet<>())
-                    .add(newFineStep);
-            observedClipNotesByStep.computeIfAbsent(newStep, ignored -> new HashSet<>()).add(midiNote);
-        }
-        observedFineNoteStartsByStep.computeIfAbsent(newGlobalStep, ignored -> new HashMap<>()).put(midiNote, newFineStart);
+        observedChordStepState.moveFineStart(
+                oldFineStart,
+                newFineStart,
+                midiNote,
+                duration,
+                FINE_STEPS_PER_STEP,
+                FINE_STEP_LENGTH);
     }
 
     private List<ObservedChordNote> notesForMove(final int localStep) {
@@ -1406,7 +1341,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         final Map<Integer, NoteStep> visibleNotes = noteStepsByPosition.get(localStep);
         final int globalStep = localToGlobalStep(localStep);
         final Map<Integer, Integer> noteStarts = new HashMap<>();
-        noteStarts.putAll(observedFineNoteStartsByStep.getOrDefault(globalStep, Map.of()));
+        noteStarts.putAll(observedChordStepState.noteStartsForStep(globalStep));
         if (!startOverrides.isEmpty()) {
             noteStarts.putAll(startOverrides);
         }
@@ -1447,11 +1382,10 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private int fineStartFor(final int globalStep, final int midiNote, final int fallbackLocalStep) {
-        final Map<Integer, Integer> observedStarts = observedFineNoteStartsByStep.get(globalStep);
-        if (observedStarts != null && observedStarts.containsKey(midiNote)) {
-            return observedStarts.get(midiNote);
-        }
-        return localToGlobalStep(fallbackLocalStep) * FINE_STEPS_PER_STEP;
+        return observedChordStepState.fineStartFor(
+                globalStep,
+                midiNote,
+                localToGlobalStep(fallbackLocalStep) * FINE_STEPS_PER_STEP);
     }
 
     private double durationForObservedNote(final int fineStart, final int midiNote, final double fallbackDuration) {
@@ -1468,11 +1402,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private boolean isObservedFineStepOccupied(final int fineStep, final int midiNote) {
-        final int coarseStep = Math.floorDiv(fineStep, FINE_STEPS_PER_STEP);
-        return observedFineOccupancyByStep
-                .getOrDefault(coarseStep, Map.of())
-                .getOrDefault(midiNote, Set.of())
-                .contains(fineStep);
+        return observedChordStepState.isFineStepOccupied(fineStep, midiNote, FINE_STEPS_PER_STEP);
     }
 
     private List<ChordEventNoteMove> createNoteMovesForEvent(final ChordEvent event, final int targetAnchorFineStart,
@@ -1738,7 +1668,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void clearChordNote(final int stepIndex, final int midiNote) {
         final Map<Integer, Integer> observedStarts =
-                observedFineNoteStartsByStep.getOrDefault(localToGlobalStep(stepIndex), Map.of());
+                observedChordStepState.noteStartsForStep(localToGlobalStep(stepIndex));
         final int fineStart = observedStarts.getOrDefault(midiNote, localToGlobalFineStep(stepIndex));
         observedNoteClip.clearStep(fineStart, midiNote);
         invalidateObservedChordStep(stepIndex);
@@ -1747,9 +1677,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void invalidateObservedChordStep(final int stepIndex) {
         final int globalStep = localToGlobalStep(stepIndex);
-        observedClipNotesByStep.remove(globalStep);
-        observedFineOccupancyByStep.remove(globalStep);
-        observedFineNoteStartsByStep.remove(globalStep);
+        observedChordStepState.invalidateStep(globalStep);
         heldBankFineStarts.remove(stepIndex);
         heldBankChordEvents.remove(stepIndex);
         shiftBankFineStarts.remove(stepIndex);
@@ -3508,22 +3436,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void queueChordObservationResync() {
-        if (chordObservationResyncQueued) {
-            return;
-        }
-        chordObservationResyncQueued = true;
-        driver.getHost().scheduleTask(() -> {
-            chordObservationResyncQueued = false;
-            refreshChordStepObservation();
-        }, 0);
+        chordObservationRefresher.queueResync();
     }
 
     private void refreshChordStepObservation() {
-        refreshSelectedNoteClipState();
-        refreshChordStepObservationPass();
-        driver.getHost().scheduleTask(this::refreshChordStepObservationPass, 1);
-        driver.getHost().scheduleTask(this::refreshChordStepObservationPass, 6);
-        driver.getHost().scheduleTask(this::refreshChordStepObservationPass, 18);
+        chordObservationRefresher.refresh();
     }
 
     private void refreshChordStepObservationPass() {
@@ -3539,9 +3456,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 () -> observedNoteClip.scrollToStep(0));
     }
     private void clearObservedChordCaches() {
-        observedClipNotesByStep.clear();
-        observedFineOccupancyByStep.clear();
-        observedFineNoteStartsByStep.clear();
+        observedChordStepState.clear();
         pendingMovedNotes.clear();
     }
 
@@ -3608,7 +3523,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private boolean hasLoadedNoteClipContent() {
-        return !observedClipNotesByStep.isEmpty()
+        return observedChordStepState.hasAnyObservedNotes()
                 || noteStepsByPosition.values().stream()
                 .flatMap(step -> step.values().stream())
                 .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
@@ -3616,7 +3531,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private boolean hasVisibleStepContent(final int stepIndex) {
         final int globalStep = localToGlobalStep(stepIndex);
-        if (observedClipNotesByStep.containsKey(globalStep)) {
+        if (observedChordStepState.hasStepContent(globalStep)) {
             return true;
         }
         if (clipNotesByStep.containsKey(stepIndex)) {
@@ -3628,7 +3543,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private boolean hasStepStartNote(final int stepIndex) {
         final int globalStep = localToGlobalStep(stepIndex);
-        if (observedFineNoteStartsByStep.containsKey(globalStep)) {
+        if (observedChordStepState.hasStepStart(globalStep)) {
             return true;
         }
         return noteStepsByPosition.getOrDefault(stepIndex, Map.of()).values().stream()
@@ -3640,7 +3555,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         if (visibleNotes != null && !visibleNotes.isEmpty()) {
             return new HashSet<>(visibleNotes);
         }
-        final Set<Integer> observedNotes = observedClipNotesByStep.get(localToGlobalStep(stepIndex));
+        final Set<Integer> observedNotes = observedChordStepState.notesAtStep(localToGlobalStep(stepIndex));
         if (observedNotes != null && !observedNotes.isEmpty()) {
             return new HashSet<>(observedNotes);
         }
