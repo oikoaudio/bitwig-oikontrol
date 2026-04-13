@@ -156,6 +156,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final ChordStepObservationRefresher chordObservationRefresher;
     private final NoteLivePerformanceControls livePerformanceControls;
     private final NoteLivePadPerformer livePadPerformer;
+    private final NoteLiveExpressionControls liveExpressionControls;
     private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
@@ -195,10 +196,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private int liveVelocity = DEFAULT_LIVE_VELOCITY;
     private int liveVelocitySensitivity = 100;
     private int oikordVelocitySensitivity = 100;
-    private int livePressure = MIN_MIDI_VALUE;
-    private int liveTimbre = DEFAULT_TIMBRE;
-    private int liveModulation = MIN_MIDI_VALUE;
-    private int livePitchExpression = DEFAULT_LIVE_PITCH_EXPRESSION;
     private int defaultOikordVelocity = DEFAULT_OIKORD_STANDARD_VELOCITY;
     private int playingStep = -1;
     private int pendingBankDir = 0;
@@ -331,6 +328,27 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 },
                 this::getLivePadMidiNote,
                 this::resolveLivePadVelocity);
+        this.liveExpressionControls = new NoteLiveExpressionControls(new NoteLiveExpressionControls.MidiExpressionOut() {
+            @Override
+            public void channelAftertouch(final int value) {
+                noteInput.sendRawMidiEvent(Midi.CHANNEL_AT, value, 0);
+            }
+
+            @Override
+            public void modulation(final int value) {
+                noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_MOD, value);
+            }
+
+            @Override
+            public void timbre(final int value) {
+                noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_TIMBRE, value);
+            }
+
+            @Override
+            public void pitchBend(final int bend) {
+                noteInput.sendRawMidiEvent(Midi.PITCH_BEND, bend & 0x7F, (bend >> 7) & 0x7F);
+            }
+        });
         observeSelectedNoteClip();
         this.clipHandler = new ClipRowHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
@@ -416,7 +434,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void bindLiveChannelEncoders(final TouchEncoder[] encoders) {
         bindResettableLiveMidiEncoder(encoders[0], liveChannelLayer, 0, "Mod",
-                this::adjustLiveModulation, () -> Integer.toString(liveModulation), this::resetLiveModulation);
+                this::adjustLiveModulation, () -> Integer.toString(liveExpressionControls.modulation()), this::resetLiveModulation);
 
         encoders[1].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
         encoders[1].bindTouched(liveChannelLayer, this::handleLivePitchOffsetTouch);
@@ -430,11 +448,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void bindLiveExpressionEncoders(final TouchEncoder[] encoders) {
         bindResettableLiveMidiEncoder(encoders[0], liveUser1Layer, 0, "Aftertouch",
-                this::adjustLivePressure, () -> Integer.toString(livePressure), this::resetLivePressure);
+                this::adjustLivePressure, () -> Integer.toString(liveExpressionControls.pressure()), this::resetLivePressure);
         bindResettableLiveMidiEncoder(encoders[1], liveUser1Layer, 1, "Pressure",
-                this::adjustLivePressure, () -> Integer.toString(livePressure), this::resetLivePressure);
+                this::adjustLivePressure, () -> Integer.toString(liveExpressionControls.pressure()), this::resetLivePressure);
         bindResettableLiveMidiEncoder(encoders[2], liveUser1Layer, 2, "Timbre",
-                this::adjustLiveTimbre, () -> Integer.toString(liveTimbre), this::resetLiveTimbre);
+                this::adjustLiveTimbre, () -> Integer.toString(liveExpressionControls.timbre()), this::resetLiveTimbre);
         bindResettableLiveMidiEncoder(encoders[3], liveUser1Layer, 3, "Pitch Expr",
                 this::adjustLivePitchExpression, this::formatLivePitchExpressionDisplay, this::resetLivePitchExpression);
     }
@@ -562,50 +580,27 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void adjustLivePressure(final int inc) {
-        adjustLiveMidiValue(inc, "Aftertouch", value -> {
-            livePressure = value;
-            noteInput.sendRawMidiEvent(Midi.CHANNEL_AT, livePressure, 0);
-        }, livePressure);
+        if (liveExpressionControls.adjustPressure(inc)) {
+            oled.paramInfo("Aftertouch", liveExpressionControls.pressure(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+        }
     }
 
     private void adjustLiveTimbre(final int inc) {
-        adjustLiveMidiValue(inc, "Timbre", value -> {
-            liveTimbre = value;
-            noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_TIMBRE, liveTimbre);
-        }, liveTimbre);
+        if (liveExpressionControls.adjustTimbre(inc)) {
+            oled.paramInfo("Timbre", liveExpressionControls.timbre(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+        }
     }
 
     private void adjustLiveModulation(final int inc) {
-        adjustLiveMidiValue(inc, "Mod", value -> {
-            liveModulation = value;
-            noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_MOD, liveModulation);
-        }, liveModulation);
+        if (liveExpressionControls.adjustModulation(inc)) {
+            oled.paramInfo("Mod", liveExpressionControls.modulation(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+        }
     }
 
     private void adjustLivePitchExpression(final int inc) {
-        if (inc == 0) {
-            return;
+        if (liveExpressionControls.adjustPitchExpression(inc)) {
+            oled.valueInfo("Pitch Expr", formatLivePitchExpressionDisplay());
         }
-        final int nextValue = Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, livePitchExpression + inc));
-        if (nextValue == livePitchExpression) {
-            return;
-        }
-        livePitchExpression = nextValue;
-        sendPitchExpressionValue(nextValue);
-        oled.valueInfo("Pitch Expr", formatLivePitchExpressionDisplay());
-    }
-
-    private void adjustLiveMidiValue(final int inc, final String label,
-                                     final java.util.function.IntConsumer setter, final int currentValue) {
-        if (inc == 0) {
-            return;
-        }
-        final int nextValue = Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, currentValue + inc));
-        if (nextValue == currentValue) {
-            return;
-        }
-        setter.accept(nextValue);
-        oled.paramInfo(label, nextValue, "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
     }
 
     private void adjustLivePitchOffset(final int inc) {
@@ -628,40 +623,24 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 livePitchOffsetEncoder::reset);
     }
 
-    private void sendPitchExpressionValue(final int value) {
-        final int bend;
-        if (value <= DEFAULT_LIVE_PITCH_EXPRESSION) {
-            bend = (int) Math.round((value / (double) DEFAULT_LIVE_PITCH_EXPRESSION) * 8192.0);
-        } else {
-            final int rangeAboveCenter = MAX_MIDI_VALUE - DEFAULT_LIVE_PITCH_EXPRESSION;
-            bend = 8192 + (int) Math.round(((value - DEFAULT_LIVE_PITCH_EXPRESSION) / (double) rangeAboveCenter)
-                    * (16383.0 - 8192.0));
-        }
-        noteInput.sendRawMidiEvent(Midi.PITCH_BEND, bend & 0x7F, (bend >> 7) & 0x7F);
-    }
-
     private String formatLivePitchExpressionDisplay() {
-        return formatSignedValue(livePitchExpression - DEFAULT_LIVE_PITCH_EXPRESSION);
+        return formatSignedValue(liveExpressionControls.pitchExpression() - DEFAULT_LIVE_PITCH_EXPRESSION);
     }
 
     private void resetLivePressure() {
-        livePressure = MIN_MIDI_VALUE;
-        noteInput.sendRawMidiEvent(Midi.CHANNEL_AT, livePressure, 0);
+        liveExpressionControls.resetPressure();
     }
 
     private void resetLiveModulation() {
-        liveModulation = MIN_MIDI_VALUE;
-        noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_MOD, liveModulation);
+        liveExpressionControls.resetModulation();
     }
 
     private void resetLiveTimbre() {
-        liveTimbre = DEFAULT_TIMBRE;
-        noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_TIMBRE, liveTimbre);
+        liveExpressionControls.resetTimbre();
     }
 
     private void resetLivePitchExpression() {
-        livePitchExpression = DEFAULT_LIVE_PITCH_EXPRESSION;
-        sendPitchExpressionValue(livePitchExpression);
+        liveExpressionControls.resetPitchExpression();
     }
 
     private void resetLivePerformanceToggles() {
