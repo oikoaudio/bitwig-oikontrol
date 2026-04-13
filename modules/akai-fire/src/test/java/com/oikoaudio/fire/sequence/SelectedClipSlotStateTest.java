@@ -1,12 +1,11 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extension.api.Color;
-import com.bitwig.extension.controller.api.BooleanValue;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.bitwig.extension.controller.api.SettableColorValue;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
+import com.oikoaudio.fire.testutil.BitwigApiValueStubs.ColorValueStub;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,7 +23,7 @@ class SelectedClipSlotStateTest {
         final ClipLauncherSlotBank bank = mock(ClipLauncherSlotBank.class);
         final ClipLauncherSlot firstSlot = mock(ClipLauncherSlot.class);
         final ClipLauncherSlot selectedSlot = mock(ClipLauncherSlot.class);
-        final SettableColorValue selectedColor = mockColorValue(1.0, 0.0, 0.0);
+        final ColorValueStub selectedColor = new ColorValueStub(255, 0, 0);
         stubSlot(firstSlot, false, false, false, null);
         stubSlot(selectedSlot, true, true, true, selectedColor);
         when(bank.getSizeOfBank()).thenReturn(2);
@@ -36,7 +35,7 @@ class SelectedClipSlotStateTest {
         assertTrue(state.hasSelection());
         assertEquals(1, state.slotIndex());
         assertTrue(state.hasContent());
-        assertEquals(ColorLookup.getColor(selectedColor.get()), state.color());
+        assertEquals(ColorLookup.getColor(selectedColor.color()), state.color());
     }
 
     @Test
@@ -75,28 +74,12 @@ class SelectedClipSlotStateTest {
                                  final boolean existsValue,
                                  final boolean hasContentValue,
                                  final boolean selectedValue,
-                                 final SettableColorValue colorValue) {
-        final BooleanValue exists = mock(BooleanValue.class);
-        final BooleanValue hasContent = mock(BooleanValue.class);
-        final BooleanValue isSelected = mock(BooleanValue.class);
-        when(exists.get()).thenReturn(existsValue);
-        when(hasContent.get()).thenReturn(hasContentValue);
-        when(isSelected.get()).thenReturn(selectedValue);
-        when(slot.exists()).thenReturn(exists);
-        when(slot.hasContent()).thenReturn(hasContent);
-        when(slot.isSelected()).thenReturn(isSelected);
+                                 final ColorValueStub colorValue) {
+        when(slot.exists()).thenReturn(new BooleanValueStub(existsValue).value());
+        when(slot.hasContent()).thenReturn(new BooleanValueStub(hasContentValue).value());
+        when(slot.isSelected()).thenReturn(new BooleanValueStub(selectedValue).value());
         if (colorValue != null) {
-            when(slot.color()).thenReturn(colorValue);
+            when(slot.color()).thenReturn(colorValue.value());
         }
-    }
-
-    private static SettableColorValue mockColorValue(final double red, final double green, final double blue) {
-        final SettableColorValue colorValue = mock(SettableColorValue.class);
-        final Color color = mock(Color.class);
-        when(color.getRed255()).thenReturn((int) (red * 255.0));
-        when(color.getGreen255()).thenReturn((int) (green * 255.0));
-        when(color.getBlue255()).thenReturn((int) (blue * 255.0));
-        when(colorValue.get()).thenReturn(color);
-        return colorValue;
     }
 }

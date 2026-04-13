@@ -1,9 +1,14 @@
 package com.bitwig.extensions.framework;
 
+import com.bitwig.extension.api.PlatformType;
+import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtension;
+import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.HardwareActionBindable;
 import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -16,7 +21,7 @@ class LayerActivationTest {
 
     @Test
     void laterActiveLayerReplacesConflictingBindingsFromLowerLayer() {
-        final Layers layers = new Layers(mockControllerExtension());
+        final Layers layers = new Layers(testControllerExtension());
         final Layer lower = new Layer(layers, "LOWER");
         final Layer upper = new Layer(layers, "UPPER");
         final Object exclusivity = new Object();
@@ -39,7 +44,7 @@ class LayerActivationTest {
 
     @Test
     void deactivatingLayerDeactivatesItsBindings() {
-        final Layers layers = new Layers(mockControllerExtension());
+        final Layers layers = new Layers(testControllerExtension());
         final Layer layer = new Layer(layers, "LAYER");
         final TestBinding binding = new TestBinding(new Object());
         layer.addBinding(binding);
@@ -53,12 +58,81 @@ class LayerActivationTest {
         assertEquals(1, binding.deactivations);
     }
 
-    private static ControllerExtension mockControllerExtension() {
-        final ControllerExtension controllerExtension = mock(ControllerExtension.class);
+    private static ControllerExtension testControllerExtension() {
         final ControllerHost host = mock(ControllerHost.class);
-        doReturn(host).when(controllerExtension).getHost();
         doReturn(mock(HardwareActionBindable.class)).when(host).createAction(any(Runnable.class), any());
-        return controllerExtension;
+        return new ControllerExtension(testDefinition(), host) {
+            @Override
+            public void init() {
+            }
+
+            @Override
+            public void exit() {
+            }
+
+            @Override
+            public void flush() {
+            }
+        };
+    }
+
+    private static ControllerExtensionDefinition testDefinition() {
+        return new ControllerExtensionDefinition() {
+            @Override
+            public String getName() {
+                return "Test";
+            }
+
+            @Override
+            public String getAuthor() {
+                return "Test";
+            }
+
+            @Override
+            public String getVersion() {
+                return "1";
+            }
+
+            @Override
+            public UUID getId() {
+                return UUID.fromString("00000000-0000-0000-0000-000000000001");
+            }
+
+            @Override
+            public int getRequiredAPIVersion() {
+                return 18;
+            }
+
+            @Override
+            public String getHardwareVendor() {
+                return "Test";
+            }
+
+            @Override
+            public String getHardwareModel() {
+                return "Test";
+            }
+
+            @Override
+            public int getNumMidiInPorts() {
+                return 0;
+            }
+
+            @Override
+            public int getNumMidiOutPorts() {
+                return 0;
+            }
+
+            @Override
+            public void listAutoDetectionMidiPortNames(final AutoDetectionMidiPortNamesList list,
+                                                       final PlatformType platformType) {
+            }
+
+            @Override
+            public ControllerExtension createInstance(final ControllerHost host) {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     private static final class TestBinding extends Binding<Object, Object> {
