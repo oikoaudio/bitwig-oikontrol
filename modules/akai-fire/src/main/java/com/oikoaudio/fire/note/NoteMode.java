@@ -156,6 +156,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final OikordBank oikordBank = new OikordBank();
     private final ChordStepSelectedClipState chordStepSelectedClipState = new ChordStepSelectedClipState();
     private final ChordStepObservationRefresher chordObservationRefresher;
+    private final NoteLivePerformanceControls livePerformanceControls;
     private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
@@ -205,8 +206,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
     private EncoderMode liveEncoderMode = EncoderMode.CHANNEL;
     private Layer currentLiveEncoderLayer;
-    private boolean sustainActive = false;
-    private boolean sostenutoActive = false;
     private boolean pendingBankFineMove = false;
     private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
@@ -316,6 +315,12 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 (task, delayTicks) -> driver.getHost().scheduleTask(task, delayTicks),
                 this::refreshSelectedNoteClipState,
                 this::refreshChordStepObservationPass);
+        this.livePerformanceControls = new NoteLivePerformanceControls(
+                value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, value),
+                value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, value),
+                noteRepeatHandler::toggleActive,
+                () -> noteRepeatHandler.getNoteRepeatActive().get(),
+                oled::valueInfo);
         observeSelectedNoteClip();
         this.clipHandler = new ClipRowHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
@@ -650,14 +655,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void resetLivePerformanceToggles() {
-        if (sustainActive) {
-            sustainActive = false;
-            noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, MIN_MIDI_VALUE);
-        }
-        if (sostenutoActive) {
-            sostenutoActive = false;
-            noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, MIN_MIDI_VALUE);
-        }
+        livePerformanceControls.resetToggles();
     }
 
     private int getLivePitchOffset() {
@@ -692,11 +690,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             }
             return;
         }
-        if (pressed) {
-            sustainActive = !sustainActive;
-            noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, sustainActive ? MAX_MIDI_VALUE : MIN_MIDI_VALUE);
-            oled.valueInfo("Sustain", sustainActive ? "On" : "Off");
-        }
+        livePerformanceControls.handleMute1(pressed);
     }
 
     private void handleMute2Button(final boolean pressed) {
@@ -709,12 +703,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             }
             return;
         }
-        if (pressed) {
-            sostenutoActive = !sostenutoActive;
-            noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO,
-                    sostenutoActive ? MAX_MIDI_VALUE : MIN_MIDI_VALUE);
-            oled.valueInfo("Sostenuto", sostenutoActive ? "On" : "Off");
-        }
+        livePerformanceControls.handleMute2(pressed);
     }
 
     private void handleMute3Button(final boolean pressed) {
@@ -727,9 +716,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             }
             return;
         }
-        if (pressed) {
-            noteRepeatHandler.toggleActive();
-        }
+        livePerformanceControls.handleMute3(pressed);
     }
 
     private void handleMute4Button(final boolean pressed) {
@@ -749,21 +736,21 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         if (isChordStepModeActive()) {
             return selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
         }
-        return sustainActive ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        return livePerformanceControls.mute1LightState();
     }
 
     private BiColorLightState getMute2LightState() {
         if (isChordStepModeActive()) {
             return fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
-        return sostenutoActive ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+        return livePerformanceControls.mute2LightState();
     }
 
     private BiColorLightState getMute3LightState() {
         if (isChordStepModeActive()) {
             return copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
         }
-        return noteRepeatHandler.getNoteRepeatActive().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        return livePerformanceControls.mute3LightState();
     }
 
     private BiColorLightState getMute4LightState() {
