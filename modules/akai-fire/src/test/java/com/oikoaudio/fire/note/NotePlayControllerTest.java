@@ -8,12 +8,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class NotePlayModeTest {
+class NotePlayControllerTest {
 
     @Test
     void delegatesLifecycleAndPadPressToLiveCollaborators() {
         final List<String> events = new ArrayList<>();
-        final NotePlayMode mode = new NotePlayMode(
+        final NotePlayController mode = new NotePlayController(
                 new NoteLiveControlSurface(
                         new NoteLivePerformanceControls(
                                 value -> events.add("sustain:" + value),

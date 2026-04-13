@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class ChordStepModeTest {
+class ChordStepControllerTest {
 
     @Test
     void delegatesEditButtonsAndClipState() {
@@ -23,7 +23,7 @@ class ChordStepModeTest {
                 () -> events.add("resync"),
                 failure -> events.add("failure:" + failure.title()));
         clipController.refresh(SelectedClipSlotState.fromValues(2, true, RgbLigthState.GRAY_2));
-        final ChordStepMode mode = new ChordStepMode(
+        final ChordStepController mode = new ChordStepController(
                 new NoteChordStepEditControls((title, detail) -> events.add(title + ":" + detail), () -> events.add("clear")),
                 clipController,
                 new NoteChordStepObservationController(

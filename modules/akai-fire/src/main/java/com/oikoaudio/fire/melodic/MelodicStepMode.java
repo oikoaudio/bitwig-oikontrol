@@ -24,7 +24,6 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
-import com.oikoaudio.fire.note.NoteMode;
 import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -1948,9 +1947,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 () -> cursorClip.scrollToStep(0));
     }
     private MelodicPhraseContext phraseContext() {
-        final NoteMode noteMode = driver.getNoteMode();
-        return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getCurrentRootNoteClass(),
-                noteMode.getCurrentBaseMidiNote());
+        return new MelodicPhraseContext(driver.getSharedMusicalScale(), driver.getSharedRootNote(),
+                driver.getSharedBaseMidiNote());
     }
 
     private RgbLigthState getPadLight(final int padIndex) {

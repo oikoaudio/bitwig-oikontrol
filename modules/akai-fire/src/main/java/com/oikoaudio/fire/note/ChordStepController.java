@@ -5,16 +5,16 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 
 /**
- * Internal mode object for chord-step sequencing behavior.
+ * Internal controller for chord-step sequencing behavior.
  */
-final class ChordStepMode {
+final class ChordStepController {
     private final NoteChordStepEditControls editControls;
     private final NoteChordStepClipController clipController;
     private final NoteChordStepObservationController observationController;
 
-    ChordStepMode(final NoteChordStepEditControls editControls,
-                  final NoteChordStepClipController clipController,
-                  final NoteChordStepObservationController observationController) {
+    ChordStepController(final NoteChordStepEditControls editControls,
+                        final NoteChordStepClipController clipController,
+                        final NoteChordStepObservationController observationController) {
         this.editControls = editControls;
         this.clipController = clipController;
         this.observationController = observationController;

@@ -7,6 +7,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
+import com.bitwig.extensions.framework.MusicalScale;
 import com.oikoaudio.fire.note.NoteMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -837,6 +838,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return sharedMusicalContext.getScaleDisplayName();
     }
 
+    public MusicalScale getSharedMusicalScale() {
+        final int effectiveScaleIndex = getSharedScaleIndex() == -1 ? 1 : getSharedScaleIndex();
+        return MusicalScaleLibrary.getInstance().getMusicalScale(effectiveScaleIndex);
+    }
+
     public SharedMusicalContext getSharedMusicalContext() {
         return sharedMusicalContext;
     }
@@ -1076,10 +1082,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         activeMode = TopLevelMode.MELODIC_STEP;
         switchActiveMode();
         notifyAction("Mode", "Step");
-    }
-
-    public NoteMode getNoteMode() {
-        return noteMode;
     }
 
     public boolean isEuclidFullClipEnabled() {

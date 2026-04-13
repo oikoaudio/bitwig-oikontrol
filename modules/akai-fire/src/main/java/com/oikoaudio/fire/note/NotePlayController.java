@@ -3,13 +3,13 @@ package com.oikoaudio.fire.note;
 import com.oikoaudio.fire.lights.BiColorLightState;
 
 /**
- * Internal mode object for live note-play behavior.
+ * Internal controller for live note-play behavior.
  */
-final class NotePlayMode {
+final class NotePlayController {
     private final NoteLiveControlSurface controls;
     private final NoteLivePadPerformer padPerformer;
 
-    NotePlayMode(final NoteLiveControlSurface controls, final NoteLivePadPerformer padPerformer) {
+    NotePlayController(final NoteLiveControlSurface controls, final NoteLivePadPerformer padPerformer) {
         this.controls = controls;
         this.padPerformer = padPerformer;
     }
