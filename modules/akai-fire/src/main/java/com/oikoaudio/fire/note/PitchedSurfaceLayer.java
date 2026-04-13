@@ -64,7 +64,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost {
+abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, SeqClipRowHost {
+    enum SurfaceRole {
+        NOTE_PLAY,
+        CHORD_STEP
+    }
     private static final int CLIP_ROW_PAD_COUNT = 16;
     private static final int OIKORD_SOURCE_PAD_OFFSET = 16;
     private static final int OIKORD_SOURCE_PAD_COUNT = 16;
@@ -129,6 +133,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private static final RgbLigthState DEFERRED_BOTTOM = new RgbLigthState(36, 16, 0, true);
 
     private final AkaiFireOikontrolExtension driver;
+    private final SurfaceRole surfaceRole;
     private final OledDisplay oled;
     private final NoteInput noteInput;
     private final PatternButtons patternButtons;
@@ -267,9 +272,13 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         }
     }
 
-    public NoteMode(final AkaiFireOikontrolExtension driver, final NoteRepeatHandler noteRepeatHandler) {
-        super(driver.getLayers(), "NOTE_MODE_LAYER");
+    protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
+                                  final NoteRepeatHandler noteRepeatHandler,
+                                  final String layerName,
+                                  final SurfaceRole surfaceRole) {
+        super(driver.getLayers(), layerName);
         this.driver = driver;
+        this.surfaceRole = surfaceRole;
         this.oled = driver.getOled();
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
@@ -1983,20 +1992,8 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         }
     }
 
-    public void togglePrimarySurface() {
-        if (noteStepActive) {
-            returnToLivePlay();
-            driver.notifyAction("Mode", "Note");
-            return;
-        }
-        currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
-        noteStepActive = true;
-        enterCurrentStepSubMode();
-        driver.notifyPopup("Mode", currentStepSubMode.displayName());
-    }
-
-    public void toggleCurrentSurfaceVariant() {
-        if (noteStepActive) {
+    public void toggleSurfaceVariant() {
+        if (isChordStepSurface()) {
             if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
                 toggleBuilderLayout();
             } else {
@@ -2017,14 +2014,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     public BiColorLightState getModeButtonLightState() {
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
-            return BiColorLightState.AMBER_FULL;
-        }
-        return BiColorLightState.RED_FULL;
+        return isChordStepSurface() ? BiColorLightState.AMBER_FULL : BiColorLightState.RED_FULL;
     }
 
-    public boolean isStepSurfaceActive() {
-        return noteStepActive;
+    public boolean isChordStepSurface() {
+        return surfaceRole == SurfaceRole.CHORD_STEP;
     }
 
     private void adjustScale(final int amount) {
@@ -3482,7 +3476,8 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     @Override
     protected void onActivate() {
-        noteStepActive = false;
+        noteStepActive = isChordStepSurface();
+        currentStepSubMode = NoteStepSubMode.OIKORD_STEP;
         builderSelectedNotes.clear();
         heldStepPads.clear();
         heldStepAnchor = null;
@@ -3490,12 +3485,19 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         chordStepPosition.setPage(0);
         patternButtons.setUpCallback(this::handlePatternUp, this::getPatternUpLight);
         patternButtons.setDownCallback(this::handlePatternDown, this::getPatternDownLight);
-        notePlayController.activate();
-        liveModeControlLayer.activate();
-        stepEncoderLayer.deactivate();
-        applyLiveVelocity();
-        applyLayout();
-        showState("Mode");
+        if (isChordStepSurface()) {
+            notePlayController.deactivate(this::releaseHeldLiveNotes);
+            liveModeControlLayer.deactivate();
+            stepEncoderLayer.deactivate();
+            enterCurrentStepSubMode();
+        } else {
+            notePlayController.activate();
+            liveModeControlLayer.activate();
+            stepEncoderLayer.deactivate();
+            applyLiveVelocity();
+            applyLayout();
+            showState("Mode");
+        }
     }
 
     @Override
