@@ -61,13 +61,13 @@ public final class AcidGenerator implements MelodicGenerator {
             final boolean accent = accents[i] || anchor;
             final boolean slide = slides[i] && nextActive(active, i, loopSteps);
             final int pitch = context.pitchForDegree(octaveOffsets[i], degrees[i]);
-            final double gate = slide ? 1.12 : gateFor(degrees[i], accent, anchor);
+            final double gate = slide ? 0.98 + parameters.legato() * 0.22 : gateFor(degrees[i], accent, anchor, parameters.legato());
             final int velocity = accent ? 116 + random.nextInt(8) : 86 + random.nextInt(14);
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }
 
         MelodicPattern pattern = new MelodicPattern(steps, loopSteps);
-        pattern = addAnchorTies(pattern, active, random, parameters.tension());
+        pattern = addAnchorTies(pattern, active, random, parameters.tension(), parameters.legato());
         if (distinctActivePitchCount(pattern) < 3) {
             pattern = forceThirdPitch(pattern, context, active);
         }
@@ -234,7 +234,7 @@ public final class AcidGenerator implements MelodicGenerator {
     }
 
     private MelodicPattern addAnchorTies(final MelodicPattern pattern, final boolean[] active,
-                                         final Random random, final double tension) {
+                                         final Random random, final double tension, final double legato) {
         MelodicPattern out = pattern;
         for (int i = 0; i < pattern.loopSteps() - 1; i++) {
             if (!activeAt(active, i) || activeAt(active, i + 1)) {
@@ -243,7 +243,7 @@ public final class AcidGenerator implements MelodicGenerator {
             if (!isAnchorStep(i, pattern.loopSteps())) {
                 continue;
             }
-            if (random.nextDouble() < 0.08 + tension * 0.14) {
+            if (random.nextDouble() < 0.04 + tension * 0.08 + legato * 0.24) {
                 out = out.withStep(out.step(i + 1).withTieFromPrevious(true));
             }
         }
@@ -336,11 +336,11 @@ public final class AcidGenerator implements MelodicGenerator {
         return step == 0 || step == loopSteps - 1 || step % 4 == 0;
     }
 
-    private double gateFor(final int degree, final boolean accent, final boolean anchor) {
+    private double gateFor(final int degree, final boolean accent, final boolean anchor, final double legato) {
         if (anchor || degree == 0) {
-            return accent ? 1.04 : 0.98;
+            return (accent ? 1.00 : 0.94) + legato * 0.10;
         }
-        return accent ? 0.92 : 0.82;
+        return (accent ? 0.86 : 0.76) + legato * 0.18;
     }
 
     private int nearestRingIndex(final int degree) {

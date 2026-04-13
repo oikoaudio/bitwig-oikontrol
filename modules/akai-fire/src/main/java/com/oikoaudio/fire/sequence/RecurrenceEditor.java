@@ -7,7 +7,11 @@ import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
-// changed
+
+/**
+ * Temporary editing layer for note recurrence masks in drum sequencing mode.
+ * It owns the pad overlay used while one or more held steps are being edited.
+ */
 public class RecurrenceEditor {
 	private List<NoteStep> editedSteps;
 	private int currentMask = 0;

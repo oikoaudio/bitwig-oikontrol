@@ -61,8 +61,12 @@ public final class RollingBassGenerator implements MelodicGenerator {
             final int octaveOffset = chooseOctaveOffset(inCell, parameters.octaveActivity(), random);
             final int pitch = context.pitchForDegree(octaveOffset, degree);
             final boolean accent = anchor || inCell == cellLength - 2;
-            final boolean slide = !anchor && inCell == cellLength - 3 && random.nextDouble() < parameters.tension() * 0.10;
-            final double gate = slide ? 1.02 : (inCell % 2 == 0 ? 0.96 : 0.88 + parameters.density() * 0.10);
+            final boolean slide = !anchor && inCell == cellLength - 3
+                    && parameters.legato() > 0.0
+                    && random.nextDouble() < 0.02 + parameters.legato() * 0.20;
+            final double gate = slide
+                    ? 0.96 + parameters.legato() * 0.14
+                    : (inCell % 2 == 0 ? 0.96 : 0.88 + parameters.density() * 0.10);
             final int velocity = accent ? 114 : 86 + (inCell % 2 == 0 ? 10 : 0) + random.nextInt(6);
             steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }

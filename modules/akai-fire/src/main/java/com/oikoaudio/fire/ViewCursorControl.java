@@ -8,7 +8,7 @@ import com.bitwig.extension.controller.api.DeviceMatcher;
 import com.bitwig.extension.controller.api.DrumPadBank;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.TrackBank;
-import com.bitwig.extensions.framework.values.SpecialDevices;
+import com.oikoaudio.fire.values.SpecialDevices;
 
 public class ViewCursorControl {
 	private static final int TRACK_RESTORE_WIDTH = 128;
