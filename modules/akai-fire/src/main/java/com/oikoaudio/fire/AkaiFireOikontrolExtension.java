@@ -112,9 +112,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
-    private int sharedRootNote = 0;
-    private int sharedScaleIndex = -1;
-    private int sharedOctave = 3;
+    private final SharedMusicalContext sharedMusicalContext = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
 
     private PatternButtons patternButtons;
     private NoteMode noteMode;
@@ -796,67 +794,51 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public int getSharedRootNote() {
-        return sharedRootNote;
+        return sharedMusicalContext.getRootNote();
     }
 
     public void setSharedRootNote(final int rootNote) {
-        sharedRootNote = Math.floorMod(rootNote, 12);
+        sharedMusicalContext.setRootNote(rootNote);
     }
 
     public void adjustSharedRootNote(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        setSharedRootNote(sharedRootNote + amount);
+        sharedMusicalContext.adjustRootNote(amount);
     }
 
     public int getSharedScaleIndex() {
-        return sharedScaleIndex;
+        return sharedMusicalContext.getScaleIndex();
     }
 
     public void setSharedScaleIndex(final int scaleIndex) {
-        sharedScaleIndex = scaleIndex;
+        sharedMusicalContext.setScaleIndex(scaleIndex);
     }
 
     public boolean adjustSharedScaleIndex(final int amount, final int minimumScaleIndex) {
-        if (amount == 0) {
-            return false;
-        }
-        final int nextScaleIndex = sharedScaleIndex + amount;
-        if (nextScaleIndex < minimumScaleIndex
-                || nextScaleIndex >= MusicalScaleLibrary.getInstance().getMusicalScalesCount()) {
-            return false;
-        }
-        setSharedScaleIndex(nextScaleIndex);
-        return true;
+        return sharedMusicalContext.adjustScaleIndex(amount, minimumScaleIndex);
     }
 
     public int getSharedOctave() {
-        return sharedOctave;
+        return sharedMusicalContext.getOctave();
     }
 
     public void setSharedOctave(final int octave) {
-        sharedOctave = Math.max(0, Math.min(7, octave));
+        sharedMusicalContext.setOctave(octave);
     }
 
     public void adjustSharedOctave(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        setSharedOctave(sharedOctave + amount);
+        sharedMusicalContext.adjustOctave(amount);
     }
 
     public int getSharedBaseMidiNote() {
-        return sharedOctave * 12 + sharedRootNote;
+        return sharedMusicalContext.getBaseMidiNote();
     }
 
     public String getSharedScaleDisplayName() {
-        if (sharedScaleIndex == -1) {
-            return "Piano";
-        }
-        final int safeIndex = Math.max(0, Math.min(MusicalScaleLibrary.getInstance().getMusicalScalesCount() - 1,
-                sharedScaleIndex));
-        return MusicalScaleLibrary.getInstance().getMusicalScale(safeIndex).getName();
+        return sharedMusicalContext.getScaleDisplayName();
+    }
+
+    public SharedMusicalContext getSharedMusicalContext() {
+        return sharedMusicalContext;
     }
 
     private void initializeSharedPitchContext() {

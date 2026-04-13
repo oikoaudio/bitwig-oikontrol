@@ -153,7 +153,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
     private final NoteChordStepClipController chordStepClipController;
-    private final ChordStepObservationRefresher chordObservationRefresher;
+    private final NoteChordStepObservationController chordStepObservationController;
+    private final NotePlayMode notePlayMode;
+    private final ChordStepMode chordStepMode;
     private final NoteLiveControlSurface liveControls;
     private final NoteLivePadPerformer livePadPerformer;
     private final NoteLiveExpressionControls liveExpressionControls;
@@ -312,15 +314,22 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         this.noteStepClip.addNoteStepObserver(this::handleNoteStepObject);
         this.observedNoteClip.addStepDataObserver(this::handleObservedStepData);
         this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
-        this.chordObservationRefresher = new ChordStepObservationRefresher(
-                (task, delayTicks) -> driver.getHost().scheduleTask(task, delayTicks),
-                this::refreshSelectedNoteClipState,
-                this::refreshChordStepObservationPass);
         this.chordStepClipController = new NoteChordStepClipController(
                 () -> cursorTrack.canHoldNoteData().get(),
                 this::hasLoadedNoteClipContent,
                 this::queueChordObservationResync,
                 this::showClipAvailabilityFailure);
+        this.chordStepObservationController = new NoteChordStepObservationController(
+                (task, delayTicks) -> driver.getHost().scheduleTask(task, delayTicks),
+                noteClipSlotBank,
+                () -> driver.getViewControl().getSelectedClipSlotIndex(),
+                () -> oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP,
+                chordStepClipController,
+                this::clearObservedChordCaches,
+                () -> noteStepClip.scrollToKey(0),
+                () -> observedNoteClip.scrollToKey(0),
+                () -> noteStepClip.scrollToStep(chordStepOffset()),
+                () -> observedNoteClip.scrollToStep(0));
         final NoteLivePerformanceControls livePerformanceControls = new NoteLivePerformanceControls(
                 value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, value),
                 value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, value),
@@ -365,7 +374,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 noteInput.sendRawMidiEvent(Midi.PITCH_BEND, bend & 0x7F, (bend >> 7) & 0x7F);
             }
         });
-        observeSelectedNoteClip();
+        this.notePlayMode = new NotePlayMode(liveControls, livePadPerformer);
+        this.chordStepMode = new ChordStepMode(chordStepEditControls, chordStepClipController, chordStepObservationController);
+        chordStepMode.observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
@@ -668,59 +679,59 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void handleMute1Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            chordStepEditControls.handleMute1(pressed);
+            chordStepMode.handleMute1(pressed);
             return;
         }
-        liveControls.handleMute1(pressed);
+        notePlayMode.handleMute1(pressed);
     }
 
     private void handleMute2Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            chordStepEditControls.handleMute2(pressed);
+            chordStepMode.handleMute2(pressed);
             return;
         }
-        liveControls.handleMute2(pressed);
+        notePlayMode.handleMute2(pressed);
     }
 
     private void handleMute3Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            chordStepEditControls.handleMute3(pressed);
+            chordStepMode.handleMute3(pressed);
             return;
         }
-        liveControls.handleMute3(pressed);
+        notePlayMode.handleMute3(pressed);
     }
 
     private void handleMute4Button(final boolean pressed) {
         if (isChordStepModeActive()) {
-            chordStepEditControls.handleMute4(pressed);
+            chordStepMode.handleMute4(pressed);
             return;
         }
     }
 
     private BiColorLightState getMute1LightState() {
         if (isChordStepModeActive()) {
-            return chordStepEditControls.mute1LightState();
+            return chordStepMode.mute1LightState();
         }
-        return liveControls.mute1LightState();
+        return notePlayMode.mute1LightState();
     }
 
     private BiColorLightState getMute2LightState() {
         if (isChordStepModeActive()) {
-            return chordStepEditControls.mute2LightState();
+            return chordStepMode.mute2LightState();
         }
-        return liveControls.mute2LightState();
+        return notePlayMode.mute2LightState();
     }
 
     private BiColorLightState getMute3LightState() {
         if (isChordStepModeActive()) {
-            return chordStepEditControls.mute3LightState();
+            return chordStepMode.mute3LightState();
         }
-        return liveControls.mute3LightState();
+        return notePlayMode.mute3LightState();
     }
 
     private BiColorLightState getMute4LightState() {
         if (isChordStepModeActive()) {
-            return chordStepEditControls.mute4LightState();
+            return chordStepMode.mute4LightState();
         }
         return BiColorLightState.OFF;
     }
@@ -750,7 +761,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
         if (!noteStepActive) {
-            handleLivePadPress(padIndex, pressed, velocity);
+            notePlayMode.handlePadPress(padIndex, pressed, velocity, liveVelocity);
             return;
         }
         if (currentStepSubMode == NoteStepSubMode.OIKORD_STEP) {
@@ -758,10 +769,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return;
         }
         handleClipStepRecordPadPress(padIndex, pressed);
-    }
-
-    private void handleLivePadPress(final int padIndex, final boolean pressed, final int velocity) {
-        livePadPerformer.handlePadPress(padIndex, pressed, velocity, liveVelocity);
     }
 
     private void handleOikordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
@@ -811,7 +818,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return;
         }
         if (pressed) {
-            if (chordStepEditControls.isSelectHeld()) {
+            if (chordStepMode.isSelectHeld()) {
                 if (isBuilderFamily()) {
                     loadBuilderFromStep(stepIndex);
                 } else {
@@ -820,17 +827,17 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 modifierHandledStepPads.add(stepIndex);
                 return;
             }
-            if (chordStepEditControls.isFixedLengthHeld()) {
+            if (chordStepMode.isFixedLengthHeld()) {
                 setLastStep(stepIndex);
                 modifierHandledStepPads.add(stepIndex);
                 return;
             }
-            if (chordStepEditControls.isCopyHeld()) {
+            if (chordStepMode.isCopyHeld()) {
                 pasteCurrentChordToStep(stepIndex);
                 modifierHandledStepPads.add(stepIndex);
                 return;
             }
-            if (chordStepEditControls.isDeleteHeld()) {
+            if (chordStepMode.isDeleteHeld()) {
                 clearChordStep(stepIndex);
                 modifierHandledStepPads.add(stepIndex);
                 return;
@@ -1495,12 +1502,12 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private void syncEncoderLayers() {
         final boolean useStepEncoders = noteStepActive && currentStepSubMode == NoteStepSubMode.OIKORD_STEP;
         if (useStepEncoders) {
-            liveControls.deactivateEncoders();
+            notePlayMode.deactivateEncoders();
             liveModeControlLayer.deactivate();
             stepEncoderLayer.activate();
         } else {
             stepEncoderLayer.deactivate();
-            liveControls.activateEncoders();
+            notePlayMode.activateEncoders();
             liveModeControlLayer.activate();
         }
     }
@@ -1831,14 +1838,14 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void handleLiveModeAdvance(final boolean pressed) {
-        liveControls.handleModeAdvance(pressed, noteStepActive);
+        notePlayMode.handleModeAdvance(pressed, noteStepActive);
         if (pressed && !noteStepActive) {
             oled.clearScreenDelayed();
         }
     }
 
     private BiColorLightState getLiveModeLightState() {
-        return liveControls.modeLightState();
+        return notePlayMode.modeLightState();
     }
 
     private void handlePitchContextButton(final boolean pressed, final int amount, final boolean root) {
@@ -2239,6 +2246,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return sourcePadIndex == selectedOikordSlot ? SELECTED_CHORD : grouped.getDimmed();
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
+        if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, chordStepPosition.getAvailableSteps())) {
+            return RgbLigthState.OFF;
+        }
         final boolean occupied = hasVisibleStepContent(stepIndex);
         final boolean accented = occupied && isOikordStepAccented(stepIndex);
         final boolean sustained = !occupied && isOikordStepSustained(stepIndex);
@@ -2274,8 +2284,8 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private RgbLigthState getOikordOccupiedStepColor() {
-        if (chordStepClipController.color() != null) {
-            return chordStepClipController.color();
+        if (chordStepMode.color() != null) {
+            return chordStepMode.color();
         }
         return oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
     }
@@ -2293,6 +2303,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return DEFERRED_TOP;
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
+        if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, chordStepPosition.getAvailableSteps())) {
+            return RgbLigthState.OFF;
+        }
         if (heldStepPads.contains(stepIndex)) {
             return HELD_STEP.getBrightest();
         }
@@ -2841,7 +2854,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     @Override
     public boolean isSelectHeld() {
-        return chordStepEditControls.isSelectHeld();
+        return chordStepMode.isSelectHeld();
     }
 
     @Override
@@ -2953,17 +2966,17 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     @Override
     public BooleanValueObject getDeleteHeld() {
-        return chordStepEditControls.deleteHeldValue();
+        return chordStepMode.deleteHeldValue();
     }
 
     @Override
     public boolean isCopyHeld() {
-        return chordStepEditControls.isCopyHeld();
+        return chordStepMode.isCopyHeld();
     }
 
     @Override
     public boolean isDeleteHeld() {
-        return chordStepEditControls.isDeleteHeld();
+        return chordStepMode.isDeleteHeld();
     }
 
     @Override
@@ -3263,30 +3276,19 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void refreshSelectedNoteClipState() {
-        final RgbLigthState defaultColor = oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
-        final SelectedClipSlotState state = SelectedClipSlotState.scan(noteClipSlotBank, defaultColor);
-        chordStepClipController.refresh(state);
+        chordStepMode.refreshSelectedClipState();
     }
 
     private void queueChordObservationResync() {
-        chordObservationRefresher.queueResync();
+        chordStepMode.queueObservationResync();
     }
 
     private void refreshChordStepObservation() {
-        chordObservationRefresher.refresh();
+        chordStepMode.refreshObservation();
     }
 
     private void refreshChordStepObservationPass() {
-        clearObservedChordCaches();
-        NoteClipCursorRefresher.refresh(
-                noteClipSlotBank,
-                driver.getViewControl().getSelectedClipSlotIndex(),
-                this::refreshSelectedNoteClipState,
-                chordStepClipController::slotIndex,
-                () -> noteStepClip.scrollToKey(0),
-                () -> observedNoteClip.scrollToKey(0),
-                () -> noteStepClip.scrollToStep(chordStepOffset()),
-                () -> observedNoteClip.scrollToStep(0));
+        chordStepMode.refreshObservationPass();
     }
     private void clearObservedChordCaches() {
         observedChordStepState.clear();
@@ -3327,13 +3329,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private boolean ensureSelectedNoteClip() {
-        refreshSelectedNoteClipState();
-        return chordStepClipController.ensureSelectedClip();
+        return chordStepMode.ensureSelectedClip();
     }
 
     private boolean ensureSelectedNoteClipSlot() {
-        refreshSelectedNoteClipState();
-        return chordStepClipController.ensureSelectedClipSlot();
+        return chordStepMode.ensureSelectedClipSlot();
     }
 
     private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
@@ -3490,7 +3490,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         chordStepPosition.setPage(0);
         patternButtons.setUpCallback(this::handlePatternUp, this::getPatternUpLight);
         patternButtons.setDownCallback(this::handlePatternDown, this::getPatternDownLight);
-        liveControls.activate();
+        notePlayMode.activate();
         liveModeControlLayer.activate();
         stepEncoderLayer.deactivate();
         applyLiveVelocity();
@@ -3503,8 +3503,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
         noteStepActive = false;
-        releaseHeldLiveNotes();
-        liveControls.deactivate();
+        notePlayMode.deactivate(this::releaseHeldLiveNotes);
         builderSelectedNotes.clear();
         heldStepPads.clear();
         heldStepAnchor = null;
