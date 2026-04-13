@@ -24,15 +24,19 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
-import com.oikoaudio.fire.note.NoteMode;
 import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
+import com.oikoaudio.fire.sequence.NoteClipAvailability;
+import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-import com.oikoaudio.fire.sequence.SeqClipHandler;
+import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
+import com.oikoaudio.fire.sequence.SelectedClipSlotState;
+import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
+import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.AccentLatchState;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
@@ -85,7 +89,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
-    private final SeqClipHandler clipHandler;
+    private final ClipRowHandler clipHandler;
     private final Set<Integer> auditioningPoolPitches = new HashSet<>();
     private final MotifGenerator motifGenerator = new MotifGenerator();
     private final CallResponseGenerator callResponseGenerator = new CallResponseGenerator();
@@ -184,7 +188,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             parameter.value().markInterested();
         }
         observeSelectedClip();
-        this.clipHandler = new SeqClipHandler(this);
+        this.clipHandler = new ClipRowHandler(this);
         bindPads();
         bindButtons();
         bindMainEncoder();
@@ -1907,87 +1911,44 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void observeSelectedClip() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            slot.exists().markInterested();
-            slot.isSelected().markInterested();
-            slot.hasContent().markInterested();
-            slot.color().markInterested();
-            slot.isPlaying().markInterested();
-            slot.isRecording().markInterested();
-            slot.exists().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.isSelected().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.hasContent().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.color().addValueObserver((r, g, b) -> refreshSelectedClipState());
-            slot.isPlaying().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.isRecording().addValueObserver(ignored -> refreshSelectedClipState());
-        }
-        refreshSelectedClipState();
+        SelectedClipSlotObserver.observe(clipSlotBank, true, true, this::refreshSelectedClipState);
     }
 
     private void refreshSelectedClipState() {
-        selectedClipSlotIndex = -1;
-        selectedClipColor = MelodicRenderer.ACTIVE_STEP;
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                selectedClipSlotIndex = i;
-                selectedClipColor = ColorLookup.getColor(slot.color().get());
-                break;
-            }
-        }
+        final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, MelodicRenderer.ACTIVE_STEP);
+        selectedClipSlotIndex = state.slotIndex();
+        selectedClipColor = state.color();
     }
 
     private boolean ensureClipAvailable() {
-        if (!cursorTrack.canHoldNoteData().get()) {
-            oled.valueInfo("Audio Track", "Use note track");
-            driver.notifyPopup("Audio Track", "Use note track");
+        refreshSelectedClipState();
+        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
+                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
+        if (failure != null) {
+            showClipAvailabilityFailure(failure);
             return false;
         }
-        refreshSelectedClipState();
-        if (selectedClipSlotIndex >= 0) {
-            refreshClipCursor();
-            return true;
-        }
-        oled.valueInfo("No Clip", "Select clip");
-        driver.notifyPopup("No Clip", "Select clip");
-        return false;
+        refreshClipCursor();
+        return true;
+    }
+
+    private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
+        oled.valueInfo(failure.title(), failure.oledDetail());
+        driver.notifyPopup(failure.title(), failure.popupDetail());
     }
 
     private void refreshClipCursor() {
-        refreshSelectedClipState();
-        boolean clipSelected = false;
-        final int preferredSlotIndex = driver.getViewControl().getSelectedClipSlotIndex();
-        if (preferredSlotIndex >= 0 && preferredSlotIndex < clipSlotBank.getSizeOfBank()) {
-            final ClipLauncherSlot preferredSlot = clipSlotBank.getItemAt(preferredSlotIndex);
-            if (preferredSlot.exists().get() && preferredSlot.isSelected().get()) {
-                clipSelected = true;
-            }
-        }
-        if (!clipSelected && selectedClipSlotIndex >= 0) {
-            clipSelected = true;
-        }
-        if (!clipSelected) {
-            clipSelected = selectPlayingClipSlot();
-        }
-        cursorClip.scrollToKey(0);
-        cursorClip.scrollToStep(0);
-    }
-
-    private boolean selectPlayingClipSlot() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && (slot.isPlaying().get() || slot.isRecording().get())) {
-                slot.select();
-                return true;
-            }
-        }
-        return false;
+        NoteClipCursorRefresher.refresh(
+                clipSlotBank,
+                driver.getViewControl().getSelectedClipSlotIndex(),
+                this::refreshSelectedClipState,
+                () -> selectedClipSlotIndex,
+                () -> cursorClip.scrollToKey(0),
+                () -> cursorClip.scrollToStep(0));
     }
     private MelodicPhraseContext phraseContext() {
-        final NoteMode noteMode = driver.getNoteMode();
-        return new MelodicPhraseContext(noteMode.getCurrentScale(), noteMode.getCurrentRootNoteClass(),
-                noteMode.getCurrentBaseMidiNote());
+        return new MelodicPhraseContext(driver.getSharedMusicalScale(), driver.getSharedRootNote(),
+                driver.getSharedBaseMidiNote());
     }
 
     private RgbLigthState getPadLight(final int padIndex) {

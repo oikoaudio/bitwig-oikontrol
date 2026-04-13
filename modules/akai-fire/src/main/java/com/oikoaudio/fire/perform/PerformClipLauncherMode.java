@@ -17,6 +17,7 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
@@ -48,6 +49,7 @@ public class PerformClipLauncherMode extends Layer {
     };
 
     private final AkaiFireOikontrolExtension driver;
+    private final SharedMusicalContext sharedMusicalContext;
     private final OledDisplay oled;
     private final TrackBank trackBank;
     private final CursorTrack cursorTrack;
@@ -84,6 +86,7 @@ public class PerformClipLauncherMode extends Layer {
     public PerformClipLauncherMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "PERFORM_CLIP_LAUNCHER");
         this.driver = driver;
+        this.sharedMusicalContext = driver.getSharedMusicalContext();
         final ControllerHost host = driver.getHost();
         this.oled = driver.getOled();
         this.trackBank = host.createTrackBank(TRACKS, 0, SCENES);
@@ -181,9 +184,9 @@ public class PerformClipLauncherMode extends Layer {
     private void showOverview() {
         oled.detailInfo("Settings",
                 "1: Root %s\n2: Scale %s\n3: Oct %d".formatted(
-                        com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()),
-                        driver.getSharedScaleDisplayName(),
-                        driver.getSharedOctave()));
+                        com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()),
+                        sharedMusicalContext.getScaleDisplayName(),
+                        sharedMusicalContext.getOctave()));
         oled.clearScreenDelayed();
     }
 
@@ -240,18 +243,18 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         if (encoderIndex == 0) {
-            driver.adjustSharedRootNote(inc);
-            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()));
+            sharedMusicalContext.adjustRootNote(inc);
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()));
             return;
         }
         if (encoderIndex == 1) {
-            driver.adjustSharedScaleIndex(inc, -1);
-            oled.valueInfo("Scale", driver.getSharedScaleDisplayName());
+            sharedMusicalContext.adjustScaleIndex(inc, -1);
+            oled.valueInfo("Scale", sharedMusicalContext.getScaleDisplayName());
             return;
         }
         if (encoderIndex == 2) {
-            driver.adjustSharedOctave(inc);
-            oled.valueInfo("Octave", Integer.toString(driver.getSharedOctave()));
+            sharedMusicalContext.adjustOctave(inc);
+            oled.valueInfo("Octave", Integer.toString(sharedMusicalContext.getOctave()));
             return;
         }
         showOverview();
@@ -263,15 +266,15 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         if (encoderIndex == 0) {
-            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(driver.getSharedRootNote()));
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()));
             return;
         }
         if (encoderIndex == 1) {
-            oled.valueInfo("Scale", driver.getSharedScaleDisplayName());
+            oled.valueInfo("Scale", sharedMusicalContext.getScaleDisplayName());
             return;
         }
         if (encoderIndex == 2) {
-            oled.valueInfo("Octave", Integer.toString(driver.getSharedOctave()));
+            oled.valueInfo("Octave", Integer.toString(sharedMusicalContext.getOctave()));
             return;
         }
         showOverview();

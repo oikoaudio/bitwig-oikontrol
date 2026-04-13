@@ -1,5 +1,9 @@
 package com.oikoaudio.fire.sequence;
 
+/**
+ * Tracks the press, hold, and toggle semantics for buttons that latch on release unless the gesture
+ * was consumed by some other edit action while held.
+ */
 public final class AccentLatchState {
     public enum Transition {
         PRESSED,

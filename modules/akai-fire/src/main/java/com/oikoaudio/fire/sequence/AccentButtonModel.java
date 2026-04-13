@@ -2,6 +2,10 @@ package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 
+/**
+ * Small model for the sequencer accent button.
+ * Owns the latch state and derives velocity, light feedback, and OLED label text from it.
+ */
 final class AccentButtonModel {
     private static final int ACCENTED_VELOCITY = 127;
 

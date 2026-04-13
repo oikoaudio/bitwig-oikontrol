@@ -16,7 +16,7 @@ import com.bitwig.extension.controller.api.*;
 import com.bitwig.extension.controller.api.NoteStep.State;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
-import com.bitwig.extensions.framework.values.StepViewPosition;
+import com.oikoaudio.fire.values.StepViewPosition;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,10 +56,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 //    private Clip cursorClipLauncher;
 
     private final StepViewPosition positionHandler;
-    private final ResolutionHander resolutionHandler;
-    private final SeqClipHandler clipHandler;
+    private final GridResolutionHandler resolutionHandler;
+    private final ClipRowHandler clipHandler;
     private final RecurrenceEditor recurrenceEditor;
-    private final PadHandler padHandler;
+    private final DrumPadHandler padHandler;
+    private final SequencerEditButtonBinder editButtonBinder;
 
     private final BooleanValueObject muteMode = new BooleanValueObject();
     private final BooleanValueObject soloMode = new BooleanValueObject();
@@ -116,7 +117,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         currentLayer = mainLayer;
         accentHandler = new AccentHandler(this);
-        resolutionHandler = new ResolutionHander(this);
+        resolutionHandler = new GridResolutionHandler(this);
 
         cursorTrack = driver.getViewControl().getCursorTrack();
         cursorTrack.name().markInterested();
@@ -142,10 +143,27 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
 
-        padHandler = new PadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
-        clipHandler = new SeqClipHandler(this);
+        padHandler = new DrumPadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
+        clipHandler = new ClipRowHandler(this);
         clipHandler.bindClipRow(mainLayer, driver.getRgbButtons());
         recurrenceEditor = new RecurrenceEditor(driver, this);
+        editButtonBinder = new SequencerEditButtonBinder(mainLayer, shiftActive, new SequencerEditButtonBinder.EditFunctionFeedback() {
+            @Override
+            public void activate(final FunctionInfo info, final boolean shiftHeld) {
+                if (padHandler.notePlayingEnabled()) {
+                    padHandler.disableNotePlaying();
+                }
+                oled.valueInfo(info.getName(shiftHeld), info.getDetail());
+            }
+
+            @Override
+            public void deactivate() {
+                oled.clearScreenDelayed();
+                if (padHandler.notePlayingEnabled()) {
+                    padHandler.applyScale();
+                }
+            }
+        });
 
         initSequenceSection(driver);
         initModeButtons(driver);
@@ -177,7 +195,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         final TouchEncoder mainEncoder = driver.getMainEncoder();
         mainEncoder.setStepSize(0.4);
         mainEncoder.bindEncoder(mainLayer, this::handleMainEncoder);
-        mainEncoder.bindTouched(mainLayer, this::handeMainEncoderPress);
+        mainEncoder.bindTouched(mainLayer, this::handleMainEncoderPress);
     }
 
 
@@ -203,12 +221,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void initModeButtons(final AkaiFireOikontrolExtension driver) {
         final MultiStateHardwareLight[] stateLights = driver.getStateLights();
-        bindEditButton(driver.getButton(NoteAssign.MUTE_1), "Select", selectHeld, stateLights[0], muteMode,
+        editButtonBinder.bind(driver.getButton(NoteAssign.MUTE_1), selectHeld, stateLights[0], muteMode,
                 muteActionsTaken);
-        bindEditButton(driver.getButton(NoteAssign.MUTE_2), "Last Step", fixedLengthHeld, stateLights[1], soloMode,
+        editButtonBinder.bind(driver.getButton(NoteAssign.MUTE_2), fixedLengthHeld, stateLights[1], soloMode,
                 soloActionsTaken);
-        bindEditButton(driver.getButton(NoteAssign.MUTE_3), "Copy", copyHeld, stateLights[2], null, null);
-        bindEditButton(driver.getButton(NoteAssign.MUTE_4), "Delete/Reset", deleteHeld, stateLights[3], null, null);
+        editButtonBinder.bind(driver.getButton(NoteAssign.MUTE_3), copyHeld, stateLights[2], null, null);
+        editButtonBinder.bind(driver.getButton(NoteAssign.MUTE_4), deleteHeld, stateLights[3], null, null);
         final BiColorButton deleteButton = driver.getButton(NoteAssign.MUTE_4);
         deleteButton.bind(mainLayer, deleteHeld, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
     }
@@ -284,7 +302,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         heldStepFineStarts.remove(index);
                         return;
                     }
-                    cursorClip.setStep(index, 0, accentHandler.getCurrenVel(),
+                    cursorClip.setStep(index, 0, accentHandler.getCurrentVelocity(),
                             positionHandler.getGridResolution() * gatePercent);
                     addedSteps.add(index);
                     heldStepFineStarts.put(index, coarseLower(index));
@@ -623,7 +641,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         defaultVelocity = nextValue;
-        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrenVel());
+        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrentVelocity());
         oled.paramInfo("Velocity", defaultVelocity, "Drum Default", 1, accentHandler.getAccentedVelocity() - 1);
     }
 
@@ -653,7 +671,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void resetDefaultVelocity() {
         defaultVelocity = 100;
-        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrenVel());
+        noteRepeatHandler.setNoteInputVelocity(accentHandler.getCurrentVelocity());
     }
 
     private void resetDefaultPressure() {
@@ -749,7 +767,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         gestureConsumedSteps.add(index);
     }
 
-    private void handeMainEncoderPress(final boolean press) {
+    private void handleMainEncoderPress(final boolean press) {
         if (driver.isPopupBrowserActive()) {
             driver.routeBrowserMainEncoderPress(press);
             return;
@@ -1013,87 +1031,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         }
         return accentPattern;
     }
-    private void bindEditButton(final BiColorButton button, final String name, final BooleanValueObject value,
-                                final MultiStateHardwareLight stateLight, final BooleanValueObject altValue,
-                                final BooleanValueObject altActionHappenedFlag) {
-        if (altValue == null) {
-            final FunctionInfo info1 = FunctionInfo.INFO1.get(button.getNoteAssign());
-            button.bind(mainLayer, value, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
-            mainLayer.bindLightState(() -> BiColorLightState.AMBER_HALF, stateLight);
-            value.addValueObserver(active -> handleEditValueChanged(button, active, info1));
-            mainLayer.bindLightState(
-                    () -> button.isPressed() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF, stateLight);
-        } else {
-            final BooleanValueObject alternateFunctionActive = new BooleanValueObject();
-            final FunctionInfo info1 = FunctionInfo.INFO1.get(button.getNoteAssign());
-            value.addValueObserver(active -> handleEditValueChanged(button, active, info1));
-            final FunctionInfo info2 = FunctionInfo.INFO2.get(button.getNoteAssign());
-            altValue.addValueObserver(active -> handleEditValueChanged(button, active, info2));
-            button.bindPressed(mainLayer,
-                    pressed -> handleModeButtonWithAlternatePressed(value, altValue, alternateFunctionActive,
-                            altActionHappenedFlag, info1, info2, pressed),  //
-                    () -> button.isPressed() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
-            mainLayer.bindLightState(() -> {
-                final boolean active = button.isPressed() && !getShiftActive().get();
-                if (alternateFunctionActive.get()) {
-                    return active ? BiColorLightState.RED_FULL : BiColorLightState.RED_HALF;
-                }
-                return active ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
-            }, stateLight);
-        }
-    }
-
-    private void handleModeButtonWithAlternatePressed(final BooleanValueObject mainValue,
-                                                      final BooleanValueObject altValue,
-                                                      final BooleanValueObject alternateFunctionActive,
-                                                      final BooleanValueObject actionTakenFlag,
-                                                      final FunctionInfo info1, final FunctionInfo info2,
-                                                      final Boolean pressed) {
-        if (pressed) {
-            if (getShiftActive().get()) {
-                alternateFunctionActive.set(!alternateFunctionActive.get());
-            } else {
-                alternateFunctionActive.set(false);
-            }
-            boolean isAlternateFunctionActive = alternateFunctionActive.get();
-
-            mainValue.set(!alternateFunctionActive.get());
-            altValue.set(alternateFunctionActive.get());
-
-            actionTakenFlag.set(true);
-            oled.valueInfo(
-                    isAlternateFunctionActive ? info2.getName(false) : info1.getName(false),
-                    isAlternateFunctionActive ? info2.getDetail() : info1.getDetail()
-            );
-        }
-
-        if (!pressed) {
-            mainValue.set(false);
-            if (!alternateFunctionActive.get()) {
-                altValue.set(false);
-            }
-
-            actionTakenFlag.set(false);
-            oled.clearScreenDelayed();
-        }
-    }
-
     public String getPadInfo() {
         return padHandler.getPadInfo();
-    }
-
-    private void handleEditValueChanged(final BiColorButton button, final boolean active, final FunctionInfo info) {
-        if (active) {
-            if (padHandler.notePlayingEnabled()) {
-                padHandler.disableNotePlaying();
-            }
-            oled.valueInfo(info.getName(shiftActive.get()), info.getDetail());
-        } else {
-            oled.clearScreenDelayed();
-            if (padHandler.notePlayingEnabled()) {
-                padHandler.applyScale();
-            }
-        }
     }
 
     @Override
@@ -1322,7 +1261,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return accentHandler;
     }
 
-    public PadHandler getPadHandler() {
+    public DrumPadHandler getDrumPadHandler() {
         return padHandler;
     }
 
@@ -1337,27 +1276,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void observeSelectedClip() {
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            slot.exists().markInterested();
-            slot.hasContent().markInterested();
-            slot.isSelected().markInterested();
-            slot.exists().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.hasContent().addValueObserver(ignored -> refreshSelectedClipState());
-            slot.isSelected().addValueObserver(ignored -> refreshSelectedClipState());
-        }
-        refreshSelectedClipState();
+        SelectedClipSlotObserver.observe(clipSlotBank, false, false, this::refreshSelectedClipState);
     }
 
     private void refreshSelectedClipState() {
-        selectedClipHasContent = false;
-        for (int i = 0; i < clipSlotBank.getSizeOfBank(); i++) {
-            final ClipLauncherSlot slot = clipSlotBank.getItemAt(i);
-            if (slot.exists().get() && slot.isSelected().get()) {
-                selectedClipHasContent = slot.hasContent().get();
-                return;
-            }
-        }
+        selectedClipHasContent = SelectedClipSlotState.scan(clipSlotBank, null).hasContent();
     }
 
     private boolean ensureSelectedClip() {

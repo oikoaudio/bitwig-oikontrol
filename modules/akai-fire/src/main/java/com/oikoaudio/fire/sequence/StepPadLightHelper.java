@@ -2,6 +2,11 @@ package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 
+/**
+ * Shared pad-light rendering for step rows.
+ * Encapsulates the visual policy for empty steps, occupied steps, accent emphasis, and playhead
+ * highlighting so the modes do not duplicate RGB decisions.
+ */
 public final class StepPadLightHelper {
     private static final int PLAYHEAD_WHITE_FLOOR = 96;
 
@@ -13,6 +18,10 @@ public final class StepPadLightHelper {
             return RgbLigthState.WHITE;
         }
         return (stepIndex / 4) % 2 == 0 ? RgbLigthState.GRAY_1 : RgbLigthState.GRAY_2;
+    }
+
+    public static boolean isStepWithinVisibleLoop(final int stepIndex, final int visibleLoopSteps) {
+        return stepIndex >= 0 && stepIndex < visibleLoopSteps;
     }
 
     public static RgbLigthState renderOccupiedStep(final RgbLigthState base, final boolean accented,
