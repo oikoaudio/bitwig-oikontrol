@@ -1,8 +1,8 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extension.controller.api.BooleanValue;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
+import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,18 +68,10 @@ class ClipSlotSelectionResolverTest {
                                          final boolean selected,
                                          final boolean existsValue) {
         final ClipLauncherSlot slot = mock(ClipLauncherSlot.class);
-        final BooleanValue isPlaying = mock(BooleanValue.class);
-        final BooleanValue isRecording = mock(BooleanValue.class);
-        final BooleanValue isSelected = mock(BooleanValue.class);
-        final BooleanValue exists = mock(BooleanValue.class);
-        when(isPlaying.get()).thenReturn(playing);
-        when(isRecording.get()).thenReturn(recording);
-        when(isSelected.get()).thenReturn(selected);
-        when(exists.get()).thenReturn(existsValue);
-        when(slot.isPlaying()).thenReturn(isPlaying);
-        when(slot.isRecording()).thenReturn(isRecording);
-        when(slot.isSelected()).thenReturn(isSelected);
-        when(slot.exists()).thenReturn(exists);
+        when(slot.isPlaying()).thenReturn(new BooleanValueStub(playing).value());
+        when(slot.isRecording()).thenReturn(new BooleanValueStub(recording).value());
+        when(slot.isSelected()).thenReturn(new BooleanValueStub(selected).value());
+        when(slot.exists()).thenReturn(new BooleanValueStub(existsValue).value());
         return slot;
     }
 }
