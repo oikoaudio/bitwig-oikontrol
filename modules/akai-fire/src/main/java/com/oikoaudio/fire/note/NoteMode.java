@@ -135,8 +135,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final NoteRepeatHandler noteRepeatHandler;
     private final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
     private final Integer[] noteTranslationTable = new Integer[128];
-    private final Set<Integer> heldPads = new HashSet<>();
-    private final Map<Integer, LivePadNote> soundingLiveNotesByPad = new HashMap<>();
     private final Set<Integer> heldStepPads = new HashSet<>();
     private final Set<Integer> addedStepPads = new HashSet<>();
     private final Set<Integer> modifiedStepPads = new HashSet<>();
@@ -157,6 +155,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final ChordStepSelectedClipState chordStepSelectedClipState = new ChordStepSelectedClipState();
     private final ChordStepObservationRefresher chordObservationRefresher;
     private final NoteLivePerformanceControls livePerformanceControls;
+    private final NoteLivePadPerformer livePadPerformer;
     private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip noteStepClip;
@@ -273,9 +272,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         }
     }
 
-    private record LivePadNote(int midiNote, int velocity) {
-    }
-
     public NoteMode(final AkaiFireOikontrolExtension driver, final NoteRepeatHandler noteRepeatHandler) {
         super(driver.getLayers(), "NOTE_MODE_LAYER");
         this.driver = driver;
@@ -321,6 +317,20 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 noteRepeatHandler::toggleActive,
                 () -> noteRepeatHandler.getNoteRepeatActive().get(),
                 oled::valueInfo);
+        this.livePadPerformer = new NoteLivePadPerformer(
+                new NoteLivePadPerformer.MidiOut() {
+                    @Override
+                    public void noteOn(final int midiNote, final int velocity) {
+                        noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, velocity);
+                    }
+
+                    @Override
+                    public void noteOff(final int midiNote) {
+                        noteInput.sendRawMidiEvent(Midi.NOTE_OFF, midiNote, 0);
+                    }
+                },
+                this::getLivePadMidiNote,
+                this::resolveLivePadVelocity);
         observeSelectedNoteClip();
         this.clipHandler = new ClipRowHandler(this);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
@@ -811,13 +821,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void handleLivePadPress(final int padIndex, final boolean pressed, final int velocity) {
-        if (pressed) {
-            heldPads.add(padIndex);
-            triggerLivePadNoteOn(padIndex, velocity);
-        } else {
-            heldPads.remove(padIndex);
-            triggerLivePadNoteOff(padIndex);
-        }
+        livePadPerformer.handlePadPress(padIndex, pressed, velocity, liveVelocity);
     }
 
     private void handleOikordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
@@ -2271,46 +2275,15 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void releaseHeldLiveNotes() {
-        for (final int padIndex : new ArrayList<>(soundingLiveNotesByPad.keySet())) {
-            triggerLivePadNoteOff(padIndex);
-        }
-        soundingLiveNotesByPad.clear();
-        heldPads.clear();
+        livePadPerformer.releaseHeldNotes();
         stopAuditionNotes();
     }
 
     private void retuneLivePads(final Runnable stateChange) {
-        final Map<Integer, LivePadNote> heldNotes = new HashMap<>(soundingLiveNotesByPad);
-        heldNotes.keySet().forEach(this::triggerLivePadNoteOff);
-        stateChange.run();
-        applyLayout();
-        heldNotes.keySet().stream()
-                .filter(heldPads::contains)
-                .sorted()
-                .forEach(padIndex -> triggerLivePadNoteOn(padIndex, heldNotes.get(padIndex).velocity()));
-    }
-
-    private void triggerLivePadNoteOn(final int padIndex) {
-        triggerLivePadNoteOn(padIndex, resolveLivePadVelocity(liveVelocity, 127));
-    }
-
-    private void triggerLivePadNoteOn(final int padIndex, final int rawVelocity) {
-        triggerLivePadNoteOff(padIndex);
-        final int midiNote = getLivePadMidiNote(padIndex);
-        if (midiNote < 0) {
-            return;
-        }
-        final int appliedVelocity = resolveLivePadVelocity(liveVelocity, rawVelocity);
-        noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, appliedVelocity);
-        soundingLiveNotesByPad.put(padIndex, new LivePadNote(midiNote, appliedVelocity));
-    }
-
-    private void triggerLivePadNoteOff(final int padIndex) {
-        final LivePadNote activeNote = soundingLiveNotesByPad.remove(padIndex);
-        if (activeNote == null) {
-            return;
-        }
-        noteInput.sendRawMidiEvent(Midi.NOTE_OFF, activeNote.midiNote(), 0);
+        livePadPerformer.retuneHeldPads(() -> {
+            stateChange.run();
+            applyLayout();
+        }, liveVelocity);
     }
 
     private int getLivePadMidiNote(final int padIndex) {
@@ -2362,7 +2335,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 case UNAVAILABLE -> RgbLigthState.OFF;
             };
         }
-        return heldPads.contains(padIndex) ? base.getBrightest() : base;
+        return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
     }
 
     private RgbLigthState getOikordStepPadLight(final int padIndex) {
@@ -2798,7 +2771,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 case UNAVAILABLE -> RgbLigthState.OFF;
             };
         }
-        return heldPads.contains(padIndex) ? base.getBrightest() : base;
+        return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
     }
 
     private void showOikordOctaveInfo() {
@@ -2936,7 +2909,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void clearTranslation() {
-        heldPads.clear();
+        livePadPerformer.releaseHeldNotes();
         heldStepAnchor = null;
         for (int i = 0; i < noteTranslationTable.length; i++) {
             noteTranslationTable[i] = -1;
