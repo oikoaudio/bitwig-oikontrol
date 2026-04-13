@@ -175,7 +175,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
-    private final BooleanValueObject invertHeld = new BooleanValueObject();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
@@ -736,10 +735,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private void handleMute4Button(final boolean pressed) {
         if (isChordStepModeActive()) {
             if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    invertCurrentChord(driver.isGlobalShiftHeld() ? -1 : 1);
-                    return;
-                }
                 deleteHeld.set(true);
                 oled.valueInfo("Delete", "Clip / step target");
             } else {
@@ -773,9 +768,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private BiColorLightState getMute4LightState() {
         if (isChordStepModeActive()) {
-            return driver.isGlobalAltHeld()
-                    ? BiColorLightState.RED_HALF
-                    : (deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF);
+            return deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
         }
         return BiColorLightState.OFF;
     }
@@ -887,10 +880,6 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
             return;
         }
         if (pressed) {
-            if (invertHeld.get()) {
-                modifierHandledStepPads.add(stepIndex);
-                return;
-            }
             if (selectHeld.get()) {
                 if (isBuilderFamily()) {
                     loadBuilderFromStep(stepIndex);
@@ -1214,32 +1203,13 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
         selectedOikordFamily = BUILDER_FAMILY_INDEX;
         oikordPage = 0;
         selectedOikordSlot = 0;
-        final int[] inverted = rotateChordInversion(currentNotes, direction);
+        final int[] inverted = ChordInversion.rotate(currentNotes, direction);
         builderSelectedNotes.clear();
         for (final int midiNote : inverted) {
             builderSelectedNotes.add(midiNote);
         }
         applyBuilderToHeldSteps();
         oled.valueInfo("Invert", direction > 0 ? "Up" : "Down");
-    }
-
-    private int[] rotateChordInversion(final int[] notes, final int direction) {
-        final int[] sorted = java.util.Arrays.stream(notes).sorted().toArray();
-        if (sorted.length <= 1) {
-            return sorted;
-        }
-        final int[] rotated = java.util.Arrays.copyOf(sorted, sorted.length);
-        if (direction >= 0) {
-            final int first = rotated[0];
-            System.arraycopy(rotated, 1, rotated, 0, rotated.length - 1);
-            rotated[rotated.length - 1] = first + 12;
-        } else {
-            final int last = rotated[rotated.length - 1];
-            System.arraycopy(rotated, 0, rotated, 1, rotated.length - 1);
-            rotated[0] = last - 12;
-        }
-        java.util.Arrays.sort(rotated);
-        return rotated;
     }
 
     private void nudgeHeldNotes(final int amount, final Set<Integer> targetSteps,
@@ -3293,7 +3263,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private EncoderBankLayout createStepEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Octave/Root\n2: Velocity\n3: Chord Family\n4: Interpret",
+                "1: Octave/Root\n2: Velocity\n3: Chord Family\n4: Interpret/Invert",
                 new EncoderSlotBinding[]{
                         oikordPitchContextSlot(),
                         chordBuildVelocitySlot(),
@@ -3735,7 +3705,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                         if (driver.isGlobalShiftHeld()) {
                             adjustOikordSharedScale(inc);
                         } else if (driver.isGlobalAltHeld()) {
-                            adjustOikordRoot(inc);
+                            invertCurrentChord(inc > 0 ? 1 : -1);
                         } else {
                             adjustOikordInterpretation(inc);
                         }
@@ -3750,7 +3720,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                         }
                         if (driver.isGlobalAltHeld()) {
                             handler.beginTouchReset(slotIndex, () -> { });
-                            showOikordRootInfo();
+                            oled.valueInfo("Invert", "Turn encoder");
                             return;
                         }
                         handler.beginTouchReset(slotIndex, () -> {
