@@ -21,6 +21,12 @@ public final class SelectedClipSlotState {
         this.color = color;
     }
 
+    public static SelectedClipSlotState fromValues(final int slotIndex,
+                                                   final boolean hasContent,
+                                                   final RgbLigthState color) {
+        return new SelectedClipSlotState(slotIndex, hasContent, color);
+    }
+
     public static SelectedClipSlotState scan(final ClipLauncherSlotBank slotBank, final RgbLigthState defaultColor) {
         for (int i = 0; i < slotBank.getSizeOfBank(); i++) {
             final ClipLauncherSlot slot = slotBank.getItemAt(i);

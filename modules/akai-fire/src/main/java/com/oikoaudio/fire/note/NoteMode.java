@@ -154,6 +154,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
+    private final ChordStepSelectedClipState chordStepSelectedClipState = new ChordStepSelectedClipState();
     private final ChordStepObservationRefresher chordObservationRefresher;
     private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
@@ -206,14 +207,11 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     private Layer currentLiveEncoderLayer;
     private boolean sustainActive = false;
     private boolean sostenutoActive = false;
-    private boolean selectedNoteClipHasContent = false;
-    private int selectedNoteClipSlotIndex = -1;
     private boolean pendingBankFineMove = false;
     private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
     private int bankMoveGeneration = 0;
     private RgbLigthState oikordStepBaseColor = OCCUPIED_STEP;
-    private RgbLigthState selectedNoteClipColor = OCCUPIED_STEP;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator liveScaleEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
@@ -2434,8 +2432,8 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private RgbLigthState getOikordOccupiedStepColor() {
-        if (selectedNoteClipColor != null) {
-            return selectedNoteClipColor;
+        if (chordStepSelectedClipState.color() != null) {
+            return chordStepSelectedClipState.color();
         }
         return oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
     }
@@ -3423,14 +3421,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private void refreshSelectedNoteClipState() {
-        final int previousSlotIndex = selectedNoteClipSlotIndex;
-        final boolean previousHasContent = selectedNoteClipHasContent;
         final RgbLigthState defaultColor = oikordStepBaseColor != null ? oikordStepBaseColor : OCCUPIED_STEP;
         final SelectedClipSlotState state = SelectedClipSlotState.scan(noteClipSlotBank, defaultColor);
-        selectedNoteClipSlotIndex = state.slotIndex();
-        selectedNoteClipHasContent = state.hasContent();
-        selectedNoteClipColor = state.color();
-        if (previousSlotIndex != selectedNoteClipSlotIndex || previousHasContent != selectedNoteClipHasContent) {
+        if (chordStepSelectedClipState.refresh(state)) {
             queueChordObservationResync();
         }
     }
@@ -3449,7 +3442,7 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
                 noteClipSlotBank,
                 driver.getViewControl().getSelectedClipSlotIndex(),
                 this::refreshSelectedNoteClipState,
-                () -> selectedNoteClipSlotIndex,
+                chordStepSelectedClipState::slotIndex,
                 () -> noteStepClip.scrollToKey(0),
                 () -> observedNoteClip.scrollToKey(0),
                 () -> noteStepClip.scrollToStep(chordStepOffset()),
@@ -3494,11 +3487,9 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
     }
 
     private boolean ensureSelectedNoteClip() {
-        if (!ensureSelectedNoteClipSlot()) {
-            return false;
-        }
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireClipContent(
-                selectedNoteClipHasContent || hasLoadedNoteClipContent());
+        refreshSelectedNoteClipState();
+        final NoteClipAvailability.Failure failure =
+                chordStepSelectedClipState.requireClip(cursorTrack.canHoldNoteData().get(), hasLoadedNoteClipContent());
         if (failure != null) {
             showClipAvailabilityFailure(failure);
             return false;
@@ -3508,8 +3499,8 @@ public class NoteMode extends Layer implements StepSequencerHost, SeqClipRowHost
 
     private boolean ensureSelectedNoteClipSlot() {
         refreshSelectedNoteClipState();
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
-                cursorTrack.canHoldNoteData().get(), selectedNoteClipSlotIndex >= 0);
+        final NoteClipAvailability.Failure failure =
+                chordStepSelectedClipState.requireSelectedClipSlot(cursorTrack.canHoldNoteData().get());
         if (failure != null) {
             showClipAvailabilityFailure(failure);
             return false;
