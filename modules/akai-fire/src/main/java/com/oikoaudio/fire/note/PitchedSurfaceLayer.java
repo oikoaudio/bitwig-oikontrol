@@ -115,6 +115,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final int DEFAULT_LIVE_PITCH_EXPRESSION = 64;
     private static final int LIVE_PITCH_BEND_RETURN_STEP = 6;
     private static final long LIVE_PITCH_BEND_RETURN_DELAY_MS = 15L;
+    private static final long LIVE_PITCH_BEND_INACTIVITY_RETURN_MS = 120L;
     private static final int MIDI_CC_MOD = 1;
     private static final int MIDI_CC_SUSTAIN = 64;
     private static final int MIDI_CC_SOSTENUTO = 66;
@@ -211,6 +212,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private int livePitchBend = DEFAULT_LIVE_PITCH_BEND;
     private boolean livePitchBendTouched = false;
     private int livePitchBendReturnGeneration = 0;
+    private int livePitchBendInactivityGeneration = 0;
     private boolean pendingBankFineMove = false;
     private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
@@ -677,6 +679,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         livePitchBend = next;
         liveExpressionControls.setTransientPitchBendValue(livePitchBend);
         oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+        armLivePitchBendInactivityReturn();
     }
 
     private void adjustLivePitchExpression(final int inc) {
@@ -758,6 +761,17 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
 
     private void cancelLivePitchBendReturn() {
         livePitchBendReturnGeneration++;
+    }
+
+    private void armLivePitchBendInactivityReturn() {
+        final int generation = ++livePitchBendInactivityGeneration;
+        driver.getHost().scheduleTask(() -> {
+            if (generation != livePitchBendInactivityGeneration || livePitchBendTouched
+                    || livePitchBend == DEFAULT_LIVE_PITCH_BEND) {
+                return;
+            }
+            scheduleLivePitchBendReturn();
+        }, LIVE_PITCH_BEND_INACTIVITY_RETURN_MS);
     }
 
     private int getLivePitchOffset() {
