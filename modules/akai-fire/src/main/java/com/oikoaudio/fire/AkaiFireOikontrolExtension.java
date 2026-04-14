@@ -858,10 +858,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private int resolveDefaultSharedScaleIndex() {
         return switch (getDefaultScalePreference()) {
-            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Ionan (Major)", 1);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Aeolian (Minor)", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Major", 1);
+            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Minor", 2);
             case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR -> findScaleIndex("Harmonic Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Melodic Minor (ascending)", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Jazz Minor", 2);
             case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
             case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
             case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);

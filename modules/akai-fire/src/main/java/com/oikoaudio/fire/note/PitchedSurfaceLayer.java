@@ -2728,25 +2728,32 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
             return "Piano";
         }
         return switch (getScale().getName()) {
-            case "Ionan (Major)" -> "Major";
-            case "Aeolian (Minor)" -> "Minor";
+            case "Major" -> "Major";
+            case "Minor" -> "Minor";
             case "Phrygian Dominant" -> "Phryg Dom";
-            case "Double Harmonic" -> "Dbl Harm";
+            case "Double Harmonic Major" -> "DH Maj";
+            case "Double Harmonic Minor" -> "DH Min";
+            case "Harmonic Major" -> "Harm Maj";
             case "Harmonic Minor" -> "Harm Min";
-            case "Melodic Minor (ascending)" -> "Mel Min";
+            case "Jazz Minor" -> "Jazz Min";
+            case "Overtone Scale" -> "Overtone";
             case "Hungarian Minor" -> "Hung Min";
             case "Ukranian Dorian" -> "Ukr Dor";
             case "Super Locrian" -> "Sup Loc";
-            case "Half-Whole Diminished" -> "Half-Whole";
+            case "Half-diminished" -> "Half Dim";
+            case "Diminished WH" -> "Dim WH";
+            case "Diminished HW" -> "Dim HW";
             case "Major Pentatonic" -> "Maj Pent";
             case "Minor Pentatonic" -> "Min Pent";
-            case "Major Blues" -> "Maj Blues";
+            case "Blues Major" -> "Bl Maj";
+            case "Blues Minor" -> "Bl Min";
             case "Whole Tone" -> "Whole";
-            case "Whole Half" -> "WholeHalf";
-            case "BeBop Major" -> "Bebop Maj";
-            case "BeBop Dorian" -> "Bebop Dor";
-            case "BeBop Mixolydian" -> "Bebop Mix";
-            case "BeBop Minor" -> "Bebop Min";
+            case "Major Triad" -> "Maj Tri";
+            case "Minor Triad" -> "Min Tri";
+            case "Bebop Major" -> "Bebop Maj";
+            case "Bebop Dorian" -> "Bebop Dor";
+            case "Bebop Mixolydian" -> "Bebop Mix";
+            case "Bebop Minor" -> "Bebop Min";
             default -> getScale().getName();
         };
     }
