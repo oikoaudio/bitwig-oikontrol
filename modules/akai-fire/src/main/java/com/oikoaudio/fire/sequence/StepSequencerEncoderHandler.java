@@ -8,6 +8,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -108,13 +109,16 @@ public class StepSequencerEncoderHandler extends Layer {
         // No alternate page variants in the shared step-page model.
 	}
 
-	public void bindNoteAccess(final Layer layer, final TouchEncoder encoder, final int slotIndex,
+    public void bindNoteAccess(final Layer layer, final TouchEncoder encoder, final int slotIndex,
                                final NoteStepAccess access) {
         final EncoderStepAccumulator accumulator = access.getStepThreshold() > 1
                 ? new EncoderStepAccumulator(access.getStepThreshold())
                 : null;
+        final ContinuousEncoderScaler scaler = accumulator == null ? new ContinuousEncoderScaler() : null;
 		encoder.bindEncoder(layer, inc -> {
-            final int effectiveInc = accumulator != null ? accumulator.consume(inc) : inc;
+            final int effectiveInc = accumulator != null
+                    ? accumulator.consume(inc)
+                    : scaler.scale(inc, driver.isGlobalShiftHeld());
             if (effectiveInc != 0) {
                 recordTouchAdjustment(slotIndex, Math.abs(effectiveInc));
                 handleMod(effectiveInc, access);
@@ -123,6 +127,9 @@ public class StepSequencerEncoderHandler extends Layer {
 		encoder.bindTouched(layer, touched -> {
             if (!touched && accumulator != null) {
                 accumulator.reset();
+            }
+            if (!touched && scaler != null) {
+                scaler.reset();
             }
             handleTouch(slotIndex, touched, access);
         });

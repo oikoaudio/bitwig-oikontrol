@@ -502,7 +502,9 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
             final Parameter parameter = liveRemoteControlsPage.getParameter(index);
-            encoders[i].bindEncoder(liveUser2Layer, inc -> adjustMixerParameter(parameter, parameter.name().get(), inc));
+            encoders[i].bindContinuousEncoder(liveUser2Layer, driver::isGlobalShiftHeld,
+                    com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG,
+                    inc -> adjustMixerParameter(parameter, parameter.name().get(), inc));
             encoders[i].bindTouched(liveUser2Layer, touched -> {
                 if (touched) {
                     oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
@@ -533,7 +535,9 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 case 2 -> "Send 1";
                 default -> "Send 2";
             };
-            encoders[i].bindEncoder(liveMixerLayer, inc -> adjustMixerParameter(parameter, fallbackLabel, inc));
+            encoders[i].bindContinuousEncoder(liveMixerLayer, driver::isGlobalShiftHeld,
+                    com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG,
+                    inc -> adjustMixerParameter(parameter, fallbackLabel, inc));
             encoders[i].bindTouched(liveMixerLayer, touched -> {
                 if (touched) {
                     oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
@@ -547,7 +551,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private void bindLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final String label,
                                      final java.util.function.IntConsumer adjuster,
                                      final java.util.function.IntSupplier valueSupplier) {
-        encoder.bindEncoder(layer, adjuster::accept);
+        encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
+                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.GENTLE, adjuster::accept);
         encoder.bindTouched(layer, touched -> liveControls.handleExpressionTouch(touched, label,
                 Integer.toString(valueSupplier.getAsInt())));
     }
@@ -556,7 +561,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                                                final String label, final java.util.function.IntConsumer adjuster,
                                                final java.util.function.Supplier<String> valueSupplier,
                                                final Runnable resetAction) {
-        encoder.bindEncoder(layer, inc -> {
+        encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
+                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.GENTLE, inc -> {
             if (inc == 0) {
                 return;
             }
@@ -3253,7 +3259,9 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 parameter.name().markInterested();
                 parameter.displayedValue().markInterested();
                 parameter.value().markInterested();
-                encoder.bindEncoder(layer, inc -> adjustMixerParameter(parameter, label, inc));
+                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
+                        com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG,
+                        inc -> adjustMixerParameter(parameter, label, inc));
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         oled.valueInfo(label, parameter.displayedValue().get());

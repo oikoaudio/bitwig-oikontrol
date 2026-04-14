@@ -1367,7 +1367,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             @Override
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
+                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
                     if (padHandler.adjustMixerParameter(index, inc)) {
                         padHandler.showMixerDisplay(index, name);
                     } else {

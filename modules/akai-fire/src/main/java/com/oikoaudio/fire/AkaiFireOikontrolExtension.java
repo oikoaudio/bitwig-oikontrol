@@ -704,15 +704,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (modeState.activeMode() == Mode.PERFORM) {
             final boolean leavingSettings = performMode.isSettingsMode();
-            performMode.exitOverview();
             if (leavingSettings) {
-                notifyAction("Mode", "Perform");
+                performMode.exitOverview();
+                notifyAction("Mode", performMode.modeLabel());
+            } else {
+                performMode.toggleOrientation();
+                notifyAction("Mode", performMode.modeLabel());
             }
             return;
         }
         modeState.activatePerform();
         switchActiveMode();
-        notifyAction("Mode", "Perform");
+        notifyAction("Mode", performMode.modeLabel());
     }
 
     private void togglePlay(final boolean pressed) {

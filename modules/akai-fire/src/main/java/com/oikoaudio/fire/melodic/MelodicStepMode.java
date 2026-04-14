@@ -20,6 +20,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -32,6 +33,7 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
+import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
@@ -67,8 +69,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private static final int MAX_CLIP_LENGTH_BEATS = (int) (STEP_COUNT * STEP_LENGTH);
     private static final int DEFAULT_VELOCITY = 96;
     private static final double DEFAULT_GATE = 0.8;
-    private static final int ENGINE_ENCODER_THRESHOLD = 3;
-    private static final int MUTATION_MODE_ENCODER_THRESHOLD = 3;
+    private static final int ENGINE_ENCODER_THRESHOLD = 5;
+    private static final int MUTATION_MODE_ENCODER_THRESHOLD = 5;
     private static final int AUDITION_VELOCITY = 96;
 
     private final AkaiFireOikontrolExtension driver;
@@ -2160,18 +2162,19 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         banks.put(EncoderMode.MIXER, new EncoderBank(
                 "1: Length\n2: Mirror\n3: Reverse\n4: Invert",
                 new EncoderSlotBinding[]{
-                        actionSlot("Length", this::adjustLengthProcess),
-                        actionSlot("Mirror", this::adjustMirrorProcess),
-                        actionSlot("Reverse", this::adjustReverseProcess),
-                        actionSlot("Invert", this::adjustInvertProcess)
+                        alternateActionSlot("Length", this::adjustLengthProcess, this::channelShapeLabel, this::adjustChannelShape),
+                        alternateActionSlot("Mirror", this::adjustMirrorProcess, () -> "Tension", this::adjustTension),
+                        alternateActionSlot("Reverse", this::adjustReverseProcess, () -> "Legato", this::adjustLegato),
+                        alternateActionSlot("Invert", this::adjustInvertProcess, () -> "Span via Row",
+                                this::showRecurrenceEditInfo)
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Motion\n2: Tension\n3: Legato\n4: Span via Row",
+                "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch",
                 new EncoderSlotBinding[]{
-                        valueSlot(this::adjustChannelShape, this::channelShapeLabel),
-                        valueSlot(this::adjustTension, () -> "Tension"),
-                        valueSlot(this::adjustLegato, () -> "Legato"),
-                        actionSlot("Span via Row", this::showRecurrenceEditInfo)
+                        noteAccessSlot(NoteStepAccess.VELOCITY),
+                        noteAccessSlot(NoteStepAccess.PRESSURE),
+                        noteAccessSlot(NoteStepAccess.TIMBRE),
+                        noteAccessSlot(NoteStepAccess.PITCH)
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Octave\n2: Gate Len\n3: Velocity\n4: Chance",
@@ -2191,7 +2194,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private EncoderSlotBinding engineSlot() {
-        final EncoderStepAccumulator accumulator = new EncoderStepAccumulator(ENGINE_ENCODER_THRESHOLD);
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -2201,19 +2203,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             @Override
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    final int steps = accumulator.consume(inc);
-                    if (steps == 0) {
-                        return;
-                    }
-                    if (driver.isGlobalAltHeld()) {
-                        cycleGeneratorSubtype(steps > 0 ? 1 : -1);
-                    } else if (steps > 0) {
-                        cycleGenerator(1);
-                    } else {
-                        cycleGenerator(-1);
-                    }
-                });
+                encoder.bindThresholdedEncoder(layer, ENGINE_ENCODER_THRESHOLD, ENGINE_ENCODER_THRESHOLD * 2,
+                        driver::isGlobalShiftHeld, steps -> {
+                            if (driver.isGlobalAltHeld()) {
+                                cycleGeneratorSubtype(steps > 0 ? 1 : -1);
+                            } else if (steps > 0) {
+                                cycleGenerator(1);
+                            } else {
+                                cycleGenerator(-1);
+                            }
+                        });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         if (driver.isGlobalAltHeld()) {
@@ -2222,7 +2221,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                             oled.valueInfo(view.label, generator.label);
                         }
                     } else {
-                        accumulator.reset();
                         oled.clearScreenDelayed();
                     }
                 });
@@ -2232,6 +2230,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private EncoderSlotBinding mutationModeSlot() {
         final EncoderStepAccumulator accumulator = new EncoderStepAccumulator(MUTATION_MODE_ENCODER_THRESHOLD);
+        final EncoderStepAccumulator fineAccumulator = new EncoderStepAccumulator(MUTATION_MODE_ENCODER_THRESHOLD * 2);
+        final ContinuousEncoderScaler altScaler = new ContinuousEncoderScaler();
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -2243,11 +2243,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (driver.isGlobalAltHeld()) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                        adjustMutateIntensity(inc);
+                        final int effective = altScaler.scale(inc, driver.isGlobalShiftHeld());
+                        if (effective != 0) {
+                            handler.recordTouchAdjustment(slotIndex, Math.abs(effective));
+                            adjustMutateIntensity(effective);
+                        }
                         return;
                     }
-                    final int steps = accumulator.consume(inc);
+                    final EncoderStepAccumulator activeAccumulator =
+                            driver.isGlobalShiftHeld() ? fineAccumulator : accumulator;
+                    final int steps = activeAccumulator.consume(inc);
                     if (steps > 0) {
                         cycleMutationMode(1);
                     } else if (steps < 0) {
@@ -2263,6 +2268,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         }
                     } else {
                         accumulator.reset();
+                        fineAccumulator.reset();
+                        altScaler.reset();
                         oled.clearScreenDelayed();
                     }
                 });
@@ -2349,7 +2356,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             @Override
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
-                encoder.bindEncoder(layer, adjuster::accept);
+                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         oled.valueInfo(view.label, label.get());
@@ -2390,7 +2397,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             @Override
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
-                encoder.bindEncoder(layer, adjuster::accept);
+                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         oled.valueInfo("Step", label.get());
@@ -2421,7 +2428,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 parameter.name().markInterested();
                 parameter.displayedValue().markInterested();
                 parameter.value().markInterested();
-                encoder.bindEncoder(layer, inc -> {
+                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
                     MixerEncoderProfile.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
                     oled.valueInfo(label, parameter.displayedValue().get());
                 });
@@ -2454,6 +2461,56 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         oled.clearScreenDelayed();
                     }
                 });
+            }
+        };
+    }
+
+    private EncoderSlotBinding alternateActionSlot(final String primaryLabel, final java.util.function.IntConsumer primaryAdjuster,
+                                                   final java.util.function.Supplier<String> alternateLabel,
+                                                   final java.util.function.IntConsumer alternateAdjuster) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                final ContinuousEncoderScaler altScaler = new ContinuousEncoderScaler();
+                encoder.bindEncoder(layer, inc -> {
+                    if (driver.isGlobalAltHeld()) {
+                        final int effective = altScaler.scale(inc, driver.isGlobalShiftHeld());
+                        if (effective != 0) {
+                            alternateAdjuster.accept(effective);
+                        }
+                    } else {
+                        primaryAdjuster.accept(inc);
+                    }
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        oled.valueInfo(view.label, driver.isGlobalAltHeld() ? alternateLabel.get() : primaryLabel);
+                    } else {
+                        altScaler.reset();
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
+    private EncoderSlotBinding noteAccessSlot(final NoteStepAccess access) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return access.getResolution();
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                handler.bindNoteAccess(layer, encoder, slotIndex, access);
             }
         };
     }
