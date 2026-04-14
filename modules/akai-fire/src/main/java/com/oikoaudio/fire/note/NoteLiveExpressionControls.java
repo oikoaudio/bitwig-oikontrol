@@ -8,12 +8,14 @@ final class NoteLiveExpressionControls {
     private static final int MAX_MIDI_VALUE = 127;
     private static final int DEFAULT_TIMBRE = 64;
     private static final int DEFAULT_PITCH_EXPRESSION = 64;
+    private static final int DEFAULT_PITCH_BEND = 8192;
 
     private final MidiExpressionOut midiOut;
     private int pressure = MIN_MIDI_VALUE;
     private int timbre = DEFAULT_TIMBRE;
     private int modulation = MIN_MIDI_VALUE;
     private int pitchExpression = DEFAULT_PITCH_EXPRESSION;
+    private int transientPitchBendOffset = 0;
 
     NoteLiveExpressionControls(final MidiExpressionOut midiOut) {
         this.midiOut = midiOut;
@@ -71,7 +73,7 @@ final class NoteLiveExpressionControls {
             return false;
         }
         pitchExpression = next;
-        midiOut.pitchBend(pitchBendValueFor(pitchExpression));
+        emitPitchBend();
         return true;
     }
 
@@ -92,7 +94,12 @@ final class NoteLiveExpressionControls {
 
     void resetPitchExpression() {
         pitchExpression = DEFAULT_PITCH_EXPRESSION;
-        midiOut.pitchBend(pitchBendValueFor(pitchExpression));
+        emitPitchBend();
+    }
+
+    void setTransientPitchBendValue(final int value) {
+        transientPitchBendOffset = pitchBendValueFor(clampMidiValue(value)) - DEFAULT_PITCH_BEND;
+        emitPitchBend();
     }
 
     private static int clampMidiValue(final int value) {
@@ -106,6 +113,14 @@ final class NoteLiveExpressionControls {
         final int rangeAboveCenter = MAX_MIDI_VALUE - DEFAULT_PITCH_EXPRESSION;
         return 8192 + (int) Math.round(((value - DEFAULT_PITCH_EXPRESSION) / (double) rangeAboveCenter)
                 * (16383.0 - 8192.0));
+    }
+
+    private static int clampPitchBend(final int bend) {
+        return Math.max(0, Math.min(16383, bend));
+    }
+
+    private void emitPitchBend() {
+        midiOut.pitchBend(clampPitchBend(pitchBendValueFor(pitchExpression) + transientPitchBendOffset));
     }
 
     interface MidiExpressionOut {

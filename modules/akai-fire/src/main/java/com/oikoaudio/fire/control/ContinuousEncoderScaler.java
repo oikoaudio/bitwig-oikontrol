@@ -6,7 +6,8 @@ package com.oikoaudio.fire.control;
 public final class ContinuousEncoderScaler {
     public enum Profile {
         STRONG(2, 4),
-        GENTLE(2, 3);
+        GENTLE(2, 3),
+        SOFT(1, 2);
 
         private final int mediumMultiplier;
         private final int fastMultiplier;

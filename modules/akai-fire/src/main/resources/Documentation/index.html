@@ -261,14 +261,14 @@
         <li>Enter <code>NOTE</code>.</li>
         <li>Play notes directly on the pad grid.</li>
         <li>Press <code>NOTE</code> again to move between the primary note-family surfaces.</li>
-        <li>Use <code>PATTERN UP/DOWN</code> for octave, <code>SHIFT + PATTERN UP/DOWN</code> for shared root, and the Channel page for <code>Scale</code>, <code>Pitch Gliss</code>, and live velocity response.</li>
+        <li>Use <code>PATTERN UP/DOWN</code> for octave, <code>SHIFT + PATTERN UP/DOWN</code> for shared root, and the Channel page for <code>Mod</code>, <code>Pitch Bend</code>, <code>Pitch Gliss</code>, and <code>Scale</code>.</li>
       </ol>
       <p>Expression behavior in <code>NOTE</code> is split between live input and sequenced note data:</p>
       <ul>
-        <li>the live <code>User 1</code> page sends channel-wide expressive MIDI for performance input, not per-note expression edits on an existing clip</li>
-        <li>today that page sends <code>Pressure</code> as channel aftertouch, <code>Timbre</code> as CC 74, and <code>Pitch Expr</code> as pitch bend</li>
+        <li>the live <code>User 1</code> page now combines live velocity response with channel-wide expressive MIDI controls, not per-note expression edits on an existing clip</li>
+        <li>today that page is <code>Velocity</code>, <code>Aftertouch</code>, <code>Timbre</code>, and <code>Pitch Expr</code></li>
+        <li>the Channel page carries the performance controls <code>Mod</code>, spring-return <code>Pitch Bend</code>, <code>Pitch Gliss</code>, and <code>Scale</code>; <code>Aftertouch</code> sends channel aftertouch, <code>Timbre</code> sends CC 74, and <code>Pitch Expr</code> is the persistent pitch-expression control</li>
         <li>Bitwig can record those live messages into note-expression lanes while recording, but turning those encoders during playback does not inject per-note expression into notes that are already in a clip</li>
-        <li>the duplicated <code>Aftertouch</code> and <code>Pressure</code> controls currently drive the same channel-aftertouch source</li>
       </ul>
 
       <h3>Melodic Step workflow</h3>

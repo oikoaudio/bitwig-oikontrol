@@ -96,7 +96,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final int OIKORD_OCTAVE_ENCODER_THRESHOLD = 6;
     private static final int OIKORD_FAMILY_ENCODER_THRESHOLD = 8;
     private static final int LIVE_VELOCITY_ENCODER_THRESHOLD = 1;
-    private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 5;
+    private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 6;
     private static final int MIN_OIKORD_ROOT_OFFSET = -24;
     private static final int MAX_OIKORD_ROOT_OFFSET = 24;
     private static final int MIN_OIKORD_OCTAVE_OFFSET = -3;
@@ -111,7 +111,10 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int DEFAULT_TIMBRE = 64;
+    private static final int DEFAULT_LIVE_PITCH_BEND = 64;
     private static final int DEFAULT_LIVE_PITCH_EXPRESSION = 64;
+    private static final int LIVE_PITCH_BEND_RETURN_STEP = 6;
+    private static final long LIVE_PITCH_BEND_RETURN_DELAY_MS = 15L;
     private static final int MIDI_CC_MOD = 1;
     private static final int MIDI_CC_SUSTAIN = 64;
     private static final int MIDI_CC_SOSTENUTO = 66;
@@ -205,6 +208,9 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private int playingStep = -1;
     private int pendingBankDir = 0;
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
+    private int livePitchBend = DEFAULT_LIVE_PITCH_BEND;
+    private boolean livePitchBendTouched = false;
+    private int livePitchBendReturnGeneration = 0;
     private boolean pendingBankFineMove = false;
     private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
@@ -469,17 +475,15 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
 
     private void bindLiveChannelEncoders(final TouchEncoder[] encoders) {
         bindResettableLiveMidiEncoder(encoders[0], liveChannelLayer, 0, "Mod",
+                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT,
                 this::adjustLiveModulation, () -> Integer.toString(liveExpressionControls.modulation()), this::resetLiveModulation);
 
-        encoders[1].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
-        encoders[1].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(1, touched,
+        bindLivePitchBendEncoder(encoders[1], liveChannelLayer, 1);
+
+        encoders[2].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
+        encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
                 () -> oled.valueInfo("Pitch Gliss", formatSignedValue(getLivePitchOffset())),
                 livePitchOffsetEncoder::reset));
-
-        encoders[2].bindEncoder(liveChannelLayer, this::handleLiveVelocityEncoder);
-        encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
-                this::showLiveVelocityInfo,
-                liveVelocityEncoder::reset));
 
         encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
         encoders[3].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(3, touched,
@@ -488,9 +492,11 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     }
 
     private void bindLiveExpressionEncoders(final TouchEncoder[] encoders) {
-        bindResettableLiveMidiEncoder(encoders[0], liveUser1Layer, 0, "Aftertouch",
-                this::adjustLivePressure, () -> Integer.toString(liveExpressionControls.pressure()), this::resetLivePressure);
-        bindResettableLiveMidiEncoder(encoders[1], liveUser1Layer, 1, "Pressure",
+        encoders[0].bindEncoder(liveUser1Layer, inc -> handleLiveVelocityEncoder(0, inc));
+        encoders[0].bindTouched(liveUser1Layer, touched -> liveControls.handleResettableTouch(0, touched,
+                this::showLiveVelocityInfo,
+                liveVelocityEncoder::reset));
+        bindResettableLiveMidiEncoder(encoders[1], liveUser1Layer, 1, "Aftertouch",
                 this::adjustLivePressure, () -> Integer.toString(liveExpressionControls.pressure()), this::resetLivePressure);
         bindResettableLiveMidiEncoder(encoders[2], liveUser1Layer, 2, "Timbre",
                 this::adjustLiveTimbre, () -> Integer.toString(liveExpressionControls.timbre()), this::resetLiveTimbre);
@@ -548,21 +554,23 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         }
     }
 
-    private void bindLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final String label,
-                                     final java.util.function.IntConsumer adjuster,
-                                     final java.util.function.IntSupplier valueSupplier) {
-        encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
-                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.GENTLE, adjuster::accept);
-        encoder.bindTouched(layer, touched -> liveControls.handleExpressionTouch(touched, label,
-                Integer.toString(valueSupplier.getAsInt())));
-    }
-
     private void bindResettableLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final int encoderIndex,
                                                final String label, final java.util.function.IntConsumer adjuster,
                                                final java.util.function.Supplier<String> valueSupplier,
                                                final Runnable resetAction) {
+        bindResettableLiveMidiEncoder(encoder, layer, encoderIndex, label,
+                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.GENTLE,
+                adjuster, valueSupplier, resetAction);
+    }
+
+    private void bindResettableLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final int encoderIndex,
+                                               final String label,
+                                               final com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile profile,
+                                               final java.util.function.IntConsumer adjuster,
+                                               final java.util.function.Supplier<String> valueSupplier,
+                                               final Runnable resetAction) {
         encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
-                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.GENTLE, inc -> {
+                profile, inc -> {
             if (inc == 0) {
                 return;
             }
@@ -574,12 +582,29 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 resetAction));
     }
 
+    private void bindLivePitchBendEncoder(final TouchEncoder encoder, final Layer layer, final int encoderIndex) {
+        encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
+                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT, inc -> {
+                    if (inc == 0) {
+                        return;
+                    }
+                    liveControls.markEncoderAdjusted(encoderIndex);
+                    cancelLivePitchBendReturn();
+                    adjustLivePitchBend(inc);
+                });
+        encoder.bindTouched(layer, this::handleLivePitchBendTouch);
+    }
+
     private void handleLiveVelocityEncoder(final int inc) {
+        handleLiveVelocityEncoder(1, inc);
+    }
+
+    private void handleLiveVelocityEncoder(final int encoderIndex, final int inc) {
         final int steps = liveVelocityEncoder.consume(inc);
         if (steps == 0) {
             return;
         }
-        liveControls.markEncoderAdjusted(1);
+        liveControls.markEncoderAdjusted(encoderIndex);
         if (driver.isGlobalShiftHeld()) {
             final int nextVelocity = Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, liveVelocity + steps));
             if (nextVelocity == liveVelocity) {
@@ -644,6 +669,16 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         }
     }
 
+    private void adjustLivePitchBend(final int inc) {
+        final int next = Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, livePitchBend + inc));
+        if (next == livePitchBend) {
+            return;
+        }
+        livePitchBend = next;
+        liveExpressionControls.setTransientPitchBendValue(livePitchBend);
+        oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+    }
+
     private void adjustLivePitchExpression(final int inc) {
         if (liveExpressionControls.adjustPitchExpression(inc)) {
             oled.valueInfo("Pitch Expr", formatLivePitchExpressionDisplay());
@@ -682,6 +717,47 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
 
     private void resetLivePitchExpression() {
         liveExpressionControls.resetPitchExpression();
+    }
+
+    private void handleLivePitchBendTouch(final boolean touched) {
+        livePitchBendTouched = touched;
+        cancelLivePitchBendReturn();
+        if (touched) {
+            oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+            return;
+        }
+        scheduleLivePitchBendReturn();
+    }
+
+    private void scheduleLivePitchBendReturn() {
+        if (livePitchBend == DEFAULT_LIVE_PITCH_BEND) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        final int generation = ++livePitchBendReturnGeneration;
+        driver.getHost().scheduleTask(() -> continueLivePitchBendReturn(generation), LIVE_PITCH_BEND_RETURN_DELAY_MS);
+    }
+
+    private void continueLivePitchBendReturn(final int generation) {
+        if (generation != livePitchBendReturnGeneration || livePitchBendTouched) {
+            return;
+        }
+        if (livePitchBend < DEFAULT_LIVE_PITCH_BEND) {
+            livePitchBend = Math.min(DEFAULT_LIVE_PITCH_BEND, livePitchBend + LIVE_PITCH_BEND_RETURN_STEP);
+        } else if (livePitchBend > DEFAULT_LIVE_PITCH_BEND) {
+            livePitchBend = Math.max(DEFAULT_LIVE_PITCH_BEND, livePitchBend - LIVE_PITCH_BEND_RETURN_STEP);
+        }
+        liveExpressionControls.setTransientPitchBendValue(livePitchBend);
+        oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+        if (livePitchBend == DEFAULT_LIVE_PITCH_BEND) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        driver.getHost().scheduleTask(() -> continueLivePitchBendReturn(generation), LIVE_PITCH_BEND_RETURN_DELAY_MS);
+    }
+
+    private void cancelLivePitchBendReturn() {
+        livePitchBendReturnGeneration++;
     }
 
     private int getLivePitchOffset() {
