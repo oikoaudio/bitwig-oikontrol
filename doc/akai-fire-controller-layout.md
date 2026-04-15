@@ -10,10 +10,10 @@ The Fire exposes four top-level workflows. Three are selected by the large mode 
 
 | Button | Role | Notes |
 | --- | --- | --- |
-| `DRUM` | Drum sequencing | Default sequencing workflow |
-| `NOTE` | Live note input | Includes entry to `Chord Step` on second press |
-| `STEP` | Step sequencing | Enters `Melodic Step` mode |
-| `PERFORM` | Clip launcher and performance mode | `16x4` clip grid |
+| `DRUM` | Drum sequencing | XOX Drum sequencing |
+| `NOTE` | Live note input | Cycles to `Harmonic mode` on second press |
+| `STEP` | Step sequencing | Cycles between `Melodic Step` and `Chord seq` modes |
+| `PERFORM` | Clip launcher | Cycles between a vertical and a horizontal `16x4` clip grid |
 
 ## Shared Transport And Utility Controls
 
@@ -393,7 +393,7 @@ While `Settings` is active in `PERFORM`:
 
 ## Preferences That Affect Layout
 
-These preferences materially change how the Fire feels in use:
+These preferences change how the Fire feels in use:
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
@@ -423,4 +423,4 @@ These areas are still intentionally incomplete or provisional:
 
 - `Clip Step Record` remains a placeholder.
 - `Chord Step` works best with simpler, grid-aligned chord material.
-- `Melodic Step` encoder documentation is still lighter here than the implementation and should be expanded once that mode stabilizes further.
+- The ocumentation is still lighter here than the implementation and should be updated :)
