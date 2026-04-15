@@ -654,6 +654,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        if (modeState.activeMode() == Mode.NOTE_PLAY && isGlobalAltHeld() && !notePlayMode.isHarmonicNoteSubMode()) {
+            notePlayMode.toggleSurfaceVariant();
+            return;
+        }
+        if (modeState.activeMode() == Mode.NOTE_PLAY && !isGlobalAltHeld()) {
+            if (notePlayMode.isHarmonicNoteSubMode()) {
+                modeState.handleNotePressed(true);
+                switchActiveMode();
+                notifyAction("Mode", "Chord Step");
+            } else {
+                notePlayMode.cycleNoteSubMode();
+                notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+            }
+            return;
+        }
         switch (modeState.handleNotePressed(isGlobalAltHeld())) {
             case TOGGLE_NOTE_VARIANT -> {
                 notePlayMode.cycleNoteSubMode();
@@ -665,6 +680,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 notifyAction("Mode", "Chord Step");
             }
             case SWITCH_TO_NOTE_PLAY -> {
+                notePlayMode.resetNoteSubMode();
                 switchActiveMode();
                 notifyAction("Mode", "Note");
             }

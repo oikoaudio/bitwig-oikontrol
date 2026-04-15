@@ -2275,6 +2275,13 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         return liveNoteSubMode == LiveNoteSubMode.HARMONIC;
     }
 
+    public void resetNoteSubMode() {
+        if (isChordStepSurface() || liveNoteSubMode == LiveNoteSubMode.MELODIC) {
+            return;
+        }
+        applyLayoutChange(() -> liveNoteSubMode = LiveNoteSubMode.MELODIC);
+    }
+
     public void cycleNoteSubMode() {
         if (isChordStepSurface()) {
             toggleSurfaceVariant();
