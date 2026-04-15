@@ -2344,6 +2344,13 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         cycleNoteSubMode();
     }
 
+    public void toggleLiveLayoutShortcut() {
+        if (isChordStepSurface()) {
+            return;
+        }
+        toggleLayout();
+    }
+
     private void toggleBuilderLayout() {
         builderInKey = !builderInKey;
         if (builderInKey && driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {

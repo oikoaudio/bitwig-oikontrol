@@ -654,6 +654,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        if (modeState.activeMode() == Mode.NOTE_PLAY && isGlobalAltHeld()) {
+            notePlayMode.toggleLiveLayoutShortcut();
+            return;
+        }
         if (modeState.activeMode() == Mode.CHORD_STEP) {
             if (isGlobalAltHeld()) {
                 chordStepMode.toggleSurfaceVariant();

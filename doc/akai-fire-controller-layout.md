@@ -150,8 +150,9 @@ Drum grid resolution is now adjusted from the `SELECT` encoder when its role is 
 | Pad matrix | `16x4` isomorphic note grid |
 | Pad LEDs | Root, in-scale, and out-of-scale feedback |
 | `NOTE` | Cycle note layout family |
-| `STEP SEQ` | Enter current note-step sub-mode |
-| `SHIFT + STEP SEQ` | Cycle note-step sub-mode and enter it |
+| `ALT + NOTE` | Toggle live-note layout shortcut (`Chromatic` / `In Key`, or harmonic layout variant) |
+| `STEP SEQ` | Enter `Melodic Step`; when already there, press again to switch to `Chord Step` |
+| `SHIFT + STEP SEQ` | Accent mode in `Melodic Step` |
 | `BANK LEFT/RIGHT` | Octave down / up |
 | `PATTERN UP/DOWN` | Octave up / down |
 | `SHIFT + PATTERN UP/DOWN` | Root up / down |
@@ -167,6 +168,7 @@ In live NOTE mode:
 - Encoder 2 is `Pitch Gliss`
 - Encoder 3 adjusts `Velocity Sensitivity`
 - `SHIFT + Encoder 3` adjusts `Default Velocity`
+- `SHIFT + Encoder 4` toggles the local live-note layout
 - Encoder 4 adjusts the shared `Scale`
 - `ALT + Encoder 4` adjusts the shared `Root Key`
 - `PATTERN UP/DOWN` adjusts the shared `Octave`
@@ -180,20 +182,9 @@ In live NOTE mode:
 | `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
-## Note-Step Sub-Modes
-
-The current note-step sub-modes are:
-
-| Sub-mode | Status | Notes |
-| --- | --- | --- |
-| `Chord Step` | Implemented | Main note-step mode under `NOTE` |
-| `Clip Step Record` | Placeholder | Still deferred |
-
-`Melodic Step` is not a NOTE sub-mode. It is entered directly from `DRUM` via `STEP SEQ`.
-
 ## Chord Step
 
-`Chord Step` repurposes the `NOTE` surface into a chord-and-step editor.
+`Chord Step` is the second `STEP SEQ` surface after `Melodic Step`.
 
 It uses the shared `Root Key`, `Scale`, and `Octave` from live NOTE input and `SHIFT + PERFORM`. Changing pitch context in one of those places updates all of them.
 
@@ -213,8 +204,8 @@ It uses the shared `Root Key`, `Scale`, and `Octave` from live NOTE input and `S
 | Tap lit step | Remove chord from that step |
 | Hold step pad(s) + tap chord pad | Rewrite held steps with that chord |
 | Tap chord pad with no held step | Audition chord, if enabled |
-| `STEP SEQ` | Toggle `As Is` / `In Scale` rendering |
-| `SHIFT + STEP SEQ` | Cycle note-step sub-mode |
+| `STEP SEQ` | Return to `Melodic Step` |
+| `SHIFT + STEP SEQ` | Reserved for melodic-step accent handling |
 | `PATTERN UP/DOWN` | Page the visible chord-step window |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
