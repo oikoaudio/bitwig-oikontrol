@@ -2,39 +2,31 @@ package com.oikoaudio.fire.note;
 
 import com.bitwig.extensions.framework.MusicalScale;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 final class HarmonicLatticeLayout implements LiveNoteLayout {
-    static final int[] GRID_SPANS = {7, 14, 21};
-    static final int MIN_OCTAVE_REACH = 1;
-    static final int MAX_OCTAVE_REACH = 3;
+    static final int[] NOTE_COUNTS = {1, 2, 3};
 
     private static final int PAD_COUNT = 64;
     private static final int PAD_COLUMNS = 16;
     private static final int PAD_ROWS = 4;
     private static final int BASS_COLUMNS = 2;
-    private static final int[] ROW_FINE_PHASES = {0, 2, 4, 6};
 
     private final MusicalScale scale;
     private final int rootNote;
     private final int octave;
-    private final int gridSpan;
-    private final int octaveReach;
+    private final int noteCount;
+    private final int octaveSpan;
     private final boolean bassColumnsEnabled;
     private final int glissSteps;
     private final int scaleDegreeCount;
 
     HarmonicLatticeLayout(final MusicalScale scale, final int rootNote, final int octave,
-                          final int gridSpan, final int octaveReach,
+                          final int noteCount, final int octaveSpan,
                           final boolean bassColumnsEnabled, final int glissSteps) {
         this.scale = scale;
         this.rootNote = rootNote;
         this.octave = octave;
-        this.gridSpan = gridSpan;
-        this.octaveReach = octaveReach;
+        this.noteCount = noteCount;
+        this.octaveSpan = octaveSpan;
         this.bassColumnsEnabled = bassColumnsEnabled;
         this.glissSteps = glissSteps;
         this.scaleDegreeCount = detectScaleDegreeCount(scale, rootNote);
@@ -71,42 +63,33 @@ final class HarmonicLatticeLayout implements LiveNoteLayout {
 
     private int[] bassNotesForPad(final int column, final int rowFromBottom) {
         final int bassIndex = rowFromBottom * BASS_COLUMNS + column;
-        final int bassNote = clampMidi(resolveTertianSeriesMidi(bassIndex, octave));
+        final int bassNote = clampMidi(resolveRegisteredRunMidi(bassIndex, octave));
         return bassNote < 0 ? new int[0] : new int[]{bassNote};
     }
 
     private int[] harmonicNotesForPad(final int harmonicColumn, final int rowFromBottom) {
-        final int anchorSeriesIndex = harmonicColumn + glissSteps;
-        final int rowPhase = ROW_FINE_PHASES[Math.max(0, Math.min(ROW_FINE_PHASES.length - 1, rowFromBottom))];
+        final int startIndex = harmonicColumn - rowFromBottom * 2 + glissSteps;
         final int rowBaseOctave = octave + rowFromBottom;
-        final Set<Integer> candidates = new LinkedHashSet<>();
-        for (int candidateIndex = 0; ; candidateIndex++) {
-            final int fineIndex = rowPhase + candidateIndex * 2;
-            if (fineIndex >= gridSpan) {
-                break;
-            }
-            final int octaveLayer = fineIndex / 7;
-            if (octaveLayer >= octaveReach) {
-                break;
-            }
-            final int midiNote = clampMidi(resolveTertianSeriesMidi(anchorSeriesIndex + candidateIndex,
-                    rowBaseOctave + octaveLayer));
-            if (midiNote >= 0) {
-                candidates.add(midiNote);
+        final int[] notes = new int[noteCount * octaveSpan];
+        int out = 0;
+        for (int octaveOffset = 0; octaveOffset < octaveSpan; octaveOffset++) {
+            for (int i = 0; i < noteCount; i++) {
+                final int baseNote = clampMidi(resolveRegisteredRunMidi(startIndex + i, rowBaseOctave));
+                notes[out++] = baseNote < 0 ? -1 : wrapMidi(baseNote + octaveOffset * 12);
             }
         }
-        return candidates.stream().mapToInt(Integer::intValue).toArray();
+        return notes;
     }
 
-    private int resolveTertianSeriesMidi(final int seriesIndex, final int baseOctave) {
+    private int resolveRegisteredRunMidi(final int seriesIndex, final int baseOctave) {
         if (scaleDegreeCount <= 0) {
             return -1;
         }
-        final int normalizedSeries = Math.max(0, seriesIndex);
-        final int degreeTravel = normalizedSeries * 2;
+        final int degreeTravel = seriesIndex * 2;
         final int octaveFromWrap = Math.floorDiv(degreeTravel, scaleDegreeCount);
         final int degreeIndex = Math.floorMod(degreeTravel, scaleDegreeCount);
-        return scale.computeNote(rootNote, baseOctave + 1 + octaveFromWrap, degreeIndex);
+        final int compactOffset = Math.floorMod(seriesIndex, 2) == 0 ? 0 : -1;
+        return scale.computeNote(rootNote, baseOctave + 1 + octaveFromWrap + compactOffset, degreeIndex);
     }
 
     private static int detectScaleDegreeCount(final MusicalScale scale, final int rootNote) {
@@ -121,5 +104,16 @@ final class HarmonicLatticeLayout implements LiveNoteLayout {
 
     private static int clampMidi(final int midiNote) {
         return midiNote >= 0 && midiNote <= 127 ? midiNote : -1;
+    }
+
+    private static int wrapMidi(final int midiNote) {
+        int wrapped = midiNote;
+        while (wrapped > 127) {
+            wrapped -= 12;
+        }
+        while (wrapped < 0) {
+            wrapped += 12;
+        }
+        return wrapped;
     }
 }

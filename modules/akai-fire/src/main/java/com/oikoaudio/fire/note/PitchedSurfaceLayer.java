@@ -122,6 +122,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final int MIDI_CC_TIMBRE = 74;
     private static final int[] LIVE_PITCH_OFFSETS = {-24, -19, -12, -7, 0, 7, 12, 19, 24};
     private static final int DEFAULT_LIVE_PITCH_OFFSET_INDEX = 4;
+    private static final int MIN_SCALE_DEGREE_GLISS = -14;
+    private static final int MAX_SCALE_DEGREE_GLISS = 14;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
     private static final RgbLigthState PIANO_BLACK_KEY_COLOR = new RgbLigthState(0, 56, 120, true);
@@ -208,6 +210,21 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         }
     }
 
+    private enum LivePitchGlissMode {
+        FIFTH_OCTAVE("5th/8v"),
+        SCALE_DEGREE("ScaleDeg");
+
+        private final String displayName;
+
+        LivePitchGlissMode(final String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+    }
+
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private final AccentLatchState oikordAccentState = new AccentLatchState();
@@ -229,8 +246,10 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private int playingStep = -1;
     private int pendingBankDir = 0;
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
-    private int harmonicGridSpanIndex = 0;
-    private int harmonicOctaveReach = 1;
+    private int liveScaleDegreeGlissOffset = 0;
+    private LivePitchGlissMode livePitchGlissMode = LivePitchGlissMode.FIFTH_OCTAVE;
+    private int harmonicNoteCountIndex = 2;
+    private int harmonicOctaveSpan = 1;
     private boolean harmonicBassColumns = true;
     private int livePitchBend = DEFAULT_LIVE_PITCH_BEND;
     private boolean livePitchBendTouched = false;
@@ -330,7 +349,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 liveEncoderLayer(liveMixerLayer),
                 liveEncoderLayer(liveUser1Layer),
                 liveEncoderLayer(liveUser2Layer),
-                this::applyLiveEncoderStepSizes);
+                this::applyLiveEncoderStepSizes,
+                this::liveEncoderModeInfo);
 
         final ControllerHost host = driver.getHost();
         this.cursorTrack = host.createCursorTrack("NOTE_VIEW", "Note View", 8, CLIP_ROW_PAD_COUNT, true);
@@ -504,54 +524,33 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                     if (inc == 0) {
                         return;
                     }
-                    if (isHarmonicLiveMode() && driver.isGlobalAltHeld()) {
-                        adjustHarmonicGridSpan(inc);
-                        return;
-                    }
                     liveControls.markEncoderAdjusted(0);
                     adjustLiveModulation(inc);
                 });
         encoders[0].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(0, touched,
-                () -> {
-                    if (isHarmonicLiveMode() && driver.isGlobalAltHeld()) {
-                        oled.valueInfo("Width", harmonicGridSpanDisplay());
-                    } else {
-                        oled.valueInfo("Mod", Integer.toString(liveExpressionControls.modulation()));
-                    }
-                },
-                () -> {
-                    if (!isHarmonicLiveMode() || !driver.isGlobalAltHeld()) {
-                        resetLiveModulation();
-                    }
-                }));
+                () -> oled.valueInfo("Mod", Integer.toString(liveExpressionControls.modulation())),
+                this::resetLiveModulation));
 
         encoders[1].bindContinuousEncoder(liveChannelLayer, driver::isGlobalShiftHeld,
                 com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT, inc -> {
                     if (inc == 0) {
                         return;
                     }
-                    if (isHarmonicLiveMode() && driver.isGlobalAltHeld()) {
-                        adjustHarmonicOctaveReach(inc);
-                        return;
-                    }
                     liveControls.markEncoderAdjusted(1);
                     cancelLivePitchBendReturn();
                     adjustLivePitchBend(inc);
                 });
-        encoders[1].bindTouched(liveChannelLayer, touched -> {
-            if (isHarmonicLiveMode() && driver.isGlobalAltHeld()) {
-                liveControls.handleResettableTouch(1, touched,
-                        () -> oled.valueInfo("Oct Reach", Integer.toString(harmonicOctaveReach)),
-                        () -> { });
-                return;
-            }
-            handleLivePitchBendTouch(touched);
-        });
+        encoders[1].bindTouched(liveChannelLayer, this::handleLivePitchBendTouch);
 
-        encoders[2].bindEncoder(liveChannelLayer, this::adjustLivePitchOffset);
+        encoders[2].bindEncoder(liveChannelLayer, this::handleLivePitchGlissEncoder);
         encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
-                () -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay()),
-                livePitchOffsetEncoder::reset));
+                () -> oled.valueInfo(driver.isGlobalAltHeld() ? "Gliss Mode" : "Pitch Gliss",
+                        driver.isGlobalAltHeld() ? livePitchGlissMode.displayName() : formatLivePitchOffsetDisplay()),
+                () -> {
+                    if (!driver.isGlobalAltHeld()) {
+                        livePitchOffsetEncoder.reset();
+                    }
+                }));
 
         encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
         encoders[3].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(3, touched,
@@ -602,6 +601,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
             parameter.value().markInterested();
         }
         for (int i = 0; i < encoders.length; i++) {
+            final int index = i;
             final com.bitwig.extension.controller.api.Parameter parameter = params.get(i);
             final String fallbackLabel = switch (i) {
                 case 0 -> "Volume";
@@ -610,15 +610,47 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 default -> "Send 2";
             };
             encoders[i].bindContinuousEncoder(liveMixerLayer, driver::isGlobalShiftHeld,
-                    com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG,
-                    inc -> adjustMixerParameter(parameter, fallbackLabel, inc));
+                    com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG, inc -> {
+                    if (inc == 0) {
+                        return;
+                    }
+                    if (isHarmonicLiveMode()) {
+                            handleHarmonicMixerEncoder(index, inc);
+                            return;
+                    }
+                    adjustMixerParameter(parameter, fallbackLabel, inc);
+                    });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
                 if (touched) {
-                    oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+                    if (isHarmonicLiveMode()) {
+                        showHarmonicMixerInfo(index);
+                    } else {
+                        oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+                    }
                 } else {
                     oled.clearScreenDelayed();
                 }
             });
+        }
+    }
+
+    private void handleHarmonicMixerEncoder(final int encoderIndex, final int inc) {
+        switch (encoderIndex) {
+            case 0 -> adjustHarmonicNoteCount(inc);
+            case 1 -> adjustHarmonicOctaveSpan(inc);
+            case 2 -> adjustHarmonicBassColumns(inc);
+            case 3 -> adjustLivePitchOffset(inc);
+            default -> { }
+        }
+    }
+
+    private void showHarmonicMixerInfo(final int encoderIndex) {
+        switch (encoderIndex) {
+            case 0 -> oled.valueInfo("Notes", harmonicNoteCountDisplay());
+            case 1 -> oled.valueInfo("Octaves", Integer.toString(harmonicOctaveSpan));
+            case 2 -> oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off");
+            case 3 -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
+            default -> oled.clearScreenDelayed();
         }
     }
 
@@ -756,55 +788,102 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         }
     }
 
+    private void handleLivePitchGlissEncoder(final int inc) {
+        if (driver.isGlobalAltHeld()) {
+            toggleLivePitchGlissMode(inc);
+            return;
+        }
+        adjustLivePitchOffset(inc);
+    }
+
+    private void toggleLivePitchGlissMode(final int inc) {
+        if (inc == 0) {
+            return;
+        }
+        final LivePitchGlissMode next = inc < 0 ? LivePitchGlissMode.FIFTH_OCTAVE : LivePitchGlissMode.SCALE_DEGREE;
+        if (next == livePitchGlissMode) {
+            oled.valueInfo("Gliss Mode", livePitchGlissMode.displayName());
+            return;
+        }
+        livePitchGlissMode = next;
+        oled.valueInfo("Gliss Mode", livePitchGlissMode.displayName());
+    }
+
     private void adjustLivePitchOffset(final int inc) {
         final int steps = livePitchOffsetEncoder.consume(inc);
         if (steps == 0) {
             return;
         }
-        final int nextIndex = Math.max(0, Math.min(LIVE_PITCH_OFFSETS.length - 1, livePitchOffsetIndex + steps));
-        if (nextIndex == livePitchOffsetIndex) {
+        if (livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE) {
+            final int nextIndex = Math.max(0, Math.min(LIVE_PITCH_OFFSETS.length - 1, livePitchOffsetIndex + steps));
+            if (nextIndex == livePitchOffsetIndex) {
+                return;
+            }
+            liveControls.markEncoderAdjusted(1);
+            retuneLivePads(() -> livePitchOffsetIndex = nextIndex);
+            oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
+            return;
+        }
+        final int nextOffset = Math.max(MIN_SCALE_DEGREE_GLISS,
+                Math.min(MAX_SCALE_DEGREE_GLISS, liveScaleDegreeGlissOffset + steps));
+        if (nextOffset == liveScaleDegreeGlissOffset) {
             return;
         }
         liveControls.markEncoderAdjusted(1);
-        retuneLivePads(() -> livePitchOffsetIndex = nextIndex);
+        retuneLivePads(() -> liveScaleDegreeGlissOffset = nextOffset);
         oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
     }
 
-    private void adjustHarmonicGridSpan(final int inc) {
+    private void adjustHarmonicNoteCount(final int inc) {
         final int steps = liveVelocityEncoder.consume(inc);
         if (steps == 0) {
             return;
         }
-        final int next = Math.max(0, Math.min(HarmonicLatticeLayout.GRID_SPANS.length - 1, harmonicGridSpanIndex + steps));
-        if (next == harmonicGridSpanIndex) {
+        final int next = Math.max(0, Math.min(HarmonicLatticeLayout.NOTE_COUNTS.length - 1, harmonicNoteCountIndex + steps));
+        if (next == harmonicNoteCountIndex) {
             return;
         }
         liveControls.markEncoderAdjusted(0);
-        retuneLivePads(() -> harmonicGridSpanIndex = next);
-        oled.valueInfo("Width", harmonicGridSpanDisplay());
+        retuneLivePads(() -> harmonicNoteCountIndex = next);
+        oled.valueInfo("Notes", harmonicNoteCountDisplay());
     }
 
-    private void adjustHarmonicOctaveReach(final int inc) {
+    private void adjustHarmonicOctaveSpan(final int inc) {
         final int steps = liveOctaveEncoder.consume(inc);
         if (steps == 0) {
             return;
         }
-        final int next = Math.max(HarmonicLatticeLayout.MIN_OCTAVE_REACH,
-                Math.min(HarmonicLatticeLayout.MAX_OCTAVE_REACH, harmonicOctaveReach + steps));
-        if (next == harmonicOctaveReach) {
+        final int next = Math.max(1, Math.min(3, harmonicOctaveSpan + steps));
+        if (next == harmonicOctaveSpan) {
             return;
         }
         liveControls.markEncoderAdjusted(1);
-        retuneLivePads(() -> harmonicOctaveReach = next);
-        oled.valueInfo("Oct Reach", Integer.toString(harmonicOctaveReach));
+        retuneLivePads(() -> harmonicOctaveSpan = next);
+        oled.valueInfo("Octaves", Integer.toString(harmonicOctaveSpan));
     }
 
-    private String harmonicGridSpanDisplay() {
-        return Integer.toString(HarmonicLatticeLayout.GRID_SPANS[harmonicGridSpanIndex]);
+    private void adjustHarmonicBassColumns(final int inc) {
+        final int steps = liveLayoutEncoder.consume(inc);
+        if (steps == 0) {
+            return;
+        }
+        final boolean next = steps > 0;
+        if (next == harmonicBassColumns) {
+            return;
+        }
+        liveControls.markEncoderAdjusted(2);
+        retuneLivePads(() -> harmonicBassColumns = next);
+        oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off");
+    }
+
+    private String harmonicNoteCountDisplay() {
+        return Integer.toString(HarmonicLatticeLayout.NOTE_COUNTS[harmonicNoteCountIndex]);
     }
 
     private int getHarmonicGlissStepOffset() {
-        return livePitchOffsetIndex - DEFAULT_LIVE_PITCH_OFFSET_INDEX;
+        return livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE
+                ? livePitchOffsetIndex - DEFAULT_LIVE_PITCH_OFFSET_INDEX
+                : liveScaleDegreeGlissOffset;
     }
 
     private String formatLivePitchExpressionDisplay() {
@@ -812,10 +891,17 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     }
 
     private String formatLivePitchOffsetDisplay() {
-        if (isHarmonicLiveMode()) {
-            return formatSignedValue(getHarmonicGlissStepOffset());
+        final int value = livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE
+                ? (isHarmonicLiveMode() ? getHarmonicGlissStepOffset() : getLivePitchOffset())
+                : liveScaleDegreeGlissOffset;
+        return "%s %s".formatted(livePitchGlissMode.displayName(), formatSignedValue(value));
+    }
+
+    private String liveEncoderModeInfo(final EncoderMode mode) {
+        if (isHarmonicLiveMode() && mode == EncoderMode.MIXER) {
+            return "1: Notes\n2: Octaves\n3: Bass Grid\n4: Pitch Gliss";
         }
-        return formatSignedValue(getLivePitchOffset());
+        return NoteLiveEncoderModeControls.modeInfo(mode);
     }
 
     private void resetLivePressure() {
@@ -2185,6 +2271,10 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         return liveNoteSubMode.displayName();
     }
 
+    public boolean isHarmonicNoteSubMode() {
+        return liveNoteSubMode == LiveNoteSubMode.HARMONIC;
+    }
+
     public void cycleNoteSubMode() {
         if (isChordStepSurface()) {
             toggleSurfaceVariant();
@@ -3046,7 +3136,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private LiveNoteLayout createLayout() {
         if (isHarmonicLiveMode()) {
             return new HarmonicLatticeLayout(getScale(), getRootNote(), getOctave(),
-                    HarmonicLatticeLayout.GRID_SPANS[harmonicGridSpanIndex], harmonicOctaveReach,
+                    HarmonicLatticeLayout.NOTE_COUNTS[harmonicNoteCountIndex],
+                    harmonicOctaveSpan,
                     harmonicBassColumns, getHarmonicGlissStepOffset());
         }
         return new NoteGridLayout(getScale(), getRootNote(), getOctave(), inKey);
@@ -3075,8 +3166,35 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         if (isHarmonicLiveMode()) {
             return midiNote;
         }
+        if (livePitchGlissMode == LivePitchGlissMode.SCALE_DEGREE) {
+            return transposeByScaleDegrees(midiNote, liveScaleDegreeGlissOffset);
+        }
         final int shifted = midiNote + getLivePitchOffset();
         return shifted >= 0 && shifted <= 127 ? shifted : -1;
+    }
+
+    private int transposeByScaleDegrees(final int midiNote, final int scaleDegrees) {
+        if (scaleDegrees == 0) {
+            return midiNote;
+        }
+        if (driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
+            final int shifted = midiNote + scaleDegrees;
+            return shifted >= 0 && shifted <= 127 ? shifted : -1;
+        }
+        int note = midiNote;
+        int remaining = Math.abs(scaleDegrees);
+        final int direction = scaleDegrees > 0 ? 1 : -1;
+        while (remaining > 0) {
+            note += direction;
+            while (note >= 0 && note <= 127 && !getScale().isMidiNoteInScale(getRootNote(), note)) {
+                note += direction;
+            }
+            if (note < 0 || note > 127) {
+                return -1;
+            }
+            remaining--;
+        }
+        return note;
     }
 
     private void clearTranslation() {

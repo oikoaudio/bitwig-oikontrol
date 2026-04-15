@@ -26,7 +26,8 @@ class NotePlayControllerTest {
                                 layer(events, "mixer"),
                                 layer(events, "user1"),
                                 layer(events, "user2"),
-                                ignored -> {}),
+                                ignored -> {},
+                                NoteLiveEncoderModeControls::modeInfo),
                         new NoteEncoderTouchResetHandler(
                                 new com.oikoaudio.fire.control.TouchResetGesture(4, 0L, 0L, 2),
                                 () -> false,

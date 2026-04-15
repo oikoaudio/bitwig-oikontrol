@@ -4,6 +4,7 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 
 import java.util.EnumMap;
+import java.util.function.Function;
 
 /**
  * Owns the live encoder-page selection and layer activation used by Note mode's live surface.
@@ -11,18 +12,21 @@ import java.util.EnumMap;
 final class NoteLiveEncoderModeControls {
     private final EnumMap<EncoderMode, LayerHandle> layers = new EnumMap<>(EncoderMode.class);
     private final StepSizeApplier stepSizeApplier;
+    private final Function<EncoderMode, String> modeInfoSupplier;
     private EncoderMode mode = EncoderMode.CHANNEL;
 
     NoteLiveEncoderModeControls(final LayerHandle channelLayer,
                                 final LayerHandle mixerLayer,
                                 final LayerHandle user1Layer,
                                 final LayerHandle user2Layer,
-                                final StepSizeApplier stepSizeApplier) {
+                                final StepSizeApplier stepSizeApplier,
+                                final Function<EncoderMode, String> modeInfoSupplier) {
         layers.put(EncoderMode.CHANNEL, channelLayer);
         layers.put(EncoderMode.MIXER, mixerLayer);
         layers.put(EncoderMode.USER_1, user1Layer);
         layers.put(EncoderMode.USER_2, user2Layer);
         this.stepSizeApplier = stepSizeApplier;
+        this.modeInfoSupplier = modeInfoSupplier;
     }
 
     void resetToChannel() {
@@ -57,7 +61,7 @@ final class NoteLiveEncoderModeControls {
     }
 
     String modeInfo() {
-        return modeInfo(mode);
+        return modeInfoSupplier.apply(mode);
     }
 
     EncoderMode mode() {
