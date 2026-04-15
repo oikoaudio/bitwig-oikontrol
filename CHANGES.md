@@ -2,6 +2,32 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.5.0 - Harmonic note input, step routing, and control-surface polish
+- Added a harmonic live `NOTE` submode with harmonic lattice layout, multi-note pad output, note-count selection, octave-span control, bass-column/full-field variants, and harmonic gliss support
+- Added live-note pitch-bend with spring-return, and toggle between `5th/8v` and `ScaleDeg` gliss modes
+- Moved `Chord Step` behind `STEP SEQ` so `NOTE` stays focused on live note input; pressing `STEP SEQ` now enters `Melodic Step`, then switches to `Chord Step` on the next press
+- Added `ALT + NOTE` and `SHIFT + Encoder 4` as direct live-layout shortcuts for collapsing note input to scale notes or switching harmonic layout variants
+- Added horizontal `Perform` orientation plus broader encoder-scaling cleanup, melodic step expression-page updates, and Bitwig 6-aligned scale naming/order
+- Updated tests and Fire documentation to match the new harmonic input, step-routing, and live-control workflows
+
+## 2.4.0 - Akai Fire shared pitch context and architecture rework
+- Added a unified shared musical context for `Root Key`, `Scale`, and `Octave` across live `NOTE`, `Chord Step`, `Melodic Step`, and `SHIFT + PERFORM`
+- Added melodic recurrence editing with held-step targeting, top-row recurrence gestures, recurrence feedback, and supporting tests
+- Reworked Fire mode architecture by separating live note play from chord sequencing, extracting dedicated controllers/helpers, and simplifying duplicated framework code
+- Expanded `SHIFT + PERFORM` overview editing for shared pitch controls and refreshed note/chord workflows to use the shared context consistently
+- Updated `Chord Step` interpretation and melodic generator workflows, plus docs and bundled help, to reflect the new shared-pitch model
+
+## 2.3.1 - Akai Fire selected clip sync fix
+- Fixed bidirectional sync of selected clip state so shared clip selection follows the actual Bitwig `isSelected()` state instead of the controller cursor index
+- Updated chord and melodic step refresh paths to trust an already selected clip before falling back to the playing clip
+- Prevented passive refresh from needlessly reselecting clip slots
+
+## 2.3.0 - Akai Fire shared sequencer clip row and step-workflow polish
+- Added a shared sequencer clip row across Drum, Chord Step, and Melodic Step workflows
+- Polished `Melodic Step` generation and editing behavior, including safer held-step and accent interactions
+- Added reusable accent-latch and clip-row helper logic to stabilize sequencer behavior across modes
+- Fixed browser-selection behavior and refreshed documentation for the updated Fire sequencing workflow
+
 ## 2.2.0 - Akai Fire shared pitch and safer performance workflows
 - Added live NOTE `Pitch Gliss` with held-note retuning and a dedicated velocity response model based on `Velocity Sensitivity` and `Default Velocity`
 - Added shared global `Root Key` and `Scale` across live NOTE, Chord Step, and the latched `SHIFT + PERFORM` `Settings` page
