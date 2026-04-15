@@ -9,34 +9,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TopLevelModeStateTest {
 
     @Test
-    void noteButtonSwitchesBetweenNotePlayAndChordStep() {
+    void canActivateLiveAndChordNoteModesExplicitly() {
         final TopLevelModeState state = new TopLevelModeState();
 
-        assertEquals(TopLevelModeState.NoteButtonResult.TOGGLE_NOTE_VARIANT, state.handleNotePressed(false));
+        state.activateChordStep();
+        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
+
+        state.activateNotePlay();
         assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.activeMode());
-
-        assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_CHORD_STEP, state.handleNotePressed(true));
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
-
-        assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_NOTE_PLAY, state.handleNotePressed(false));
-        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.activeMode());
-    }
-
-    @Test
-    void alternateNoteButtonDoesNotLeaveCurrentNoteSurface() {
-        final TopLevelModeState state = new TopLevelModeState();
-
-        assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_CHORD_STEP, state.handleNotePressed(true));
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
-
-        assertEquals(TopLevelModeState.NoteButtonResult.TOGGLE_CHORD_VARIANT, state.handleNotePressed(true));
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
     }
 
     @Test
     void melodicExitReturnsToPreviousNonStepMode() {
         final TopLevelModeState state = new TopLevelModeState();
-        state.handleNotePressed(true);
+        state.activateChordStep();
 
         state.enterMelodicStepMode();
 

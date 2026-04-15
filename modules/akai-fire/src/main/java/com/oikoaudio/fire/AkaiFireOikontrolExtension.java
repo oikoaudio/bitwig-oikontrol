@@ -654,52 +654,51 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        if (modeState.activeMode() == Mode.NOTE_PLAY && isGlobalAltHeld() && !notePlayMode.isHarmonicNoteSubMode()) {
-            notePlayMode.toggleSurfaceVariant();
+        if (modeState.activeMode() == Mode.CHORD_STEP) {
+            if (isGlobalAltHeld()) {
+                chordStepMode.toggleSurfaceVariant();
+                return;
+            }
+            modeState.activateNotePlay();
+            switchActiveMode();
+            notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
             return;
         }
-        if (modeState.activeMode() == Mode.NOTE_PLAY && !isGlobalAltHeld()) {
-            if (notePlayMode.isHarmonicNoteSubMode()) {
-                modeState.handleNotePressed(true);
-                switchActiveMode();
-                notifyAction("Mode", "Chord Step");
-            } else {
-                notePlayMode.cycleNoteSubMode();
-                notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
-            }
+        if (modeState.activeMode() != Mode.NOTE_PLAY) {
+            modeState.activateNotePlay();
+            switchActiveMode();
+            notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
             return;
         }
-        switch (modeState.handleNotePressed(isGlobalAltHeld())) {
-            case TOGGLE_NOTE_VARIANT -> {
-                notePlayMode.cycleNoteSubMode();
-                notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
-            }
-            case TOGGLE_CHORD_VARIANT -> chordStepMode.toggleSurfaceVariant();
-            case SWITCH_TO_CHORD_STEP -> {
-                switchActiveMode();
-                notifyAction("Mode", "Chord Step");
-            }
-            case SWITCH_TO_NOTE_PLAY -> {
-                notePlayMode.resetNoteSubMode();
-                switchActiveMode();
-                notifyAction("Mode", "Note");
-            }
-        }
+        notePlayMode.cycleNoteSubMode();
+        notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
     }
 
     private void handleStepPressed(final boolean pressed) {
-        if (modeState.shouldIgnoreTopLevelStepPress(isGlobalShiftHeld(), isGlobalAltHeld())) {
-            return;
-        }
-        if (modeState.isChordStepActive()) {
-            return;
-        }
         if (modeState.activeMode() == Mode.MELODIC_STEP) {
             if (!pressed && suppressNextMelodicStepRelease) {
                 suppressNextMelodicStepRelease = false;
                 return;
             }
+            if (!isGlobalShiftHeld() && !isGlobalAltHeld()) {
+                if (pressed) {
+                    modeState.activateChordStep();
+                    switchActiveMode();
+                    notifyAction("Mode", "Chord Step");
+                }
+                return;
+            }
             melodicStepMode.handleStepButton(pressed);
+            return;
+        }
+        if (modeState.activeMode() == Mode.CHORD_STEP) {
+            if (!pressed || isGlobalShiftHeld() || isGlobalAltHeld()) {
+                return;
+            }
+            enterMelodicStepMode();
+            return;
+        }
+        if (modeState.shouldIgnoreTopLevelStepPress(isGlobalShiftHeld(), isGlobalAltHeld())) {
             return;
         }
         if (!pressed) {

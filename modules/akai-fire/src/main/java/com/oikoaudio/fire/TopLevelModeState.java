@@ -9,13 +9,6 @@ public final class TopLevelModeState {
         PERFORM
     }
 
-    public enum NoteButtonResult {
-        TOGGLE_NOTE_VARIANT,
-        TOGGLE_CHORD_VARIANT,
-        SWITCH_TO_NOTE_PLAY,
-        SWITCH_TO_CHORD_STEP
-    }
-
     private Mode activeMode = Mode.NOTE_PLAY;
     private Mode previousNonStepMode = Mode.NOTE_PLAY;
 
@@ -31,23 +24,12 @@ public final class TopLevelModeState {
         activeMode = Mode.PERFORM;
     }
 
-    public NoteButtonResult handleNotePressed(final boolean altHeld) {
-        if (activeMode == Mode.NOTE_PLAY) {
-            if (altHeld) {
-                activeMode = Mode.CHORD_STEP;
-                return NoteButtonResult.SWITCH_TO_CHORD_STEP;
-            }
-            return NoteButtonResult.TOGGLE_NOTE_VARIANT;
-        }
-        if (activeMode == Mode.CHORD_STEP) {
-            if (altHeld) {
-                return NoteButtonResult.TOGGLE_CHORD_VARIANT;
-            }
-            activeMode = Mode.NOTE_PLAY;
-            return NoteButtonResult.SWITCH_TO_NOTE_PLAY;
-        }
+    public void activateNotePlay() {
         activeMode = Mode.NOTE_PLAY;
-        return NoteButtonResult.SWITCH_TO_NOTE_PLAY;
+    }
+
+    public void activateChordStep() {
+        activeMode = Mode.CHORD_STEP;
     }
 
     public boolean shouldIgnoreTopLevelStepPress(final boolean shiftHeld, final boolean altHeld) {
