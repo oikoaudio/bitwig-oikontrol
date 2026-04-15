@@ -886,14 +886,22 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 : liveScaleDegreeGlissOffset;
     }
 
+    static int displayPitchGlissValue(final boolean fifthOctaveMode,
+                                      final int livePitchOffset,
+                                      final int scaleDegreeGlissOffset) {
+        if (!fifthOctaveMode) {
+            return scaleDegreeGlissOffset;
+        }
+        return livePitchOffset;
+    }
+
     private String formatLivePitchExpressionDisplay() {
         return formatSignedValue(liveExpressionControls.pitchExpression() - DEFAULT_LIVE_PITCH_EXPRESSION);
     }
 
     private String formatLivePitchOffsetDisplay() {
-        final int value = livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE
-                ? (isHarmonicLiveMode() ? getHarmonicGlissStepOffset() : getLivePitchOffset())
-                : liveScaleDegreeGlissOffset;
+        final int value = displayPitchGlissValue(livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE,
+                getLivePitchOffset(), liveScaleDegreeGlissOffset);
         return "%s %s".formatted(livePitchGlissMode.displayName(), formatSignedValue(value));
     }
 
