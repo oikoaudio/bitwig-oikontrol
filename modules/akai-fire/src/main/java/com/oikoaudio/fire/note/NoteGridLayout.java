@@ -2,7 +2,7 @@ package com.oikoaudio.fire.note;
 
 import com.bitwig.extensions.framework.MusicalScale;
 
-public final class NoteGridLayout {
+public final class NoteGridLayout implements LiveNoteLayout {
     public static final int PAD_COUNT = 64;
     public static final int PAD_COLUMNS = 16;
     public static final int PAD_ROWS = 4;
@@ -40,6 +40,12 @@ public final class NoteGridLayout {
         }
         final int note = rootNote + (octave + 1) * 12 + column + rowFromBottom * CHROMATIC_ROW_INTERVAL;
         return note >= 0 && note <= 127 ? note : -1;
+    }
+
+    @Override
+    public int[] notesForPad(final int padIndex) {
+        final int midiNote = noteForPad(padIndex);
+        return midiNote < 0 ? new int[0] : new int[]{midiNote};
     }
 
     public PadRole roleForPad(final int padIndex) {

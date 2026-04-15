@@ -46,7 +46,7 @@ class NotePlayControllerTest {
                     public void noteOff(final int midiNote) {
                         events.add("off:" + midiNote);
                     }
-                }, pad -> 60 + pad, (baseVelocity, rawVelocity) -> baseVelocity));
+                }, pad -> new int[]{60 + pad}, (baseVelocity, rawVelocity) -> baseVelocity));
 
         mode.activate();
         mode.handleMute1(true);

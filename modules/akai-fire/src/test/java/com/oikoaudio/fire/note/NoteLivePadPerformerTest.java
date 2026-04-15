@@ -16,7 +16,7 @@ class NoteLivePadPerformerTest {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer = new NoteLivePadPerformer(
                 new TestMidiOut(events),
-                pad -> 60 + pad,
+                pad -> new int[]{60 + pad},
                 (configured, raw) -> raw);
 
         performer.handlePadPress(2, true, 99, 100);
@@ -31,7 +31,7 @@ class NoteLivePadPerformerTest {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer = new NoteLivePadPerformer(
                 new TestMidiOut(events),
-                pad -> 60 + pad,
+                pad -> new int[]{60 + pad},
                 (configured, raw) -> raw);
 
         performer.handlePadPress(1, true, 80, 100);
@@ -46,7 +46,7 @@ class NoteLivePadPerformerTest {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer = new NoteLivePadPerformer(
                 new TestMidiOut(events),
-                pad -> 60 + pad,
+                pad -> new int[]{60 + pad},
                 (configured, raw) -> configured);
 
         performer.handlePadPress(0, true, 90, 100);
@@ -64,7 +64,7 @@ class NoteLivePadPerformerTest {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer = new NoteLivePadPerformer(
                 new TestMidiOut(events),
-                pad -> 60 + pad,
+                pad -> new int[]{60 + pad},
                 (configured, raw) -> raw);
 
         performer.handlePadPress(3, true, 70, 100);
@@ -73,6 +73,20 @@ class NoteLivePadPerformerTest {
 
         assertEquals(List.of("on:63:70", "off:63"), events);
         assertFalse(performer.isPadHeld(3));
+    }
+
+    @Test
+    void handlePadPressSupportsMultipleNotesPerPad() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad, 64 + pad, 67 + pad},
+                (configured, raw) -> configured);
+
+        performer.handlePadPress(0, true, 99, 100);
+        performer.handlePadPress(0, false, 0, 100);
+
+        assertEquals(List.of("on:60:100", "on:64:100", "on:67:100", "off:60", "off:64", "off:67"), events);
     }
 
     private record TestMidiOut(List<String> events) implements NoteLivePadPerformer.MidiOut {

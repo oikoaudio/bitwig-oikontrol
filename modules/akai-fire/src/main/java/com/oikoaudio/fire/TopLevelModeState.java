@@ -34,10 +34,10 @@ public final class TopLevelModeState {
     public NoteButtonResult handleNotePressed(final boolean altHeld) {
         if (activeMode == Mode.NOTE_PLAY) {
             if (altHeld) {
-                return NoteButtonResult.TOGGLE_NOTE_VARIANT;
+                activeMode = Mode.CHORD_STEP;
+                return NoteButtonResult.SWITCH_TO_CHORD_STEP;
             }
-            activeMode = Mode.CHORD_STEP;
-            return NoteButtonResult.SWITCH_TO_CHORD_STEP;
+            return NoteButtonResult.TOGGLE_NOTE_VARIANT;
         }
         if (activeMode == Mode.CHORD_STEP) {
             if (altHeld) {

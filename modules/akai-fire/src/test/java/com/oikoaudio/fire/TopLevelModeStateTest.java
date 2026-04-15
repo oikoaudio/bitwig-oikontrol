@@ -12,7 +12,10 @@ class TopLevelModeStateTest {
     void noteButtonSwitchesBetweenNotePlayAndChordStep() {
         final TopLevelModeState state = new TopLevelModeState();
 
-        assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_CHORD_STEP, state.handleNotePressed(false));
+        assertEquals(TopLevelModeState.NoteButtonResult.TOGGLE_NOTE_VARIANT, state.handleNotePressed(false));
+        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.activeMode());
+
+        assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_CHORD_STEP, state.handleNotePressed(true));
         assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
 
         assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_NOTE_PLAY, state.handleNotePressed(false));
@@ -23,10 +26,9 @@ class TopLevelModeStateTest {
     void alternateNoteButtonDoesNotLeaveCurrentNoteSurface() {
         final TopLevelModeState state = new TopLevelModeState();
 
-        assertEquals(TopLevelModeState.NoteButtonResult.TOGGLE_NOTE_VARIANT, state.handleNotePressed(true));
-        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.activeMode());
+        assertEquals(TopLevelModeState.NoteButtonResult.SWITCH_TO_CHORD_STEP, state.handleNotePressed(true));
+        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
 
-        state.handleNotePressed(false);
         assertEquals(TopLevelModeState.NoteButtonResult.TOGGLE_CHORD_VARIANT, state.handleNotePressed(true));
         assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
     }
@@ -34,7 +36,7 @@ class TopLevelModeStateTest {
     @Test
     void melodicExitReturnsToPreviousNonStepMode() {
         final TopLevelModeState state = new TopLevelModeState();
-        state.handleNotePressed(false);
+        state.handleNotePressed(true);
 
         state.enterMelodicStepMode();
 

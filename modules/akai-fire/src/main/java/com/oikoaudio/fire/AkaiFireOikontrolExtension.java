@@ -655,7 +655,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         switch (modeState.handleNotePressed(isGlobalAltHeld())) {
-            case TOGGLE_NOTE_VARIANT -> notePlayMode.toggleSurfaceVariant();
+            case TOGGLE_NOTE_VARIANT -> {
+                notePlayMode.cycleNoteSubMode();
+                notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+            }
             case TOGGLE_CHORD_VARIANT -> chordStepMode.toggleSurfaceVariant();
             case SWITCH_TO_CHORD_STEP -> {
                 switchActiveMode();

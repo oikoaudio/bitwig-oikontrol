@@ -3,26 +3,26 @@ package com.oikoaudio.fire.note;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.IntBinaryOperator;
-import java.util.function.IntUnaryOperator;
+import java.util.function.BiFunction;
 
 /**
  * Live pad-note performance state for Note mode: held pads, sounding notes, retuning, and note on/off output.
  */
 final class NoteLivePadPerformer {
     private final MidiOut midiOut;
-    private final IntUnaryOperator midiNoteResolver;
-    private final IntBinaryOperator velocityResolver;
+    private final java.util.function.IntFunction<int[]> midiNotesResolver;
+    private final BiFunction<Integer, Integer, Integer> velocityResolver;
     private final Set<Integer> heldPads = new HashSet<>();
     private final Map<Integer, LivePadNote> soundingNotesByPad = new HashMap<>();
 
     NoteLivePadPerformer(final MidiOut midiOut,
-                         final IntUnaryOperator midiNoteResolver,
-                         final IntBinaryOperator velocityResolver) {
+                         final java.util.function.IntFunction<int[]> midiNotesResolver,
+                         final BiFunction<Integer, Integer, Integer> velocityResolver) {
         this.midiOut = midiOut;
-        this.midiNoteResolver = midiNoteResolver;
+        this.midiNotesResolver = midiNotesResolver;
         this.velocityResolver = velocityResolver;
     }
 
@@ -60,13 +60,22 @@ final class NoteLivePadPerformer {
 
     private void noteOn(final int padIndex, final int rawVelocity, final int configuredVelocity) {
         noteOff(padIndex);
-        final int midiNote = midiNoteResolver.applyAsInt(padIndex);
-        if (midiNote < 0) {
+        final int[] midiNotes = midiNotesResolver.apply(padIndex);
+        if (midiNotes == null || midiNotes.length == 0) {
             return;
         }
-        final int appliedVelocity = velocityResolver.applyAsInt(configuredVelocity, rawVelocity);
-        midiOut.noteOn(midiNote, appliedVelocity);
-        soundingNotesByPad.put(padIndex, new LivePadNote(midiNote, appliedVelocity));
+        final int appliedVelocity = velocityResolver.apply(configuredVelocity, rawVelocity);
+        final List<Integer> sounding = new ArrayList<>();
+        for (final int midiNote : midiNotes) {
+            if (midiNote < 0) {
+                continue;
+            }
+            midiOut.noteOn(midiNote, appliedVelocity);
+            sounding.add(midiNote);
+        }
+        if (!sounding.isEmpty()) {
+            soundingNotesByPad.put(padIndex, new LivePadNote(sounding, appliedVelocity));
+        }
     }
 
     private void noteOff(final int padIndex) {
@@ -74,7 +83,9 @@ final class NoteLivePadPerformer {
         if (activeNote == null) {
             return;
         }
-        midiOut.noteOff(activeNote.midiNote());
+        for (final int midiNote : activeNote.midiNotes()) {
+            midiOut.noteOff(midiNote);
+        }
     }
 
     @FunctionalInterface
@@ -85,6 +96,6 @@ final class NoteLivePadPerformer {
         }
     }
 
-    private record LivePadNote(int midiNote, int velocity) {
+    private record LivePadNote(List<Integer> midiNotes, int velocity) {
     }
 }
