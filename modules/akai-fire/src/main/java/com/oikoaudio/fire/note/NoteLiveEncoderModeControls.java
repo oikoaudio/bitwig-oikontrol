@@ -4,6 +4,7 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 
 import java.util.EnumMap;
+import java.util.function.Function;
 
 /**
  * Owns the live encoder-page selection and layer activation used by Note mode's live surface.
@@ -11,18 +12,21 @@ import java.util.EnumMap;
 final class NoteLiveEncoderModeControls {
     private final EnumMap<EncoderMode, LayerHandle> layers = new EnumMap<>(EncoderMode.class);
     private final StepSizeApplier stepSizeApplier;
+    private final Function<EncoderMode, String> modeInfoSupplier;
     private EncoderMode mode = EncoderMode.CHANNEL;
 
     NoteLiveEncoderModeControls(final LayerHandle channelLayer,
                                 final LayerHandle mixerLayer,
                                 final LayerHandle user1Layer,
                                 final LayerHandle user2Layer,
-                                final StepSizeApplier stepSizeApplier) {
+                                final StepSizeApplier stepSizeApplier,
+                                final Function<EncoderMode, String> modeInfoSupplier) {
         layers.put(EncoderMode.CHANNEL, channelLayer);
         layers.put(EncoderMode.MIXER, mixerLayer);
         layers.put(EncoderMode.USER_1, user1Layer);
         layers.put(EncoderMode.USER_2, user2Layer);
         this.stepSizeApplier = stepSizeApplier;
+        this.modeInfoSupplier = modeInfoSupplier;
     }
 
     void resetToChannel() {
@@ -57,7 +61,7 @@ final class NoteLiveEncoderModeControls {
     }
 
     String modeInfo() {
-        return modeInfo(mode);
+        return modeInfoSupplier.apply(mode);
     }
 
     EncoderMode mode() {
@@ -66,9 +70,9 @@ final class NoteLiveEncoderModeControls {
 
     static String modeInfo(final EncoderMode mode) {
         return switch (mode) {
-            case CHANNEL -> "1: Mod\n2: Pitch Gliss\n3: Velocity\n4: Scale";
+            case CHANNEL -> "1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Scale";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
-            case USER_1 -> "1: Aftertouch\n2: Pressure\n3: Timbre\n4: Pitch Expr";
+            case USER_1 -> "1: Velocity\n2: Aftertouch\n3: Timbre\n4: Pitch Expr";
             case USER_2 -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
         };
     }

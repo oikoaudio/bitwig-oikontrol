@@ -23,7 +23,7 @@ class NoteLiveEncoderModeControlsTest {
 
         assertEquals(EncoderMode.CHANNEL, controls.mode());
         assertEquals(BiColorLightState.MODE_CHANNEL, controls.lightState());
-        assertEquals("1: Mod\n2: Pitch Gliss\n3: Velocity\n4: Scale", controls.modeInfo());
+        assertEquals("1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Scale", controls.modeInfo());
         assertEquals(List.of(
                 "deactivate:CHANNEL",
                 "deactivate:MIXER",
@@ -78,7 +78,8 @@ class NoteLiveEncoderModeControlsTest {
                 layer(events, EncoderMode.MIXER),
                 layer(events, EncoderMode.USER_1),
                 layer(events, EncoderMode.USER_2),
-                mode -> events.add("step:" + mode));
+                mode -> events.add("step:" + mode),
+                NoteLiveEncoderModeControls::modeInfo);
     }
 
     private static NoteLiveEncoderModeControls.LayerHandle layer(final List<String> events, final EncoderMode mode) {

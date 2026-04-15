@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.control;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
@@ -45,6 +46,35 @@ public class TouchEncoder {
 	public void bindEncoder(final Layer layer, final IntConsumer action) {
 		layer.bind(encoder, createIncrementBinder(action));
 	}
+
+    public void bindContinuousEncoder(final Layer layer, final BooleanSupplier fineSupplier, final IntConsumer action) {
+        bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, action);
+    }
+
+    public void bindContinuousEncoder(final Layer layer, final BooleanSupplier fineSupplier,
+                                      final ContinuousEncoderScaler.Profile profile,
+                                      final IntConsumer action) {
+        final ContinuousEncoderScaler scaler = new ContinuousEncoderScaler(profile);
+        layer.bind(encoder, createIncrementBinder(inc -> {
+            final int effective = scaler.scale(inc, fineSupplier.getAsBoolean());
+            if (effective != 0) {
+                action.accept(effective);
+            }
+        }));
+    }
+
+    public void bindThresholdedEncoder(final Layer layer, final int normalThreshold, final int fineThreshold,
+                                       final BooleanSupplier fineSupplier, final IntConsumer action) {
+        final EncoderStepAccumulator normalAccumulator = new EncoderStepAccumulator(normalThreshold);
+        final EncoderStepAccumulator fineAccumulator = new EncoderStepAccumulator(fineThreshold);
+        layer.bind(encoder, createIncrementBinder(inc -> {
+            final EncoderStepAccumulator accumulator = fineSupplier.getAsBoolean() ? fineAccumulator : normalAccumulator;
+            final int effective = accumulator.consume(inc);
+            if (effective != 0) {
+                action.accept(effective);
+            }
+        }));
+    }
 
 	public RelativeHardwarControlBindable createIncrementBinder(final IntConsumer consumer) {
 		return host.createRelativeHardwareControlStepTarget(//

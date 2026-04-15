@@ -9,48 +9,63 @@ public final class MusicalScaleLibrary
 {
    private MusicalScaleLibrary()
    {
-      /* Classic */
+      /* Bitwig-aligned core scales */
       addScale(new MusicalScale("Chromatic", new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }));
-      addScale(new MusicalScale("Ionan (Major)", new int[]{ 0, 2, 4, 5, 7, 9, 11 }));
+      addScale(new MusicalScale("Major", new int[]{ 0, 2, 4, 5, 7, 9, 11 }));
+      addScale(new MusicalScale("Minor", new int[]{ 0, 2, 3, 5, 7, 8, 10 }));
       addScale(new MusicalScale("Dorian", new int[]{ 0, 2, 3, 5, 7, 9, 10 }));
       addScale(new MusicalScale("Phrygian", new int[]{ 0, 1, 3, 5, 7, 8, 10 }));
       addScale(new MusicalScale("Lydian", new int[]{ 0, 2, 4, 6, 7, 9, 11 }));
       addScale(new MusicalScale("Mixolydian", new int[]{ 0, 2, 4, 5, 7, 9, 10 }));
-      addScale(new MusicalScale("Aeolian (Minor)", new int[]{ 0, 2, 3, 5, 7, 8, 10 }));
       addScale(new MusicalScale("Locrian", new int[]{ 0, 1, 3, 5, 6, 8, 10 }));
-
-      /* 5 keys */
-      addScale(new MusicalScale("Hirajoshi", new int[]{ 0, 2, 3, 7, 8 }));
-      addScale(new MusicalScale("Iwato", new int[]{ 0, 1, 5, 6, 10 })); // related to Hirajoshi (after)
-      addScale(new MusicalScale("Kumoi", new int[]{ 0, 2, 3, 7, 9 }));
-      addScale(new MusicalScale("In Sen", new int[]{ 0, 1, 5, 7, 10 })); // related to Kumoi (after)
-      addScale(new MusicalScale("Yo scale", new int[]{ 0, 2, 5, 7, 9 }));
-      addScale(new MusicalScale("Minor Pentatonic", new int[]{ 0, 3, 5, 7, 10 })); // related to Yo Scale (after)
-      addScale(new MusicalScale("Major Pentatonic", new int[]{ 0, 2, 4, 7, 9 })); // related to Minor Pentatonic (after)
-
-      /* 6 keys */
+      addScale(new MusicalScale("Harmonic Major", new int[]{ 0, 2, 4, 5, 7, 8, 11 }));
+      addScale(new MusicalScale("Harmonic Minor", new int[]{ 0, 2, 3, 5, 7, 8, 11 }));
+      addScale(new MusicalScale("Overtone Scale", new int[]{ 0, 2, 4, 6, 7, 9, 10 }));
+      addScale(new MusicalScale("Jazz Minor", new int[]{ 0, 2, 3, 5, 7, 9, 11 }));
+      addScale(new MusicalScale("Blues Major", new int[]{ 0, 2, 3, 4, 7, 9 }));
+      addScale(new MusicalScale("Blues Minor", new int[]{ 0, 3, 5, 6, 7, 10 }));
+      addScale(new MusicalScale("Double Harmonic Major", new int[]{ 0, 1, 4, 5, 7, 8, 11 }));
+      addScale(new MusicalScale("Double Harmonic Minor", new int[]{ 0, 2, 3, 6, 7, 8, 11 }));
       addScale(new MusicalScale("Whole Tone", new int[]{ 0, 2, 4, 6, 8, 10 }));
-      addScale(new MusicalScale("Blues", new int[]{ 0, 3, 5, 6, 7, 10 }));
-      addScale(new MusicalScale("Major Blues", new int[]{ 0, 2, 3, 4, 7, 9 }));
+      addScale(new MusicalScale("Half-diminished", new int[]{ 0, 2, 3, 5, 6, 8, 10 }));
+      addScale(new MusicalScale("Diminished WH", new int[]{ 0, 2, 3, 5, 6, 8, 9, 11 }));
+      addScale(new MusicalScale("Diminished HW", new int[]{ 0, 1, 3, 4, 6, 7, 9, 10 }));
+      addScale(new MusicalScale("Major Pentatonic", new int[]{ 0, 2, 4, 7, 9 }));
+      addScale(new MusicalScale("Minor Pentatonic", new int[]{ 0, 3, 5, 7, 10 }));
+      addScale(new MusicalScale("Major Triad", new int[]{ 0, 4, 7 }));
+      addScale(new MusicalScale("Minor Triad", new int[]{ 0, 3, 7 }));
 
-      /* scales with augmented second */
+      /* Extras beyond the Bitwig-like core list */
+      addScale(new MusicalScale("Hirajoshi", new int[]{ 0, 2, 3, 7, 8 }));
+      addScale(new MusicalScale("Iwato", new int[]{ 0, 1, 5, 6, 10 }));
+      addScale(new MusicalScale("Kumoi", new int[]{ 0, 2, 3, 7, 9 }));
+      addScale(new MusicalScale("In Sen", new int[]{ 0, 1, 5, 7, 10 }));
+      addScale(new MusicalScale("Yo Scale", new int[]{ 0, 2, 5, 7, 9 }));
       addScale(new MusicalScale("Todi", new int[]{ 0, 1, 3, 5, 6, 7, 11 }));
       addScale(new MusicalScale("Phrygian Dominant", new int[]{ 0, 1, 4, 5, 7, 8, 10 }));
-      addScale(new MusicalScale("Double Harmonic", new int[]{ 0, 1, 4, 5, 7, 8, 11 }));
       addScale(new MusicalScale("Marva", new int[]{ 0, 1, 4, 6, 7, 9, 11 }));
-      addScale(new MusicalScale("Harmonic Minor", new int[]{ 0, 2, 3, 5, 7, 8, 11 }));
-
-      /* Others */
-      addScale(new MusicalScale("Melodic Minor (ascending)", new int[]{ 0, 2, 3, 5, 7, 9, 11 }));
-      addScale(new MusicalScale("Hungarian Minor", new int[]{ 0, 2, 3, 6, 7, 8, 11 }));
       addScale(new MusicalScale("Ukranian Dorian", new int[]{ 0, 2, 3, 6, 7, 9, 10 }));
       addScale(new MusicalScale("Super Locrian", new int[]{ 0, 1, 3, 4, 6, 8, 10 }));
-      addScale(new MusicalScale("Whole Half", new int[]{ 0, 2, 3, 5, 6, 8, 9, 11 }));
-      addScale(new MusicalScale("Half-Whole Diminished", new int[]{ 0, 1, 3, 4, 6, 7, 9, 10 }));
-      addScale(new MusicalScale("BeBop Major", new int[]{ 0, 2, 4, 5, 7, 8, 9, 11 }));
-      addScale(new MusicalScale("BeBop Dorian", new int[]{ 0, 2, 3, 4, 5, 7, 9, 10 }));
-      addScale(new MusicalScale("BeBop Mixolydian", new int[]{ 0, 2, 4, 5, 7, 9, 10, 11 }));
-      addScale(new MusicalScale("BeBop Minor", new int[]{ 0, 2, 3, 5, 7, 8, 10, 11 }));
+      addScale(new MusicalScale("Bebop Major", new int[]{ 0, 2, 4, 5, 7, 8, 9, 11 }));
+      addScale(new MusicalScale("Bebop Dorian", new int[]{ 0, 2, 3, 4, 5, 7, 9, 10 }));
+      addScale(new MusicalScale("Bebop Mixolydian", new int[]{ 0, 2, 4, 5, 7, 9, 10, 11 }));
+      addScale(new MusicalScale("Bebop Minor", new int[]{ 0, 2, 3, 5, 7, 8, 10, 11 }));
+
+      /* Legacy aliases kept for compatibility with older code/tests */
+      addAlias("Ionan (Major)", "Major");
+      addAlias("Aeolian (Minor)", "Minor");
+      addAlias("Melodic Minor (ascending)", "Jazz Minor");
+      addAlias("Double Harmonic", "Double Harmonic Major");
+      addAlias("Blues", "Blues Minor");
+      addAlias("Major Blues", "Blues Major");
+      addAlias("Whole Half", "Diminished WH");
+      addAlias("Half-Whole Diminished", "Diminished HW");
+      addAlias("Yo scale", "Yo Scale");
+      addAlias("BeBop Major", "Bebop Major");
+      addAlias("BeBop Dorian", "Bebop Dorian");
+      addAlias("BeBop Mixolydian", "Bebop Mixolydian");
+      addAlias("BeBop Minor", "Bebop Minor");
+      addAlias("Hungarian Minor", "Double Harmonic Minor");
 
       final int numScales = mMusicalScales.size();
       mScalesName = new String[numScales];
@@ -70,6 +85,14 @@ public final class MusicalScaleLibrary
       musicalScale.setIndexInLibrary(mMusicalScales.size());
       mMusicalScales.add(musicalScale);
       mMusicalScaleHashMap.put(musicalScale.getName(), musicalScale);
+   }
+
+   private void addAlias(final String alias, final String canonicalName)
+   {
+      assert !mMusicalScaleHashMap.containsKey(alias);
+      final MusicalScale canonical = mMusicalScaleHashMap.get(canonicalName);
+      assert canonical != null;
+      mMusicalScaleHashMap.put(alias, canonical);
    }
 
    static public MusicalScaleLibrary getInstance()

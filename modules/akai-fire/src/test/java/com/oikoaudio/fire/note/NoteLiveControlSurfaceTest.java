@@ -157,7 +157,8 @@ class NoteLiveControlSurfaceTest {
                 layer(events, EncoderMode.MIXER),
                 layer(events, EncoderMode.USER_1),
                 layer(events, EncoderMode.USER_2),
-                mode -> events.add("step:" + mode));
+                mode -> events.add("step:" + mode),
+                NoteLiveEncoderModeControls::modeInfo);
     }
 
     private static NoteEncoderTouchResetHandler createTouchResetHandler(final List<String> events) {
