@@ -489,7 +489,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
 
         encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
         encoders[3].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(3, touched,
-                () -> showState(driver.isGlobalAltHeld() ? "Root" : "Scale"),
+                () -> showState(driver.isGlobalShiftHeld() ? "Layout" : driver.isGlobalAltHeld() ? "Root" : "Scale"),
                 liveScaleEncoder::reset));
     }
 
@@ -628,8 +628,10 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private void handleEncoder1(final int inc) {
         final int steps = liveScaleEncoder.consume(inc);
         if (steps != 0) {
-            liveControls.markEncoderAdjusted(2);
-            if (driver.isGlobalAltHeld()) {
+            liveControls.markEncoderAdjusted(3);
+            if (driver.isGlobalShiftHeld()) {
+                adjustLayout(steps);
+            } else if (driver.isGlobalAltHeld()) {
                 adjustTransposeSemitone(steps);
             } else {
                 adjustScale(steps);

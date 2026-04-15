@@ -2177,12 +2177,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         noteAccessSlot(NoteStepAccess.PITCH)
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Octave\n2: Gate Len\n3: Velocity\n4: Chance",
+                "1: Gate Len\n2: Chance\n3: Vel Spread\n4: Repeat",
                 new EncoderSlotBinding[]{
-                        stepValueSlot(this::adjustSelectedOctave, () -> stepDetail("Oct")),
-                        stepValueSlot(this::adjustSelectedGate, () -> stepDetail("Gate Len")),
-                        stepValueSlot(this::adjustSelectedVelocity, () -> stepDetail("Velocity")),
-                        stepValueSlot(this::adjustSelectedChance, () -> stepDetail("Chance"))
+                        noteAccessSlot(NoteStepAccess.DURATION),
+                        noteAccessSlot(NoteStepAccess.CHANCE),
+                        noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD),
+                        noteAccessSlot(NoteStepAccess.REPEATS)
                 }));
         return new EncoderBankLayout(banks);
     }
@@ -2309,10 +2309,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         };
     }
 
-    private String stepDetail(final String label) {
-        return "%s S%d".formatted(label, selectedStep + 1);
-    }
-
     private EncoderSlotBinding poolContextSlot() {
         return new EncoderSlotBinding() {
             @Override
@@ -2387,7 +2383,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private EncoderSlotBinding stepValueSlot(final java.util.function.IntConsumer adjuster,
-                                             final java.util.function.Supplier<String> label) {
+                                             final String label) {
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -2400,7 +2396,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        oled.valueInfo("Step", label.get());
+                        oled.valueInfo(label, "Step %d".formatted(selectedStep + 1));
                     } else {
                         oled.clearScreenDelayed();
                     }
