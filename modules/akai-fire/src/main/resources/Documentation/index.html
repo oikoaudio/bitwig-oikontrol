@@ -209,6 +209,12 @@
         <li><code>User 1</code>: step behavior page</li>
         <li><code>User 2</code>: Euclid controls</li>
       </ul>
+      <p>Expression note:</p>
+      <ul>
+        <li>step-expression editing in <code>DRUM</code> writes Bitwig note-expression data into the clip, per drum hit</li>
+        <li><code>Pressure</code> and <code>Timbre</code> here are per-step note-expression values, not a single live channel-wide MIDI stream</li>
+        <li>that is why different drum hits or drum chains can respond differently inside the same clip</li>
+      </ul>
       <p>Preferences that matter:</p>
       <ul>
         <li><code>Drum Mode Pinning</code></li>
@@ -240,23 +246,29 @@
       <p>Useful live-note controls:</p>
       <ul>
         <li><code>PATTERN UP/DOWN</code>: octave</li>
+        <li><code>ALT + NOTE</code>: local layout shortcut</li>
+        <li><code>SHIFT + Encoder 4</code>: local layout</li>
+        <li><code>Encoder 4</code>: shared scale</li>
+        <li><code>ALT + Encoder 4</code>: shared root</li>
         <li><code>SHIFT + PATTERN UP/DOWN</code>: root</li>
         <li><code>MUTE_1</code>: sustain</li>
         <li><code>MUTE_2</code>: sostenuto</li>
       </ul>
-      <p>The current note-step sub-modes are:</p>
-      <ul>
-        <li><code>Melodic Step</code></li>
-        <li><code>Chord Step</code></li>
-        <li><code>Clip Step Record</code> placeholder</li>
-      </ul>
+      <p><code>Melodic Step</code> and <code>Chord Step</code> now live behind <code>STEP SEQ</code> rather than under <code>NOTE</code>.</p>
       <p>Quick start:</p>
       <ol>
         <li>Enter <code>NOTE</code>.</li>
         <li>Play notes directly on the pad grid.</li>
         <li>Press <code>NOTE</code> again to move between the primary note-family surfaces.</li>
-        <li>Use <code>PATTERN UP/DOWN</code> for octave, <code>SHIFT + PATTERN UP/DOWN</code> for shared root, and the Channel page for <code>Scale</code>, <code>Pitch Gliss</code>, and live velocity response.</li>
+        <li>Use <code>ALT + NOTE</code> or <code>SHIFT + Encoder 4</code> for the local layout, <code>PATTERN UP/DOWN</code> for octave, <code>SHIFT + PATTERN UP/DOWN</code> for shared root, and the Channel page for <code>Mod</code>, <code>Pitch Bend</code>, <code>Pitch Gliss</code>, and shared scale/root control.</li>
       </ol>
+      <p>Expression behavior in <code>NOTE</code> is split between live input and sequenced note data:</p>
+      <ul>
+        <li>the live <code>User 1</code> page now combines live velocity response with channel-wide expressive MIDI controls, not per-note expression edits on an existing clip</li>
+        <li>today that page is <code>Velocity</code>, <code>Aftertouch</code>, <code>Timbre</code>, and <code>Pitch Expr</code></li>
+        <li>the Channel page carries the performance controls <code>Mod</code>, spring-return <code>Pitch Bend</code>, <code>Pitch Gliss</code>, and <code>Scale</code>; <code>Aftertouch</code> sends channel aftertouch, <code>Timbre</code> sends CC 74, and <code>Pitch Expr</code> is the persistent pitch-expression control</li>
+        <li>Bitwig can record those live messages into note-expression lanes while recording, but turning those encoders during playback does not inject per-note expression into notes that are already in a clip</li>
+      </ul>
 
       <h3>Melodic Step workflow</h3>
       <p><code>Melodic Step</code> is a generated and editable mono phrase sequencer for basslines, motifs, and melodic hooks.</p>
@@ -294,7 +306,8 @@
       <ul>
         <li><code>Channel</code>: primary phrase setup, pool shaping, and mutation controls</li>
         <li><code>Mixer</code>: melodic process transforms</li>
-        <li><code>User 1</code>: secondary generator-shaping controls</li>
+        <li><code>ALT + Mixer</code>: secondary generator-shaping controls</li>
+        <li><code>User 1</code>: per-note expression for the selected or held melodic note</li>
         <li><code>User 2</code>: selected or held step properties</li>
       </ul>
       <p>Channel page details:</p>
@@ -307,12 +320,19 @@
         <li>Encoder 4: <code>Mutation Type</code></li>
         <li><code>ALT + Encoder 4</code>: mutation strength</li>
       </ul>
-      <p><code>User 1</code> is the secondary generator-shaping page:</p>
+      <p><code>ALT + Mixer</code> exposes the secondary generator-shaping controls:</p>
       <ul>
         <li>Encoder 1: engine-specific motion or contour control such as motion, answer, movement, or jump</li>
         <li>Encoder 2: <code>Tension</code></li>
         <li>Encoder 3: <code>Legato</code>, which biases slide and gate behavior inside the generator</li>
         <li>Encoder 4: recurrence span entry; hold it and use the step rows to draw the recurrence mask for the selected step</li>
+      </ul>
+      <p><code>User 1</code> is the per-note expression page:</p>
+      <ul>
+        <li>Encoder 1: selected or held step velocity</li>
+        <li>Encoder 2: selected or held step pressure</li>
+        <li>Encoder 3: selected or held step timbre</li>
+        <li>Encoder 4: selected or held step pitch expression</li>
       </ul>
       <p><code>User 2</code> is the per-step property page:</p>
       <ul>
@@ -320,6 +340,12 @@
         <li>Encoder 2: selected or held step gate length</li>
         <li>Encoder 3: selected or held step velocity</li>
         <li>Encoder 4: selected or held step chance</li>
+      </ul>
+      <p>Expression note:</p>
+      <ul>
+        <li><code>Melodic Step</code> edits note data inside the clip rather than sending live channel expression</li>
+        <li>when a step or selected note exposes expression properties, those are Bitwig per-note values stored with the sequence</li>
+        <li>this is a different path from live <code>NOTE</code> mode, where the encoders send incoming performance MIDI such as channel aftertouch or CC 74</li>
       </ul>
       <p>Melodic left-side buttons now align with the shared sequencer clip/edit workflow:</p>
       <ul>
@@ -346,6 +372,7 @@
       </ul>
 
       <h3>Chord Step workflow</h3>
+      <p>Press <code>STEP SEQ</code> once to enter <code>Melodic Step</code>, then press <code>STEP SEQ</code> again to switch to <code>Chord Step</code>. Press <code>NOTE</code> to return to live note input.</p>
       <p><code>Chord Step</code> is the current chord-oriented note-step workflow.</p>
       <ul>
         <li>Row 1: clip row</li>
@@ -381,6 +408,11 @@
         <li>coarse nudge is intentionally disabled in <code>Chord Step</code></li>
         <li>chord-step micro-timing is currently temperamental and should be treated as experimental</li>
       </ul>
+      <p>Expression note:</p>
+      <ul>
+        <li>like <code>DRUM</code> and <code>Melodic Step</code>, any step-expression editing here is clip note data, not a live channel-wide performance stream</li>
+        <li>that means per-step expression can differ across notes or steps inside the same clip</li>
+      </ul>
 
       <h3>PERFORM mode</h3>
       <p><code>PERFORM</code> is the clip-launch and performance surface.</p>
@@ -389,6 +421,7 @@
         <li>pads show clip color and launch state</li>
         <li>empty slots can create a new clip using the current <code>Default Clip Length</code> preference</li>
         <li>quick select, copy, delete, and clip-length gestures live on the <code>MUTE</code> buttons</li>
+        <li>press <code>PERFORM</code> again while already in the mode to toggle between <code>PerformV</code> and <code>PerformH</code></li>
       </ul>
       <p>Important gestures:</p>
       <ul>
@@ -407,6 +440,12 @@
         <li><code>Mixer</code>: volume, pan, send 1, send 2</li>
         <li><code>User 1</code>: track remotes 1-4</li>
         <li><code>User 2</code>: master / cue controls</li>
+      </ul>
+      <p>Orientation note:</p>
+      <ul>
+        <li><code>PerformV</code> is the original view: tracks by column, scenes by row</li>
+        <li><code>PerformH</code> rotates the grid: tracks by row, scenes by column</li>
+        <li>top row in <code>PerformH</code> is the first visible track of the current page</li>
       </ul>
       <p><code>SHIFT + PERFORM</code> opens a latched <code>Settings</code> page. From there, Encoder 1 adjusts the shared <code>Root Key</code>, Encoder 2 adjusts the shared <code>Scale</code>, and the pad grid becomes a non-performance settings display. Press <code>PERFORM</code> again to leave <code>Settings</code>.</p>
 

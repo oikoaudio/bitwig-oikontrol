@@ -178,27 +178,24 @@ Quick start:
 Useful live-note controls:
 
 - `PATTERN UP/DOWN`: shared octave
+- `ALT + NOTE`: toggle the local live-note layout shortcut
+- `SHIFT + Encoder 4`: local layout (`Chromatic` / `In Key` in melodic note mode)
 - `Encoder 4`: shared scale
 - `ALT + Encoder 4`: shared root
 - `MUTE_1`: sustain
 - `MUTE_2`: sostenuto
 
-The current note-step sub-modes are:
-
-- `Chord Step`
-- `Clip Step Record` placeholder
-
-`Melodic Step` is a separate top-level mode entered from `STEP SEQ`, not a NOTE sub-mode.
+`Melodic Step` and `Chord Step` now live behind `STEP SEQ` rather than under `NOTE`.
 
 Quick start:
 
 1. Enter `NOTE`.
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
-4. Use `PATTERN UP/DOWN` for shared octave, `Encoder 4` for shared scale, `ALT + Encoder 4` for shared root, and the Channel page for `Pitch Gliss` and live velocity response.
+4. Use `ALT + NOTE` or `SHIFT + Encoder 4` for the local layout, `PATTERN UP/DOWN` for shared octave, `Encoder 4` for shared scale, `ALT + Encoder 4` for shared root, and the Channel page for `Pitch Gliss` and live velocity response.
 
 ### Chord Step workflow
-To get to this mode from the Note live input mode, press the `NOTE` controller button. From any other mode, press the `NOTE` button twice to cycle past the Note input mode.
+Press `STEP SEQ` once to enter `Melodic Step`, then press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
 
 `Chord Step` is the chord-oriented note-step workflow.
 

@@ -654,33 +654,55 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        switch (modeState.handleNotePressed(isGlobalAltHeld())) {
-            case TOGGLE_NOTE_VARIANT -> notePlayMode.toggleSurfaceVariant();
-            case TOGGLE_CHORD_VARIANT -> chordStepMode.toggleSurfaceVariant();
-            case SWITCH_TO_CHORD_STEP -> {
-                switchActiveMode();
-                notifyAction("Mode", "Chord Step");
-            }
-            case SWITCH_TO_NOTE_PLAY -> {
-                switchActiveMode();
-                notifyAction("Mode", "Note");
-            }
+        if (modeState.activeMode() == Mode.NOTE_PLAY && isGlobalAltHeld()) {
+            notePlayMode.toggleLiveLayoutShortcut();
+            return;
         }
+        if (modeState.activeMode() == Mode.CHORD_STEP) {
+            if (isGlobalAltHeld()) {
+                chordStepMode.toggleSurfaceVariant();
+                return;
+            }
+            modeState.activateNotePlay();
+            switchActiveMode();
+            notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+            return;
+        }
+        if (modeState.activeMode() != Mode.NOTE_PLAY) {
+            modeState.activateNotePlay();
+            switchActiveMode();
+            notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+            return;
+        }
+        notePlayMode.cycleNoteSubMode();
+        notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
     }
 
     private void handleStepPressed(final boolean pressed) {
-        if (modeState.shouldIgnoreTopLevelStepPress(isGlobalShiftHeld(), isGlobalAltHeld())) {
-            return;
-        }
-        if (modeState.isChordStepActive()) {
-            return;
-        }
         if (modeState.activeMode() == Mode.MELODIC_STEP) {
             if (!pressed && suppressNextMelodicStepRelease) {
                 suppressNextMelodicStepRelease = false;
                 return;
             }
+            if (!isGlobalShiftHeld() && !isGlobalAltHeld()) {
+                if (pressed) {
+                    modeState.activateChordStep();
+                    switchActiveMode();
+                    notifyAction("Mode", "Chord Step");
+                }
+                return;
+            }
             melodicStepMode.handleStepButton(pressed);
+            return;
+        }
+        if (modeState.activeMode() == Mode.CHORD_STEP) {
+            if (!pressed || isGlobalShiftHeld() || isGlobalAltHeld()) {
+                return;
+            }
+            enterMelodicStepMode();
+            return;
+        }
+        if (modeState.shouldIgnoreTopLevelStepPress(isGlobalShiftHeld(), isGlobalAltHeld())) {
             return;
         }
         if (!pressed) {
@@ -704,15 +726,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (modeState.activeMode() == Mode.PERFORM) {
             final boolean leavingSettings = performMode.isSettingsMode();
-            performMode.exitOverview();
             if (leavingSettings) {
-                notifyAction("Mode", "Perform");
+                performMode.exitOverview();
+                notifyAction("Mode", performMode.modeLabel());
+            } else {
+                performMode.toggleOrientation();
+                notifyAction("Mode", performMode.modeLabel());
             }
             return;
         }
         modeState.activatePerform();
         switchActiveMode();
-        notifyAction("Mode", "Perform");
+        notifyAction("Mode", performMode.modeLabel());
     }
 
     private void togglePlay(final boolean pressed) {
@@ -855,10 +880,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private int resolveDefaultSharedScaleIndex() {
         return switch (getDefaultScalePreference()) {
-            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Ionan (Major)", 1);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Aeolian (Minor)", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Major", 1);
+            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Minor", 2);
             case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR -> findScaleIndex("Harmonic Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Melodic Minor (ascending)", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Jazz Minor", 2);
             case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
             case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
             case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);
