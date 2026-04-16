@@ -28,7 +28,7 @@ class NoteGridLayoutTest {
                 3,
                 true);
 
-        assertEquals(64, layout.noteForPad(0));
+        assertEquals(74, layout.noteForPad(0));
         assertEquals(48, layout.noteForPad(48));
         assertEquals(74, layout.noteForPad(63));
     }

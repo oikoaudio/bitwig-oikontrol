@@ -8,7 +8,7 @@ public final class NoteGridLayout implements LiveNoteLayout {
     public static final int PAD_ROWS = 4;
 
     private static final int CHROMATIC_ROW_INTERVAL = 5;
-    private static final int IN_KEY_ROW_INTERVAL = 3;
+    private static final int IN_KEY_ROW_INTERVAL = 5;
 
     public enum PadRole {
         ROOT,
