@@ -126,6 +126,11 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final int MAX_SCALE_DEGREE_GLISS = 14;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
+    private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
+    private static final RgbLigthState HARMONIC_MINOR_COLOR = new RgbLigthState(18, 48, 104, true);
+    private static final RgbLigthState HARMONIC_TENSE_COLOR = new RgbLigthState(68, 48, 116, true);
+    private static final RgbLigthState HARMONIC_EXOTIC_COLOR = new RgbLigthState(108, 28, 72, true);
+    private static final RgbLigthState HARMONIC_SYMMETRIC_COLOR = new RgbLigthState(46, 92, 42, true);
     private static final RgbLigthState PIANO_BLACK_KEY_COLOR = new RgbLigthState(0, 56, 120, true);
     private static final RgbLigthState PIANO_WHITE_KEY_COLOR = RgbLigthState.GRAY_2;
     private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
@@ -2569,6 +2574,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         final RgbLigthState base;
         if (midiNote < 0) {
             base = RgbLigthState.OFF;
+        } else if (isHarmonicLiveMode()) {
+            base = getHarmonicLivePadBaseLight(padIndex, layout);
         } else if (!isHarmonicLiveMode() && !inKey && driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
             if (layout.roleForPad(padIndex) == NoteGridLayout.PadRole.ROOT) {
                 base = ROOT_COLOR;
@@ -2587,6 +2594,66 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
             };
         }
         return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
+    }
+
+    private RgbLigthState getHarmonicLivePadBaseLight(final int padIndex, final LiveNoteLayout layout) {
+        final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
+        final boolean bassColumnPad = harmonicBassColumns && (padIndex % NoteGridLayout.PAD_COLUMNS) < 2;
+        if (role == NoteGridLayout.PadRole.UNAVAILABLE) {
+            return RgbLigthState.OFF;
+        }
+        if (role == NoteGridLayout.PadRole.ROOT) {
+            final int primaryMidiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
+            final RgbLigthState rootBase = bassColumnPad ? ROOT_COLOR.getSoftDimmed() : ROOT_COLOR;
+            return livePadPerformer.isMidiNoteSounding(primaryMidiNote) ? rootBase.getBrightend() : rootBase;
+        }
+        final RgbLigthState familyColor = harmonicScaleFamilyColor();
+        final RgbLigthState padBase = bassColumnPad ? familyColor.getSoftDimmed() : familyColor;
+        final int primaryMidiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
+        if (livePadPerformer.isMidiNoteSounding(primaryMidiNote)) {
+            return padBase.getBrightend();
+        }
+        return padBase;
+    }
+
+    private RgbLigthState harmonicScaleFamilyColor() {
+        final String scaleName = getScale().getName().toLowerCase();
+        if (scaleName.contains("ion")
+                || scaleName.contains("major")
+                || scaleName.contains("lydian")
+                || scaleName.contains("mixolyd")) {
+            return HARMONIC_BRIGHT_COLOR;
+        }
+        if (scaleName.contains("dorian")
+                || scaleName.contains("aeolian")
+                || scaleName.contains("minor")
+                || scaleName.contains("melodic minor")
+                || scaleName.contains("blues")) {
+            return HARMONIC_MINOR_COLOR;
+        }
+        if (scaleName.contains("whole tone")
+                || scaleName.contains("chromatic")
+                || scaleName.contains("diminished")
+                || scaleName.contains("octatonic")
+                || scaleName.contains("augmented")) {
+            return HARMONIC_SYMMETRIC_COLOR;
+        }
+        if (scaleName.contains("phryg")
+                || scaleName.contains("locrian")
+                || scaleName.contains("altered")
+                || scaleName.contains("dominant")
+                || scaleName.contains("double harmonic")) {
+            return HARMONIC_TENSE_COLOR;
+        }
+        if (scaleName.contains("harmonic")
+                || scaleName.contains("hungarian")
+                || scaleName.contains("enigmatic")
+                || scaleName.contains("persian")
+                || scaleName.contains("byzantine")
+                || scaleName.contains("oriental")) {
+            return HARMONIC_EXOTIC_COLOR;
+        }
+        return HARMONIC_BRIGHT_COLOR;
     }
 
     private RgbLigthState getOikordStepPadLight(final int padIndex) {

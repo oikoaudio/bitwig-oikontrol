@@ -58,6 +58,14 @@ final class NoteLivePadPerformer {
         return heldPads.contains(padIndex);
     }
 
+    boolean isMidiNoteSounding(final int midiNote) {
+        if (midiNote < 0) {
+            return false;
+        }
+        return soundingNotesByPad.values().stream()
+                .anyMatch(activeNote -> activeNote.midiNotes().contains(midiNote));
+    }
+
     private void noteOn(final int padIndex, final int rawVelocity, final int configuredVelocity) {
         noteOff(padIndex);
         final int[] midiNotes = midiNotesResolver.apply(padIndex);
