@@ -300,7 +300,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         defaultScalePref = preferences.getEnumSetting("Default Scale",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 FireControlPreferences.DEFAULT_SCALES,
-                FireControlPreferences.DEFAULT_SCALE_PIANO);
+                FireControlPreferences.DEFAULT_SCALE_MAJOR);
         defaultScalePref.markInterested();
 
         defaultRootKeyPref = preferences.getEnumSetting("Default Root Key",
@@ -888,8 +888,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public MusicalScale getSharedMusicalScale() {
-        final int effectiveScaleIndex = getSharedScaleIndex() == -1 ? 1 : getSharedScaleIndex();
-        return MusicalScaleLibrary.getInstance().getMusicalScale(effectiveScaleIndex);
+        return MusicalScaleLibrary.getInstance().getMusicalScale(getSharedScaleIndex());
     }
 
     public SharedMusicalContext getSharedMusicalContext() {
@@ -911,7 +910,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
             case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
             case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);
-            default -> -1;
+            default -> findScaleIndex("Major", 1);
         };
     }
 
@@ -1083,7 +1082,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public String getDefaultScalePreference() {
         return defaultScalePref == null
-                ? FireControlPreferences.DEFAULT_SCALE_PIANO
+                ? FireControlPreferences.DEFAULT_SCALE_MAJOR
                 : FireControlPreferences.normalizeDefaultScale(defaultScalePref.get());
     }
 

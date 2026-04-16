@@ -74,7 +74,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final int OIKORD_SOURCE_PAD_COUNT = 16;
     private static final int BUILDER_FAMILY_INDEX = 0;
     private static final String BUILDER_FAMILY_LABEL = "Builder";
-    private static final int PIANO_HIGHLIGHT_INDEX = -1;
     private static final int MIN_OCTAVE = 0;
     private static final int MAX_OCTAVE = 7;
     private static final int MIN_TRANSPOSE = 0;
@@ -131,8 +130,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private static final RgbLigthState HARMONIC_TENSE_COLOR = new RgbLigthState(68, 48, 116, true);
     private static final RgbLigthState HARMONIC_EXOTIC_COLOR = new RgbLigthState(108, 28, 72, true);
     private static final RgbLigthState HARMONIC_SYMMETRIC_COLOR = new RgbLigthState(46, 92, 42, true);
-    private static final RgbLigthState PIANO_BLACK_KEY_COLOR = new RgbLigthState(0, 56, 120, true);
-    private static final RgbLigthState PIANO_WHITE_KEY_COLOR = RgbLigthState.GRAY_2;
     private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
     private static final RgbLigthState EMPTY_STEP_A = RgbLigthState.GRAY_1;
     private static final RgbLigthState EMPTY_STEP_B = RgbLigthState.GRAY_2;
@@ -465,7 +462,10 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     }
 
     private void applyDefaultLayoutPreference() {
-        inKey = !FireControlPreferences.DEFAULT_SCALE_PIANO.equals(driver.getDefaultScalePreference());
+        inKey = false;
+        if (driver.getSharedScaleIndex() < 1) {
+            driver.setSharedScaleIndex(1);
+        }
     }
 
     private void applyDefaultVelocitySensitivityPreference() {
@@ -2020,8 +2020,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         if (amount == 0) {
             return;
         }
-        final int minScale = inKey ? 1 : PIANO_HIGHLIGHT_INDEX;
-        applyLayoutChange(() -> driver.adjustSharedScaleIndex(amount, minScale));
+        applyLayoutChange(() -> driver.adjustSharedScaleIndex(amount, 1));
         oled.valueInfo("Scale", getScaleDisplayName());
         driver.notifyPopup("Scale", getScaleDisplayName());
     }
@@ -2303,10 +2302,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         final LiveNoteSubMode next = liveNoteSubMode.next();
         applyLayoutChange(() -> {
             liveNoteSubMode = next;
-            if (driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX
-                    && (liveNoteSubMode == LiveNoteSubMode.HARMONIC || (liveNoteSubMode == LiveNoteSubMode.MELODIC && inKey))) {
-                driver.setSharedScaleIndex(1);
-            }
         });
     }
 
@@ -2319,9 +2314,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         }
         applyLayoutChange(() -> {
             inKey = !inKey;
-            if (inKey && driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
-                driver.setSharedScaleIndex(1);
-            }
         });
         showState("Layout");
     }
@@ -2366,9 +2358,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
 
     private void toggleBuilderLayout() {
         builderInKey = !builderInKey;
-        if (builderInKey && driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
-            driver.setSharedScaleIndex(1);
-        }
         oled.valueInfo("Builder Layout", builderInKey ? "In Key" : "Chromatic");
         driver.notifyPopup("Builder Layout", builderInKey ? "In Key" : "Chromatic");
     }
@@ -2576,19 +2565,12 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
             base = RgbLigthState.OFF;
         } else if (isHarmonicLiveMode()) {
             base = getHarmonicLivePadBaseLight(padIndex, layout);
-        } else if (!isHarmonicLiveMode() && !inKey && driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
-            if (layout.roleForPad(padIndex) == NoteGridLayout.PadRole.ROOT) {
-                base = ROOT_COLOR;
-            } else if (NoteGridLayout.isBlackKey(midiNote)) {
-                base = PIANO_BLACK_KEY_COLOR;
-            } else {
-                base = PIANO_WHITE_KEY_COLOR;
-            }
         } else {
             final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
+            final RgbLigthState melodicFamilyColor = harmonicScaleFamilyColor();
             base = switch (role) {
                 case ROOT -> ROOT_COLOR;
-                case IN_SCALE -> IN_SCALE_COLOR;
+                case IN_SCALE -> melodicFamilyColor;
                 case OUT_OF_SCALE -> OUT_OF_SCALE_COLOR;
                 case UNAVAILABLE -> RgbLigthState.OFF;
             };
@@ -3078,14 +3060,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         final RgbLigthState base;
         if (midiNote < 0) {
             base = RgbLigthState.OFF;
-        } else if (!builderInKey && driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
-            if (getScale().isRootMidiNote(builderRoot, midiNote)) {
-                base = ROOT_COLOR;
-            } else if (NoteGridLayout.isBlackKey(midiNote)) {
-                base = PIANO_BLACK_KEY_COLOR;
-            } else {
-                base = PIANO_WHITE_KEY_COLOR;
-            }
         } else {
             final NoteGridLayout.PadRole role;
             if (getScale().isRootMidiNote(builderRoot, midiNote)) {
@@ -3151,8 +3125,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     }
 
     private MusicalScale getScale() {
-        final int effectiveScaleIndex = driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX ? 1 : driver.getSharedScaleIndex();
-        return scaleLibrary.getMusicalScale(effectiveScaleIndex);
+        return scaleLibrary.getMusicalScale(driver.getSharedScaleIndex());
     }
 
     public MusicalScale getCurrentScale() {
@@ -3160,9 +3133,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     }
 
     private String getScaleDisplayName() {
-        if (driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
-            return "Piano";
-        }
         return switch (getScale().getName()) {
             case "Major" -> "Major";
             case "Minor" -> "Minor";
@@ -3219,7 +3189,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     }
 
     private int liveScaleMinIndex() {
-        return isHarmonicLiveMode() || inKey ? 1 : PIANO_HIGHLIGHT_INDEX;
+        return 1;
     }
 
     private LiveNoteLayout createLayout() {
@@ -3265,10 +3235,6 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private int transposeByScaleDegrees(final int midiNote, final int scaleDegrees) {
         if (scaleDegrees == 0) {
             return midiNote;
-        }
-        if (driver.getSharedScaleIndex() == PIANO_HIGHLIGHT_INDEX) {
-            final int shifted = midiNote + scaleDegrees;
-            return shifted >= 0 && shifted <= 127 ? shifted : -1;
         }
         int note = midiNote;
         int remaining = Math.abs(scaleDegrees);
