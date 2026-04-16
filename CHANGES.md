@@ -8,6 +8,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Moved `Chord Step` behind `STEP SEQ` so `NOTE` stays focused on live note input; pressing `STEP SEQ` now enters `Melodic Step`, then switches to `Chord Step` on the next press
 - Added `ALT + NOTE` and `SHIFT + Encoder 4` as direct live-layout shortcuts for collapsing note input to scale notes or switching harmonic layout variants
 - Added horizontal `Perform` orientation plus broader encoder-scaling cleanup, melodic step expression-page updates, and Bitwig 6-aligned scale naming/order
+- Reworked Fire modifier routing so `SHIFT + PERFORM` latches a 4-row track-action page (`Stop`, `Solo`, `Mute`, `Arm`) and `SHIFT + BROWSER` opens a global root/scale/octave settings overlay
 - Updated tests and Fire documentation to match the new harmonic input, step-routing, and live-control workflows
 
 ## 2.4.0 - Akai Fire shared pitch context and architecture rework

@@ -77,8 +77,9 @@ Browser insert mode follows modifiers when opening:
 | Action | Browser open mode |
 | --- | --- |
 | `BROWSER` | Replace / add in current context |
-| `SHIFT + BROWSER` | Insert before |
+| `SHIFT + BROWSER` | Hold global `Root Key` / `Scale` / `Octave` settings overlay |
 | `ALT + BROWSER` | Insert after |
+| `SHIFT + ALT + BROWSER` | Insert before |
 
 ## DRUM Mode
 
@@ -141,7 +142,7 @@ Drum grid resolution is now adjusted from the `SELECT` encoder when its role is 
 
 `NOTE` is the live note-input surface, with note-step workflows behind `STEP SEQ`.
 
-`NOTE`, `Chord Step`, `Melodic Step`, and `SHIFT + PERFORM` now share one global pitch context for `Root Key`, `Scale`, and `Octave`. Layout remains mode-local to NOTE-oriented surfaces.
+`NOTE`, `Chord Step`, `Melodic Step`, and the global `SHIFT + BROWSER` overlay now share one pitch context for `Root Key`, `Scale`, and `Octave`. Layout remains mode-local to NOTE-oriented surfaces.
 
 ### Live Note Layout
 
@@ -186,7 +187,7 @@ In live NOTE mode:
 
 `Chord Step` is the second `STEP SEQ` surface after `Melodic Step`.
 
-It uses the shared `Root Key`, `Scale`, and `Octave` from live NOTE input and `SHIFT + PERFORM`. Changing pitch context in one of those places updates all of them.
+It uses the shared `Root Key`, `Scale`, and `Octave` from live NOTE input and the global `SHIFT + BROWSER` overlay. Changing pitch context in one of those places updates all of them.
 
 ### Pad Layout
 
@@ -336,8 +337,6 @@ Melodic recurrence editing:
 
 `PERFORM` is the `16x4` clip-launch and performance surface.
 
-`SHIFT + PERFORM` opens a latched `Settings` page on the `Channel` encoder page. From there, Encoder 1 adjusts the shared `Root Key`, Encoder 2 adjusts the shared `Scale`, and Encoder 3 adjusts the shared `Octave`. Press `PERFORM` again to leave `Settings`.
-
 ### Pad Layout
 
 | Area | Role |
@@ -357,6 +356,7 @@ Pad LEDs follow Bitwig clip and track colors plus launch state.
 | `SHIFT + MUTE_2` | Halve selected visible clip length |
 | `MUTE_3` | Hold for copy / paste selected clip |
 | `MUTE_4` | Hold for delete |
+| `SHIFT + PERFORM` | Toggle the latched track-action page |
 
 ### Navigation
 
@@ -367,6 +367,24 @@ Pad LEDs follow Bitwig clip and track colors plus launch state.
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Perform encoder pages |
+
+### Track-Action Page
+
+`SHIFT + PERFORM` latches a dedicated `16x4` track-action grid. Each row targets the visible tracks directly:
+
+| Row color | Row function |
+| --- | --- |
+| Blue / dark | Stop |
+| Yellow | Solo |
+| Orange | Mute |
+| Red | Arm |
+
+Track-action page notes:
+
+- Each column addresses one visible track.
+- Pads brighten when the corresponding state is active.
+- The stop row lights by current stop/queued-stop state rather than clip color.
+- Press `SHIFT + PERFORM` again to return to normal clip-launch view.
 
 ### Perform Encoder Pages
 
@@ -382,14 +400,21 @@ Perform OLED page titles are:
 - `Channel`: `Global Remotes`
 - `Mixer`: `Mixer`
 - `User 1`: `Track Remotes`
-- `User 2`: `Master/Cue`
+- `User 2`: currently still shows a legacy `Master/Cue` title in the OLED, but the controls are selected-device remotes 1-4
 
-While `Settings` is active in `PERFORM`:
+## Global Pitch Settings
+
+`SHIFT + BROWSER` is the global held overlay for shared pitch context.
+
+While held:
 
 - Encoder 1 edits shared `Root Key`
 - Encoder 2 edits shared `Scale`
 - Encoder 3 edits shared `Octave`
-- Encoder 4 is currently unused on the settings page
+- Encoder 4 is currently unused
+- The pad grid becomes a non-performance logo/overlay display
+
+Releasing `BROWSER` leaves the overlay and returns the surface to the current mode.
 
 ## Preferences That Affect Layout
 

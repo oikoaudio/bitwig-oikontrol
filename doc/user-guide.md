@@ -113,7 +113,6 @@ The Akai Fire extension is a clip, note, and sequencer workflow built around fou
 - `DRUM`
 - `NOTE`
 - `PERFORM`
-- `SETTINGS` (not a full mode)
 
 ### DRUM mode
 
@@ -193,6 +192,8 @@ Quick start:
 2. Play notes directly on the pad grid.
 3. Press `NOTE` again to move between the primary note-family surfaces.
 4. Use `ALT + NOTE` or `SHIFT + Encoder 4` for the local layout, `PATTERN UP/DOWN` for shared octave, `Encoder 4` for shared scale, `ALT + Encoder 4` for shared root, and the Channel page for `Pitch Gliss` and live velocity response.
+
+The shared `Root Key`, `Scale`, and `Octave` are global across `NOTE`, `Chord Step`, `Melodic Step`, and the held `SHIFT + BROWSER` settings overlay.
 
 ### Chord Step workflow
 Press `STEP SEQ` once to enter `Melodic Step`, then press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
@@ -355,15 +356,24 @@ Encoder pages:
 - `Channel`: global remotes 1-4
 - `Mixer`: volume, pan, send 1, send 2
 - `User 1`: track remotes 1-4
-- `User 2`: master / cue controls
+- `User 2`: selected device remotes 1-4
 
-`SHIFT + PERFORM` opens a latched `Settings` page. From there:
+Track-action page:
 
-- Encoder 1 adjusts the shared `Root Key`
-- Encoder 2 adjusts the shared `Scale`
-- Encoder 3 adjusts the shared `Octave`
-- the pad grid becomes a non-performance settings display
-- press `PERFORM` again to leave `Settings`
+- `SHIFT + PERFORM`: toggle the latched track-action page
+- row 1: stop for the 16 visible tracks
+- row 2: solo for the 16 visible tracks
+- row 3: mute for the 16 visible tracks
+- row 4: arm for the 16 visible tracks
+- row colors are blue/dark for stop, yellow for solo, orange for mute, and red for arm
+
+Global settings overlay:
+
+- `SHIFT + BROWSER`: hold the global `Root Key` / `Scale` / `Octave` overlay from any mode
+- Encoder 1 adjusts shared root
+- Encoder 2 adjusts shared scale
+- Encoder 3 adjusts shared octave
+- releasing `BROWSER` returns to the active mode view
 
 ### Main encoder and transport
 
@@ -408,6 +418,10 @@ Shared transport behavior:
 - `PATTERN`: clip launcher automation write
 - `SHIFT + PATTERN`: metronome
 - `ALT + PATTERN`: clip launcher overdub
+- `BROWSER`: open or close Bitwig popup browser
+- `ALT + BROWSER`: open browser after the current device / insertion context
+- `SHIFT + ALT + BROWSER`: open browser before the current device / insertion context
+- `SHIFT + BROWSER`: hold global pitch settings instead of opening the browser
 
 ## Preferences
 
