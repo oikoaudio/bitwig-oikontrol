@@ -33,11 +33,12 @@ class SharedMusicalContextTest {
     }
 
     @Test
-    void reportsPianoWhenScaleIndexIsMinusOne() {
+    void normalizesRemovedChromaticScaleToMajor() {
         final SharedMusicalContext context = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
 
         context.setScaleIndex(-1);
 
-        assertEquals("Piano", context.getScaleDisplayName());
+        assertEquals(1, context.getScaleIndex());
+        assertEquals("Major", context.getScaleDisplayName());
     }
 }

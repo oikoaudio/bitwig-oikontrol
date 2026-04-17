@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;

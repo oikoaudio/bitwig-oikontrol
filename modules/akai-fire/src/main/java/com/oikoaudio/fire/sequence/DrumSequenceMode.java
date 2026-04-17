@@ -1431,12 +1431,17 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             @Override
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
+                final var action = (java.util.function.IntConsumer) inc -> {
                     if (getExpressionTargetNotes().isEmpty()) {
                         handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
                     }
                     adjuster.adjust(handler, inc);
-                });
+                };
+                if (accessor.accelerationProfile() == com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT) {
+                    encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, accessor.accelerationProfile(), action);
+                } else {
+                    encoder.bindEncoder(layer, action);
+                }
                 encoder.bindTouched(layer, touched -> handleUser1Touch(handler, touched, slotIndex, accessor,
                         showDefault, resetDefault));
             }

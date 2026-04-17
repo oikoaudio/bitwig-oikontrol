@@ -1,6 +1,5 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.control;
 
-import com.oikoaudio.fire.control.TouchResetGesture;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -9,13 +8,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class NoteEncoderTouchResetHandlerTest {
+class EncoderTouchResetHandlerTest {
 
     @Test
     void touchShowsImmediatelyAndResetsAfterHoldWhenStillTouched() {
         final List<String> events = new ArrayList<>();
         Runnable[] scheduledTask = new Runnable[1];
-        final NoteEncoderTouchResetHandler handler = new NoteEncoderTouchResetHandler(
+        final EncoderTouchResetHandler handler = new EncoderTouchResetHandler(
                 new TouchResetGesture(4, 0L, 300L, 2),
                 () -> true,
                 (task, delayMs) -> {
@@ -35,7 +34,7 @@ class NoteEncoderTouchResetHandlerTest {
     void touchReleaseClearsDisplayAndCancelsResetEffect() {
         final List<String> events = new ArrayList<>();
         Runnable[] scheduledTask = new Runnable[1];
-        final NoteEncoderTouchResetHandler handler = new NoteEncoderTouchResetHandler(
+        final EncoderTouchResetHandler handler = new EncoderTouchResetHandler(
                 new TouchResetGesture(4, 1000L, 300L, 2),
                 () -> true,
                 (task, delayMs) -> scheduledTask[0] = task,
@@ -53,7 +52,7 @@ class NoteEncoderTouchResetHandlerTest {
     void recentAdjustmentSuppressesTouchHoldReset() {
         final List<String> events = new ArrayList<>();
         Runnable[] scheduledTask = new Runnable[1];
-        final NoteEncoderTouchResetHandler handler = new NoteEncoderTouchResetHandler(
+        final EncoderTouchResetHandler handler = new EncoderTouchResetHandler(
                 new TouchResetGesture(4, 1000L, 300L, 2),
                 () -> true,
                 (task, delayMs) -> scheduledTask[0] = task,
@@ -71,7 +70,7 @@ class NoteEncoderTouchResetHandlerTest {
     void disabledResetStillShowsAndClearsWithoutScheduling() {
         final List<String> events = new ArrayList<>();
         final AtomicBoolean scheduled = new AtomicBoolean();
-        final NoteEncoderTouchResetHandler handler = new NoteEncoderTouchResetHandler(
+        final EncoderTouchResetHandler handler = new EncoderTouchResetHandler(
                 new TouchResetGesture(4, 1000L, 300L, 2),
                 () -> false,
                 (task, delayMs) -> scheduled.set(true),
