@@ -30,6 +30,7 @@ import com.oikoaudio.fire.chordstep.ChordStepEditControls;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepObservedState;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
@@ -192,7 +193,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final Layer liveUser2Layer;
     private final StepSequencerEncoderHandler stepEncoderLayer;
     private final EncoderBankLayout stepEncoderBankLayout;
-    private final NoteEncoderTouchResetHandler encoderTouchResetHandler;
+    private final EncoderTouchResetHandler encoderTouchResetHandler;
     private final ChordStepEditControls chordStepEditControls;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
@@ -345,7 +346,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.liveMixerLayer = new Layer(driver.getLayers(), "NOTE_MODE_LIVE_MIXER");
         this.liveUser1Layer = new Layer(driver.getLayers(), "NOTE_MODE_LIVE_USER1");
         this.liveUser2Layer = new Layer(driver.getLayers(), "NOTE_MODE_LIVE_USER2");
-        this.encoderTouchResetHandler = new NoteEncoderTouchResetHandler(
+        this.encoderTouchResetHandler = new EncoderTouchResetHandler(
                 touchResetGesture,
                 driver::isEncoderTouchResetEnabled,
                 (task, delayMs) -> driver.getHost().scheduleTask(task, delayMs),

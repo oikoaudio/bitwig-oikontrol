@@ -1,5 +1,7 @@
 package com.oikoaudio.fire.note;
 
+import com.oikoaudio.fire.control.EncoderTouchResetHandler;
+import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +30,8 @@ class NotePlayControllerTest {
                                 layer(events, "user2"),
                                 ignored -> {},
                                 NoteLiveEncoderModeControls::modeInfo),
-                        new NoteEncoderTouchResetHandler(
-                                new com.oikoaudio.fire.control.TouchResetGesture(4, 0L, 0L, 2),
+                        new EncoderTouchResetHandler(
+                                new TouchResetGesture(4, 0L, 0L, 2),
                                 () -> false,
                                 (task, delayMs) -> {},
                                 0L,

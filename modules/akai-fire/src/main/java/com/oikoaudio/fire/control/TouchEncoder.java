@@ -47,6 +47,16 @@ public class TouchEncoder {
 		layer.bind(encoder, createIncrementBinder(action));
 	}
 
+    public void bindEncoderBehavior(final Layer layer, final BooleanSupplier fineSupplier,
+                                    final EncoderTurnBehavior behavior, final IntConsumer action) {
+        layer.bind(encoder, createIncrementBinder(inc -> {
+            final int effective = behavior.apply(inc, fineSupplier.getAsBoolean());
+            if (effective != 0) {
+                action.accept(effective);
+            }
+        }));
+    }
+
     public void bindContinuousEncoder(final Layer layer, final BooleanSupplier fineSupplier, final IntConsumer action) {
         bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, action);
     }
@@ -54,26 +64,12 @@ public class TouchEncoder {
     public void bindContinuousEncoder(final Layer layer, final BooleanSupplier fineSupplier,
                                       final ContinuousEncoderScaler.Profile profile,
                                       final IntConsumer action) {
-        final ContinuousEncoderScaler scaler = new ContinuousEncoderScaler(profile);
-        layer.bind(encoder, createIncrementBinder(inc -> {
-            final int effective = scaler.scale(inc, fineSupplier.getAsBoolean());
-            if (effective != 0) {
-                action.accept(effective);
-            }
-        }));
+        bindEncoderBehavior(layer, fineSupplier, EncoderTurnBehavior.continuous(profile), action);
     }
 
     public void bindThresholdedEncoder(final Layer layer, final int normalThreshold, final int fineThreshold,
                                        final BooleanSupplier fineSupplier, final IntConsumer action) {
-        final EncoderStepAccumulator normalAccumulator = new EncoderStepAccumulator(normalThreshold);
-        final EncoderStepAccumulator fineAccumulator = new EncoderStepAccumulator(fineThreshold);
-        layer.bind(encoder, createIncrementBinder(inc -> {
-            final EncoderStepAccumulator accumulator = fineSupplier.getAsBoolean() ? fineAccumulator : normalAccumulator;
-            final int effective = accumulator.consume(inc);
-            if (effective != 0) {
-                action.accept(effective);
-            }
-        }));
+        bindEncoderBehavior(layer, fineSupplier, EncoderTurnBehavior.thresholded(normalThreshold, fineThreshold), action);
     }
 
 	public RelativeHardwarControlBindable createIncrementBinder(final IntConsumer consumer) {

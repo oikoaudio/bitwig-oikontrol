@@ -19,6 +19,7 @@ import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
@@ -98,9 +99,7 @@ public class PerformClipLauncherMode extends Layer {
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
-    private final TouchResetGesture parameterResetGesture =
-            new TouchResetGesture(4, PARAMETER_RESET_TOUCH_HOLD_MS, PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
-                    PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS);
+    private final EncoderTouchResetHandler parameterResetHandler;
     private Layer currentEncoderLayer;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
     private int blinkState;
@@ -131,6 +130,13 @@ public class PerformClipLauncherMode extends Layer {
         this.user1Layer = new Layer(driver.getLayers(), "PERFORM_ENC_USER1");
         this.user2Layer = new Layer(driver.getLayers(), "PERFORM_ENC_USER2");
         this.currentEncoderLayer = channelLayer;
+        this.parameterResetHandler = new EncoderTouchResetHandler(
+                new TouchResetGesture(4, PARAMETER_RESET_TOUCH_HOLD_MS, PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
+                        PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS),
+                driver::isEncoderTouchResetEnabled,
+                (task, delayMs) -> driver.getHost().scheduleTask(task, delayMs),
+                PARAMETER_RESET_TOUCH_HOLD_MS,
+                oled::clearScreenDelayed);
 
         trackBank.channelCount().markInterested();
         trackBank.channelCount().addValueObserver(count -> totalTrackCount = count);
@@ -690,9 +696,7 @@ public class PerformClipLauncherMode extends Layer {
         if (!isMapped(parameter)) {
             return;
         }
-        if (driver.isEncoderTouchResetEnabled()) {
-            parameterResetGesture.onAdjusted(encoderIndex, Math.abs(inc));
-        }
+        parameterResetHandler.markAdjusted(encoderIndex, Math.abs(inc));
         MixerEncoderProfile.adjustParameter(parameter, isShiftHeld(), inc);
         oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
     }
@@ -700,17 +704,12 @@ public class PerformClipLauncherMode extends Layer {
     private void handleParameterTouch(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
                                       final boolean touched) {
         if (touched) {
-            if (driver.isEncoderTouchResetEnabled()) {
-                parameterResetGesture.onTouchStart(encoderIndex);
-                driver.getHost().scheduleTask(() -> {
-                    if (driver.isEncoderTouchResetEnabled()
-                            && parameterResetGesture.shouldResetWhileTouched(encoderIndex)
-                            && isMapped(parameter)) {
-                        parameter.reset();
-                        oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
-                    }
-                }, PARAMETER_RESET_TOUCH_HOLD_MS);
-            }
+            parameterResetHandler.beginTouchReset(encoderIndex, () -> {
+                if (isMapped(parameter)) {
+                    parameter.reset();
+                    oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+                }
+            });
             if (!isMapped(parameter)) {
                 oled.valueInfo(fallbackLabel, "Unmapped");
                 return;
@@ -720,15 +719,11 @@ public class PerformClipLauncherMode extends Layer {
         }
 
         if (!isMapped(parameter)) {
-            if (driver.isEncoderTouchResetEnabled()) {
-                parameterResetGesture.onTouchEnd(encoderIndex);
-            }
+            parameterResetHandler.endTouchReset(encoderIndex);
             oled.clearScreenDelayed();
             return;
         }
-        if (driver.isEncoderTouchResetEnabled()) {
-            parameterResetGesture.onTouchEnd(encoderIndex);
-        }
+        parameterResetHandler.endTouchReset(encoderIndex);
         oled.clearScreenDelayed();
     }
 
