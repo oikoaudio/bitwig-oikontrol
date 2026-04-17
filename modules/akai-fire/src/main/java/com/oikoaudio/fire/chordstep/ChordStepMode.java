@@ -1,6 +1,7 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
+import com.oikoaudio.fire.note.PitchedSurfaceLayer;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 
 public final class ChordStepMode extends PitchedSurfaceLayer {

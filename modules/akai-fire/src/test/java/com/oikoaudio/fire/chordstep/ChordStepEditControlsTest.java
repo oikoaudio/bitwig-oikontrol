@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
@@ -10,12 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class NoteChordStepEditControlsTest {
+class ChordStepEditControlsTest {
 
     @Test
     void muteButtonsUpdateHeldStateAndDisplay() {
         final List<String> events = new ArrayList<>();
-        final NoteChordStepEditControls controls = new NoteChordStepEditControls(
+        final ChordStepEditControls controls = new ChordStepEditControls(
                 (title, detail) -> events.add(title + ":" + detail),
                 () -> events.add("clear"));
 
@@ -39,7 +39,7 @@ class NoteChordStepEditControlsTest {
 
     @Test
     void lightStatesFollowHeldFlags() {
-        final NoteChordStepEditControls controls = new NoteChordStepEditControls((title, detail) -> {}, () -> {});
+        final ChordStepEditControls controls = new ChordStepEditControls((title, detail) -> {}, () -> {});
 
         assertEquals(BiColorLightState.GREEN_HALF, controls.mute1LightState());
         assertEquals(BiColorLightState.AMBER_HALF, controls.mute2LightState());
@@ -59,7 +59,7 @@ class NoteChordStepEditControlsTest {
 
     @Test
     void deleteHeldValueReflectsPressedState() {
-        final NoteChordStepEditControls controls = new NoteChordStepEditControls((title, detail) -> {}, () -> {});
+        final ChordStepEditControls controls = new ChordStepEditControls((title, detail) -> {}, () -> {});
 
         assertFalse(controls.deleteHeldValue().get());
         controls.handleMute4(true);

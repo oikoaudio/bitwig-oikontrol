@@ -26,7 +26,7 @@ class NoteLiveExpressionControlsTest {
         final List<String> events = new ArrayList<>();
         final NoteLiveExpressionControls controls = new NoteLiveExpressionControls(new TestMidi(events));
 
-        assertTrue(controls.adjustTimbre(100));
+        assertTrue(controls.adjustTimbre(200));
         assertTrue(controls.adjustModulation(200));
 
         assertEquals(127, controls.timbre());
@@ -61,7 +61,7 @@ class NoteLiveExpressionControlsTest {
 
         assertEquals(List.of(
                 "pressure:0",
-                "timbre:64",
+                "timbre:0",
                 "mod:0",
                 "bend:" + NoteLiveExpressionControls.pitchBendValueFor(64)), events);
     }

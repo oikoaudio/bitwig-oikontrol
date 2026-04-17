@@ -29,6 +29,7 @@ These mappings apply across the Fire modes unless a mode temporarily takes over 
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub |
 | `BROWSER` | Open or close Bitwig popup browser |
+| `SHIFT + BROWSER` | Open global settings for scale and key (two first encoders) |
 
 ## Main Select Encoder
 
@@ -82,7 +83,7 @@ Browser insert mode follows modifiers when opening:
 
 ## DRUM Mode
 
-`DRUM` is the fixed drum-sequencer surface.
+`DRUM` is the xox style drum sequencer from the rhbitwig extension, with added micro-timing control and minor adjustments to controls, pad order and pad colors.
 
 ### Pad Layout
 
@@ -105,7 +106,6 @@ Browser insert mode follows modifiers when opening:
 
 | Action | Result |
 | --- | --- |
-| `STEP SEQ` | Enter `Melodic Step` |
 | `SHIFT + STEP SEQ` | Accent mode |
 | `ALT + STEP SEQ` | Toggle Fill |
 | `BANK LEFT/RIGHT` | Move or rotate pattern |
@@ -139,9 +139,8 @@ Drum grid resolution is now adjusted from the `SELECT` encoder when its role is 
 
 ## NOTE Mode
 
-`NOTE` is the live note-input surface, with note-step workflows behind `STEP SEQ`.
-
-`NOTE`, `Chord Step`, `Melodic Step`, and `SHIFT + PERFORM` now share one global pitch context for `Root Key`, `Scale`, and `Octave`. Layout remains mode-local to NOTE-oriented surfaces.
+`NOTE` is the live note-input surface, with multiple scales and live controls for modulation wheel, pitch bend, glissando, expression and mappings to track remotes.
+Pressing `NOTE` again enters a different Harmonic pad layout where each pad can emit multiple notes that represent triplet chord inversions. Combine multiple pads for richer chords.
 
 ### Live Note Layout
 

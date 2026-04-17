@@ -9,11 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class OikordBankTest {
+class ChordBankTest {
 
     @Test
     void exposesEightCuratedFamiliesWithVariableTraversalLengths() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertEquals(8, bank.families().size());
         assertEquals("Audible", bank.family(0).family());
@@ -32,7 +32,7 @@ class OikordBankTest {
 
     @Test
     void keepsBarkerAndAudibleFirstAcrossTheCuratedFamilies() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertEquals("plaits", bank.family(0).sourcePack());
         assertEquals("PLAITS-JON", bank.family(0).sourceFamily());
@@ -42,7 +42,7 @@ class OikordBankTest {
 
     @Test
     void familySlotsExpandEachFormulaIntoEightVariants() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertEquals("quartal stack", bank.slot(1, 0, 0).name());
         assertEquals("Q stack 1", bank.slot(1, 0, 0).shortLabel());
@@ -53,7 +53,7 @@ class OikordBankTest {
 
     @Test
     void audibleUsesAllSeventeenConcreteSourceEntries() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertEquals(2, bank.pageCount(0));
         assertEquals("Oct", bank.slot(0, 0, 0).shortLabel());
@@ -63,7 +63,7 @@ class OikordBankTest {
 
     @Test
     void respectsSixteenSlotPageBoundariesForCuratedFamilies() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertTrue(bank.hasSlot(0, 0, 15));
         assertFalse(bank.hasSlot(0, 0, 16));
@@ -75,7 +75,7 @@ class OikordBankTest {
 
     @Test
     void lastBarkerVariantLivesOnFourthSixteenSlotPage() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertEquals(4, bank.pageCount(1));
         assertTrue(bank.hasSlot(1, 3, 15));
@@ -85,7 +85,7 @@ class OikordBankTest {
 
     @Test
     void rejectsOutOfRangePageRequests() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
 
         assertThrows(IllegalArgumentException.class, () -> bank.slot(0, 2, 0));
         assertThrows(IllegalArgumentException.class, () -> bank.slot(1, 4, 0));
@@ -93,7 +93,7 @@ class OikordBankTest {
 
     @Test
     void keepsDistinctRenderedVoicingsAcrossGeneratedVariants() {
-        final OikordBank bank = new OikordBank();
+        final ChordBank bank = new ChordBank();
         final int[] first = bank.renderAsIs(0, 0, 6, 48);
         final int[] second = bank.renderAsIs(0, 0, 7, 48);
 
@@ -102,8 +102,8 @@ class OikordBankTest {
 
     @Test
     void canRenderSlotsAsIsOrCastThroughScale() {
-        final OikordBank bank = new OikordBank();
-        final OikordBank.Slot slot = bank.slot(2, 0, 0);
+        final ChordBank bank = new ChordBank();
+        final ChordBank.Slot slot = bank.slot(2, 0, 0);
         final int[] asIs = bank.renderAsIs(2, 0, 0, 48);
         final int[] cast = bank.renderCast(2, 0, 0, MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0);
 

@@ -36,6 +36,15 @@ public final class SharedMusicalContext {
     }
 
     public void setScaleIndex(final int scaleIndex) {
+        if (scaleIndex < 0) {
+            this.scaleIndex = 1;
+            return;
+        }
+        if (scaleIndex < scaleLibrary.getMusicalScalesCount()
+                && "Chromatic".equals(scaleLibrary.getMusicalScale(scaleIndex).getName())) {
+            this.scaleIndex = 1;
+            return;
+        }
         this.scaleIndex = scaleIndex;
     }
 
@@ -43,12 +52,15 @@ public final class SharedMusicalContext {
         if (amount == 0) {
             return false;
         }
-        final int nextScaleIndex = scaleIndex + amount;
-        if (nextScaleIndex < minimumScaleIndex || nextScaleIndex >= scaleLibrary.getMusicalScalesCount()) {
-            return false;
+        int nextScaleIndex = scaleIndex + amount;
+        while (nextScaleIndex >= minimumScaleIndex && nextScaleIndex < scaleLibrary.getMusicalScalesCount()) {
+            if (!"Chromatic".equals(scaleLibrary.getMusicalScale(nextScaleIndex).getName())) {
+                setScaleIndex(nextScaleIndex);
+                return true;
+            }
+            nextScaleIndex += amount;
         }
-        setScaleIndex(nextScaleIndex);
-        return true;
+        return false;
     }
 
     public int getOctave() {
@@ -71,9 +83,6 @@ public final class SharedMusicalContext {
     }
 
     public String getScaleDisplayName() {
-        if (scaleIndex == -1) {
-            return "Piano";
-        }
         final int safeIndex = Math.max(0, Math.min(scaleLibrary.getMusicalScalesCount() - 1, scaleIndex));
         return scaleLibrary.getMusicalScale(safeIndex).getName();
     }

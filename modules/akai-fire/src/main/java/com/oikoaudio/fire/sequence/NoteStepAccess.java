@@ -2,6 +2,7 @@ package com.oikoaudio.fire.sequence;
 
 import java.util.List;
 
+import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteDoubleGetter;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteDoubleSetter;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteIntGetter;
@@ -124,6 +125,17 @@ public enum NoteStepAccess implements EncoderAccess {
 
     public int getStepThreshold() {
         return stepThreshold;
+    }
+
+    public ContinuousEncoderScaler.Profile accelerationProfile() {
+        return switch (this) {
+            case PRESSURE, TIMBRE -> ContinuousEncoderScaler.Profile.SOFT;
+            default -> ContinuousEncoderScaler.Profile.STRONG;
+        };
+    }
+
+    public boolean usesAcceleratedTurnBehavior() {
+        return stepThreshold <= 1;
     }
 
 	public double getDouble(final NoteStep step) {

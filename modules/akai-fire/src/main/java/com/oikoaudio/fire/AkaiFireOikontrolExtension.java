@@ -3,13 +3,14 @@ package com.oikoaudio.fire;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.chordstep.ChordStepMode;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
+import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.TopLevelModeState.Mode;
 import com.bitwig.extensions.framework.MusicalScale;
-import com.oikoaudio.fire.note.ChordStepMode;
 import com.oikoaudio.fire.note.NotePlayMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -35,6 +36,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
     private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
+    private static final int SETTINGS_PAD_COLUMNS = 16;
+    private static final int SETTINGS_PAD_ROWS = 4;
+    private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
+    private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
+    private static final boolean[][] SETTINGS_LOGO = {
+            {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
+            {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
+            {true, true, false, false, false, true, false, false, true, true, false, false, true, true, true, false},
+            {true, false, false, false, true, true, true, false, true, false, true, false, true, true, true, true}
+    };
     public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
     public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
@@ -64,6 +75,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final RgbLigthState[] currentPadStates = new RgbLigthState[64];
 
     private Layer mainLayer;
+    private Layer globalSettingsLayer;
     private final RgbButton[] rgbButtons = new RgbButton[64];
     private final TouchEncoder[] encoders = new TouchEncoder[4];
     private final MultiStateHardwareLight[] stateLights = new MultiStateHardwareLight[4];
@@ -112,10 +124,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean mainEncoderTurnedWhilePressed = false;
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
+    private boolean globalSettingsOverlayActive = false;
+    private boolean globalSettingsGestureArmed = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
-    private final SharedMusicalContext sharedMusicalContext = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
+    private final SharedPitchContextController sharedPitchContext = new SharedPitchContextController(
+            new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
+            MusicalScaleLibrary.getInstance());
 
     private PatternButtons patternButtons;
     private NotePlayMode notePlayMode;
@@ -190,6 +206,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         deviceLocator = new FireDeviceLocator(host, DEVICE_DISCOVERY_WIDTH);
 
         mainLayer = new Layer(layers, "Main");
+        globalSettingsLayer = new Layer(layers, "GlobalSettings");
         oled = new OledDisplay(midiOut);
         noteRepeatHandler = new NoteRepeatHandler(
                 noteInput,
@@ -209,6 +226,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         chordStepMode = new ChordStepMode(this, noteRepeatHandler);
         melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
         performMode = new PerformClipLauncherMode(this);
+        initGlobalSettingsOverlay();
         oled.setIdleAction(this::showIdleOledInfo);
         midiOut.sendSysex(DEV_INQ);
 
@@ -285,7 +303,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         defaultScalePref = preferences.getEnumSetting("Default Scale",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
                 FireControlPreferences.DEFAULT_SCALES,
-                FireControlPreferences.DEFAULT_SCALE_PIANO);
+                FireControlPreferences.DEFAULT_SCALE_MAJOR);
         defaultScalePref.markInterested();
 
         defaultRootKeyPref = preferences.getEnumSetting("Default Root Key",
@@ -425,6 +443,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         shiftButton.bind(mainLayer, shiftActive, BiColorLightState.RED_HALF, BiColorLightState.OFF);
         final BiColorButton altButton = addButton(NoteAssign.ALT);
         altButton.bind(mainLayer, altActive, BiColorLightState.RED_HALF, BiColorLightState.OFF);
+        shiftActive.addValueObserver(ignored -> updateGlobalSettingsOverlayState());
+        altActive.addValueObserver(ignored -> updateGlobalSettingsOverlayState());
 
         final BiColorButton m1Button = addButton(NoteAssign.MUTE_1);
         m1Button.bindPressed(mainLayer, this::dummyAction, BiColorLightState.RED_FULL);
@@ -455,6 +475,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         stateLights[1] = createLight(NoteAssign.TRACK_SELECT_2);
         stateLights[2] = createLight(NoteAssign.TRACK_SELECT_3);
         stateLights[3] = createLight(NoteAssign.TRACK_SELECT_4);
+    }
+
+    private void initGlobalSettingsOverlay() {
+        for (int index = 0; index < encoders.length; index++) {
+            final int encoderIndex = index;
+            encoders[index].bindContinuousEncoder(globalSettingsLayer, () -> false,
+                    inc -> adjustGlobalSettings(encoderIndex, inc));
+            encoders[index].bindTouched(globalSettingsLayer,
+                    touched -> handleGlobalSettingsTouch(encoderIndex, touched));
+        }
+        for (int padIndex = 0; padIndex < rgbButtons.length; padIndex++) {
+            final int currentPad = padIndex;
+            rgbButtons[padIndex].bindPressed(globalSettingsLayer, pressed -> {
+            }, () -> globalSettingsPadState(currentPad));
+        }
     }
 
     private BiColorButton addButton(final NoteAssign which, final int ccLightValue) {
@@ -544,9 +579,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() != Mode.PERFORM) {
             return BiColorLightState.OFF;
         }
-        return performMode != null && performMode.isSettingsMode()
-                ? BiColorLightState.AMBER_FULL
-                : BiColorLightState.GREEN_FULL;
+        if (performMode != null && performMode.isTrackActionMode()) {
+            return BiColorLightState.RED_FULL;
+        }
+        return BiColorLightState.GREEN_FULL;
     }
 
     private void dummyAction(final boolean pressed) {
@@ -715,29 +751,20 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        final boolean enteringPerform = modeState.activeMode() != Mode.PERFORM;
+        if (enteringPerform) {
+            modeState.activatePerform();
+            switchActiveMode();
+        }
         if (isGlobalShiftHeld()) {
-            if (modeState.activeMode() != Mode.PERFORM) {
-                modeState.activatePerform();
-                switchActiveMode();
-            }
-            performMode.enterOverview();
-            notifyAction("Mode", "Settings");
+            performMode.toggleTrackActionMode();
+            notifyAction("Mode", performMode.activePageLabel());
             return;
         }
-        if (modeState.activeMode() == Mode.PERFORM) {
-            final boolean leavingSettings = performMode.isSettingsMode();
-            if (leavingSettings) {
-                performMode.exitOverview();
-                notifyAction("Mode", performMode.modeLabel());
-            } else {
-                performMode.toggleOrientation();
-                notifyAction("Mode", performMode.modeLabel());
-            }
-            return;
+        if (!enteringPerform) {
+            performMode.toggleOrientation();
         }
-        modeState.activatePerform();
-        switchActiveMode();
-        notifyAction("Mode", performMode.modeLabel());
+        notifyAction("Mode", performMode.activePageLabel());
     }
 
     private void togglePlay(final boolean pressed) {
@@ -820,85 +847,62 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public int getSharedRootNote() {
-        return sharedMusicalContext.getRootNote();
+        return sharedPitchContext.getRootNote();
     }
 
     public void setSharedRootNote(final int rootNote) {
-        sharedMusicalContext.setRootNote(rootNote);
+        sharedPitchContext.setRootNote(rootNote);
     }
 
     public void adjustSharedRootNote(final int amount) {
-        sharedMusicalContext.adjustRootNote(amount);
+        sharedPitchContext.adjustRootNote(amount);
     }
 
     public int getSharedScaleIndex() {
-        return sharedMusicalContext.getScaleIndex();
+        return sharedPitchContext.getScaleIndex();
     }
 
     public void setSharedScaleIndex(final int scaleIndex) {
-        sharedMusicalContext.setScaleIndex(scaleIndex);
+        sharedPitchContext.setScaleIndex(scaleIndex);
     }
 
     public boolean adjustSharedScaleIndex(final int amount, final int minimumScaleIndex) {
-        return sharedMusicalContext.adjustScaleIndex(amount, minimumScaleIndex);
+        return sharedPitchContext.adjustScaleIndex(amount, minimumScaleIndex);
     }
 
     public int getSharedOctave() {
-        return sharedMusicalContext.getOctave();
+        return sharedPitchContext.getOctave();
     }
 
     public void setSharedOctave(final int octave) {
-        sharedMusicalContext.setOctave(octave);
+        sharedPitchContext.setOctave(octave);
     }
 
     public void adjustSharedOctave(final int amount) {
-        sharedMusicalContext.adjustOctave(amount);
+        sharedPitchContext.adjustOctave(amount);
     }
 
     public int getSharedBaseMidiNote() {
-        return sharedMusicalContext.getBaseMidiNote();
+        return sharedPitchContext.getBaseMidiNote();
     }
 
     public String getSharedScaleDisplayName() {
-        return sharedMusicalContext.getScaleDisplayName();
+        return sharedPitchContext.getScaleDisplayName();
     }
 
     public MusicalScale getSharedMusicalScale() {
-        final int effectiveScaleIndex = getSharedScaleIndex() == -1 ? 1 : getSharedScaleIndex();
-        return MusicalScaleLibrary.getInstance().getMusicalScale(effectiveScaleIndex);
+        return sharedPitchContext.getMusicalScale();
     }
 
     public SharedMusicalContext getSharedMusicalContext() {
-        return sharedMusicalContext;
+        return sharedPitchContext.context();
     }
 
     private void initializeSharedPitchContext() {
-        setSharedScaleIndex(resolveDefaultSharedScaleIndex());
-        setSharedRootNote(getDefaultRootKeyPreference());
-        setSharedOctave(getDefaultNoteInputOctavePreference());
-    }
-
-    private int resolveDefaultSharedScaleIndex() {
-        return switch (getDefaultScalePreference()) {
-            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Major", 1);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR -> findScaleIndex("Harmonic Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Jazz Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
-            case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);
-            default -> -1;
-        };
-    }
-
-    private int findScaleIndex(final String scaleName, final int fallbackIndex) {
-        final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
-        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
-            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
-                return i;
-            }
-        }
-        return fallbackIndex;
+        sharedPitchContext.initializeFromPreferences(
+                getDefaultScalePreference(),
+                getDefaultRootKeyPreference(),
+                getDefaultNoteInputOctavePreference());
     }
 
     private void onMidi0(final ShortMidiMessage msg) {
@@ -1059,7 +1063,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public String getDefaultScalePreference() {
         return defaultScalePref == null
-                ? FireControlPreferences.DEFAULT_SCALE_PIANO
+                ? FireControlPreferences.DEFAULT_SCALE_MAJOR
                 : FireControlPreferences.normalizeDefaultScale(defaultScalePref.get());
     }
 
@@ -1314,12 +1318,114 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Shuffle", groove.getShuffleAmount().displayedValue().get());
     }
 
+    private void activateGlobalSettingsOverlay() {
+        if (globalSettingsOverlayActive) {
+            showGlobalSettingsOverview();
+            return;
+        }
+        globalSettingsOverlayActive = true;
+        globalSettingsLayer.activate();
+        showGlobalSettingsOverview();
+        refreshSurfaceLights();
+    }
+
+    private void deactivateGlobalSettingsOverlay() {
+        if (!globalSettingsOverlayActive) {
+            return;
+        }
+        globalSettingsOverlayActive = false;
+        globalSettingsLayer.deactivate();
+        oled.clearScreenDelayed();
+        refreshSurfaceLights();
+    }
+
+    private void updateGlobalSettingsOverlayState() {
+        final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
+        final boolean shouldShow = browserButton != null
+                && globalSettingsGestureArmed
+                && browserButton.isPressed()
+                && isGlobalShiftHeld()
+                && !isGlobalAltHeld()
+                && !isPopupBrowserActive();
+        if (shouldShow) {
+            activateGlobalSettingsOverlay();
+        } else {
+            deactivateGlobalSettingsOverlay();
+        }
+    }
+
+    private void showGlobalSettingsOverview() {
+        oled.detailInfo("Global Settings",
+                "1: Root %s\n2: Scale %s\n3: Oct %d".formatted(
+                        com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
+                        sharedPitchContext.getScaleDisplayName(),
+                        sharedPitchContext.getOctave()));
+    }
+
+    private void adjustGlobalSettings(final int encoderIndex, final int inc) {
+        if (inc == 0) {
+            return;
+        }
+        if (encoderIndex == 0) {
+            sharedPitchContext.adjustRootNote(inc);
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
+            return;
+        }
+        if (encoderIndex == 1) {
+            sharedPitchContext.adjustScaleIndex(inc, -1);
+            oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName());
+            return;
+        }
+        if (encoderIndex == 2) {
+            sharedPitchContext.adjustOctave(inc);
+            oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
+            return;
+        }
+        showGlobalSettingsOverview();
+    }
+
+    private void handleGlobalSettingsTouch(final int encoderIndex, final boolean touched) {
+        if (!touched) {
+            showGlobalSettingsOverview();
+            return;
+        }
+        if (encoderIndex == 0) {
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
+            return;
+        }
+        if (encoderIndex == 1) {
+            oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName());
+            return;
+        }
+        if (encoderIndex == 2) {
+            oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
+            return;
+        }
+        showGlobalSettingsOverview();
+    }
+
+    private RgbLigthState globalSettingsPadState(final int padIndex) {
+        final int row = padIndex / SETTINGS_PAD_COLUMNS;
+        final int column = padIndex % SETTINGS_PAD_COLUMNS;
+        if (row < 0 || row >= SETTINGS_PAD_ROWS || column < 0 || column >= SETTINGS_PAD_COLUMNS) {
+            return RgbLigthState.OFF;
+        }
+        return SETTINGS_LOGO[row][column] ? SETTINGS_LOGO_ON : SETTINGS_LOGO_OFF;
+    }
+
     public boolean isPopupBrowserActive() {
         return popupBrowser != null && popupBrowser.exists().get();
     }
 
     public BiColorLightState getBrowserLightState() {
+        if (globalSettingsOverlayActive) {
+            return BiColorLightState.AMBER_FULL;
+        }
         return isPopupBrowserActive() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+    }
+
+    public boolean isGlobalSettingsOverlayActive() {
+        return globalSettingsOverlayActive;
     }
 
     public boolean isGlobalAltHeld() {
@@ -1394,12 +1500,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleBrowserPressed(final boolean pressed) {
         if (!pressed) {
+            globalSettingsGestureArmed = false;
+            updateGlobalSettingsOverlayState();
             oled.clearScreenDelayed();
             return;
         }
+        globalSettingsGestureArmed = isGlobalShiftHeld() && !isGlobalAltHeld();
+        updateGlobalSettingsOverlayState();
         if (isPopupBrowserActive()) {
             popupBrowser.cancel();
             notifyAction("Browser", "Closed");
+            return;
+        }
+        if (isGlobalShiftHeld() && !isGlobalAltHeld()) {
+            activateGlobalSettingsOverlay();
+            notifyAction("Settings", "Global");
             return;
         }
         openPopupBrowser();
@@ -1409,7 +1524,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
         final boolean shiftHeld = getButton(NoteAssign.SHIFT).isPressed();
         final boolean altHeld = getButton(NoteAssign.ALT).isPressed();
-        if (shiftHeld) {
+        if (shiftHeld && altHeld) {
             if (primaryDevice.exists().get()) {
                 primaryDevice.beforeDeviceInsertionPoint().browse();
             } else {

@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.note;
 
+import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.lights.BiColorLightState;
 
 /**
@@ -8,14 +9,14 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 final class NoteLiveControlSurface {
     private final NoteLivePerformanceControls performanceControls;
     private final NoteLiveEncoderModeControls encoderModeControls;
-    private final NoteEncoderTouchResetHandler touchResetHandler;
+    private final EncoderTouchResetHandler touchResetHandler;
     private final ValueDisplay valueDisplay;
     private final DetailDisplay detailDisplay;
     private final Runnable clearDisplay;
 
     NoteLiveControlSurface(final NoteLivePerformanceControls performanceControls,
                            final NoteLiveEncoderModeControls encoderModeControls,
-                           final NoteEncoderTouchResetHandler touchResetHandler,
+                           final EncoderTouchResetHandler touchResetHandler,
                            final ValueDisplay valueDisplay,
                            final DetailDisplay detailDisplay,
                            final Runnable clearDisplay) {

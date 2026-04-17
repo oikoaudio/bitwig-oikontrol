@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
@@ -11,19 +11,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class NoteChordStepObservationControllerTest {
+class ChordStepObservationControllerTest {
 
     @Test
     void refreshPassClearsCachesAndDelegatesCursorRefresh() {
         final List<String> events = new ArrayList<>();
-        final NoteChordStepClipController clipController = new NoteChordStepClipController(
+        final ChordStepClipController clipController = new ChordStepClipController(
                 () -> true,
                 () -> false,
                 () -> events.add("clip-resync"),
                 failure -> events.add("failure:" + failure.title()));
         clipController.refresh(SelectedClipSlotState.fromValues(3, true, RgbLigthState.GRAY_2));
 
-        final NoteChordStepObservationController controller = new NoteChordStepObservationController(
+        final ChordStepObservationController controller = new ChordStepObservationController(
                 (task, delayTicks) -> {},
                 null,
                 () -> 5,
@@ -61,12 +61,12 @@ class NoteChordStepObservationControllerTest {
     void queueResyncSchedulesOnlyOnePendingRefresh() {
         final List<ScheduledTask> scheduled = new ArrayList<>();
         final List<String> events = new ArrayList<>();
-        final NoteChordStepClipController clipController = new NoteChordStepClipController(
+        final ChordStepClipController clipController = new ChordStepClipController(
                 () -> true,
                 () -> false,
                 () -> events.add("clip-resync"),
                 failure -> events.add("failure:" + failure.title()));
-        final NoteChordStepObservationController controller = new NoteChordStepObservationController(
+        final ChordStepObservationController controller = new ChordStepObservationController(
                 (task, delayTicks) -> scheduled.add(new ScheduledTask(task, delayTicks)),
                 null,
                 () -> 0,

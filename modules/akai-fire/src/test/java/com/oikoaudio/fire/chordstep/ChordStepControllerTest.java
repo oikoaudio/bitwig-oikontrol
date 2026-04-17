@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -17,16 +17,16 @@ class ChordStepControllerTest {
     @Test
     void delegatesEditButtonsAndClipState() {
         final List<String> events = new ArrayList<>();
-        final NoteChordStepClipController clipController = new NoteChordStepClipController(
+        final ChordStepClipController clipController = new ChordStepClipController(
                 () -> true,
                 () -> true,
                 () -> events.add("resync"),
                 failure -> events.add("failure:" + failure.title()));
         clipController.refresh(SelectedClipSlotState.fromValues(2, true, RgbLigthState.GRAY_2));
         final ChordStepController mode = new ChordStepController(
-                new NoteChordStepEditControls((title, detail) -> events.add(title + ":" + detail), () -> events.add("clear")),
+                new ChordStepEditControls((title, detail) -> events.add(title + ":" + detail), () -> events.add("clear")),
                 clipController,
-                new NoteChordStepObservationController(
+                new ChordStepObservationController(
                         (task, delayTicks) -> events.add("schedule:" + delayTicks),
                         null,
                         () -> 0,

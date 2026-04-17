@@ -91,7 +91,7 @@ public final class FireControlPreferences {
             LIVE_PITCH_OFFSET_RETUNE_HELD
     };
 
-    public static final String DEFAULT_SCALE_PIANO = "Piano/Chromatic";
+    public static final String DEFAULT_SCALE_PIANO = "Chromatic";
     public static final String DEFAULT_SCALE_MINOR = "Minor";
     public static final String DEFAULT_SCALE_HARMONIC_MINOR = "Harmonic Minor";
     public static final String DEFAULT_SCALE_MELODIC_MINOR = "Melodic Minor";
@@ -100,7 +100,6 @@ public final class FireControlPreferences {
     public static final String DEFAULT_SCALE_DORIAN = "Dorian";
     public static final String DEFAULT_SCALE_MIXOLYDIAN = "Mixolydian";
     public static final String[] DEFAULT_SCALES = {
-            DEFAULT_SCALE_PIANO,
             DEFAULT_SCALE_MAJOR,
             DEFAULT_SCALE_MINOR,
             DEFAULT_SCALE_HARMONIC_MINOR,
@@ -238,12 +237,17 @@ public final class FireControlPreferences {
     }
 
     public static String normalizeDefaultScale(final String preferenceValue) {
+        if ("Piano/Chromatic".equals(preferenceValue)
+                || "Piano".equals(preferenceValue)
+                || DEFAULT_SCALE_PIANO.equals(preferenceValue)) {
+            return DEFAULT_SCALE_MAJOR;
+        }
         for (final String value : DEFAULT_SCALES) {
             if (value.equals(preferenceValue)) {
                 return value;
             }
         }
-        return DEFAULT_SCALE_PIANO;
+        return DEFAULT_SCALE_MAJOR;
     }
 
     public static String normalizeMelodicSeedMode(final String preferenceValue) {

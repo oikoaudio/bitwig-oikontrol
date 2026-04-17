@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -7,106 +7,106 @@ import com.oikoaudio.fire.lights.RgbLigthState;
 /**
  * Internal controller for chord-step sequencing behavior.
  */
-final class ChordStepController {
-    private final NoteChordStepEditControls editControls;
-    private final NoteChordStepClipController clipController;
-    private final NoteChordStepObservationController observationController;
+public final class ChordStepController {
+    private final ChordStepEditControls editControls;
+    private final ChordStepClipController clipController;
+    private final ChordStepObservationController observationController;
 
-    ChordStepController(final NoteChordStepEditControls editControls,
-                        final NoteChordStepClipController clipController,
-                        final NoteChordStepObservationController observationController) {
+    public ChordStepController(final ChordStepEditControls editControls,
+                               final ChordStepClipController clipController,
+                               final ChordStepObservationController observationController) {
         this.editControls = editControls;
         this.clipController = clipController;
         this.observationController = observationController;
     }
 
-    void observeSelectedClip() {
+    public void observeSelectedClip() {
         observationController.observeSelectedClip();
     }
 
-    void refreshSelectedClipState() {
+    public void refreshSelectedClipState() {
         observationController.refreshSelectedClipState();
     }
 
-    void queueObservationResync() {
+    public void queueObservationResync() {
         observationController.queueResync();
     }
 
-    void refreshObservation() {
+    public void refreshObservation() {
         observationController.refresh();
     }
 
-    void refreshObservationPass() {
+    public void refreshObservationPass() {
         observationController.refreshPass();
     }
 
-    boolean ensureSelectedClip() {
+    public boolean ensureSelectedClip() {
         refreshSelectedClipState();
         return clipController.ensureSelectedClip();
     }
 
-    boolean ensureSelectedClipSlot() {
+    public boolean ensureSelectedClipSlot() {
         refreshSelectedClipState();
         return clipController.ensureSelectedClipSlot();
     }
 
-    void handleMute1(final boolean pressed) {
+    public void handleMute1(final boolean pressed) {
         editControls.handleMute1(pressed);
     }
 
-    void handleMute2(final boolean pressed) {
+    public void handleMute2(final boolean pressed) {
         editControls.handleMute2(pressed);
     }
 
-    void handleMute3(final boolean pressed) {
+    public void handleMute3(final boolean pressed) {
         editControls.handleMute3(pressed);
     }
 
-    void handleMute4(final boolean pressed) {
+    public void handleMute4(final boolean pressed) {
         editControls.handleMute4(pressed);
     }
 
-    boolean isSelectHeld() {
+    public boolean isSelectHeld() {
         return editControls.isSelectHeld();
     }
 
-    boolean isFixedLengthHeld() {
+    public boolean isFixedLengthHeld() {
         return editControls.isFixedLengthHeld();
     }
 
-    boolean isCopyHeld() {
+    public boolean isCopyHeld() {
         return editControls.isCopyHeld();
     }
 
-    boolean isDeleteHeld() {
+    public boolean isDeleteHeld() {
         return editControls.isDeleteHeld();
     }
 
-    BiColorLightState mute1LightState() {
+    public BiColorLightState mute1LightState() {
         return editControls.mute1LightState();
     }
 
-    BiColorLightState mute2LightState() {
+    public BiColorLightState mute2LightState() {
         return editControls.mute2LightState();
     }
 
-    BiColorLightState mute3LightState() {
+    public BiColorLightState mute3LightState() {
         return editControls.mute3LightState();
     }
 
-    BiColorLightState mute4LightState() {
+    public BiColorLightState mute4LightState() {
         return editControls.mute4LightState();
     }
 
-    BooleanValueObject deleteHeldValue() {
+    public BooleanValueObject deleteHeldValue() {
         return editControls.deleteHeldValue();
     }
 
-    int slotIndex() {
+    public int slotIndex() {
         return clipController.slotIndex();
     }
 
-    RgbLigthState color() {
+    public RgbLigthState color() {
         return clipController.color();
     }
 }

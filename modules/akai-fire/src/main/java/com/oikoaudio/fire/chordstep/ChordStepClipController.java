@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
@@ -9,30 +9,30 @@ import java.util.function.BooleanSupplier;
 /**
  * Owns chord-step selected-clip state refresh and clip-availability checks.
  */
-final class NoteChordStepClipController {
+public final class ChordStepClipController {
     private final ChordStepSelectedClipState selectedClipState = new ChordStepSelectedClipState();
     private final BooleanSupplier canHoldNoteData;
     private final BooleanSupplier hasLoadedNoteClipContent;
     private final ResyncRequester resyncRequester;
     private final AvailabilityFeedback availabilityFeedback;
 
-    NoteChordStepClipController(final BooleanSupplier canHoldNoteData,
-                                final BooleanSupplier hasLoadedNoteClipContent,
-                                final ResyncRequester resyncRequester,
-                                final AvailabilityFeedback availabilityFeedback) {
+    public ChordStepClipController(final BooleanSupplier canHoldNoteData,
+                                   final BooleanSupplier hasLoadedNoteClipContent,
+                                   final ResyncRequester resyncRequester,
+                                   final AvailabilityFeedback availabilityFeedback) {
         this.canHoldNoteData = canHoldNoteData;
         this.hasLoadedNoteClipContent = hasLoadedNoteClipContent;
         this.resyncRequester = resyncRequester;
         this.availabilityFeedback = availabilityFeedback;
     }
 
-    void refresh(final SelectedClipSlotState state) {
+    public void refresh(final SelectedClipSlotState state) {
         if (selectedClipState.refresh(state)) {
             resyncRequester.queueResync();
         }
     }
 
-    boolean ensureSelectedClip() {
+    public boolean ensureSelectedClip() {
         final NoteClipAvailability.Failure failure =
                 selectedClipState.requireClip(canHoldNoteData.getAsBoolean(), hasLoadedNoteClipContent.getAsBoolean());
         if (failure != null) {
@@ -42,7 +42,7 @@ final class NoteChordStepClipController {
         return true;
     }
 
-    boolean ensureSelectedClipSlot() {
+    public boolean ensureSelectedClipSlot() {
         final NoteClipAvailability.Failure failure =
                 selectedClipState.requireSelectedClipSlot(canHoldNoteData.getAsBoolean());
         if (failure != null) {
@@ -52,25 +52,25 @@ final class NoteChordStepClipController {
         return true;
     }
 
-    int slotIndex() {
+    public int slotIndex() {
         return selectedClipState.slotIndex();
     }
 
-    boolean hasContent() {
+    public boolean hasContent() {
         return selectedClipState.hasContent();
     }
 
-    RgbLigthState color() {
+    public RgbLigthState color() {
         return selectedClipState.color();
     }
 
     @FunctionalInterface
-    interface ResyncRequester {
+    public interface ResyncRequester {
         void queueResync();
     }
 
     @FunctionalInterface
-    interface AvailabilityFeedback {
+    public interface AvailabilityFeedback {
         void show(NoteClipAvailability.Failure failure);
     }
 }

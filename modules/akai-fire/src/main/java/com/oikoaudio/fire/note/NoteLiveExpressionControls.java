@@ -6,7 +6,7 @@ package com.oikoaudio.fire.note;
 final class NoteLiveExpressionControls {
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
-    private static final int DEFAULT_TIMBRE = 64;
+    private static final int DEFAULT_TIMBRE = 0;
     private static final int DEFAULT_PITCH_EXPRESSION = 64;
     private static final int DEFAULT_PITCH_BEND = 8192;
 

@@ -2,12 +2,22 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.6.0 - Perform track actions and encoder behavior refinement
+- Added a `SHIFT + PERFORM` track-action page for `Stop`, `Solo`, `Mute`, and `Arm`
+- Unified Akai Fire encoder turn and touch-reset behavior behind shared control helpers
+- Added shared encoder value profiles for parameter-style controls and aligned more encoder paths with the shared behavior layer
+- Softened live and step expression encoder feel for pressure, timbre, and related expression controls
+- Reduced encoder touch-reset hold from `1000 ms` to `750 ms`
+- Aligned live note timbre reset/default with zero-based semantics instead of centering on `64`
+- Renamed active chord-step bank/state terminology from `Oikord` to `Chord`
+
 ## 2.5.0 - Harmonic note input, step routing, and control-surface polish
 - Added a harmonic live `NOTE` submode with harmonic lattice layout, multi-note pad output, note-count selection, octave-span control, bass-column/full-field variants, and harmonic gliss support
 - Added live-note pitch-bend with spring-return, and toggle between `5th/8v` and `ScaleDeg` gliss modes
 - Moved `Chord Step` behind `STEP SEQ` so `NOTE` stays focused on live note input; pressing `STEP SEQ` now enters `Melodic Step`, then switches to `Chord Step` on the next press
 - Added `ALT + NOTE` and `SHIFT + Encoder 4` as direct live-layout shortcuts for collapsing note input to scale notes or switching harmonic layout variants
 - Added horizontal `Perform` orientation plus broader encoder-scaling cleanup, melodic step expression-page updates, and Bitwig 6-aligned scale naming/order
+- Reworked Fire modifier routing so `SHIFT + PERFORM` latches a 4-row track-action page (`Stop`, `Solo`, `Mute`, `Arm`) and `SHIFT + BROWSER` opens a global root/scale/octave settings overlay
 - Updated tests and Fire documentation to match the new harmonic input, step-routing, and live-control workflows
 
 ## 2.4.0 - Akai Fire shared pitch context and architecture rework
@@ -52,7 +62,7 @@ Adds a full Akai Fire extension and promotes `bitwig-oikontrol` into a multi-con
 - Added Fire `DRUM`, `NOTE`, and `PERFORM` workflows
 - Added drum step sequencing with fine nudge, accent/fill handling, and Euclid controls
 - Added note mode with isomorphic layout, scale/root/octave controls, and note-step access
-- Added Oikord chord-step sequencing and performance clip launching
+- Added chord-step sequencing and performance clip launching
 - Added Fire OLED feedback, encoder pages, transport/tempo control, and preferences
 - Restructured the repository into a multi-module `bitwig-oikontrol` project for Akai Fire and Launch Control XL
 - Continued Launch Control XL improvements, including device remote pages and drum-mode refinements

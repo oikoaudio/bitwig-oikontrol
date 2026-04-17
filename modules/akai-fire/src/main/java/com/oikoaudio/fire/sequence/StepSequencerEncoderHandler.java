@@ -7,8 +7,8 @@ import java.util.Map;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.EncoderStepAccumulator;
-import com.oikoaudio.fire.control.ContinuousEncoderScaler;
+import com.oikoaudio.fire.control.EncoderTouchResetHandler;
+import com.oikoaudio.fire.control.EncoderTurnBehavior;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -23,7 +23,7 @@ import com.bitwig.extensions.framework.Layer;
  * slots and note or mixer parameters.
  */
 public class StepSequencerEncoderHandler extends Layer {
-    private static final long TOUCH_RESET_HOLD_MS = 1000L;
+    private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private final StepSequencerHost parent;
@@ -39,9 +39,7 @@ public class StepSequencerEncoderHandler extends Layer {
 	private final OledDisplay oled;
 	private final Map<EncoderMode, Layer> modeMapping = new HashMap<>();
 	private final TouchEncoder[] encoders;
-    private final TouchResetGesture touchResetGesture =
-            new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
-                    TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
+    private final EncoderTouchResetHandler touchResetHandler;
 
 	@FunctionalInterface
 	interface NoteDoubleGetter {
@@ -73,6 +71,13 @@ public class StepSequencerEncoderHandler extends Layer {
 		user1Layer = new Layer(driver.getLayers(), "ENC_USER1_LAYER");
 		user2Layer = new Layer(driver.getLayers(), "ENC_USER2_LAYER");
 		encoders = driver.getEncoders();
+        touchResetHandler = new EncoderTouchResetHandler(
+                new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
+                        TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS),
+                driver::isEncoderTouchResetEnabled,
+                (task, delayMs) -> driver.getHost().scheduleTask(task, delayMs),
+                TOUCH_RESET_HOLD_MS,
+                () -> {});
         final EncoderBankLayout layout = parent.getEncoderBankLayout();
         bindBank(EncoderMode.CHANNEL, channelLayer, layout.bank(EncoderMode.CHANNEL));
         bindBank(EncoderMode.MIXER, mixerLayer, layout.bank(EncoderMode.MIXER));
@@ -111,25 +116,18 @@ public class StepSequencerEncoderHandler extends Layer {
 
     public void bindNoteAccess(final Layer layer, final TouchEncoder encoder, final int slotIndex,
                                final NoteStepAccess access) {
-        final EncoderStepAccumulator accumulator = access.getStepThreshold() > 1
-                ? new EncoderStepAccumulator(access.getStepThreshold())
-                : null;
-        final ContinuousEncoderScaler scaler = accumulator == null ? new ContinuousEncoderScaler() : null;
-		encoder.bindEncoder(layer, inc -> {
-            final int effectiveInc = accumulator != null
-                    ? accumulator.consume(inc)
-                    : scaler.scale(inc, driver.isGlobalShiftHeld());
+        final EncoderTurnBehavior behavior = !access.usesAcceleratedTurnBehavior()
+                ? EncoderTurnBehavior.quantizedSteps(access.getStepThreshold())
+                : EncoderTurnBehavior.acceleratedValue(access.accelerationProfile());
+		encoder.bindEncoderBehavior(layer, driver::isGlobalShiftHeld, behavior, effectiveInc -> {
             if (effectiveInc != 0) {
                 recordTouchAdjustment(slotIndex, Math.abs(effectiveInc));
                 handleMod(effectiveInc, access);
             }
         });
 		encoder.bindTouched(layer, touched -> {
-            if (!touched && accumulator != null) {
-                accumulator.reset();
-            }
-            if (!touched && scaler != null) {
-                scaler.reset();
+            if (!touched) {
+                behavior.reset();
             }
             handleTouch(slotIndex, touched, access);
         });
@@ -140,26 +138,15 @@ public class StepSequencerEncoderHandler extends Layer {
     }
 
     public void beginTouchReset(final int slotIndex, final Runnable resetAction) {
-        if (driver.isEncoderTouchResetEnabled()) {
-            touchResetGesture.onTouchStart(slotIndex);
-            driver.getHost().scheduleTask(() -> {
-                if (driver.isEncoderTouchResetEnabled() && touchResetGesture.shouldResetWhileTouched(slotIndex)) {
-                    resetAction.run();
-                }
-            }, TOUCH_RESET_HOLD_MS);
-        }
+        touchResetHandler.beginTouchReset(slotIndex, resetAction);
     }
 
     public void recordTouchAdjustment(final int slotIndex, final int units) {
-        if (driver.isEncoderTouchResetEnabled()) {
-            touchResetGesture.onAdjusted(slotIndex, units);
-        }
+        touchResetHandler.markAdjusted(slotIndex, units);
     }
 
     public void endTouchReset(final int slotIndex) {
-        if (driver.isEncoderTouchResetEnabled()) {
-            touchResetGesture.onTouchEnd(slotIndex);
-        }
+        touchResetHandler.endTouchReset(slotIndex);
     }
 
     public void showAccessorTouchValue(final NoteStepAccess accessor) {
