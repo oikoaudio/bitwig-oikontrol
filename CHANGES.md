@@ -2,6 +2,15 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.6.0 - Perform track actions and encoder behavior refinement
+- Added a `SHIFT + PERFORM` track-action page for `Stop`, `Solo`, `Mute`, and `Arm`
+- Unified Akai Fire encoder turn and touch-reset behavior behind shared control helpers
+- Added shared encoder value profiles for parameter-style controls and aligned more encoder paths with the shared behavior layer
+- Softened live and step expression encoder feel for pressure, timbre, and related expression controls
+- Reduced encoder touch-reset hold from `1000 ms` to `750 ms`
+- Aligned live note timbre reset/default with zero-based semantics instead of centering on `64`
+- Renamed active chord-step bank/state terminology from `Oikord` to `Chord`
+
 ## 2.5.0 - Harmonic note input, step routing, and control-surface polish
 - Added a harmonic live `NOTE` submode with harmonic lattice layout, multi-note pad output, note-count selection, octave-span control, bass-column/full-field variants, and harmonic gliss support
 - Added live-note pitch-bend with spring-return, and toggle between `5th/8v` and `ScaleDeg` gliss modes
