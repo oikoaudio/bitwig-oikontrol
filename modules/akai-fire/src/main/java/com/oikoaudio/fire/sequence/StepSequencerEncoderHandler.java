@@ -116,9 +116,9 @@ public class StepSequencerEncoderHandler extends Layer {
 
     public void bindNoteAccess(final Layer layer, final TouchEncoder encoder, final int slotIndex,
                                final NoteStepAccess access) {
-        final EncoderTurnBehavior behavior = access.getStepThreshold() > 1
-                ? EncoderTurnBehavior.thresholded(access.getStepThreshold(), access.getStepThreshold())
-                : EncoderTurnBehavior.continuous();
+        final EncoderTurnBehavior behavior = !access.usesAcceleratedTurnBehavior()
+                ? EncoderTurnBehavior.quantizedSteps(access.getStepThreshold())
+                : EncoderTurnBehavior.acceleratedValue(access.accelerationProfile());
 		encoder.bindEncoderBehavior(layer, driver::isGlobalShiftHeld, behavior, effectiveInc -> {
             if (effectiveInc != 0) {
                 recordTouchAdjustment(slotIndex, Math.abs(effectiveInc));

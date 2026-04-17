@@ -13,18 +13,22 @@ public final class EncoderTurnBehavior {
         this.fineAccumulator = fineAccumulator;
     }
 
-    public static EncoderTurnBehavior continuous() {
-        return continuous(ContinuousEncoderScaler.Profile.STRONG);
+    public static EncoderTurnBehavior acceleratedValue() {
+        return acceleratedValue(ContinuousEncoderScaler.Profile.STRONG);
     }
 
-    public static EncoderTurnBehavior continuous(final ContinuousEncoderScaler.Profile profile) {
+    public static EncoderTurnBehavior acceleratedValue(final ContinuousEncoderScaler.Profile profile) {
         return new EncoderTurnBehavior(new ContinuousEncoderScaler(profile), null, null);
     }
 
-    public static EncoderTurnBehavior thresholded(final int normalThreshold, final int fineThreshold) {
+    public static EncoderTurnBehavior quantizedSteps(final int normalThreshold, final int fineThreshold) {
         return new EncoderTurnBehavior(null,
                 new EncoderStepAccumulator(normalThreshold),
                 new EncoderStepAccumulator(fineThreshold));
+    }
+
+    public static EncoderTurnBehavior quantizedSteps(final int threshold) {
+        return quantizedSteps(threshold, threshold);
     }
 
     public int apply(final int inc, final boolean fine) {

@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class EncoderTurnBehaviorTest {
 
     @Test
-    void thresholdedBehaviorAccumulatesAndResets() {
-        final EncoderTurnBehavior behavior = EncoderTurnBehavior.thresholded(2, 3);
+    void quantizedStepsAccumulatesAndResets() {
+        final EncoderTurnBehavior behavior = EncoderTurnBehavior.quantizedSteps(2, 3);
 
         assertEquals(0, behavior.apply(1, false));
         assertEquals(1, behavior.apply(1, false));
@@ -19,8 +19,8 @@ class EncoderTurnBehaviorTest {
     }
 
     @Test
-    void continuousBehaviorUsesFinePathWithoutAccelerationState() {
-        final EncoderTurnBehavior behavior = EncoderTurnBehavior.continuous();
+    void acceleratedValueUsesFinePathWithoutAccelerationState() {
+        final EncoderTurnBehavior behavior = EncoderTurnBehavior.acceleratedValue();
 
         assertEquals(1, behavior.apply(1, false));
         assertEquals(1, behavior.apply(1, true));

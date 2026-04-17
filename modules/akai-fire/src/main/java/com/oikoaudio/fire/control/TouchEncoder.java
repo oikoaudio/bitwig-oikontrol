@@ -64,12 +64,12 @@ public class TouchEncoder {
     public void bindContinuousEncoder(final Layer layer, final BooleanSupplier fineSupplier,
                                       final ContinuousEncoderScaler.Profile profile,
                                       final IntConsumer action) {
-        bindEncoderBehavior(layer, fineSupplier, EncoderTurnBehavior.continuous(profile), action);
+        bindEncoderBehavior(layer, fineSupplier, EncoderTurnBehavior.acceleratedValue(profile), action);
     }
 
     public void bindThresholdedEncoder(final Layer layer, final int normalThreshold, final int fineThreshold,
                                        final BooleanSupplier fineSupplier, final IntConsumer action) {
-        bindEncoderBehavior(layer, fineSupplier, EncoderTurnBehavior.thresholded(normalThreshold, fineThreshold), action);
+        bindEncoderBehavior(layer, fineSupplier, EncoderTurnBehavior.quantizedSteps(normalThreshold, fineThreshold), action);
     }
 
 	public RelativeHardwarControlBindable createIncrementBinder(final IntConsumer consumer) {

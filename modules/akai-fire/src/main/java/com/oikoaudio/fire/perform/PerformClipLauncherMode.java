@@ -20,6 +20,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
@@ -697,7 +698,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         parameterResetHandler.markAdjusted(encoderIndex, Math.abs(inc));
-        MixerEncoderProfile.adjustParameter(parameter, isShiftHeld(), inc);
+        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, isShiftHeld(), inc);
         oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
     }
 

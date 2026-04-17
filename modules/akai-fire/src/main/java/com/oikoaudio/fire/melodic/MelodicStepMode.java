@@ -19,8 +19,9 @@ import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
+import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -2425,7 +2426,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 parameter.displayedValue().markInterested();
                 parameter.value().markInterested();
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
-                    MixerEncoderProfile.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
+                    EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
                     oled.valueInfo(label, parameter.displayedValue().get());
                 });
                 encoder.bindTouched(layer, touched -> {

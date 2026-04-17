@@ -31,6 +31,7 @@ import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepObservedState;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
@@ -670,7 +671,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                                                final java.util.function.Supplier<String> valueSupplier,
                                                final Runnable resetAction) {
         bindResettableLiveMidiEncoder(encoder, layer, encoderIndex, label,
-                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.GENTLE,
+                com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT,
                 adjuster, valueSupplier, resetAction);
     }
 
@@ -3487,7 +3488,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void adjustMixerParameter(final Parameter parameter, final String fallbackLabel, final int inc) {
-        MixerEncoderProfile.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
+        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
         oled.valueInfo(fallbackLabel, parameter.displayedValue().get());
     }
 

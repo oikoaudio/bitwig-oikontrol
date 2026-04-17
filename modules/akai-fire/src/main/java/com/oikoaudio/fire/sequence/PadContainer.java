@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.display.ParameterDisplayBinding;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -11,9 +12,6 @@ import com.oikoaudio.fire.values.DawColor;
 
 class PadContainer {
 
-
-    private static final double TUNE_INC = 0.0416667;
-    private static final double PITCH_INC = 0.0138889;
 
     private int lastKnobValue = 0;
 
@@ -209,19 +207,19 @@ class PadContainer {
     }
 
     public void modifyValue(final int typeIndex, final int inc, final boolean shiftHeld, final boolean altHeld) {
-        double amount = 0;
+        double amount;
 
         if (altHeld) {
-           if (remoteControls.getParameter(0).name().get().contains("Tune"))
-            amount = inc * TUNE_INC; // Force increments of exactly ±1
-            else if (remoteControls.getParameter(0).name().get().contains("Pitch"))
-               amount = inc * PITCH_INC;
-            else amount = inc * MixerEncoderProfile.COARSE_INCREMENT;
+           if (remoteControls.getParameter(0).name().get().contains("Tune")) {
+               amount = EncoderValueProfile.SEMITONE_PARAMETER.delta(false, inc);
+           } else if (remoteControls.getParameter(0).name().get().contains("Pitch")) {
+               amount = EncoderValueProfile.PITCH_PARAMETER.delta(false, inc);
+           } else {
+               amount = EncoderValueProfile.LARGE_RANGE.delta(false, inc);
+           }
         }
         else {
-            amount = inc * (shiftHeld
-                    ? MixerEncoderProfile.FINE_INCREMENT
-                    : MixerEncoderProfile.COARSE_INCREMENT);
+            amount = EncoderValueProfile.LARGE_RANGE.delta(shiftHeld, inc);
         }
         switch (typeIndex) {
             case 0:
@@ -270,7 +268,7 @@ class PadContainer {
         if (parameter == null) {
             return false;
         }
-        MixerEncoderProfile.adjustParameter(parameter, fine, inc);
+        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, fine, inc);
         return true;
     }
 
