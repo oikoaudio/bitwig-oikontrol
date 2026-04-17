@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public final class OikordBank {
+public final class ChordBank {
     public static final int PAGE_SIZE = 16;
     public static final int MID_REGISTER_OCTAVE = 3;
     private static final int MID_REGISTER_CENTER = 64;
@@ -19,7 +19,7 @@ public final class OikordBank {
 
     public Family family(final int familyIndex) {
         if (familyIndex < 0 || familyIndex >= FAMILIES.size()) {
-            throw new IllegalArgumentException("Invalid Oikord family index: " + familyIndex);
+            throw new IllegalArgumentException("Invalid Chord family index: " + familyIndex);
         }
         return FAMILIES.get(familyIndex);
     }
@@ -27,13 +27,13 @@ public final class OikordBank {
     public Slot slot(final int familyIndex, final int pageIndex, final int slotIndex) {
         final int absoluteIndex = pageIndex * PAGE_SIZE + slotIndex;
         if (pageIndex < 0 || pageIndex >= pageCount(familyIndex)) {
-            throw new IllegalArgumentException("Invalid Oikord page: " + pageIndex);
+            throw new IllegalArgumentException("Invalid Chord page: " + pageIndex);
         }
         if (slotIndex < 0 || slotIndex >= PAGE_SIZE) {
-            throw new IllegalArgumentException("Invalid Oikord slot: " + slotIndex);
+            throw new IllegalArgumentException("Invalid Chord slot: " + slotIndex);
         }
         if (absoluteIndex >= family(familyIndex).slots().size()) {
-            throw new IllegalArgumentException("Invalid Oikord slot index for family page: " + slotIndex);
+            throw new IllegalArgumentException("Invalid Chord slot index for family page: " + slotIndex);
         }
         return family(familyIndex).slots().get(absoluteIndex);
     }

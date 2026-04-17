@@ -53,7 +53,7 @@ Adds a full Akai Fire extension and promotes `bitwig-oikontrol` into a multi-con
 - Added Fire `DRUM`, `NOTE`, and `PERFORM` workflows
 - Added drum step sequencing with fine nudge, accent/fill handling, and Euclid controls
 - Added note mode with isomorphic layout, scale/root/octave controls, and note-step access
-- Added Oikord chord-step sequencing and performance clip launching
+- Added chord-step sequencing and performance clip launching
 - Added Fire OLED feedback, encoder pages, transport/tempo control, and preferences
 - Restructured the repository into a multi-module `bitwig-oikontrol` project for Akai Fire and Launch Control XL
 - Continued Launch Control XL improvements, including device remote pages and drum-mode refinements
