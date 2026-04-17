@@ -49,7 +49,7 @@ public class PerformClipLauncherMode extends Layer {
         }
 
         static TrackActionRow fromPadIndex(final int padIndex) {
-            final int row = padIndex / PAD_COLUMNS;
+            final int row = padIndex / PerformLayout.PAD_COLUMNS;
             for (final TrackActionRow actionRow : values()) {
                 if (actionRow.rowIndex == row) {
                     return actionRow;
@@ -59,30 +59,9 @@ public class PerformClipLauncherMode extends Layer {
         }
     }
 
-    private enum Orientation {
-        VERTICAL("PerformV"),
-        HORIZONTAL("PerformH");
-
-        private final String label;
-
-        Orientation(final String label) {
-            this.label = label;
-        }
-
-        Orientation toggle() {
-            return this == VERTICAL ? HORIZONTAL : VERTICAL;
-        }
-
-        String label() {
-            return label;
-        }
-    }
-
     private static final long PARAMETER_RESET_TOUCH_HOLD_MS = 1000;
     private static final long PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300;
     private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
-    private static final int PAD_COLUMNS = 16;
-    private static final int PAD_ROWS = 4;
     private static final int MAX_TRACKS = 16;
     private static final int MAX_SCENES = 16;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
@@ -130,7 +109,7 @@ public class PerformClipLauncherMode extends Layer {
     private int selectedTrackIndex = -1;
     private int selectedSceneIndex = -1;
     private boolean trackActionMode = false;
-    private Orientation orientation = Orientation.VERTICAL;
+    private PerformLayout layout = PerformLayout.vertical();
 
     public PerformClipLauncherMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "PERFORM_CLIP_LAUNCHER");
@@ -260,17 +239,17 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public void toggleOrientation() {
-        orientation = orientation.toggle();
+        layout = layout.toggle();
         showCurrentModeInfo();
         oled.clearScreenDelayed();
     }
 
     public String modeLabel() {
-        return orientation.label();
+        return layout.label();
     }
 
     public String activePageLabel() {
-        return trackActionMode ? "Tracks" : orientation.label();
+        return trackActionMode ? "Tracks" : layout.label();
     }
 
     private void bindChannelPage(final Layer layer, final CursorRemoteControlsPage page, final String fallbackPrefix) {
@@ -455,7 +434,7 @@ public class PerformClipLauncherMode extends Layer {
         if (actionRow == null) {
             return;
         }
-        final int visibleTrackIndex = padIndex % PAD_COLUMNS;
+        final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
         final Track track = trackBank.getItemAt(visibleTrackIndex);
         if (track == null || !track.exists().get()) {
             return;
@@ -773,11 +752,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int trackScrollAmount() {
-        return isShiftHeld() ? 1 : visibleTrackCount();
+        return layout.trackScrollAmount(isShiftHeld());
     }
 
     private int sceneScrollAmount() {
-        return isShiftHeld() ? 1 : visibleSceneCount();
+        return layout.sceneScrollAmount(isShiftHeld());
     }
 
     private boolean canScrollTracks(final int direction) {
@@ -791,11 +770,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int maxTrackOffset() {
-        return Math.max(0, totalTrackCount - visibleTrackCount());
+        return layout.maxTrackOffset(totalTrackCount);
     }
 
     private int maxSceneOffset() {
-        return Math.max(0, totalSceneCount - visibleSceneCount());
+        return layout.maxSceneOffset(totalSceneCount);
     }
 
     private boolean isShiftHeld() {
@@ -896,7 +875,7 @@ public class PerformClipLauncherMode extends Layer {
         if (actionRow == null) {
             return RgbLigthState.OFF;
         }
-        final int visibleTrackIndex = padIndex % PAD_COLUMNS;
+        final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
         final Track track = trackBank.getItemAt(visibleTrackIndex);
         if (track == null || !track.exists().get()) {
             return RgbLigthState.OFF;
@@ -916,9 +895,9 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private RgbLigthState settingsLogoState(final int padIndex) {
-        final int row = padIndex / PAD_COLUMNS;
-        final int column = padIndex % PAD_COLUMNS;
-        if (row < 0 || row >= SETTINGS_LOGO.length || column < 0 || column >= PAD_COLUMNS) {
+        final int row = padIndex / PerformLayout.PAD_COLUMNS;
+        final int column = padIndex % PerformLayout.PAD_COLUMNS;
+        if (row < 0 || row >= SETTINGS_LOGO.length || column < 0 || column >= PerformLayout.PAD_COLUMNS) {
             return RgbLigthState.OFF;
         }
         return SETTINGS_LOGO[row][column] ? SETTINGS_LOGO_ON : SETTINGS_LOGO_OFF;
@@ -976,30 +955,23 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int visibleTrackCount() {
-        return orientation == Orientation.VERTICAL ? PAD_COLUMNS : PAD_ROWS;
+        return layout.visibleTrackCount();
     }
 
     private int visibleSceneCount() {
-        return orientation == Orientation.VERTICAL ? PAD_ROWS : PAD_COLUMNS;
+        return layout.visibleSceneCount();
     }
 
     private int visibleTrackIndexForPad(final int padIndex) {
-        final int row = padIndex / PAD_COLUMNS;
-        final int column = padIndex % PAD_COLUMNS;
-        return orientation == Orientation.VERTICAL ? column : row;
+        return layout.visibleTrackIndexForPad(padIndex);
     }
 
     private int visibleSceneIndexForPad(final int padIndex) {
-        final int row = padIndex / PAD_COLUMNS;
-        final int column = padIndex % PAD_COLUMNS;
-        return orientation == Orientation.VERTICAL ? row : column;
+        return layout.visibleSceneIndexForPad(padIndex);
     }
 
     private int toPadIndex(final int visibleTrackIndex, final int visibleSceneIndex) {
-        if (orientation == Orientation.VERTICAL) {
-            return visibleSceneIndex * PAD_COLUMNS + visibleTrackIndex;
-        }
-        return visibleTrackIndex * PAD_COLUMNS + visibleSceneIndex;
+        return layout.toPadIndex(visibleTrackIndex, visibleSceneIndex);
     }
 
     private int toSlotIndex(final int trackIndex, final int sceneIndex) {

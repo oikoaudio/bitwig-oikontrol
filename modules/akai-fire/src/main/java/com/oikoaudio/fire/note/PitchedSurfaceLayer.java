@@ -20,11 +20,15 @@ import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.bitwig.extensions.framework.values.Midi;
-import com.oikoaudio.fire.values.StepViewPosition;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.chordstep.ChordStepClipController;
+import com.oikoaudio.fire.chordstep.ChordStepController;
+import com.oikoaudio.fire.chordstep.ChordStepEditControls;
+import com.oikoaudio.fire.chordstep.ChordStepObservationController;
+import com.oikoaudio.fire.chordstep.ChordStepObservedState;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
@@ -52,6 +56,7 @@ import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
+import com.oikoaudio.fire.values.StepViewPosition;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -64,8 +69,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, SeqClipRowHost {
-    enum SurfaceRole {
+public abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, SeqClipRowHost {
+    protected enum SurfaceRole {
         NOTE_PLAY,
         CHORD_STEP
     }
@@ -165,8 +170,8 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
     private final OikordBank oikordBank = new OikordBank();
-    private final NoteChordStepClipController chordStepClipController;
-    private final NoteChordStepObservationController chordStepObservationController;
+    private final ChordStepClipController chordStepClipController;
+    private final ChordStepObservationController chordStepObservationController;
     private final NotePlayController notePlayController;
     private final ChordStepController chordStepController;
     private final NoteLiveControlSurface liveControls;
@@ -188,7 +193,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
     private final StepSequencerEncoderHandler stepEncoderLayer;
     private final EncoderBankLayout stepEncoderBankLayout;
     private final NoteEncoderTouchResetHandler encoderTouchResetHandler;
-    private final NoteChordStepEditControls chordStepEditControls;
+    private final ChordStepEditControls chordStepEditControls;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
@@ -376,12 +381,12 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
         this.noteStepClip.addNoteStepObserver(this::handleNoteStepObject);
         this.observedNoteClip.addStepDataObserver(this::handleObservedStepData);
         this.noteStepClip.playingStep().addValueObserver(this::handlePlayingStep);
-        this.chordStepClipController = new NoteChordStepClipController(
+        this.chordStepClipController = new ChordStepClipController(
                 () -> cursorTrack.canHoldNoteData().get(),
                 this::hasLoadedNoteClipContent,
                 this::queueChordObservationResync,
                 this::showClipAvailabilityFailure);
-        this.chordStepObservationController = new NoteChordStepObservationController(
+        this.chordStepObservationController = new ChordStepObservationController(
                 (task, delayTicks) -> driver.getHost().scheduleTask(task, delayTicks),
                 noteClipSlotBank,
                 () -> driver.getViewControl().getSelectedClipSlotIndex(),
@@ -398,7 +403,7 @@ abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, S
                 noteRepeatHandler::toggleActive,
                 () -> noteRepeatHandler.getNoteRepeatActive().get(),
                 oled::valueInfo);
-        this.chordStepEditControls = new NoteChordStepEditControls(oled::valueInfo, oled::clearScreenDelayed);
+        this.chordStepEditControls = new ChordStepEditControls(oled::valueInfo, oled::clearScreenDelayed);
         this.liveControls = new NoteLiveControlSurface(livePerformanceControls, liveEncoderControls,
                 encoderTouchResetHandler, oled::valueInfo, oled::detailInfo, oled::clearScreenDelayed);
         this.livePadPerformer = new NoteLivePadPerformer(

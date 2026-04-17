@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
@@ -13,12 +13,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class NoteChordStepClipControllerTest {
+class ChordStepClipControllerTest {
 
     @Test
     void refreshQueuesResyncOnlyWhenStateChanges() {
         final List<String> events = new ArrayList<>();
-        final NoteChordStepClipController controller = new NoteChordStepClipController(
+        final ChordStepClipController controller = new ChordStepClipController(
                 () -> true,
                 () -> false,
                 () -> events.add("resync"),
@@ -36,7 +36,7 @@ class NoteChordStepClipControllerTest {
     @Test
     void ensureSelectedClipReportsFailureWhenNoClipContentAvailable() {
         final List<NoteClipAvailability.Failure> failures = new ArrayList<>();
-        final NoteChordStepClipController controller = new NoteChordStepClipController(
+        final ChordStepClipController controller = new ChordStepClipController(
                 () -> true,
                 () -> false,
                 () -> {},
@@ -51,7 +51,7 @@ class NoteChordStepClipControllerTest {
     @Test
     void ensureSelectedClipSlotReportsFailureWhenTrackCannotHoldNotes() {
         final AtomicBoolean shown = new AtomicBoolean();
-        final NoteChordStepClipController controller = new NoteChordStepClipController(
+        final ChordStepClipController controller = new ChordStepClipController(
                 () -> false,
                 () -> false,
                 () -> {},
@@ -63,7 +63,7 @@ class NoteChordStepClipControllerTest {
 
     @Test
     void ensureSelectedClipSucceedsWhenLoadedContentCanBackfillEmptySelection() {
-        final NoteChordStepClipController controller = new NoteChordStepClipController(
+        final ChordStepClipController controller = new ChordStepClipController(
                 () -> true,
                 () -> true,
                 () -> {},

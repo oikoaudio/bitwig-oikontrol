@@ -3,13 +3,14 @@ package com.oikoaudio.fire;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.chordstep.ChordStepMode;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
+import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.TopLevelModeState.Mode;
 import com.bitwig.extensions.framework.MusicalScale;
-import com.oikoaudio.fire.note.ChordStepMode;
 import com.oikoaudio.fire.note.NotePlayMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -128,7 +129,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
-    private final SharedMusicalContext sharedMusicalContext = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
+    private final SharedPitchContextController sharedPitchContext = new SharedPitchContextController(
+            new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
+            MusicalScaleLibrary.getInstance());
 
     private PatternButtons patternButtons;
     private NotePlayMode notePlayMode;
@@ -844,84 +847,62 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public int getSharedRootNote() {
-        return sharedMusicalContext.getRootNote();
+        return sharedPitchContext.getRootNote();
     }
 
     public void setSharedRootNote(final int rootNote) {
-        sharedMusicalContext.setRootNote(rootNote);
+        sharedPitchContext.setRootNote(rootNote);
     }
 
     public void adjustSharedRootNote(final int amount) {
-        sharedMusicalContext.adjustRootNote(amount);
+        sharedPitchContext.adjustRootNote(amount);
     }
 
     public int getSharedScaleIndex() {
-        return sharedMusicalContext.getScaleIndex();
+        return sharedPitchContext.getScaleIndex();
     }
 
     public void setSharedScaleIndex(final int scaleIndex) {
-        sharedMusicalContext.setScaleIndex(scaleIndex);
+        sharedPitchContext.setScaleIndex(scaleIndex);
     }
 
     public boolean adjustSharedScaleIndex(final int amount, final int minimumScaleIndex) {
-        return sharedMusicalContext.adjustScaleIndex(amount, minimumScaleIndex);
+        return sharedPitchContext.adjustScaleIndex(amount, minimumScaleIndex);
     }
 
     public int getSharedOctave() {
-        return sharedMusicalContext.getOctave();
+        return sharedPitchContext.getOctave();
     }
 
     public void setSharedOctave(final int octave) {
-        sharedMusicalContext.setOctave(octave);
+        sharedPitchContext.setOctave(octave);
     }
 
     public void adjustSharedOctave(final int amount) {
-        sharedMusicalContext.adjustOctave(amount);
+        sharedPitchContext.adjustOctave(amount);
     }
 
     public int getSharedBaseMidiNote() {
-        return sharedMusicalContext.getBaseMidiNote();
+        return sharedPitchContext.getBaseMidiNote();
     }
 
     public String getSharedScaleDisplayName() {
-        return sharedMusicalContext.getScaleDisplayName();
+        return sharedPitchContext.getScaleDisplayName();
     }
 
     public MusicalScale getSharedMusicalScale() {
-        return MusicalScaleLibrary.getInstance().getMusicalScale(getSharedScaleIndex());
+        return sharedPitchContext.getMusicalScale();
     }
 
     public SharedMusicalContext getSharedMusicalContext() {
-        return sharedMusicalContext;
+        return sharedPitchContext.context();
     }
 
     private void initializeSharedPitchContext() {
-        setSharedScaleIndex(resolveDefaultSharedScaleIndex());
-        setSharedRootNote(getDefaultRootKeyPreference());
-        setSharedOctave(getDefaultNoteInputOctavePreference());
-    }
-
-    private int resolveDefaultSharedScaleIndex() {
-        return switch (getDefaultScalePreference()) {
-            case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Major", 1);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR -> findScaleIndex("Harmonic Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Jazz Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
-            case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);
-            default -> findScaleIndex("Major", 1);
-        };
-    }
-
-    private int findScaleIndex(final String scaleName, final int fallbackIndex) {
-        final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
-        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
-            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
-                return i;
-            }
-        }
-        return fallbackIndex;
+        sharedPitchContext.initializeFromPreferences(
+                getDefaultScalePreference(),
+                getDefaultRootKeyPreference(),
+                getDefaultNoteInputOctavePreference());
     }
 
     private void onMidi0(final ShortMidiMessage msg) {
@@ -1376,9 +1357,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void showGlobalSettingsOverview() {
         oled.detailInfo("Global Settings",
                 "1: Root %s\n2: Scale %s\n3: Oct %d".formatted(
-                        com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()),
-                        sharedMusicalContext.getScaleDisplayName(),
-                        sharedMusicalContext.getOctave()));
+                        com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
+                        sharedPitchContext.getScaleDisplayName(),
+                        sharedPitchContext.getOctave()));
     }
 
     private void adjustGlobalSettings(final int encoderIndex, final int inc) {
@@ -1386,18 +1367,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (encoderIndex == 0) {
-            sharedMusicalContext.adjustRootNote(inc);
-            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()));
+            sharedPitchContext.adjustRootNote(inc);
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
             return;
         }
         if (encoderIndex == 1) {
-            sharedMusicalContext.adjustScaleIndex(inc, -1);
-            oled.valueInfo("Scale", sharedMusicalContext.getScaleDisplayName());
+            sharedPitchContext.adjustScaleIndex(inc, -1);
+            oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName());
             return;
         }
         if (encoderIndex == 2) {
-            sharedMusicalContext.adjustOctave(inc);
-            oled.valueInfo("Octave", Integer.toString(sharedMusicalContext.getOctave()));
+            sharedPitchContext.adjustOctave(inc);
+            oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
             return;
         }
         showGlobalSettingsOverview();
@@ -1409,15 +1390,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (encoderIndex == 0) {
-            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()));
+            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
             return;
         }
         if (encoderIndex == 1) {
-            oled.valueInfo("Scale", sharedMusicalContext.getScaleDisplayName());
+            oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName());
             return;
         }
         if (encoderIndex == 2) {
-            oled.valueInfo("Octave", Integer.toString(sharedMusicalContext.getOctave()));
+            oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
             return;
         }
         showGlobalSettingsOverview();

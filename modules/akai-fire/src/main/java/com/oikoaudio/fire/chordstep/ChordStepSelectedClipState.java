@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
@@ -8,12 +8,12 @@ import com.oikoaudio.fire.sequence.SelectedClipSlotState;
  * Tracks the selected clip-slot state used by chord-step mode and centralizes the related
  * availability checks.
  */
-final class ChordStepSelectedClipState {
+public final class ChordStepSelectedClipState {
     private int slotIndex = -1;
     private boolean hasContent;
     private RgbLigthState color;
 
-    boolean refresh(final SelectedClipSlotState state) {
+    public boolean refresh(final SelectedClipSlotState state) {
         final boolean changed = slotIndex != state.slotIndex() || hasContent != state.hasContent();
         slotIndex = state.slotIndex();
         hasContent = state.hasContent();
@@ -21,11 +21,11 @@ final class ChordStepSelectedClipState {
         return changed;
     }
 
-    NoteClipAvailability.Failure requireSelectedClipSlot(final boolean canHoldNoteData) {
+    public NoteClipAvailability.Failure requireSelectedClipSlot(final boolean canHoldNoteData) {
         return NoteClipAvailability.requireSelectedClipSlot(canHoldNoteData, slotIndex >= 0);
     }
 
-    NoteClipAvailability.Failure requireClip(final boolean canHoldNoteData, final boolean hasLoadedContent) {
+    public NoteClipAvailability.Failure requireClip(final boolean canHoldNoteData, final boolean hasLoadedContent) {
         final NoteClipAvailability.Failure slotFailure = requireSelectedClipSlot(canHoldNoteData);
         if (slotFailure != null) {
             return slotFailure;
@@ -33,15 +33,15 @@ final class ChordStepSelectedClipState {
         return NoteClipAvailability.requireClipContent(hasContent || hasLoadedContent);
     }
 
-    int slotIndex() {
+    public int slotIndex() {
         return slotIndex;
     }
 
-    boolean hasContent() {
+    public boolean hasContent() {
         return hasContent;
     }
 
-    RgbLigthState color() {
+    public RgbLigthState color() {
         return color;
     }
 }
