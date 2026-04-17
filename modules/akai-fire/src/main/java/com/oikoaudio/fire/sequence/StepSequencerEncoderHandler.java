@@ -23,7 +23,7 @@ import com.bitwig.extensions.framework.Layer;
  * slots and note or mixer parameters.
  */
 public class StepSequencerEncoderHandler extends Layer {
-    private static final long TOUCH_RESET_HOLD_MS = 1000L;
+    private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private final StepSequencerHost parent;

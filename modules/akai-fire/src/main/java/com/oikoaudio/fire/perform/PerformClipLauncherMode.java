@@ -61,7 +61,7 @@ public class PerformClipLauncherMode extends Layer {
         }
     }
 
-    private static final long PARAMETER_RESET_TOUCH_HOLD_MS = 1000;
+    private static final long PARAMETER_RESET_TOUCH_HOLD_MS = 750;
     private static final long PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300;
     private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int MAX_TRACKS = 16;

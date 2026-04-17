@@ -113,10 +113,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_STANDARD_VELOCITY = 100;
     private static final int DEFAULT_OIKORD_ACCENTED_VELOCITY = 127;
-    private static final long TOUCH_RESET_HOLD_MS = 1000L;
+    private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
-    private static final int DEFAULT_TIMBRE = 64;
     private static final int DEFAULT_LIVE_PITCH_BEND = 64;
     private static final int DEFAULT_LIVE_PITCH_EXPRESSION = 64;
     private static final int LIVE_PITCH_BEND_RETURN_STEP = 6;
