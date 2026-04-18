@@ -184,7 +184,7 @@ Useful live-note controls:
 - `MUTE_1`: sustain
 - `MUTE_2`: sostenuto
 
-`Melodic Step` and `Chord Step` now live behind `STEP SEQ` rather than under `NOTE`.
+`Melodic Step`, `Chord Step`, and `Nested Rhythm` now live behind `STEP SEQ` rather than under `NOTE`.
 
 Quick start:
 
@@ -196,7 +196,7 @@ Quick start:
 The shared `Root Key`, `Scale`, and `Octave` are global across `NOTE`, `Chord Step`, `Melodic Step`, and the held `SHIFT + BROWSER` settings overlay.
 
 ### Chord Step workflow
-Press `STEP SEQ` once to enter `Melodic Step`, then press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
+Press `STEP SEQ` once to enter `Melodic Step`. Press `STEP SEQ` again to switch to `Chord Step`, or `SHIFT + STEP SEQ` to enter `Nested Rhythm`. Press `NOTE` to return to live note input.
 
 `Chord Step` is the chord-oriented note-step workflow.
 
@@ -328,6 +328,40 @@ Notes on generation:
 - `Call/Resp` creates a call phrase and an answering phrase
 - `Rolling` targets denser rolling bassline motion
 - the OLED generation message shows the current mode family, for example `Acd.RootAnswer`
+
+### Nested Rhythm mode
+
+`Nested Rhythm` is a separate, non-editable rhythm generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.
+
+- enter with `SHIFT + STEP SEQ`
+- `STEP SEQ`: return to `Melodic Step`
+- `SHIFT + STEP SEQ` while already there: go to `Chord Step`
+- Row 1: clip row
+- Rows 2-3: projected rhythm view
+- Row 4: first 16 generated hits in hit order, shown by velocity
+
+Main gestures:
+
+- `PATTERN UP`: generate the current nested rhythm into the selected clip
+- `PATTERN DOWN` or `MUTE_2`: reset hit-level edits
+- `BANK LEFT/RIGHT`: rotate the rhythm by 16th-note steps
+- tap a projected rhythm pad: select the nearest generated hit
+- tap a bottom-row hit pad: select that hit
+- hold `MUTE_4` and tap a hit pad: toggle that hit on or off
+- hold `SHIFT` and tap a hit pad: reset that hit's local edits
+
+Encoder pages:
+
+- `Channel`: density, tuplet count, tuplet coverage, ratchet count
+- `Mixer`: ratchet beat, rhythm rotation, velocity depth, velocity rotation
+- `User 1`: selected-hit velocity trim, gate, enable, and hit selection
+- `User 2`: shared root, shared octave, regenerate, reset hit edits
+
+Timing note:
+
+- note timing is not editable from the Fire in this mode
+- exact starts are written to a hidden fine grid inside the clip
+- the Fire pad view is a projection of that rhythm, not the literal note grid
 
 
 ### PERFORM mode

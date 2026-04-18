@@ -12,7 +12,7 @@ The Fire exposes four top-level workflows. Three are selected by the large mode 
 | --- | --- | --- |
 | `DRUM` | Drum sequencing | XOX Drum sequencing |
 | `NOTE` | Live note input | Cycles to `Harmonic mode` on second press |
-| `STEP` | Step sequencing | Cycles between `Melodic Step` and `Chord seq` modes |
+| `STEP` | Step sequencing | Enters `Melodic Step`; `SHIFT + STEP SEQ` enters `Nested Rhythm` |
 | `PERFORM` | Clip launcher | Cycles between a vertical and a horizontal `16x4` clip grid |
 
 ## Shared Transport And Utility Controls
@@ -151,7 +151,7 @@ Pressing `NOTE` again enters a different Harmonic pad layout where each pad can 
 | `NOTE` | Cycle note layout family |
 | `ALT + NOTE` | Toggle live-note layout shortcut (`Chromatic` / `In Key`, or harmonic layout variant) |
 | `STEP SEQ` | Enter `Melodic Step`; when already there, press again to switch to `Chord Step` |
-| `SHIFT + STEP SEQ` | Accent mode in `Melodic Step` |
+| `SHIFT + STEP SEQ` | Enter `Nested Rhythm` |
 | `BANK LEFT/RIGHT` | Octave down / up |
 | `PATTERN UP/DOWN` | Octave up / down |
 | `SHIFT + PATTERN UP/DOWN` | Root up / down |
@@ -330,6 +330,48 @@ Melodic recurrence editing:
 - Tap top-row pads to toggle recurrence hits within the current span.
 - Hold the first top-row pad as a span anchor, then tap another top-row pad to set the recurrence span.
 - `User 1 / Encoder 4` shows the current recurrence summary for the held target step(s).
+
+## Nested Rhythm
+
+`Nested Rhythm` is a separate non-editable rhythm generator mode for exact tuplets and ratchets on a hidden fine clip grid.
+
+### Pad Layout
+
+| Pad row | Role |
+| --- | --- |
+| Row 1 | Clip row |
+| Rows 2-3 | 32-bin projected rhythm view |
+| Row 4 | First 16 generated hits in hit order, shown by velocity |
+
+### Main Nested Rhythm Gestures
+
+| Action | Result |
+| --- | --- |
+| `SHIFT + STEP SEQ` from `NOTE`, `Chord Step`, or `Melodic Step` | Enter `Nested Rhythm` |
+| `STEP SEQ` | Return to `Melodic Step` |
+| `SHIFT + STEP SEQ` while already in `Nested Rhythm` | Go to `Chord Step` |
+| `PATTERN UP` | Generate current nested rhythm into the selected clip |
+| `PATTERN DOWN` or `MUTE_2` | Reset hit edits |
+| `BANK LEFT/RIGHT` | Rotate rhythm by 16th-note steps |
+| Tap projected rhythm pad | Select nearest generated hit |
+| Tap bottom-row hit pad | Select that generated hit |
+| Hold `MUTE_4` + hit pad | Toggle that hit on/off |
+| `SHIFT` + hit pad | Reset that hit's local edits |
+
+### Nested Rhythm Encoders
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Density | Tuplet count | Tuplet coverage | Ratchet count |
+| `Mixer` | Ratchet beat | Rhythm rotate | Velocity depth | Velocity rotate |
+| `User 1` | Selected hit velocity | Selected hit gate | Selected hit enable | Selected hit select |
+| `User 2` | Shared root | Shared octave | Regenerate | Reset hit edits |
+
+Timing note:
+
+- exact starts are written to a hidden fine grid in the Bitwig clip
+- the Fire pads do not edit those raw start times directly
+- the visible rhythm row is a projected overview rather than a literal note grid
 
 ## PERFORM Mode
 

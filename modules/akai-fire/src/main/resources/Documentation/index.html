@@ -254,7 +254,7 @@
         <li><code>MUTE_1</code>: sustain</li>
         <li><code>MUTE_2</code>: sostenuto</li>
       </ul>
-      <p><code>Melodic Step</code> and <code>Chord Step</code> now live behind <code>STEP SEQ</code> rather than under <code>NOTE</code>.</p>
+      <p><code>Melodic Step</code>, <code>Chord Step</code>, and <code>Nested Rhythm</code> now live behind <code>STEP SEQ</code> rather than under <code>NOTE</code>.</p>
       <p>Quick start:</p>
       <ol>
         <li>Enter <code>NOTE</code>.</li>
@@ -371,8 +371,39 @@
         <li>the OLED generation message shows the current mode family, for example <code>Acd.RootAnswer</code></li>
       </ul>
 
+      <h3>Nested Rhythm workflow</h3>
+      <p><code>Nested Rhythm</code> is a separate non-editable generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.</p>
+      <ul>
+        <li><code>SHIFT + STEP SEQ</code>: enter <code>Nested Rhythm</code></li>
+        <li><code>STEP SEQ</code>: return to <code>Melodic Step</code></li>
+        <li><code>SHIFT + STEP SEQ</code> while already there: go to <code>Chord Step</code></li>
+        <li>Row 1: clip row</li>
+        <li>Rows 2-3: projected rhythm view</li>
+        <li>Row 4: first 16 generated hits in hit order, shown by velocity</li>
+        <li><code>PATTERN UP</code>: generate the current rhythm into the selected clip</li>
+        <li><code>PATTERN DOWN</code> or <code>MUTE_2</code>: reset hit edits</li>
+        <li><code>BANK LEFT/RIGHT</code>: rotate the rhythm by 16th-note steps</li>
+        <li>tap a projected rhythm pad: select the nearest generated hit</li>
+        <li>tap a bottom-row hit pad: select that generated hit</li>
+        <li><code>MUTE_4</code> + hit pad: toggle that hit on or off</li>
+        <li><code>SHIFT</code> + hit pad: reset that hit's local edits</li>
+      </ul>
+      <p>Encoder pages:</p>
+      <ul>
+        <li><code>Channel</code>: density, tuplet count, tuplet coverage, ratchet count</li>
+        <li><code>Mixer</code>: ratchet beat, rhythm rotation, velocity depth, velocity rotation</li>
+        <li><code>User 1</code>: selected-hit velocity trim, gate, enable, and hit selection</li>
+        <li><code>User 2</code>: shared root, shared octave, regenerate, reset hit edits</li>
+      </ul>
+      <p>Timing note:</p>
+      <ul>
+        <li>exact starts are written to a hidden fine grid in the Bitwig clip</li>
+        <li>the Fire pads do not edit those raw start times directly</li>
+        <li>the visible rhythm rows are a projected overview rather than a literal note grid</li>
+      </ul>
+
       <h3>Chord Step workflow</h3>
-      <p>Press <code>STEP SEQ</code> once to enter <code>Melodic Step</code>, then press <code>STEP SEQ</code> again to switch to <code>Chord Step</code>. Press <code>NOTE</code> to return to live note input.</p>
+      <p>Press <code>STEP SEQ</code> once to enter <code>Melodic Step</code>, then press <code>STEP SEQ</code> again to switch to <code>Chord Step</code>, or <code>SHIFT + STEP SEQ</code> to enter <code>Nested Rhythm</code>. Press <code>NOTE</code> to return to live note input.</p>
       <p><code>Chord Step</code> is the current chord-oriented note-step workflow.</p>
       <ul>
         <li>Row 1: clip row</li>
