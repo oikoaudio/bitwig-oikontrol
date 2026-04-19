@@ -147,7 +147,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     private enum DrumSubMode {
-        STANDARD(BiColorLightState.GREEN_FULL);
+        STANDARD(BiColorLightState.GREEN_FULL),
+        NESTED_RHYTHM(BiColorLightState.AMBER_FULL);
 
         private final BiColorLightState lightState;
 
@@ -160,7 +161,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
 
         public DrumSubMode next() {
-            return STANDARD;
+            return this == STANDARD ? NESTED_RHYTHM : STANDARD;
         }
     }
 
@@ -686,10 +687,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (modeState.activeMode() == Mode.DRUM) {
             activeDrumSubMode = activeDrumSubMode.next();
+            switchActiveMode();
+            notifyAction("Mode", activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum");
         } else {
             modeState.activateDrum();
             switchActiveMode();
-            notifyAction("Mode", "Drum");
+            notifyAction("Mode", activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum");
         }
     }
 
@@ -727,12 +730,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 suppressNextMelodicStepRelease = false;
                 return;
             }
-            if (isGlobalShiftHeld()) {
-                if (pressed) {
-                    enterNestedRhythmMode();
-                }
-                return;
-            }
             if (!isGlobalShiftHeld() && !isGlobalAltHeld()) {
                 if (pressed) {
                     modeState.activateChordStep();
@@ -744,34 +741,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             melodicStepMode.handleStepButton(pressed);
             return;
         }
-        if (modeState.activeMode() == Mode.NESTED_RHYTHM) {
-            if (!pressed && suppressNextMelodicStepRelease) {
-                suppressNextMelodicStepRelease = false;
-                return;
-            }
-            if (isGlobalShiftHeld()) {
-                if (pressed) {
-                    modeState.activateChordStep();
-                    switchActiveMode();
-                    notifyAction("Mode", "Chord Step");
-                }
-                return;
-            }
-            if (!isGlobalAltHeld()) {
-                if (pressed) {
-                    enterMelodicStepMode();
-                }
-                return;
-            }
-            nestedRhythmMode.handleStepButton(pressed);
-            return;
-        }
         if (modeState.activeMode() == Mode.CHORD_STEP) {
             if (!pressed || isGlobalAltHeld()) {
-                return;
-            }
-            if (isGlobalShiftHeld()) {
-                enterNestedRhythmMode();
                 return;
             }
             enterMelodicStepMode();
@@ -781,10 +752,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (!pressed) {
-            return;
-        }
-        if (isGlobalShiftHeld()) {
-            enterNestedRhythmMode();
             return;
         }
         enterMelodicStepMode();
@@ -1011,7 +978,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         performMode.deactivate();
         if (modeState.activeMode() == Mode.DRUM) {
             applyDrumPinningIfEnabled();
-            drumSequenceMode.activate();
+            if (activeDrumSubMode == DrumSubMode.NESTED_RHYTHM) {
+                nestedRhythmMode.activate();
+            } else {
+                drumSequenceMode.activate();
+            }
             refreshSurfaceLights();
             return;
         }
@@ -1168,9 +1139,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void enterNestedRhythmMode() {
         suppressNextMelodicStepRelease = true;
-        modeState.enterNestedRhythmMode();
+        activeDrumSubMode = DrumSubMode.NESTED_RHYTHM;
+        modeState.activateDrum();
         switchActiveMode();
-        notifyAction("Mode", "Nested");
+        notifyAction("Mode", "Nested Rhythm");
     }
 
     public boolean isEuclidFullClipEnabled() {
@@ -1190,12 +1162,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 && FireControlPreferences.shouldAutoPinFirstDrumMachine(drumPinModePref.get());
     }
 
+    private boolean shouldAutoPinStandardDrumMode() {
+        return modeState.activeMode() == Mode.DRUM
+                && activeDrumSubMode == DrumSubMode.STANDARD
+                && shouldAutoPinFirstDrumMachine();
+    }
+
     private void syncDrumPinningForActiveMode() {
         if (modeState.activeMode() == Mode.DRUM) {
-            if (shouldAutoPinFirstDrumMachine()) {
+            if (shouldAutoPinStandardDrumMode()) {
                 applyDrumPinningIfEnabled();
             } else {
-                releaseAutoPinnedDrumContext(false);
+                releaseAutoPinnedDrumContext(true);
             }
             return;
         }
@@ -1203,7 +1181,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void applyDrumPinningIfEnabled() {
-        if (!shouldAutoPinFirstDrumMachine() || drumAutoPinApplied || deviceLocator == null || viewControl == null) {
+        if (!shouldAutoPinStandardDrumMode() || drumAutoPinApplied || deviceLocator == null || viewControl == null) {
             return;
         }
 
@@ -1223,7 +1201,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void ensureDrumPinningStillValid() {
-        if (modeState.activeMode() != Mode.DRUM || !shouldAutoPinFirstDrumMachine() || !drumAutoPinApplied
+        if (!shouldAutoPinStandardDrumMode() || !drumAutoPinApplied
                 || viewControl == null || deviceLocator == null) {
             return;
         }
@@ -1307,7 +1285,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         final String modeLabel = switch (modeState.activeMode()) {
-            case DRUM -> "Drum";
+            case DRUM -> activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum";
             case NOTE_PLAY -> "Note";
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melodic Step";

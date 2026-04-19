@@ -254,7 +254,7 @@
         <li><code>MUTE_1</code>: sustain</li>
         <li><code>MUTE_2</code>: sostenuto</li>
       </ul>
-      <p><code>Melodic Step</code>, <code>Chord Step</code>, and <code>Nested Rhythm</code> now live behind <code>STEP SEQ</code> rather than under <code>NOTE</code>.</p>
+      <p><code>Melodic Step</code> and <code>Chord Step</code> live behind <code>STEP SEQ</code>. <code>Nested Rhythm</code> is now the second main <code>DRUM</code> surface.</p>
       <p>Quick start:</p>
       <ol>
         <li>Enter <code>NOTE</code>.</li>
@@ -372,17 +372,16 @@
       </ul>
 
       <h3>Nested Rhythm workflow</h3>
-      <p><code>Nested Rhythm</code> is a separate non-editable generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.</p>
+      <p><code>Nested Rhythm</code> is the second main <code>DRUM</code> surface: a separate non-editable generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.</p>
       <ul>
-        <li><code>SHIFT + STEP SEQ</code>: enter <code>Nested Rhythm</code></li>
-        <li><code>STEP SEQ</code>: return to <code>Melodic Step</code></li>
-        <li><code>SHIFT + STEP SEQ</code> while already there: go to <code>Chord Step</code></li>
+        <li>press <code>DRUM</code> again while already in <code>DRUM</code>: toggle to <code>Nested Rhythm</code></li>
+        <li><code>STEP SEQ</code>: enter <code>Melodic Step</code></li>
+        <li>press <code>DRUM</code> while in <code>Nested Rhythm</code>: return to standard drum sequencing</li>
         <li>Row 1: clip row</li>
         <li>Rows 2-3: projected rhythm view</li>
-        <li>Row 4: first 16 generated hits in hit order, shown by velocity</li>
+        <li>Row 4: first 16 generated hits in hit order, shown by velocity with playhead highlight</li>
         <li><code>PATTERN UP</code>: generate the current rhythm into the selected clip</li>
         <li><code>PATTERN DOWN</code> or <code>MUTE_2</code>: reset hit edits</li>
-        <li><code>BANK LEFT/RIGHT</code>: rotate the rhythm by 16th-note steps</li>
         <li>tap a projected rhythm pad: select the nearest generated hit</li>
         <li>tap a bottom-row hit pad: select that generated hit</li>
         <li><code>MUTE_4</code> + hit pad: toggle that hit on or off</li>
@@ -390,10 +389,10 @@
       </ul>
       <p>Encoder pages:</p>
       <ul>
-        <li><code>Channel</code>: density, tuplet count, tuplet coverage, ratchet count</li>
-        <li><code>Mixer</code>: ratchet beat, rhythm rotation, velocity depth, velocity rotation</li>
+        <li><code>Channel</code>: density, tuplet count with <code>ALT</code> for cover, ratchet count with <code>ALT</code> for width, and velocity rotation with <code>ALT</code> ratchet phase and <code>SHIFT</code> tuplet phase</li>
+        <li><code>Mixer</code>: velocity depth with <code>ALT</code> for velocity center, selected-hit velocity, selected-hit gate, selected-hit selection</li>
         <li><code>User 1</code>: selected-hit velocity trim, gate, enable, and hit selection</li>
-        <li><code>User 2</code>: shared root, shared octave, regenerate, reset hit edits</li>
+        <li><code>User 2</code>: shared root, shared octave, reset hit edits</li>
       </ul>
       <p>Timing note:</p>
       <ul>
@@ -401,9 +400,17 @@
         <li>the Fire pads do not edit those raw start times directly</li>
         <li>the visible rhythm rows are a projected overview rather than a literal note grid</li>
       </ul>
+      <p>Control note:</p>
+      <ul>
+        <li><code>Density</code> is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately</li>
+        <li><code>Vel Depth</code> scales offsets around a configurable <code>Velocity Center</code> instead of dragging the whole pattern up or down</li>
+        <li><code>Tuplet</code> stays a half-bar transform, not a per-quarter burst; <code>Cover</code> switches through <code>Off</code>, <code>Back</code>, and <code>Both</code>, and <code>Tuplet Phase</code> flips half-bar tuplets between back and front</li>
+        <li><code>Ratchet Width</code> expands ratchets across beats in the deterministic order <code>1, 3, 2, 4</code>, and <code>Ratchet Phase</code> rotates that selection</li>
+        <li><code>Tuplet</code> currently uses <code>3 / 5 / 7</code>, while <code>Ratchet</code> supports even and odd burst counts including <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code></li>
+      </ul>
 
       <h3>Chord Step workflow</h3>
-      <p>Press <code>STEP SEQ</code> once to enter <code>Melodic Step</code>, then press <code>STEP SEQ</code> again to switch to <code>Chord Step</code>, or <code>SHIFT + STEP SEQ</code> to enter <code>Nested Rhythm</code>. Press <code>NOTE</code> to return to live note input.</p>
+      <p>Press <code>STEP SEQ</code> once to enter <code>Melodic Step</code>, then press <code>STEP SEQ</code> again to switch to <code>Chord Step</code>. Press <code>NOTE</code> to return to live note input.</p>
       <p><code>Chord Step</code> is the current chord-oriented note-step workflow.</p>
       <ul>
         <li>Row 1: clip row</li>

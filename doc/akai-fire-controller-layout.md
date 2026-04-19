@@ -6,13 +6,13 @@ It replaces the older "target layout" notes that drifted away from the code. Whe
 
 ## Top-Level Modes
 
-The Fire exposes four top-level workflows. Three are selected by the large mode buttons, and `STEP` is entered with `STEP SEQ` from the current note or drum context.
+The Fire exposes four top-level workflows. Three are selected by the large mode buttons, and `STEP` is entered with `STEP SEQ` from the current note or drum context. `DRUM` now has two main surfaces: standard drum sequencing and `Nested Rhythm`.
 
 | Button | Role | Notes |
 | --- | --- | --- |
 | `DRUM` | Drum sequencing | XOX Drum sequencing |
 | `NOTE` | Live note input | Cycles to `Harmonic mode` on second press |
-| `STEP` | Step sequencing | Enters `Melodic Step`; `SHIFT + STEP SEQ` enters `Nested Rhythm` |
+| `STEP` | Step sequencing | Enters `Melodic Step`; press again to switch to `Chord Step` |
 | `PERFORM` | Clip launcher | Cycles between a vertical and a horizontal `16x4` clip grid |
 
 ## Shared Transport And Utility Controls
@@ -151,7 +151,7 @@ Pressing `NOTE` again enters a different Harmonic pad layout where each pad can 
 | `NOTE` | Cycle note layout family |
 | `ALT + NOTE` | Toggle live-note layout shortcut (`Chromatic` / `In Key`, or harmonic layout variant) |
 | `STEP SEQ` | Enter `Melodic Step`; when already there, press again to switch to `Chord Step` |
-| `SHIFT + STEP SEQ` | Enter `Nested Rhythm` |
+| `DRUM` while already in `DRUM` | Toggle between standard drum sequencing and `Nested Rhythm` |
 | `BANK LEFT/RIGHT` | Octave down / up |
 | `PATTERN UP/DOWN` | Octave up / down |
 | `SHIFT + PATTERN UP/DOWN` | Root up / down |
@@ -333,7 +333,7 @@ Melodic recurrence editing:
 
 ## Nested Rhythm
 
-`Nested Rhythm` is a separate non-editable rhythm generator mode for exact tuplets and ratchets on a hidden fine clip grid.
+`Nested Rhythm` is the second main `DRUM` surface: a separate non-editable rhythm generator mode for exact tuplets and ratchets on a hidden fine clip grid.
 
 ### Pad Layout
 
@@ -341,18 +341,17 @@ Melodic recurrence editing:
 | --- | --- |
 | Row 1 | Clip row |
 | Rows 2-3 | 32-bin projected rhythm view |
-| Row 4 | First 16 generated hits in hit order, shown by velocity |
+| Row 4 | First 16 generated hits in hit order, shown by velocity with playhead highlight |
 
 ### Main Nested Rhythm Gestures
 
 | Action | Result |
 | --- | --- |
-| `SHIFT + STEP SEQ` from `NOTE`, `Chord Step`, or `Melodic Step` | Enter `Nested Rhythm` |
-| `STEP SEQ` | Return to `Melodic Step` |
-| `SHIFT + STEP SEQ` while already in `Nested Rhythm` | Go to `Chord Step` |
+| `DRUM` while already in `DRUM` | Toggle between standard drum sequencing and `Nested Rhythm` |
+| `STEP SEQ` | Enter `Melodic Step` |
+| `DRUM` while in `Nested Rhythm` | Return to standard drum sequencing |
 | `PATTERN UP` | Generate current nested rhythm into the selected clip |
 | `PATTERN DOWN` or `MUTE_2` | Reset hit edits |
-| `BANK LEFT/RIGHT` | Rotate rhythm by 16th-note steps |
 | Tap projected rhythm pad | Select nearest generated hit |
 | Tap bottom-row hit pad | Select that generated hit |
 | Hold `MUTE_4` + hit pad | Toggle that hit on/off |
@@ -362,16 +361,24 @@ Melodic recurrence editing:
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Density | Tuplet count | Tuplet coverage | Ratchet count |
-| `Mixer` | Ratchet beat | Rhythm rotate | Velocity depth | Velocity rotate |
+| `Channel` | Density | Tuplet count / `ALT`: cover | Ratchet count / `ALT`: width | Velocity rotate / `ALT`: ratchet phase / `SHIFT`: tuplet phase |
+| `Mixer` | Velocity depth / `ALT`: center | Selected hit velocity | Selected hit gate | Selected hit select |
 | `User 1` | Selected hit velocity | Selected hit gate | Selected hit enable | Selected hit select |
-| `User 2` | Shared root | Shared octave | Regenerate | Reset hit edits |
+| `User 2` | Shared root | Shared octave | Reset hit edits | Unused |
 
 Timing note:
 
 - exact starts are written to a hidden fine grid in the Bitwig clip
 - the Fire pads do not edit those raw start times directly
 - the visible rhythm row is a projected overview rather than a literal note grid
+
+Control note:
+
+- `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
+- `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` switches through `Off`, `Back`, and `Both`, and `Tuplet Phase` flips half-bar tuplets between back and front
+- `Ratchet Width` expands ratchets across beats in the deterministic order `1, 3, 2, 4`, and `Ratchet Phase` rotates that selection
+- `Tuplet` currently uses `3 / 5 / 7`, while `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 ## PERFORM Mode
 

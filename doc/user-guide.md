@@ -184,7 +184,7 @@ Useful live-note controls:
 - `MUTE_1`: sustain
 - `MUTE_2`: sostenuto
 
-`Melodic Step`, `Chord Step`, and `Nested Rhythm` now live behind `STEP SEQ` rather than under `NOTE`.
+`Melodic Step` and `Chord Step` live behind `STEP SEQ`. `Nested Rhythm` is now the second main `DRUM` surface.
 
 Quick start:
 
@@ -196,7 +196,7 @@ Quick start:
 The shared `Root Key`, `Scale`, and `Octave` are global across `NOTE`, `Chord Step`, `Melodic Step`, and the held `SHIFT + BROWSER` settings overlay.
 
 ### Chord Step workflow
-Press `STEP SEQ` once to enter `Melodic Step`. Press `STEP SEQ` again to switch to `Chord Step`, or `SHIFT + STEP SEQ` to enter `Nested Rhythm`. Press `NOTE` to return to live note input.
+Press `STEP SEQ` once to enter `Melodic Step`. Press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
 
 `Chord Step` is the chord-oriented note-step workflow.
 
@@ -331,20 +331,19 @@ Notes on generation:
 
 ### Nested Rhythm mode
 
-`Nested Rhythm` is a separate, non-editable rhythm generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.
+`Nested Rhythm` is the second main `DRUM` surface. It is a separate, non-editable rhythm generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.
 
-- enter with `SHIFT + STEP SEQ`
-- `STEP SEQ`: return to `Melodic Step`
-- `SHIFT + STEP SEQ` while already there: go to `Chord Step`
+- press `DRUM` again while already in `DRUM` to toggle between standard drum sequencing and `Nested Rhythm`
+- `STEP SEQ`: enter `Melodic Step`
+- press `DRUM` again to return to standard drum sequencing
 - Row 1: clip row
 - Rows 2-3: projected rhythm view
-- Row 4: first 16 generated hits in hit order, shown by velocity
+- Row 4: first 16 generated hits in hit order, shown by velocity with playhead highlight
 
 Main gestures:
 
 - `PATTERN UP`: generate the current nested rhythm into the selected clip
 - `PATTERN DOWN` or `MUTE_2`: reset hit-level edits
-- `BANK LEFT/RIGHT`: rotate the rhythm by 16th-note steps
 - tap a projected rhythm pad: select the nearest generated hit
 - tap a bottom-row hit pad: select that hit
 - hold `MUTE_4` and tap a hit pad: toggle that hit on or off
@@ -352,16 +351,25 @@ Main gestures:
 
 Encoder pages:
 
-- `Channel`: density, tuplet count, tuplet coverage, ratchet count
-- `Mixer`: ratchet beat, rhythm rotation, velocity depth, velocity rotation
+- `Channel`: density, tuplet count with `ALT` for cover, ratchet count with `ALT` for width, and velocity rotation with `ALT` ratchet phase and `SHIFT` tuplet phase
+- `Mixer`: velocity depth with `ALT` for velocity center, selected-hit velocity, selected-hit gate, selected-hit selection
 - `User 1`: selected-hit velocity trim, gate, enable, and hit selection
-- `User 2`: shared root, shared octave, regenerate, reset hit edits
+- `User 2`: shared root, shared octave, reset hit edits
 
 Timing note:
 
 - note timing is not editable from the Fire in this mode
 - exact starts are written to a hidden fine grid inside the clip
 - the Fire pad view is a projection of that rhythm, not the literal note grid
+
+Control note:
+
+- `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
+- `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `Tuplet` and `Ratchet` both default to `Off`
+- `Cover` currently steps through `Off`, `Back`, and `Both`, while `Tuplet Phase` flips half-bar tuplets between back and front
+- `Ratchet Width` expands ratchets across multiple beats in the deterministic order `1, 3, 2, 4`, and `Ratchet Phase` rotates that selection
+- `Tuplet` currently uses `3 / 5 / 7`, while `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 
 ### PERFORM mode
