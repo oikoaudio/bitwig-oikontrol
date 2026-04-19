@@ -363,7 +363,7 @@ Melodic recurrence editing:
 | --- | --- | --- | --- | --- |
 | `Channel` | Density | Tuplet count / `ALT`: cover | Ratchet count / `ALT`: width | Velocity rotate / `ALT`: ratchet phase / `SHIFT`: tuplet phase |
 | `Mixer` | Unused | Unused | Unused | Unused |
-| `User 1` | Velocity / `ALT`: spread / `SHIFT`: rotate | Pressure / `ALT`: spread / `SHIFT`: rotate | Timbre / `ALT`: spread / `SHIFT`: rotate | Pitch Expr / `ALT`: spread / `SHIFT`: rotate |
+| `User 1` | Velocity or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
 | `User 2` | Linear pitch | Clip length | Reset hit edits | Meter readout |
 
 Timing note:
@@ -375,10 +375,10 @@ Timing note:
 Control note:
 
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
-- `User 1` is the expression page; it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression
+- `User 1` is the expression page; with no hit selected, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit selected, plain turn edits that hit directly
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
-- `Hit Gate` edits the selected hit when one is targeted; if no hit is selected it applies to all current generated hits
+- `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits
 - `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
 - available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`

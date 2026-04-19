@@ -352,7 +352,7 @@ Encoder pages:
 
 - `Channel`: density, tuplet count with `ALT` for cover, ratchet count with `ALT` for width, and velocity rotation with `ALT` ratchet phase and `SHIFT` tuplet phase
 - `Mixer`: currently unused
-- `User 1`: velocity center with `ALT` spread and `SHIFT` rotation, plus pressure, timbre, and pitch-expression lanes with the same modifier grammar
+- `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit selected, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit selected, plain turn edits that hit directly
 - `User 2`: linear pitch, clip length, reset hit edits, transport meter readout
 
 Timing note:
@@ -364,11 +364,11 @@ Timing note:
 Control note:
 
 - `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
-- `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
-- `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression
+- `Vel Spread` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
-- `Hit Gate` edits the selected hit when one is targeted; if no hit is selected it applies to all current generated hits
+- `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits
 - `Tuplet` and `Ratchet` both default to `Off`
 - `Cover` now sets how many consecutive half-bars are claimed by the tuplet span, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip

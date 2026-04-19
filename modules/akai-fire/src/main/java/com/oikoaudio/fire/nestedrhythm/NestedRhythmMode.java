@@ -52,8 +52,6 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private static final int STEPPED_ENCODER_THRESHOLD = 5;
     private static final int STEPPED_ENCODER_FINE_THRESHOLD = 9;
     private static final RgbLigthState BASE_COLOR = new RgbLigthState(0, 90, 34, true);
-    private static final RgbLigthState SELECTED_HIT_COLOR = new RgbLigthState(110, 76, 0, true);
-    private static final RgbLigthState SELECTED_DISABLED_HIT_COLOR = new RgbLigthState(52, 36, 0, true);
     private static final int[] RATCHET_COUNT_VALUES = {0, 2, 3, 4, 5, 6, 7, 8};
     private static final int[] CLIP_BAR_COUNT_VALUES = {1, 2, 4};
 
@@ -76,6 +74,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final List<EditablePulse> editablePulses = new ArrayList<>();
     private boolean mainEncoderPressConsumed = false;
     private int selectedPulseIndex = -1;
+    private int heldPulseIndex = -1;
     private int selectedClipSlotIndex = -1;
     private RgbLigthState selectedClipColor = BASE_COLOR;
     private int playingFineStep = -1;
@@ -234,28 +233,29 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return;
         }
         if (!pressed) {
+            heldPulseIndex = -1;
             return;
         }
         if (padIndex < VELOCITY_PAD_OFFSET) {
-            selectPulseForStructurePad(padIndex - STRUCTURE_PAD_OFFSET);
+            holdPulseForStructurePad(padIndex - STRUCTURE_PAD_OFFSET);
             return;
         }
         final int hitIndex = padIndex - VELOCITY_PAD_OFFSET;
         if (hitIndex >= editablePulses.size()) {
             return;
         }
+        heldPulseIndex = hitIndex;
         if (driver.isGlobalShiftHeld()) {
             editablePulses.get(hitIndex).resetEdits();
             applyEditablePattern("Hit", "Reset");
             return;
         }
         final EditablePulse pulse = editablePulses.get(hitIndex);
-        selectedPulseIndex = hitIndex;
         pulse.enabled = !pulse.enabled;
         applyEditablePattern("Hit", pulse.enabled ? "On" : "Off");
     }
 
-    private void selectPulseForStructurePad(final int structurePad) {
+    private void holdPulseForStructurePad(final int structurePad) {
         final int bin = Math.max(0, Math.min(STRUCTURE_PAD_COUNT - 1, structurePad));
         int bestIndex = -1;
         int bestDistance = Integer.MAX_VALUE;
@@ -269,8 +269,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
         }
         if (bestIndex >= 0) {
-            selectedPulseIndex = bestIndex;
-            showSelectedPulse();
+            heldPulseIndex = bestIndex;
+            showHeldPulse();
         }
     }
 
@@ -290,13 +290,6 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (pulse == null) {
             return StepPadLightHelper.renderEmptyStep(bin, playingBin);
         }
-        if (selectedPulseIndex >= 0 && selectedPulseIndex < editablePulses.size()
-                && editablePulses.get(selectedPulseIndex) == pulse) {
-            final RgbLigthState selectedColor = pulse.enabled ? SELECTED_HIT_COLOR : SELECTED_DISABLED_HIT_COLOR;
-            return playingBin == bin
-                    ? StepPadLightHelper.renderPlayheadHighlight(selectedColor)
-                    : selectedColor;
-        }
         final RgbLigthState base = pulse.enabled
                 ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor())
                 : disabledPulseColor();
@@ -309,12 +302,6 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         final int playingHitIndex = playingPulseIndex();
         final EditablePulse pulse = editablePulses.get(hitIndex);
-        if (selectedPulseIndex == hitIndex) {
-            final RgbLigthState selectedColor = pulse.enabled ? SELECTED_HIT_COLOR : SELECTED_DISABLED_HIT_COLOR;
-            return playingHitIndex == hitIndex
-                    ? StepPadLightHelper.renderPlayheadHighlight(selectedColor)
-                    : selectedColor;
-        }
         final RgbLigthState base = pulse.enabled
                 ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor())
                 : disabledPulseColor();
@@ -353,13 +340,13 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return -1;
     }
 
-    private void showSelectedPulse() {
-        if (selectedPulseIndex < 0 || selectedPulseIndex >= editablePulses.size()) {
+    private void showHeldPulse() {
+        if (heldPulseIndex < 0 || heldPulseIndex >= editablePulses.size()) {
             oled.valueInfo("Hit", "None");
             return;
         }
-        final EditablePulse pulse = editablePulses.get(selectedPulseIndex);
-        oled.valueInfo("Hit %d".formatted(selectedPulseIndex + 1),
+        final EditablePulse pulse = editablePulses.get(heldPulseIndex);
+        oled.valueInfo("Hit %d".formatted(heldPulseIndex + 1),
                 "%s Vel %d Gate %.2f".formatted(pulse.roleLabel(), pulse.effectiveVelocity(), pulse.gateScale));
     }
 
@@ -452,13 +439,16 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return;
         }
         final List<EditablePulse> previousPulses = List.copyOf(editablePulses);
-        final int previousSelectionFineStart = hasSelectedPulse() ? editablePulses.get(selectedPulseIndex).fineStart : -1;
+        final int previousSelectionFineStart = heldPulseIndex >= 0 && heldPulseIndex < editablePulses.size()
+                ? editablePulses.get(heldPulseIndex).fineStart
+                : -1;
         final NestedRhythmPattern pattern = generator.generate(currentSettings());
         editablePulses.clear();
         for (final NestedRhythmPattern.PulseEvent event : pattern.events()) {
             editablePulses.add(restoreLocalEdits(new EditablePulse(event), previousPulses));
         }
         selectedPulseIndex = findSelectedPulseIndex(previousSelectionFineStart);
+        heldPulseIndex = -1;
         writeEditablePulses();
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
@@ -491,10 +481,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private void applyExpressionValues(final NoteStep step, final EditablePulse pulse) {
         final int order = pulse.order;
-        step.setPressure(shapedUnitExpression(order, pressureCenter, pressureSpread, pressureRotation));
-        step.setTimbre(shapedSignedExpression(order, timbreCenter, timbreSpread, timbreRotation));
-        step.setTranspose(shapedPitchExpression(order, pitchExpressionCenter, pitchExpressionSpread,
-                pitchExpressionRotation));
+        step.setPressure(pulse.effectivePressure());
+        step.setTimbre(pulse.effectiveTimbre());
+        step.setTranspose(pulse.effectivePitchExpression());
     }
 
     private double shapedUnitExpression(final int order,
@@ -582,6 +571,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return bestIndex;
     }
 
+    private int activePulseIndex() {
+        return heldPulseIndex >= 0 && heldPulseIndex < editablePulses.size() ? heldPulseIndex : -1;
+    }
+
     private NestedRhythmGenerator.Settings currentSettings() {
         return new NestedRhythmGenerator.Settings(
                 driver.getSharedBaseMidiNote(),
@@ -640,21 +633,18 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Density\n2: Tuplet / Alt Cover\n3: Ratchet / Alt Width\n4: Vel / Alt Rat / Shift Tup",
+                "1: Density\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: -",
                 new EncoderSlotBinding[]{
                         continuousSlot("Density", () -> "%.2f".formatted(density), this::adjustDensity),
                         modifierChoiceSlot(
                                 view("Tuplet", () -> countLabel(tupletCount), this::adjustTupletCount),
                                 view("Cover", this::coverageLabel, this::adjustTupletCover),
-                                null),
+                                view("Tuplet Phase", this::tupletPhaseLabel, this::adjustTupletPhase)),
                         modifierChoiceSlot(
                                 view("Ratchet", () -> countLabel(ratchetCount), this::adjustRatchetCount),
                                 view("Width", () -> Integer.toString(ratchetWidth), this::adjustRatchetWidth),
-                                null),
-                        modifierChoiceSlot(
-                                view("Vel Rotate", () -> Integer.toString(velocityRotation), this::adjustVelocityRotation),
-                                view("Ratchet Phase", this::ratchetPhaseLabel, this::adjustRatchetPhase),
-                                view("Tuplet Phase", this::tupletPhaseLabel, this::adjustTupletPhase))
+                                view("Ratchet Phase", this::ratchetPhaseLabel, this::adjustRatchetPhase)),
+                        choiceSlot("-", () -> "-", this::ignoreEncoder)
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
                 "1: -\n2: -\n3: -\n4: -",
@@ -668,20 +658,20 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
                 new EncoderSlotBinding[]{
                         modifierChoiceSlot(
-                                view("Velocity", this::velocityCenterLabel, this::adjustVelocityCenter),
-                                view("Vel Spread", this::velocityDepthLabel, this::adjustVelocityDepth),
+                                view("Velocity", this::velocityPrimaryLabel, this::adjustVelocityPrimary),
+                                view("Vel Center", this::velocityCenterLabel, this::adjustVelocityCenter),
                                 view("Vel Rotate", () -> Integer.toString(velocityRotation), this::adjustVelocityRotation)),
                         modifierChoiceSlot(
-                                view("Pressure", this::pressureCenterLabel, this::adjustPressureCenter),
-                                view("Prs Spread", this::pressureSpreadLabel, this::adjustPressureSpread),
+                                view("Pressure", this::pressurePrimaryLabel, this::adjustPressurePrimary),
+                                view("Prs Center", this::pressureCenterLabel, this::adjustPressureCenter),
                                 view("Prs Rotate", this::pressureRotationLabel, this::adjustPressureRotation)),
                         modifierChoiceSlot(
-                                view("Timbre", this::timbreCenterLabel, this::adjustTimbreCenter),
-                                view("Tmb Spread", this::timbreSpreadLabel, this::adjustTimbreSpread),
+                                view("Timbre", this::timbrePrimaryLabel, this::adjustTimbrePrimary),
+                                view("Tmb Center", this::timbreCenterLabel, this::adjustTimbreCenter),
                                 view("Tmb Rotate", this::timbreRotationLabel, this::adjustTimbreRotation)),
                         modifierChoiceSlot(
-                                view("Pitch Expr", this::pitchExpressionCenterLabel, this::adjustPitchExpressionCenter),
-                                view("Ptc Spread", this::pitchExpressionSpreadLabel, this::adjustPitchExpressionSpread),
+                                view("Pitch Expr", this::pitchExpressionPrimaryLabel, this::adjustPitchExpressionPrimary),
+                                view("Ptc Center", this::pitchExpressionCenterLabel, this::adjustPitchExpressionCenter),
                                 view("Ptc Rotate", this::pitchExpressionRotationLabel, this::adjustPitchExpressionRotation))
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
@@ -855,6 +845,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         generatePattern("Vel Depth", velocityDepthLabel());
     }
 
+    private void adjustVelocityPrimary(final int amount) {
+        if (hasHeldPulse()) {
+            adjustSelectedHitVelocity(amount);
+            return;
+        }
+        adjustVelocityDepth(amount);
+    }
+
     private void adjustVelocityCenter(final int amount) {
         if (amount == 0) {
             return;
@@ -874,6 +872,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         pressureCenter = clampUnit(pressureCenter + amount * 0.05);
         applyEditablePattern("Pressure", pressureCenterLabel());
+    }
+
+    private void adjustPressurePrimary(final int amount) {
+        if (hasHeldPulse()) {
+            adjustSelectedHitPressure(amount);
+            return;
+        }
+        adjustPressureSpread(amount);
     }
 
     private void adjustPressureSpread(final int amount) {
@@ -897,6 +903,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         applyEditablePattern("Timbre", timbreCenterLabel());
     }
 
+    private void adjustTimbrePrimary(final int amount) {
+        if (hasHeldPulse()) {
+            adjustSelectedHitTimbre(amount);
+            return;
+        }
+        adjustTimbreSpread(amount);
+    }
+
     private void adjustTimbreSpread(final int amount) {
         if (amount == 0) {
             return;
@@ -916,6 +930,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         pitchExpressionCenter = clampPitchExpression(pitchExpressionCenter + amount);
         applyEditablePattern("Pitch Expr", pitchExpressionCenterLabel());
+    }
+
+    private void adjustPitchExpressionPrimary(final int amount) {
+        if (hasHeldPulse()) {
+            adjustSelectedHitPitchExpression(amount);
+            return;
+        }
+        adjustPitchExpressionSpread(amount);
     }
 
     private void adjustPitchExpressionSpread(final int amount) {
@@ -940,20 +962,47 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void adjustSelectedHitVelocity(final int amount) {
-        if (!hasSelectedPulse() || amount == 0) {
+        if (!hasHeldPulse() || amount == 0) {
             return;
         }
-        final EditablePulse pulse = editablePulses.get(selectedPulseIndex);
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.velocityOffset = Math.max(-48, Math.min(48, pulse.velocityOffset + amount * 2));
         applyEditablePattern("Hit Vel", Integer.toString(pulse.effectiveVelocity()));
+    }
+
+    private void adjustSelectedHitPressure(final int amount) {
+        if (!hasHeldPulse() || amount == 0) {
+            return;
+        }
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        pulse.pressureOffset = clampSignedUnit(pulse.pressureOffset + amount * 0.05);
+        applyEditablePattern("Pressure", pressurePrimaryLabel());
+    }
+
+    private void adjustSelectedHitTimbre(final int amount) {
+        if (!hasHeldPulse() || amount == 0) {
+            return;
+        }
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        pulse.timbreOffset = clampSignedUnit(pulse.timbreOffset + amount * 0.05);
+        applyEditablePattern("Timbre", timbrePrimaryLabel());
+    }
+
+    private void adjustSelectedHitPitchExpression(final int amount) {
+        if (!hasHeldPulse() || amount == 0) {
+            return;
+        }
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        pulse.pitchExpressionOffset = clampPitchExpression(pulse.pitchExpressionOffset + amount);
+        applyEditablePattern("Pitch Expr", pitchExpressionPrimaryLabel());
     }
 
     private void adjustSelectedHitGate(final int amount) {
         if (editablePulses.isEmpty() || amount == 0) {
             return;
         }
-        if (hasSelectedPulse()) {
-            final EditablePulse pulse = editablePulses.get(selectedPulseIndex);
+        if (hasHeldPulse()) {
+            final EditablePulse pulse = editablePulses.get(activePulseIndex());
             pulse.gateScale = clampGateScale(pulse.gateScale + amount * 0.05);
             applyEditablePattern("Hit Gate", "%.2f".formatted(pulse.gateScale));
             return;
@@ -969,9 +1018,18 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (amount == 0) {
             return;
         }
-        final int nextBaseNote = Math.max(0, Math.min(95, driver.getSharedBaseMidiNote() + amount));
+        final int previousBaseNote = driver.getSharedBaseMidiNote();
+        final int nextBaseNote = Math.max(0, Math.min(95, previousBaseNote + amount));
         driver.setSharedRootNote(Math.floorMod(nextBaseNote, 12));
         driver.setSharedOctave(Math.floorDiv(nextBaseNote, 12));
+        if (!editablePulses.isEmpty()) {
+            final int delta = nextBaseNote - previousBaseNote;
+            for (final EditablePulse pulse : editablePulses) {
+                pulse.midiNote = Math.max(0, Math.min(127, pulse.midiNote + delta));
+            }
+            applyEditablePattern("Pitch", pitchLabel());
+            return;
+        }
         generatePattern("Pitch", pitchLabel());
     }
 
@@ -985,7 +1043,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private String selectedVelocityLabel() {
-        return hasSelectedPulse() ? Integer.toString(editablePulses.get(selectedPulseIndex).effectiveVelocity()) : "None";
+        return hasHeldPulse() ? Integer.toString(editablePulses.get(activePulseIndex()).effectiveVelocity()) : "None";
     }
 
     private String velocityDepthLabel() {
@@ -996,8 +1054,20 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return Integer.toString(velocityCenter);
     }
 
+    private String velocityPrimaryLabel() {
+        return hasHeldPulse()
+                ? Integer.toString(editablePulses.get(activePulseIndex()).effectiveVelocity())
+                : velocityDepthLabel();
+    }
+
     private String pressureCenterLabel() {
         return percentLabel(pressureCenter);
+    }
+
+    private String pressurePrimaryLabel() {
+        return hasHeldPulse()
+                ? percentLabel(editablePulses.get(activePulseIndex()).effectivePressure())
+                : pressureSpreadLabel();
     }
 
     private String pressureSpreadLabel() {
@@ -1012,6 +1082,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return signedPercentLabel(timbreCenter);
     }
 
+    private String timbrePrimaryLabel() {
+        return hasHeldPulse()
+                ? signedPercentLabel(editablePulses.get(activePulseIndex()).effectiveTimbre())
+                : timbreSpreadLabel();
+    }
+
     private String timbreSpreadLabel() {
         return percentLabel(timbreSpread);
     }
@@ -1022,6 +1098,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String pitchExpressionCenterLabel() {
         return "%.0f st".formatted(pitchExpressionCenter);
+    }
+
+    private String pitchExpressionPrimaryLabel() {
+        return hasHeldPulse()
+                ? "%.0f st".formatted(editablePulses.get(activePulseIndex()).effectivePitchExpression())
+                : pitchExpressionSpreadLabel();
     }
 
     private String pitchExpressionSpreadLabel() {
@@ -1103,15 +1185,15 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (editablePulses.isEmpty()) {
             return "None";
         }
-        if (hasSelectedPulse()) {
-            return "%.2f".formatted(editablePulses.get(selectedPulseIndex).gateScale);
+        if (hasHeldPulse()) {
+            return "%.2f".formatted(editablePulses.get(activePulseIndex()).gateScale);
         }
         final double globalGateScale = globalGateScale();
         return allGateScalesEqual(globalGateScale) ? "All %.2f".formatted(globalGateScale) : "All Mixed";
     }
 
     private String selectedHitLabel() {
-        return hasSelectedPulse() ? Integer.toString(selectedPulseIndex + 1) : "None";
+        return hasHeldPulse() ? Integer.toString(activePulseIndex() + 1) : "None";
     }
 
     private String percentLabel(final double value) {
@@ -1122,8 +1204,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return "%+d%%".formatted((int) Math.round(value * 100.0));
     }
 
-    private boolean hasSelectedPulse() {
-        return selectedPulseIndex >= 0 && selectedPulseIndex < editablePulses.size();
+    private boolean hasHeldPulse() {
+        return activePulseIndex() >= 0;
     }
 
     private String countLabel(final int count) {
@@ -1228,7 +1310,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     @Override
     public boolean isPadBeingHeld() {
-        return false;
+        return hasHeldPulse();
     }
 
     @Override
@@ -1377,15 +1459,18 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return best;
     }
 
-    private static final class EditablePulse {
+    private final class EditablePulse {
         private final int order;
         private final int fineStart;
         private final int baseDuration;
-        private final int midiNote;
+        private int midiNote;
         private final int baseVelocity;
         private final NestedRhythmPattern.Role role;
         private int velocityOffset = 0;
         private double gateScale = 1.0;
+        private double pressureOffset = 0.0;
+        private double timbreOffset = 0.0;
+        private double pitchExpressionOffset = 0.0;
         private boolean enabled = true;
 
         private EditablePulse(final NestedRhythmPattern.PulseEvent event) {
@@ -1399,6 +1484,20 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
         private int effectiveVelocity() {
             return Math.max(1, Math.min(127, baseVelocity + velocityOffset));
+        }
+
+        private double effectivePressure() {
+            return clampUnit(shapedUnitExpression(order, pressureCenter, pressureSpread, pressureRotation) + pressureOffset);
+        }
+
+        private double effectiveTimbre() {
+            return clampSignedUnit(shapedSignedExpression(order, timbreCenter, timbreSpread, timbreRotation)
+                    + timbreOffset);
+        }
+
+        private double effectivePitchExpression() {
+            return clampPitchExpression(shapedPitchExpression(order, pitchExpressionCenter, pitchExpressionSpread,
+                    pitchExpressionRotation) + pitchExpressionOffset);
         }
 
         private double effectiveDuration() {
@@ -1424,12 +1523,18 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         private void resetEdits() {
             velocityOffset = 0;
             gateScale = 1.0;
+            pressureOffset = 0.0;
+            timbreOffset = 0.0;
+            pitchExpressionOffset = 0.0;
             enabled = true;
         }
 
         private void copyLocalEditsFrom(final EditablePulse other) {
             velocityOffset = other.velocityOffset;
             gateScale = other.gateScale;
+            pressureOffset = other.pressureOffset;
+            timbreOffset = other.timbreOffset;
+            pitchExpressionOffset = other.pitchExpressionOffset;
             enabled = other.enabled;
         }
 
