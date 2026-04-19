@@ -91,12 +91,21 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void densityMinimumKeepsAnchorsAndRequiredSubdivisionLeads() {
+    void densityMinimumKeepsOnlyVisibleAnchorsOutsideClaimedSpans() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.0, 7, 1, 1, 4, 2, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(0, 420, 840), starts(pattern));
+        assertEquals(List.of(420), starts(pattern));
+    }
+
+    @Test
+    void thinningDoesNotReintroduceBasePulseInsideOwnedSpan() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 3, 1, 1, 4, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
+
+        assertEquals(List.of(420), starts(pattern));
     }
 
     @Test

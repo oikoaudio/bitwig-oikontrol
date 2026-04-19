@@ -390,8 +390,8 @@
       </ul>
       <p>Encoder pages:</p>
       <ul>
-        <li><code>Channel</code>: density, tuplet count with <code>ALT</code> for cover and <code>SHIFT</code> for phase, ratchet count with <code>ALT</code> for width and <code>SHIFT</code> for phase, and chance with <code>ALT</code> for baseline and <code>SHIFT</code> for rotation</li>
-        <li><code>Mixer</code>: currently unused</li>
+        <li><code>Channel</code>: density with <code>SHIFT</code> for generated recurrence, tuplet count with <code>ALT</code> for cover and <code>SHIFT</code> for phase, ratchet count with <code>ALT</code> for width and <code>SHIFT</code> for phase, and chance with <code>ALT</code> for baseline and <code>SHIFT</code> for rotation</li>
+        <li><code>Mixer</code>: volume, pan, send 1, send 2</li>
         <li><code>User 1</code>: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, <code>ALT</code> edits center, and <code>SHIFT</code> edits rotation; with a hit held, plain turn edits that hit directly</li>
         <li><code>User 2</code>: linear pitch, clip length, reset hit edits, transport meter readout</li>
       </ul>
@@ -404,6 +404,8 @@
       <p>Control note:</p>
       <ul>
         <li><code>Density</code> is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately</li>
+        <li><code>SHIFT + Density</code> now generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first</li>
+        <li>when <code>Density</code> thins a tuplet- or ratchet-owned span, it removes visible hits from that claimed span without reviving an underlying base pulse there</li>
         <li><code>User 1</code> is the expression page; it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit</li>
         <li><code>Chance</code> is a native Bitwig note chance lane here: plain turn edits chance depth, <code>ALT</code> edits chance baseline, <code>SHIFT</code> edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit</li>
         <li>while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped</li>

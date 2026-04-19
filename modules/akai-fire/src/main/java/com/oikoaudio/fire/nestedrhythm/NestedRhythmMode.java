@@ -14,6 +14,7 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -76,10 +77,13 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private boolean mainEncoderPressConsumed = false;
     private int selectedPulseIndex = -1;
     private int heldPulseIndex = -1;
+    private int pressedHitIndex = -1;
+    private boolean heldPulseConsumed = false;
     private int selectedClipSlotIndex = -1;
     private RgbLigthState selectedClipColor = BASE_COLOR;
     private int playingFineStep = -1;
     private double density = 1.0;
+    private double recurrenceDepth = 0.0;
     private int tupletCount = 0;
     private int tupletCover = 1;
     private int tupletPhase = 1;
@@ -240,27 +244,39 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             clipHandler.handlePadPress(padIndex, pressed);
             return;
         }
-        if (!pressed) {
-            heldPulseIndex = -1;
-            return;
-        }
         if (padIndex < VELOCITY_PAD_OFFSET) {
-            holdPulseForStructurePad(padIndex - STRUCTURE_PAD_OFFSET);
+            if (!pressed) {
+                heldPulseIndex = -1;
+            } else {
+                holdPulseForStructurePad(padIndex - STRUCTURE_PAD_OFFSET);
+            }
             return;
         }
         final int hitIndex = padIndex - VELOCITY_PAD_OFFSET;
+        if (!pressed) {
+            if (hitIndex == pressedHitIndex && !heldPulseConsumed && !driver.isGlobalShiftHeld()
+                    && hitIndex >= 0 && hitIndex < editablePulses.size()) {
+                final EditablePulse pulse = editablePulses.get(hitIndex);
+                pulse.enabled = !pulse.enabled;
+                applyEditablePattern("Hit", pulse.enabled ? "On" : "Off");
+            }
+            pressedHitIndex = -1;
+            heldPulseConsumed = false;
+            heldPulseIndex = -1;
+            return;
+        }
         if (hitIndex >= editablePulses.size()) {
             return;
         }
         heldPulseIndex = hitIndex;
+        pressedHitIndex = hitIndex;
+        heldPulseConsumed = false;
+        showHeldPulse();
         if (driver.isGlobalShiftHeld()) {
             editablePulses.get(hitIndex).resetEdits();
+            heldPulseConsumed = true;
             applyEditablePattern("Hit", "Reset");
-            return;
         }
-        final EditablePulse pulse = editablePulses.get(hitIndex);
-        pulse.enabled = !pulse.enabled;
-        applyEditablePattern("Hit", pulse.enabled ? "On" : "Off");
     }
 
     private void holdPulseForStructurePad(final int structurePad) {
@@ -370,6 +386,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         final RecurrencePattern updated = pulse.effectiveRecurrence().toggledAt(padIndex);
         pulse.recurrenceLength = updated.length();
         pulse.recurrenceMask = updated.mask();
+        pulse.recurrenceEdited = true;
+        heldPulseConsumed = true;
         applyEditablePattern("Recurrence", updated.summary());
     }
 
@@ -525,9 +543,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         step.setPressure(pulse.effectivePressure());
         step.setTimbre(pulse.effectiveTimbre());
         step.setTranspose(pulse.effectivePitchExpression());
-        final double chance = pulse.effectiveChance();
+        final double chance = Math.min(0.999, pulse.effectiveChance());
         step.setChance(chance);
-        step.setIsChanceEnabled(chance < 0.9999);
+        step.setIsChanceEnabled(true);
         final RecurrencePattern recurrence = pulse.effectiveRecurrence();
         step.setRecurrence(recurrence.bitwigLength(), recurrence.bitwigMask());
     }
@@ -573,6 +591,47 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             case RATCHET_INTERIOR -> 0.82;
             case PICKUP -> 0.55;
         };
+    }
+
+    private double recurrenceRoleWeight(final NestedRhythmPattern.Role role) {
+        return switch (role) {
+            case PRIMARY_ANCHOR -> 0.12;
+            case SECONDARY_ANCHOR -> 0.28;
+            case TUPLET_LEAD -> 0.32;
+            case TUPLET_INTERIOR -> 0.82;
+            case RATCHET_LEAD -> 0.38;
+            case RATCHET_INTERIOR -> 0.92;
+            case PICKUP -> 0.60;
+        };
+    }
+
+    private RecurrencePattern generatedRecurrence(final int order, final NestedRhythmPattern.Role role) {
+        if (recurrenceDepth <= 0.0001) {
+            return RecurrencePattern.of(0, 0);
+        }
+        final int span = RecurrencePattern.EDITOR_DEFAULT_SPAN;
+        final double weakness = (1.0 - contourNormalized(order, 0)) * 0.5;
+        final double attenuation = recurrenceDepth * recurrenceRoleWeight(role) * (0.5 + weakness * 0.5);
+        final int activeCount = Math.max(1, Math.min(span, (int) Math.round((1.0 - attenuation) * span)));
+        if (activeCount >= span) {
+            return RecurrencePattern.of(0, 0);
+        }
+        return RecurrencePattern.of(span, distributedMask(span, activeCount, order));
+    }
+
+    private int distributedMask(final int span, final int activeCount, final int rotation) {
+        int mask = 0;
+        for (int index = 0; index < span; index++) {
+            final int previous = (index * activeCount) / span;
+            final int next = ((index + 1) * activeCount) / span;
+            if (next != previous) {
+                mask |= 1 << Math.floorMod(index + rotation, span);
+            }
+        }
+        if (mask == 0) {
+            mask = 1 << Math.floorMod(rotation, span);
+        }
+        return mask;
     }
 
     private double contourNormalized(final int order, final int rotation) {
@@ -701,9 +760,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Density\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Chance / Alt Base / Shift Rot",
+                "1: Density / Shift Rec\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Chance / Alt Base / Shift Rot",
                 new EncoderSlotBinding[]{
-                        continuousSlot("Density", () -> "%.2f".formatted(density), this::adjustDensity),
+                        modifierContinuousSlot(
+                                view("Density", () -> "%.2f".formatted(density), this::adjustDensity),
+                                null,
+                                view("Recurrence", this::recurrenceDepthLabel, this::adjustRecurrenceDepth)),
                         modifierChoiceSlot(
                                 view("Tuplet", () -> countLabel(tupletCount), this::adjustTupletCount),
                                 view("Cover", this::coverageLabel, this::adjustTupletCover),
@@ -718,12 +780,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Chance Rot", this::chanceRotationLabel, this::adjustChanceRotation))
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
-                "1: -\n2: -\n3: -\n4: -",
+                "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
                 new EncoderSlotBinding[]{
-                        choiceSlot("-", () -> "-", this::ignoreEncoder),
-                        choiceSlot("-", () -> "-", this::ignoreEncoder),
-                        choiceSlot("-", () -> "-", this::ignoreEncoder),
-                        choiceSlot("-", () -> "-", this::ignoreEncoder)
+                        mixerSlot(0, "Volume"),
+                        mixerSlot(1, "Pan"),
+                        mixerSlot(2, "Send 1"),
+                        mixerSlot(3, "Send 2")
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
@@ -784,6 +846,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                             : driver.isGlobalAltHeld() && alt != null ? altAccumulator : normal;
                     final int steps = accumulator.consume(inc);
                     if (steps != 0) {
+                        if (hasHeldPulse()) {
+                            heldPulseConsumed = true;
+                        }
                         currentView.adjuster().accept(steps);
                     }
                 });
@@ -795,6 +860,36 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                         normal.reset();
                         altAccumulator.reset();
                         shiftAccumulator.reset();
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
+    private EncoderSlotBinding modifierContinuousSlot(final ModifierEncoderView primary,
+                                                      final ModifierEncoderView alt,
+                                                      final ModifierEncoderView shift) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                encoder.bindEncoder(layer, inc -> {
+                    if (inc != 0 && hasHeldPulse()) {
+                        heldPulseConsumed = true;
+                    }
+                    activeView(primary, alt, shift).adjuster().accept(inc);
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        final ModifierEncoderView currentView = activeView(primary, alt, shift);
+                        oled.valueInfo(currentView.label(), currentView.valueSupplier().get());
+                    } else {
                         oled.clearScreenDelayed();
                     }
                 });
@@ -826,7 +921,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             @Override
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
-                encoder.bindEncoder(layer, adjuster::accept);
+                encoder.bindEncoder(layer, inc -> {
+                    if (inc != 0 && hasHeldPulse()) {
+                        heldPulseConsumed = true;
+                    }
+                    adjuster.accept(inc);
+                });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         oled.valueInfo(label, valueSupplier.get());
@@ -857,7 +957,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindThresholdedEncoder(layer, STEPPED_ENCODER_THRESHOLD, STEPPED_ENCODER_FINE_THRESHOLD,
-                        driver::isGlobalShiftHeld, adjuster::accept);
+                        driver::isGlobalShiftHeld, steps -> {
+                            if (steps != 0 && hasHeldPulse()) {
+                                heldPulseConsumed = true;
+                            }
+                            adjuster.accept(steps);
+                        });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         oled.valueInfo(label, valueSupplier.get());
@@ -875,6 +980,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         density = clampUnit(density + amount * 0.05);
         generatePattern("Density", "%.2f".formatted(density));
+    }
+
+    private void adjustRecurrenceDepth(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        recurrenceDepth = clampUnit(recurrenceDepth + amount * 0.05);
+        applyEditablePattern("Recurrence", recurrenceDepthLabel());
     }
 
     private void adjustTupletCount(final int amount) {
@@ -1148,6 +1261,40 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
     }
 
+    private EncoderSlotBinding mixerSlot(final int index, final String label) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+                             final int slotIndex) {
+                final Parameter parameter = switch (index) {
+                    case 0 -> cursorTrack.volume();
+                    case 1 -> cursorTrack.pan();
+                    case 2 -> cursorTrack.sendBank().getItemAt(0);
+                    default -> cursorTrack.sendBank().getItemAt(1);
+                };
+                parameter.name().markInterested();
+                parameter.displayedValue().markInterested();
+                parameter.value().markInterested();
+                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
+                    EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
+                    oled.valueInfo(label, parameter.displayedValue().get());
+                });
+                encoder.bindTouched(layer, touched -> {
+                    if (touched) {
+                        oled.valueInfo(label, parameter.displayedValue().get());
+                    } else {
+                        oled.clearScreenDelayed();
+                    }
+                });
+            }
+        };
+    }
+
     private void ignoreEncoder(final int amount) {
     }
 
@@ -1239,6 +1386,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String chanceRotationLabel() {
         return Integer.toString(chanceRotation);
+    }
+
+    private String recurrenceDepthLabel() {
+        return percentLabel(recurrenceDepth);
     }
 
     private String pitchLabel() {
@@ -1601,6 +1752,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         private double chanceOffset = 0.0;
         private int recurrenceLength = 0;
         private int recurrenceMask = 0;
+        private boolean recurrenceEdited = false;
         private boolean enabled = true;
 
         private EditablePulse(final NestedRhythmPattern.PulseEvent event) {
@@ -1635,7 +1787,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
 
         private RecurrencePattern effectiveRecurrence() {
-            return RecurrencePattern.of(recurrenceLength, recurrenceMask);
+            return recurrenceEdited
+                    ? RecurrencePattern.of(recurrenceLength, recurrenceMask)
+                    : generatedRecurrence(order, role);
         }
 
         private double effectiveDuration() {
@@ -1667,6 +1821,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             chanceOffset = 0.0;
             recurrenceLength = 0;
             recurrenceMask = 0;
+            recurrenceEdited = false;
             enabled = true;
         }
 
@@ -1679,6 +1834,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             chanceOffset = other.chanceOffset;
             recurrenceLength = other.recurrenceLength;
             recurrenceMask = other.recurrenceMask;
+            recurrenceEdited = other.recurrenceEdited;
             enabled = other.enabled;
         }
 

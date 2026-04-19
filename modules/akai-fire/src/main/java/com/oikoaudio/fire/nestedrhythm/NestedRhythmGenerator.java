@@ -196,7 +196,7 @@ public final class NestedRhythmGenerator {
             structure.put(fineStart, new PulseSpec(
                     fineStart,
                     role,
-                    inserted == 0,
+                    false,
                     subdivisionPriority(index, count, basePriority)));
             inserted++;
         }
