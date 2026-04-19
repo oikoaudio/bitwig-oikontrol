@@ -344,15 +344,16 @@ Main gestures:
 
 - `PATTERN UP`: generate the current nested rhythm into the selected clip
 - `PATTERN DOWN` or `MUTE_2`: reset hit-level edits
-- tap a projected rhythm pad: select the nearest generated hit
-- tap a bottom-row hit pad: toggle that hit on or off and target it for per-hit edits
+- hold a projected rhythm pad: target the nearest generated hit while held
+- tap a bottom-row hit pad: toggle that hit on or off
+- hold a bottom-row hit pad while turning an expression encoder: edit that hit directly
 - hold `SHIFT` and tap a hit pad: reset that hit's local edits
 
 Encoder pages:
 
-- `Channel`: density, tuplet count with `ALT` for cover, ratchet count with `ALT` for width, and velocity rotation with `ALT` ratchet phase and `SHIFT` tuplet phase
+- `Channel`: density, tuplet count with `ALT` for cover and `SHIFT` for phase, ratchet count with `ALT` for width and `SHIFT` for phase, and chance with `ALT` for baseline and `SHIFT` for rotation
 - `Mixer`: currently unused
-- `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit selected, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit selected, plain turn edits that hit directly
+- `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
 - `User 2`: linear pitch, clip length, reset hit edits, transport meter readout
 
 Timing note:
@@ -366,6 +367,7 @@ Control note:
 - `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
 - `Vel Spread` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
 - `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit
+- `Chance` is a native Bitwig note chance lane here: plain turn edits chance depth, `ALT` edits chance baseline, `SHIFT` edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
 - `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits

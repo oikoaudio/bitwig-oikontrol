@@ -97,6 +97,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private double pitchExpressionCenter = 0.0;
     private double pitchExpressionSpread = 0.0;
     private int pitchExpressionRotation = 0;
+    private double chanceBaseline = 1.0;
+    private double chanceDepth = 0.0;
+    private int chanceRotation = 0;
     private int clipBarCount = 1;
 
     public NestedRhythmMode(final AkaiFireOikontrolExtension driver) {
@@ -480,10 +483,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void applyExpressionValues(final NoteStep step, final EditablePulse pulse) {
-        final int order = pulse.order;
         step.setPressure(pulse.effectivePressure());
         step.setTimbre(pulse.effectiveTimbre());
         step.setTranspose(pulse.effectivePitchExpression());
+        final double chance = pulse.effectiveChance();
+        step.setChance(chance);
+        step.setIsChanceEnabled(chance < 0.9999);
     }
 
     private double shapedUnitExpression(final int order,
@@ -505,6 +510,28 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                          final double spread,
                                          final int rotation) {
         return clampPitchExpression(center + spread * contourNormalized(order, rotation));
+    }
+
+    private double shapedChance(final int order,
+                                final NestedRhythmPattern.Role role,
+                                final double baseline,
+                                final double depth,
+                                final int rotation) {
+        final double contour = (1.0 - contourNormalized(order, rotation)) * 0.5;
+        final double attenuation = depth * chanceRoleWeight(role) * contour;
+        return clampUnit(baseline - attenuation);
+    }
+
+    private double chanceRoleWeight(final NestedRhythmPattern.Role role) {
+        return switch (role) {
+            case PRIMARY_ANCHOR -> 0.10;
+            case SECONDARY_ANCHOR -> 0.25;
+            case TUPLET_LEAD -> 0.22;
+            case TUPLET_INTERIOR -> 0.75;
+            case RATCHET_LEAD -> 0.18;
+            case RATCHET_INTERIOR -> 0.82;
+            case PICKUP -> 0.55;
+        };
     }
 
     private double contourNormalized(final int order, final int rotation) {
@@ -633,7 +660,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Density\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: -",
+                "1: Density\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Chance / Alt Base / Shift Rot",
                 new EncoderSlotBinding[]{
                         continuousSlot("Density", () -> "%.2f".formatted(density), this::adjustDensity),
                         modifierChoiceSlot(
@@ -644,7 +671,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Ratchet", () -> countLabel(ratchetCount), this::adjustRatchetCount),
                                 view("Width", () -> Integer.toString(ratchetWidth), this::adjustRatchetWidth),
                                 view("Ratchet Phase", this::ratchetPhaseLabel, this::adjustRatchetPhase)),
-                        choiceSlot("-", () -> "-", this::ignoreEncoder)
+                        modifierChoiceSlot(
+                                view("Chance", this::chancePrimaryLabel, this::adjustChancePrimary),
+                                view("Chance Base", this::chanceBaselineLabel, this::adjustChanceBaseline),
+                                view("Chance Rot", this::chanceRotationLabel, this::adjustChanceRotation))
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
                 "1: -\n2: -\n3: -\n4: -",
@@ -961,6 +991,35 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         generatePattern("Length", clipLengthLabel());
     }
 
+    private void adjustChancePrimary(final int amount) {
+        if (hasHeldPulse()) {
+            adjustSelectedHitChance(amount);
+            return;
+        }
+        adjustChanceDepth(amount);
+    }
+
+    private void adjustChanceDepth(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        chanceDepth = clampUnit(chanceDepth + amount * 0.05);
+        applyEditablePattern("Chance", chancePrimaryLabel());
+    }
+
+    private void adjustChanceBaseline(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        chanceBaseline = clampUnit(chanceBaseline + amount * 0.05);
+        applyEditablePattern("Chance Base", chanceBaselineLabel());
+    }
+
+    private void adjustChanceRotation(final int amount) {
+        chanceRotation = Math.floorMod(chanceRotation + amount, NestedRhythmGenerator.contourLength());
+        applyEditablePattern("Chance Rot", chanceRotationLabel());
+    }
+
     private void adjustSelectedHitVelocity(final int amount) {
         if (!hasHeldPulse() || amount == 0) {
             return;
@@ -995,6 +1054,15 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         final EditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.pitchExpressionOffset = clampPitchExpression(pulse.pitchExpressionOffset + amount);
         applyEditablePattern("Pitch Expr", pitchExpressionPrimaryLabel());
+    }
+
+    private void adjustSelectedHitChance(final int amount) {
+        if (!hasHeldPulse() || amount == 0) {
+            return;
+        }
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        pulse.chanceOffset = clampSignedUnit(pulse.chanceOffset + amount * 0.05);
+        applyEditablePattern("Chance", chancePrimaryLabel());
     }
 
     private void adjustSelectedHitGate(final int amount) {
@@ -1112,6 +1180,24 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String pitchExpressionRotationLabel() {
         return Integer.toString(pitchExpressionRotation);
+    }
+
+    private String chanceBaselineLabel() {
+        return percentLabel(chanceBaseline);
+    }
+
+    private String chancePrimaryLabel() {
+        return hasHeldPulse()
+                ? percentLabel(editablePulses.get(activePulseIndex()).effectiveChance())
+                : chanceDepthLabel();
+    }
+
+    private String chanceDepthLabel() {
+        return percentLabel(chanceDepth);
+    }
+
+    private String chanceRotationLabel() {
+        return Integer.toString(chanceRotation);
     }
 
     private String pitchLabel() {
@@ -1471,6 +1557,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         private double pressureOffset = 0.0;
         private double timbreOffset = 0.0;
         private double pitchExpressionOffset = 0.0;
+        private double chanceOffset = 0.0;
         private boolean enabled = true;
 
         private EditablePulse(final NestedRhythmPattern.PulseEvent event) {
@@ -1500,6 +1587,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     pitchExpressionRotation) + pitchExpressionOffset);
         }
 
+        private double effectiveChance() {
+            return clampUnit(shapedChance(order, role, chanceBaseline, chanceDepth, chanceRotation) + chanceOffset);
+        }
+
         private double effectiveDuration() {
             return Math.max(1.0, baseDuration * gateScale);
         }
@@ -1526,6 +1617,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             pressureOffset = 0.0;
             timbreOffset = 0.0;
             pitchExpressionOffset = 0.0;
+            chanceOffset = 0.0;
             enabled = true;
         }
 
@@ -1535,6 +1627,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             pressureOffset = other.pressureOffset;
             timbreOffset = other.timbreOffset;
             pitchExpressionOffset = other.pitchExpressionOffset;
+            chanceOffset = other.chanceOffset;
             enabled = other.enabled;
         }
 

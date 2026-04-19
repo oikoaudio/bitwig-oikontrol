@@ -352,8 +352,9 @@ Melodic recurrence editing:
 | `DRUM` while in `Nested Rhythm` | Return to standard drum sequencing |
 | `PATTERN UP` | Generate current nested rhythm into the selected clip |
 | `PATTERN DOWN` or `MUTE_2` | Reset hit edits |
-| Tap projected rhythm pad | Select nearest generated hit |
-| Tap bottom-row hit pad | Toggle that generated hit on/off and target it for per-hit edits |
+| Hold projected rhythm pad | Target the nearest generated hit while held |
+| Tap bottom-row hit pad | Toggle that generated hit on/off |
+| Hold bottom-row hit pad while turning an expression encoder | Edit that hit directly |
 | Hold `MUTE_4` + hit pad | Delete gesture remains available for clip actions; hit toggling is direct on the bottom row |
 | `SHIFT` + hit pad | Reset that hit's local edits |
 
@@ -361,9 +362,9 @@ Melodic recurrence editing:
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Density | Tuplet count / `ALT`: cover | Ratchet count / `ALT`: width | Velocity rotate / `ALT`: ratchet phase / `SHIFT`: tuplet phase |
+| `Channel` | Density | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
 | `Mixer` | Unused | Unused | Unused | Unused |
-| `User 1` | Velocity or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
+| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
 | `User 2` | Linear pitch | Clip length | Reset hit edits | Meter readout |
 
 Timing note:
@@ -375,7 +376,8 @@ Timing note:
 Control note:
 
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
-- `User 1` is the expression page; with no hit selected, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit selected, plain turn edits that hit directly
+- `User 1` is the expression page; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
+- `Channel / Encoder 4` writes Bitwig note chance: plain turn edits chance depth, `ALT` edits chance baseline, and `SHIFT` edits chance rotation; holding a hit turns the plain action into a direct chance edit for that hit
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
 - `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits
