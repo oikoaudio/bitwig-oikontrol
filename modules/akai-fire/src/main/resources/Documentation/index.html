@@ -389,8 +389,8 @@
       <p>Encoder pages:</p>
       <ul>
         <li><code>Channel</code>: density, tuplet count with <code>ALT</code> for cover, ratchet count with <code>ALT</code> for width, and velocity rotation with <code>ALT</code> ratchet phase and <code>SHIFT</code> tuplet phase</li>
-        <li><code>Mixer</code>: velocity depth with <code>ALT</code> for velocity center</li>
-        <li><code>User 1</code>: selected-hit velocity trim, gate, enable, and hit selection</li>
+        <li><code>Mixer</code>: currently unused</li>
+        <li><code>User 1</code>: velocity center with <code>ALT</code> spread and <code>SHIFT</code> rotation, plus pressure, timbre, and pitch-expression lanes with the same modifier grammar</li>
         <li><code>User 2</code>: linear pitch, clip length, reset hit edits, transport meter readout</li>
       </ul>
       <p>Timing note:</p>
@@ -402,13 +402,14 @@
       <p>Control note:</p>
       <ul>
         <li><code>Density</code> is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately</li>
-        <li><code>Vel Depth</code> scales offsets around a configurable <code>Velocity Center</code> instead of dragging the whole pattern up or down</li>
+        <li><code>User 1</code> is the expression page; it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression</li>
         <li><code>User 2</code> pitch is a single non-wrapping note control rather than separate root and octave knobs</li>
         <li><code>User 2 / Encoder 2</code> controls generated clip length in bars, and <code>User 2 / Encoder 4</code> shows the current Bitwig transport meter used by the generator</li>
         <li><code>Hit Gate</code> edits the selected hit when one is targeted; if no hit is selected it applies to all current generated hits</li>
         <li><code>Tuplet</code> stays a half-bar transform, not a per-quarter burst; <code>Cover</code> sets how many consecutive half-bars are claimed, and <code>Tuplet Phase</code> rotates that continuous claimed region across the clip</li>
         <li><code>Ratchet Width</code> chooses phrase beats in deterministic priority order, and <code>Ratchet Phase</code> rotates that chosen set across the actual beat positions of the clip</li>
-        <li><code>Tuplet</code> currently uses <code>3 / 5 / 7</code>, while <code>Ratchet</code> supports even and odd burst counts including <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code></li>
+        <li>available <code>Tuplet</code> counts now depend on meter and claimed span; in <code>4/4</code> that still yields <code>3 / 5 / 7</code>, while <code>5/4</code> can expose counts such as <code>3 / 4 / 6 / 7</code></li>
+        <li><code>Ratchet</code> supports even and odd burst counts including <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code></li>
       </ul>
 
       <h3>Chord Step workflow</h3>

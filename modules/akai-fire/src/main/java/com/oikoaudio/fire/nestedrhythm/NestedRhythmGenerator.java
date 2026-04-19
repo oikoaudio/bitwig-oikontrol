@@ -18,7 +18,7 @@ public final class NestedRhythmGenerator {
     private static final int MAX_BARS = 4;
     private static final int MAX_NUMERATOR = 16;
     private static final int[] SUPPORTED_DENOMINATORS = {2, 4, 8, 16};
-    private static final int[] SUPPORTED_TUPLET_COUNTS = {0, 3, 5, 7};
+    private static final int[] TUPLET_COUNT_CANDIDATES = {0, 3, 4, 5, 6, 7};
     private static final int[] SUPPORTED_RATCHET_COUNTS = {0, 2, 3, 4, 5, 6, 7, 8};
     private static final int[] VELOCITY_CONTOUR = {18, -9, 12, -16, 14, -7, 9, -13, 16, -11, 10, -8, 13, -15, 15, -6};
 
@@ -83,6 +83,36 @@ public final class NestedRhythmGenerator {
             return normalizedIndex * 2;
         }
         return (normalizedIndex - evenCount) * 2 + 1;
+    }
+
+    public static int[] supportedTupletCounts(final int meterNumerator,
+                                              final int meterDenominator,
+                                              final int tupletCover) {
+        final int normalizedCover = Math.max(1, tupletCover);
+        final int barFineSteps = fineStepsPerBar(meterNumerator, meterDenominator);
+        final int halfBarFineSteps = Math.max(1, barFineSteps / 2);
+        final int spanFineSteps = halfBarFineSteps * normalizedCover;
+        final int eighthFineSteps = FINE_STEPS_PER_WHOLE / 8;
+        final int spanUnits = Math.max(1, (int) Math.round(spanFineSteps / (double) eighthFineSteps));
+        final List<Integer> supported = new ArrayList<>();
+        supported.add(0);
+        for (final int candidate : TUPLET_COUNT_CANDIDATES) {
+            if (candidate == 0 || candidate == spanUnits) {
+                continue;
+            }
+            if (greatestCommonDivisor(candidate, spanUnits) == 1) {
+                supported.add(candidate);
+            }
+        }
+        return supported.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    public static int contourLength() {
+        return VELOCITY_CONTOUR.length;
+    }
+
+    public static int contourAt(final int order) {
+        return VELOCITY_CONTOUR[Math.floorMod(order, VELOCITY_CONTOUR.length)];
     }
 
     private List<PulseSpec> retainedStructure(final Settings settings,
@@ -311,7 +341,7 @@ public final class NestedRhythmGenerator {
     }
 
     private int velocityFor(final NestedRhythmPattern.Role role, final int order) {
-        final int contour = VELOCITY_CONTOUR[Math.floorMod(order, VELOCITY_CONTOUR.length)];
+        final int contour = contourAt(order);
         final int peak = switch (role) {
             case PRIMARY_ANCHOR -> 118;
             case SECONDARY_ANCHOR -> 110;
@@ -336,7 +366,10 @@ public final class NestedRhythmGenerator {
             return new Settings(
                     Math.max(0, Math.min(127, midiNote)),
                     Math.max(0.0, Math.min(1.0, density)),
-                    normalizeCount(tupletCount, SUPPORTED_TUPLET_COUNTS),
+                    normalizeCount(tupletCount, supportedTupletCounts(
+                            normalizedMeterNumerator,
+                            normalizedMeterDenominator,
+                            Math.max(1, Math.min(totalHalfBars, tupletCover)))),
                     Math.max(0, Math.min(totalHalfBars, tupletCover)),
                     Math.floorMod(tupletPhase, totalHalfBars),
                     normalizeCount(ratchetCount, SUPPORTED_RATCHET_COUNTS),
@@ -358,7 +391,16 @@ public final class NestedRhythmGenerator {
                     return count;
                 }
             }
-            return 0;
+            int best = supportedCounts[0];
+            int bestDistance = Integer.MAX_VALUE;
+            for (final int supported : supportedCounts) {
+                final int distance = Math.abs(supported - count);
+                if (distance < bestDistance || (distance == bestDistance && supported < best)) {
+                    bestDistance = distance;
+                    best = supported;
+                }
+            }
+            return best;
         }
     }
 
@@ -373,6 +415,17 @@ public final class NestedRhythmGenerator {
             }
         }
         return DEFAULT_BEAT_DENOMINATOR;
+    }
+
+    private static int greatestCommonDivisor(final int left, final int right) {
+        int a = Math.abs(left);
+        int b = Math.abs(right);
+        while (b != 0) {
+            final int next = a % b;
+            a = b;
+            b = next;
+        }
+        return Math.max(1, a);
     }
 
     private record PulseSpec(int fineStart, NestedRhythmPattern.Role role, boolean required, int priority) {

@@ -362,8 +362,8 @@ Melodic recurrence editing:
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
 | `Channel` | Density | Tuplet count / `ALT`: cover | Ratchet count / `ALT`: width | Velocity rotate / `ALT`: ratchet phase / `SHIFT`: tuplet phase |
-| `Mixer` | Velocity depth / `ALT`: center | Unused | Unused | Unused |
-| `User 1` | Selected hit velocity | Selected hit gate | Unused | Unused |
+| `Mixer` | Unused | Unused | Unused | Unused |
+| `User 1` | Velocity / `ALT`: spread / `SHIFT`: rotate | Pressure / `ALT`: spread / `SHIFT`: rotate | Timbre / `ALT`: spread / `SHIFT`: rotate | Pitch Expr / `ALT`: spread / `SHIFT`: rotate |
 | `User 2` | Linear pitch | Clip length | Reset hit edits | Meter readout |
 
 Timing note:
@@ -375,13 +375,14 @@ Timing note:
 Control note:
 
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
-- `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `User 1` is the expression page; it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
 - `Hit Gate` edits the selected hit when one is targeted; if no hit is selected it applies to all current generated hits
 - `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
-- `Tuplet` currently uses `3 / 5 / 7`, while `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
+- available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`
+- `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 ## PERFORM Mode
 

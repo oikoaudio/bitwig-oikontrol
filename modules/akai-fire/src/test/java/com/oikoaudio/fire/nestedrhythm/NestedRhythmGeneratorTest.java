@@ -54,6 +54,22 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void fourFourTupletCountsStayOnThreeFiveSeven() {
+        assertEquals(List.of(0, 3, 5, 7),
+                java.util.Arrays.stream(NestedRhythmGenerator.supportedTupletCounts(4, 4, 1))
+                        .boxed()
+                        .toList());
+    }
+
+    @Test
+    void fiveFourTupletCountsPreferNonNativeDivisions() {
+        assertEquals(List.of(0, 3, 4, 6, 7),
+                java.util.Arrays.stream(NestedRhythmGenerator.supportedTupletCounts(5, 4, 1))
+                        .boxed()
+                        .toList());
+    }
+
+    @Test
     void multiBarTupletCoverClaimsConsecutiveHalfBars() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 3, 2, 2, 0, 1, 0, 1.0, 100, 0, 0,
