@@ -18,7 +18,8 @@ class NestedRhythmGeneratorTest {
     @Test
     void generatorIsDeterministicForSettings() {
         final NestedRhythmGenerator.Settings settings = new NestedRhythmGenerator.Settings(
-                60, 0.75, 5, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 1, 0.7, 100, 2, 1);
+                60, 0.75, 5, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 1, 0.7, 100, 2, 1,
+                4, 4, 1);
 
         final NestedRhythmPattern a = generator.generate(settings);
         final NestedRhythmPattern b = generator.generate(settings);
@@ -35,9 +36,28 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void multipleBarsRepeatTheGeneratedBarStructure() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 2));
+
+        assertEquals(List.of(0, 420, 840, 1260, 1680, 2100, 2520, 2940), starts(pattern));
+    }
+
+    @Test
+    void meterNumeratorAndDenominatorDefineAnchorGrid() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                7, 8, 1));
+
+        assertEquals(List.of(0, 210, 420, 630, 840, 1050, 1260), starts(pattern));
+    }
+
+    @Test
     void densityMinimumKeepsAnchorsAndRequiredSubdivisionLeads() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 0.0, 7, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0));
+                60, 0.0, 7, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         assertEquals(List.of(0, 420, 840), starts(pattern));
     }
@@ -45,26 +65,29 @@ class NestedRhythmGeneratorTest {
     @Test
     void backHalfTupletLeavesFrontHalfAnchorsInPlace() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 3, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 0, 1, 0, 0.6, 100, 0, 0));
+                60, 1.0, 3, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 0, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         assertEquals(List.of(0, 420), startsInRange(pattern, 0, 840));
         assertEquals(List.of(840, 1120, 1400),
-                startsInRange(pattern, 840, NestedRhythmGenerator.FINE_STEPS_PER_BAR));
+                startsInRange(pattern, 840, NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 
     @Test
     void tupletPhaseMovesHalfBarTupletToFrontHalf() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 3, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 1, 0, 1, 0, 0.6, 100, 0, 0));
+                60, 1.0, 3, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 1, 0, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         assertEquals(List.of(0, 280, 560), startsInRange(pattern, 0, 840));
-        assertEquals(List.of(840, 1260), startsInRange(pattern, 840, NestedRhythmGenerator.FINE_STEPS_PER_BAR));
+        assertEquals(List.of(840, 1260), startsInRange(pattern, 840, NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 
     @Test
     void ratchetOverridesTupletInsideClaimedBeatSpan() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 3, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 1, 2, 0.6, 100, 0, 0));
+                60, 1.0, 3, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 1, 2, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         assertEquals(List.of(0), startsInRange(pattern, 0, 420));
         assertEquals(List.of(420, 525, 630, 735), startsInRange(pattern, 420, 840));
@@ -74,20 +97,23 @@ class NestedRhythmGeneratorTest {
     @Test
     void ratchetWidthSelectsMultipleStructuralRegionsDeterministically() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 4, 2, 0, 0.6, 100, 0, 0));
+                60, 1.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 4, 2, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         assertEquals(4, startsInRange(pattern, 0, 420).size());
         assertEquals(List.of(420), startsInRange(pattern, 420, 840));
         assertEquals(4, startsInRange(pattern, 840, 1260).size());
-        assertEquals(List.of(1260), startsInRange(pattern, 1260, NestedRhythmGenerator.FINE_STEPS_PER_BAR));
+        assertEquals(List.of(1260), startsInRange(pattern, 1260, NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 
     @Test
     void ratchetPhaseRotatesChosenRegionsWithoutChangingCount() {
         final NestedRhythmPattern base = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 4, 1, 0, 0.6, 100, 0, 0));
+                60, 1.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 4, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
         final NestedRhythmPattern rotated = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 4, 1, 1, 0.6, 100, 0, 0));
+                60, 1.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 4, 1, 1, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         assertEquals(4, startsInRange(base, 0, 420).size());
         assertEquals(List.of(420, 840, 1260), startsOutsideRange(base, 0, 420));
@@ -98,9 +124,11 @@ class NestedRhythmGeneratorTest {
     @Test
     void increasingDensityNeverAddsNewPositionsBeyondStructure() {
         final NestedRhythmPattern sparse = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 0.0, 7, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0));
+                60, 0.0, 7, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
         final NestedRhythmPattern dense = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 7, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0));
+                60, 1.0, 7, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
 
         final Set<Integer> sparseStarts = starts(sparse).stream().collect(Collectors.toSet());
         final Set<Integer> denseStarts = starts(dense).stream().collect(Collectors.toSet());
@@ -110,9 +138,11 @@ class NestedRhythmGeneratorTest {
     @Test
     void velocityRotationAdvancesOneHitAtATime() {
         final NestedRhythmPattern rotation0 = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 0.6, 100, 0, 0));
+                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
         final NestedRhythmPattern rotation1 = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 0.6, 100, 1, 0));
+                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 0.6, 100, 1, 0,
+                4, 4, 1));
 
         assertEquals(starts(rotation0), starts(rotation1));
         assertEquals(velocities(rotation0).get(1), velocities(rotation1).get(0));
@@ -122,16 +152,19 @@ class NestedRhythmGeneratorTest {
     @Test
     void velocityRotationCanMoveStrongestHit() {
         final NestedRhythmPattern rotation0 = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 5, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0));
+                60, 1.0, 5, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
         final NestedRhythmPattern rotation1 = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 5, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 1, 0));
+                60, 1.0, 5, NestedRhythmGenerator.TupletCoverage.BACK_HALF, 0, 4, 2, 0, 0.6, 100, 1, 0,
+                4, 4, 1));
 
         assertNotEquals(startOfMaxVelocity(rotation0), startOfMaxVelocity(rotation1));
     }
 
     private NestedRhythmGenerator.Settings defaultSettings() {
         return new NestedRhythmGenerator.Settings(
-                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 0.6, 100, 0, 0);
+                60, 0.0, 0, NestedRhythmGenerator.TupletCoverage.NONE, 0, 0, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1);
     }
 
     private int startOfMaxVelocity(final NestedRhythmPattern pattern) {

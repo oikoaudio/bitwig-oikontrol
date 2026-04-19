@@ -46,9 +46,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private static final int STRUCTURE_PAD_COUNT = 32;
     private static final int VELOCITY_PAD_OFFSET = 48;
     private static final int VELOCITY_PAD_COUNT = 16;
-    private static final int CLIP_FINE_STEP_COUNT = NestedRhythmGenerator.FINE_STEPS_PER_BAR;
-    private static final double CLIP_STEP_SIZE = 1.0 / NestedRhythmGenerator.FINE_STEPS_PER_BEAT;
-    private static final int BAR_LENGTH_BEATS = NestedRhythmGenerator.BEATS_PER_BAR;
+    private static final int MAX_BAR_COUNT = 4;
+    private static final int CLIP_FINE_STEP_COUNT = NestedRhythmGenerator.maxFineStepsFor(MAX_BAR_COUNT, 16, 2);
+    private static final double CLIP_STEP_SIZE = 1.0 / NestedRhythmGenerator.FINE_STEPS_PER_QUARTER;
     private static final int STEPPED_ENCODER_THRESHOLD = 5;
     private static final int STEPPED_ENCODER_FINE_THRESHOLD = 9;
     private static final RgbLigthState BASE_COLOR = new RgbLigthState(0, 90, 34, true);
@@ -56,6 +56,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private static final RgbLigthState DISABLED_HIT_COLOR = new RgbLigthState(32, 10, 10, true);
     private static final int[] TUPLET_COUNT_VALUES = {0, 3, 5, 7};
     private static final int[] RATCHET_COUNT_VALUES = {0, 2, 3, 4, 5, 6, 7, 8};
+    private static final int[] CLIP_BAR_COUNT_VALUES = {1, 2, 4};
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
@@ -89,6 +90,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private double velocityDepth = 1.0;
     private int velocityCenter = 100;
     private int velocityRotation = 0;
+    private int clipBarCount = 1;
 
     public NestedRhythmMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "NESTED_RHYTHM_MODE");
@@ -326,7 +328,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private int structureBinFor(final int fineStart) {
-        final double normalized = fineStart / (double) NestedRhythmGenerator.FINE_STEPS_PER_BAR;
+        final double normalized = fineStart / (double) Math.max(1, totalFineStepCount());
         return Math.max(0, Math.min(STRUCTURE_PAD_COUNT - 1,
                 (int) Math.floor(normalized * STRUCTURE_PAD_COUNT)));
     }
@@ -337,7 +339,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         for (int index = 0; index < editablePulses.size(); index++) {
             final EditablePulse pulse = editablePulses.get(index);
-            if (pulse.enabled && pulse.containsFineStep(playingFineStep)) {
+            if (pulse.enabled && pulse.containsFineStep(playingFineStep, totalFineStepCount())) {
                 return index;
             }
         }

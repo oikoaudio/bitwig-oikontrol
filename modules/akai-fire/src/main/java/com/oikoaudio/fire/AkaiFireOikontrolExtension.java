@@ -127,6 +127,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumPinPreferenceObserved = false;
     private boolean globalSettingsOverlayActive = false;
     private boolean globalSettingsGestureArmed = false;
+    private int transportTimeSignatureNumerator = 4;
+    private int transportTimeSignatureDenominator = 4;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
@@ -418,6 +420,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void setUpTransportControl() {
         transport.isPlaying().markInterested();
+        transport.timeSignature().markInterested();
+        transport.timeSignature().numerator().markInterested();
+        transport.timeSignature().denominator().markInterested();
+        transport.timeSignature().numerator().addValueObserver(value -> transportTimeSignatureNumerator = value);
+        transport.timeSignature().denominator().addValueObserver(value -> transportTimeSignatureDenominator = value);
         transport.tempo().markInterested();
         transport.tempo().name().markInterested();
         transport.tempo().value().markInterested();
@@ -529,6 +536,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isTransportPlaying() {
         return transport != null && transport.isPlaying().get();
+    }
+
+    public int getTransportTimeSignatureNumerator() {
+        return transportTimeSignatureNumerator;
+    }
+
+    public int getTransportTimeSignatureDenominator() {
+        return transportTimeSignatureDenominator;
     }
 
     private BiColorLightState getRecordState() {
