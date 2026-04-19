@@ -473,7 +473,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 .toList();
         for (final EditablePulse pulse : active) {
             cursorClip.setStep(pulse.fineStart, pulse.midiNote,
-                    pulse.effectiveVelocity(), pulse.effectiveDuration());
+                    pulse.effectiveVelocity(), pulse.effectiveBeatDuration());
         }
     }
 
@@ -551,15 +551,15 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Tuplet Phase", this::tupletPhaseLabel, this::adjustTupletPhase))
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
-                "1: Vel / Alt Center\n2: Hit Vel\n3: Hit Gate\n4: Hit Select",
+                "1: Vel / Alt Center\n2: -\n3: -\n4: -",
                 new EncoderSlotBinding[]{
                         modifierChoiceSlot(
                                 view("Vel Depth", this::velocityDepthLabel, this::adjustVelocityDepth),
                                 view("Vel Center", this::velocityCenterLabel, this::adjustVelocityCenter),
                                 null),
-                        continuousSlot("Hit Vel", this::selectedVelocityLabel, this::adjustSelectedHitVelocity),
-                        continuousSlot("Hit Gate", this::selectedGateLabel, this::adjustSelectedHitGate),
-                        choiceSlot("Hit", this::selectedHitLabel, this::adjustSelectedHitIndex)
+                        choiceSlot("-", () -> "-", this::ignoreEncoder),
+                        choiceSlot("-", () -> "-", this::ignoreEncoder),
+                        choiceSlot("-", () -> "-", this::ignoreEncoder)
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Hit Vel\n2: Hit Gate\n3: Hit On\n4: Hit Select",
@@ -570,11 +570,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                         choiceSlot("Hit", this::selectedHitLabel, this::adjustSelectedHitIndex)
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Root\n2: Oct\n3: Reset Hits\n4: -",
+                "1: Pitch\n2: Reset Hits\n3: -\n4: -",
                 new EncoderSlotBinding[]{
-                        choiceSlot("Root", () -> NoteGridLayout.noteName(driver.getSharedRootNote()), this::adjustRoot),
-                        choiceSlot("Oct", () -> Integer.toString(driver.getSharedOctave()), this::adjustOctave),
+                        choiceSlot("Pitch", this::pitchLabel, this::adjustPitch),
                         choiceSlot("Reset", () -> editablePulses.isEmpty() ? "No Hits" : "Ready", this::resetHitsFromEncoder),
+                        choiceSlot("-", () -> "-", this::ignoreEncoder),
                         choiceSlot("-", () -> "-", this::ignoreEncoder)
                 }));
         return new EncoderBankLayout(banks);
@@ -793,20 +793,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         showSelectedPulse();
     }
 
-    private void adjustRoot(final int amount) {
+    private void adjustPitch(final int amount) {
         if (amount == 0) {
             return;
         }
-        driver.adjustSharedRootNote(amount);
-        generatePattern("Root", NoteGridLayout.noteName(driver.getSharedRootNote()));
-    }
-
-    private void adjustOctave(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        driver.adjustSharedOctave(amount);
-        generatePattern("Octave", Integer.toString(driver.getSharedOctave()));
+        final int nextBaseNote = Math.max(0, Math.min(95, driver.getSharedBaseMidiNote() + amount));
+        driver.setSharedRootNote(Math.floorMod(nextBaseNote, 12));
+        driver.setSharedOctave(Math.floorDiv(nextBaseNote, 12));
+        generatePattern("Pitch", pitchLabel());
     }
 
     private void resetHitsFromEncoder(final int amount) {
@@ -828,6 +822,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String velocityCenterLabel() {
         return Integer.toString(velocityCenter);
+    }
+
+    private String pitchLabel() {
+        return NoteGridLayout.noteName(driver.getSharedRootNote()) + driver.getSharedOctave();
     }
 
     private String tupletPhaseLabel() {
@@ -1066,6 +1064,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
         private double effectiveDuration() {
             return Math.max(1.0, baseDuration * gateScale);
+        }
+
+        private double effectiveBeatDuration() {
+            return effectiveDuration() * CLIP_STEP_SIZE;
         }
 
         private boolean containsFineStep(final int fineStep) {

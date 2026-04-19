@@ -362,9 +362,9 @@ Melodic recurrence editing:
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
 | `Channel` | Density | Tuplet count / `ALT`: cover | Ratchet count / `ALT`: width | Velocity rotate / `ALT`: ratchet phase / `SHIFT`: tuplet phase |
-| `Mixer` | Velocity depth / `ALT`: center | Selected hit velocity | Selected hit gate | Selected hit select |
+| `Mixer` | Velocity depth / `ALT`: center | Unused | Unused | Unused |
 | `User 1` | Selected hit velocity | Selected hit gate | Selected hit enable | Selected hit select |
-| `User 2` | Shared root | Shared octave | Reset hit edits | Unused |
+| `User 2` | Linear pitch | Reset hit edits | Unused | Unused |
 
 Timing note:
 
@@ -376,6 +376,7 @@ Control note:
 
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
 - `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` switches through `Off`, `Back`, and `Both`, and `Tuplet Phase` flips half-bar tuplets between back and front
 - `Ratchet Width` expands ratchets across beats in the deterministic order `1, 3, 2, 4`, and `Ratchet Phase` rotates that selection
 - `Tuplet` currently uses `3 / 5 / 7`, while `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`

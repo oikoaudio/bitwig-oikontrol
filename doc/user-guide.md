@@ -352,9 +352,9 @@ Main gestures:
 Encoder pages:
 
 - `Channel`: density, tuplet count with `ALT` for cover, ratchet count with `ALT` for width, and velocity rotation with `ALT` ratchet phase and `SHIFT` tuplet phase
-- `Mixer`: velocity depth with `ALT` for velocity center, selected-hit velocity, selected-hit gate, selected-hit selection
+- `Mixer`: velocity depth with `ALT` for velocity center
 - `User 1`: selected-hit velocity trim, gate, enable, and hit selection
-- `User 2`: shared root, shared octave, reset hit edits
+- `User 2`: linear pitch, reset hit edits
 
 Timing note:
 
@@ -366,6 +366,7 @@ Control note:
 
 - `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
 - `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `Tuplet` and `Ratchet` both default to `Off`
 - `Cover` currently steps through `Off`, `Back`, and `Both`, while `Tuplet Phase` flips half-bar tuplets between back and front
 - `Ratchet Width` expands ratchets across multiple beats in the deterministic order `1, 3, 2, 4`, and `Ratchet Phase` rotates that selection
