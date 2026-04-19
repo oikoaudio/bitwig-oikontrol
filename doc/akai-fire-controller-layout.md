@@ -353,8 +353,8 @@ Melodic recurrence editing:
 | `PATTERN UP` | Generate current nested rhythm into the selected clip |
 | `PATTERN DOWN` or `MUTE_2` | Reset hit edits |
 | Tap projected rhythm pad | Select nearest generated hit |
-| Tap bottom-row hit pad | Select that generated hit |
-| Hold `MUTE_4` + hit pad | Toggle that hit on/off |
+| Tap bottom-row hit pad | Toggle that generated hit on/off and target it for per-hit edits |
+| Hold `MUTE_4` + hit pad | Delete gesture remains available for clip actions; hit toggling is direct on the bottom row |
 | `SHIFT` + hit pad | Reset that hit's local edits |
 
 ### Nested Rhythm Encoders
@@ -363,8 +363,8 @@ Melodic recurrence editing:
 | --- | --- | --- | --- | --- |
 | `Channel` | Density | Tuplet count / `ALT`: cover | Ratchet count / `ALT`: width | Velocity rotate / `ALT`: ratchet phase / `SHIFT`: tuplet phase |
 | `Mixer` | Velocity depth / `ALT`: center | Unused | Unused | Unused |
-| `User 1` | Selected hit velocity | Selected hit gate | Selected hit enable | Selected hit select |
-| `User 2` | Linear pitch | Reset hit edits | Unused | Unused |
+| `User 1` | Selected hit velocity | Selected hit gate | Unused | Unused |
+| `User 2` | Linear pitch | Clip length | Reset hit edits | Meter readout |
 
 Timing note:
 
@@ -377,8 +377,10 @@ Control note:
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
 - `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
-- `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` switches through `Off`, `Back`, and `Both`, and `Tuplet Phase` flips half-bar tuplets between back and front
-- `Ratchet Width` expands ratchets across beats in the deterministic order `1, 3, 2, 4`, and `Ratchet Phase` rotates that selection
+- `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
+- `Hit Gate` edits the selected hit when one is targeted; if no hit is selected it applies to all current generated hits
+- `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that continuous claimed region across the clip
+- `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
 - `Tuplet` currently uses `3 / 5 / 7`, while `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 ## PERFORM Mode

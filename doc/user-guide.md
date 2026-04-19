@@ -345,16 +345,15 @@ Main gestures:
 - `PATTERN UP`: generate the current nested rhythm into the selected clip
 - `PATTERN DOWN` or `MUTE_2`: reset hit-level edits
 - tap a projected rhythm pad: select the nearest generated hit
-- tap a bottom-row hit pad: select that hit
-- hold `MUTE_4` and tap a hit pad: toggle that hit on or off
+- tap a bottom-row hit pad: toggle that hit on or off and target it for per-hit edits
 - hold `SHIFT` and tap a hit pad: reset that hit's local edits
 
 Encoder pages:
 
 - `Channel`: density, tuplet count with `ALT` for cover, ratchet count with `ALT` for width, and velocity rotation with `ALT` ratchet phase and `SHIFT` tuplet phase
 - `Mixer`: velocity depth with `ALT` for velocity center
-- `User 1`: selected-hit velocity trim, gate, enable, and hit selection
-- `User 2`: linear pitch, reset hit edits
+- `User 1`: selected-hit velocity trim and gate
+- `User 2`: linear pitch, clip length, reset hit edits, transport meter readout
 
 Timing note:
 
@@ -367,9 +366,11 @@ Control note:
 - `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
 - `Vel Depth` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
+- `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
+- `Hit Gate` edits the selected hit when one is targeted; if no hit is selected it applies to all current generated hits
 - `Tuplet` and `Ratchet` both default to `Off`
-- `Cover` currently steps through `Off`, `Back`, and `Both`, while `Tuplet Phase` flips half-bar tuplets between back and front
-- `Ratchet Width` expands ratchets across multiple beats in the deterministic order `1, 3, 2, 4`, and `Ratchet Phase` rotates that selection
+- `Cover` now sets how many consecutive half-bars are claimed by the tuplet span, and `Tuplet Phase` rotates that continuous claimed region across the clip
+- `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
 - `Tuplet` currently uses `3 / 5 / 7`, while `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 
