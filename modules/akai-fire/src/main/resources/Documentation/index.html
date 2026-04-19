@@ -385,6 +385,7 @@
         <li>hold a projected rhythm pad: target the nearest generated hit while held</li>
         <li>tap a bottom-row hit pad: toggle that generated hit on or off</li>
         <li>hold a bottom-row hit pad while turning an expression encoder: edit that hit directly</li>
+        <li>while a hit is held, Row 1 becomes an 8-step recurrence mask for that hit</li>
         <li><code>SHIFT</code> + hit pad: reset that hit's local edits</li>
       </ul>
       <p>Encoder pages:</p>
@@ -405,6 +406,7 @@
         <li><code>Density</code> is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately</li>
         <li><code>User 1</code> is the expression page; it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit</li>
         <li><code>Chance</code> is a native Bitwig note chance lane here: plain turn edits chance depth, <code>ALT</code> edits chance baseline, <code>SHIFT</code> edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit</li>
+        <li>while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped</li>
         <li><code>User 2</code> pitch is a single non-wrapping note control rather than separate root and octave knobs</li>
         <li><code>User 2 / Encoder 2</code> controls generated clip length in bars, and <code>User 2 / Encoder 4</code> shows the current Bitwig transport meter used by the generator</li>
         <li><code>Hit Gate</code> edits the held hit when one is being held; otherwise it applies to all current generated hits</li>

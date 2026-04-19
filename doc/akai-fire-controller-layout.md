@@ -355,6 +355,7 @@ Melodic recurrence editing:
 | Hold projected rhythm pad | Target the nearest generated hit while held |
 | Tap bottom-row hit pad | Toggle that generated hit on/off |
 | Hold bottom-row hit pad while turning an expression encoder | Edit that hit directly |
+| Hold a hit, then use Row 1 pads 1-8 | Edit that hit's recurrence mask across up to 8 phrase revolutions |
 | Hold `MUTE_4` + hit pad | Delete gesture remains available for clip actions; hit toggling is direct on the bottom row |
 | `SHIFT` + hit pad | Reset that hit's local edits |
 
@@ -378,6 +379,7 @@ Control note:
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
 - `User 1` is the expression page; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
 - `Channel / Encoder 4` writes Bitwig note chance: plain turn edits chance depth, `ALT` edits chance baseline, and `SHIFT` edits chance rotation; holding a hit turns the plain action into a direct chance edit for that hit
+- while a hit is held, Row 1 temporarily becomes an 8-pad recurrence mask instead of the clip row
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
 - `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits

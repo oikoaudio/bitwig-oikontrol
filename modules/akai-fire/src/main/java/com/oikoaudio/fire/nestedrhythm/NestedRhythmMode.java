@@ -32,6 +32,7 @@ import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
+import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.utils.PatternButtons;
 
 import java.util.ArrayList;
@@ -231,6 +232,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
+        if (padIndex < CLIP_ROW_PAD_COUNT && hasHeldPulse()) {
+            handleRecurrencePadPress(padIndex, pressed);
+            return;
+        }
         if (padIndex < CLIP_ROW_PAD_COUNT) {
             clipHandler.handlePadPress(padIndex, pressed);
             return;
@@ -278,6 +283,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
+        if (padIndex < CLIP_ROW_PAD_COUNT && hasHeldPulse()) {
+            return recurrencePadLight(padIndex);
+        }
         if (padIndex < CLIP_ROW_PAD_COUNT) {
             return clipHandler.getPadLight(padIndex);
         }
@@ -349,8 +357,39 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return;
         }
         final EditablePulse pulse = editablePulses.get(heldPulseIndex);
+        final RecurrencePattern recurrence = pulse.effectiveRecurrence();
         oled.valueInfo("Hit %d".formatted(heldPulseIndex + 1),
-                "%s Vel %d Gate %.2f".formatted(pulse.roleLabel(), pulse.effectiveVelocity(), pulse.gateScale));
+                "%s Vel %d Rec %s".formatted(pulse.roleLabel(), pulse.effectiveVelocity(), recurrence.summary()));
+    }
+
+    private void handleRecurrencePadPress(final int padIndex, final boolean pressed) {
+        if (!pressed || padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN || !hasHeldPulse()) {
+            return;
+        }
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final RecurrencePattern updated = pulse.effectiveRecurrence().toggledAt(padIndex);
+        pulse.recurrenceLength = updated.length();
+        pulse.recurrenceMask = updated.mask();
+        applyEditablePattern("Recurrence", updated.summary());
+    }
+
+    private RgbLigthState recurrencePadLight(final int padIndex) {
+        if (!hasHeldPulse()) {
+            return clipHandler.getPadLight(padIndex);
+        }
+        if (padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
+            return RgbLigthState.OFF;
+        }
+        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final RecurrencePattern recurrence = pulse.effectiveRecurrence();
+        final int span = recurrence.effectiveSpan();
+        if (padIndex >= span) {
+            return RgbLigthState.OFF;
+        }
+        final int mask = recurrence.effectiveMask(span);
+        return ((mask >> padIndex) & 0x1) == 1
+                ? clipBaseColor().getBrightend()
+                : clipBaseColor().getDimmed();
     }
 
     private void handlePlayingStep(final int fineStep) {
@@ -489,6 +528,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         final double chance = pulse.effectiveChance();
         step.setChance(chance);
         step.setIsChanceEnabled(chance < 0.9999);
+        final RecurrencePattern recurrence = pulse.effectiveRecurrence();
+        step.setRecurrence(recurrence.bitwigLength(), recurrence.bitwigMask());
     }
 
     private double shapedUnitExpression(final int order,
@@ -1558,6 +1599,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         private double timbreOffset = 0.0;
         private double pitchExpressionOffset = 0.0;
         private double chanceOffset = 0.0;
+        private int recurrenceLength = 0;
+        private int recurrenceMask = 0;
         private boolean enabled = true;
 
         private EditablePulse(final NestedRhythmPattern.PulseEvent event) {
@@ -1591,6 +1634,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return clampUnit(shapedChance(order, role, chanceBaseline, chanceDepth, chanceRotation) + chanceOffset);
         }
 
+        private RecurrencePattern effectiveRecurrence() {
+            return RecurrencePattern.of(recurrenceLength, recurrenceMask);
+        }
+
         private double effectiveDuration() {
             return Math.max(1.0, baseDuration * gateScale);
         }
@@ -1618,6 +1665,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             timbreOffset = 0.0;
             pitchExpressionOffset = 0.0;
             chanceOffset = 0.0;
+            recurrenceLength = 0;
+            recurrenceMask = 0;
             enabled = true;
         }
 
@@ -1628,6 +1677,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             timbreOffset = other.timbreOffset;
             pitchExpressionOffset = other.pitchExpressionOffset;
             chanceOffset = other.chanceOffset;
+            recurrenceLength = other.recurrenceLength;
+            recurrenceMask = other.recurrenceMask;
             enabled = other.enabled;
         }
 

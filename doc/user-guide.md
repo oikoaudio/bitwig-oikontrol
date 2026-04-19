@@ -347,6 +347,7 @@ Main gestures:
 - hold a projected rhythm pad: target the nearest generated hit while held
 - tap a bottom-row hit pad: toggle that hit on or off
 - hold a bottom-row hit pad while turning an expression encoder: edit that hit directly
+- while a hit is held, Row 1 becomes an 8-step recurrence mask for that hit
 - hold `SHIFT` and tap a hit pad: reset that hit's local edits
 
 Encoder pages:
@@ -368,6 +369,7 @@ Control note:
 - `Vel Spread` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
 - `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit
 - `Chance` is a native Bitwig note chance lane here: plain turn edits chance depth, `ALT` edits chance baseline, `SHIFT` edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit
+- while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
 - `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits
