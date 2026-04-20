@@ -28,8 +28,10 @@ class SharedMusicalContextTest {
 
         assertTrue(context.adjustScaleIndex(1, -1));
         assertEquals(2, context.getScaleIndex());
-        assertFalse(context.adjustScaleIndex(-10, -1));
-        assertEquals(2, context.getScaleIndex());
+        assertTrue(context.adjustScaleIndex(-10, -1));
+        assertEquals(1, context.getScaleIndex());
+        assertFalse(context.adjustScaleIndex(-1, -1));
+        assertEquals(1, context.getScaleIndex());
     }
 
     @Test

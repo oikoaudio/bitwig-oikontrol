@@ -67,7 +67,20 @@ public final class SharedPitchContextController {
     }
 
     public MusicalScale getMusicalScale() {
-        return scaleLibrary.getMusicalScale(getScaleIndex());
+        if (scaleLibrary == null || scaleLibrary.getMusicalScalesCount() <= 0) {
+            return null;
+        }
+        final MusicalScale preferred = scaleAt(getScaleIndex());
+        if (preferred != null) {
+            return preferred;
+        }
+        for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
+            final MusicalScale candidate = scaleAt(i);
+            if (candidate != null) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     public SharedMusicalContext context() {
@@ -88,11 +101,22 @@ public final class SharedPitchContextController {
     }
 
     int findScaleIndex(final String scaleName, final int fallbackIndex) {
+        if (scaleLibrary == null || scaleLibrary.getMusicalScalesCount() <= 0) {
+            return fallbackIndex;
+        }
         for (int i = 0; i < scaleLibrary.getMusicalScalesCount(); i++) {
-            if (scaleLibrary.getMusicalScale(i).getName().equals(scaleName)) {
+            final MusicalScale scale = scaleAt(i);
+            if (scale != null && scale.getName().equals(scaleName)) {
                 return i;
             }
         }
         return fallbackIndex;
+    }
+
+    private MusicalScale scaleAt(final int index) {
+        if (scaleLibrary == null || index < 0 || index >= scaleLibrary.getMusicalScalesCount()) {
+            return null;
+        }
+        return scaleLibrary.getMusicalScale(index);
     }
 }

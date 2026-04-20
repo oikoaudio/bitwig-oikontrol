@@ -1,6 +1,7 @@
 package com.oikoaudio.fire;
 
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
@@ -8,6 +9,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
+import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.TopLevelModeState.Mode;
 import com.bitwig.extensions.framework.MusicalScale;
@@ -36,8 +38,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
     private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
+    private static final int BROWSER_OPEN_DEFER_MS = 40;
     private static final int SETTINGS_PAD_COLUMNS = 16;
     private static final int SETTINGS_PAD_ROWS = 4;
+    private static final int GLOBAL_ROOT_ENCODER_THRESHOLD = 16;
+    private static final int GLOBAL_SCALE_ENCODER_THRESHOLD = 8;
+    private static final int GLOBAL_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
     private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
     private static final boolean[][] SETTINGS_LOGO = {
@@ -76,6 +82,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private Layer mainLayer;
     private Layer globalSettingsLayer;
+    private final EncoderStepAccumulator[] globalSettingsAccumulators = new EncoderStepAccumulator[]{
+            new EncoderStepAccumulator(GLOBAL_ROOT_ENCODER_THRESHOLD),
+            new EncoderStepAccumulator(GLOBAL_SCALE_ENCODER_THRESHOLD),
+            new EncoderStepAccumulator(GLOBAL_OCTAVE_ENCODER_THRESHOLD),
+            new EncoderStepAccumulator(GLOBAL_SCALE_ENCODER_THRESHOLD)
+    };
     private final RgbButton[] rgbButtons = new RgbButton[64];
     private final TouchEncoder[] encoders = new TouchEncoder[4];
     private final MultiStateHardwareLight[] stateLights = new MultiStateHardwareLight[4];
@@ -125,7 +137,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private boolean globalSettingsOverlayActive = false;
-    private boolean globalSettingsGestureArmed = false;
+    private int browserPressToken = 0;
+    private int transportTimeSignatureNumerator = 4;
+    private int transportTimeSignatureDenominator = 4;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
@@ -137,6 +151,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private NotePlayMode notePlayMode;
     private ChordStepMode chordStepMode;
     private MelodicStepMode melodicStepMode;
+    private NestedRhythmMode nestedRhythmMode;
     private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
     private final TopLevelModeState modeState = new TopLevelModeState();
@@ -145,7 +160,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     private enum DrumSubMode {
-        STANDARD(BiColorLightState.GREEN_FULL);
+        STANDARD(BiColorLightState.GREEN_FULL),
+        NESTED_RHYTHM(BiColorLightState.AMBER_FULL);
 
         private final BiColorLightState lightState;
 
@@ -158,7 +174,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
 
         public DrumSubMode next() {
-            return STANDARD;
+            return this == STANDARD ? NESTED_RHYTHM : STANDARD;
         }
     }
 
@@ -225,6 +241,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
         chordStepMode = new ChordStepMode(this, noteRepeatHandler);
         melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
+        nestedRhythmMode = new NestedRhythmMode(this);
         performMode = new PerformClipLauncherMode(this);
         initGlobalSettingsOverlay();
         oled.setIdleAction(this::showIdleOledInfo);
@@ -247,6 +264,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode.notifyBlink(blinkTicks);
         chordStepMode.notifyBlink(blinkTicks);
         melodicStepMode.notifyBlink(blinkTicks);
+        nestedRhythmMode.notifyBlink(blinkTicks);
         performMode.notifyBlink(blinkTicks);
         host.scheduleTask(this::handlePing, 100);
     }
@@ -413,6 +431,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void setUpTransportControl() {
         transport.isPlaying().markInterested();
+        transport.timeSignature().markInterested();
+        transport.timeSignature().numerator().markInterested();
+        transport.timeSignature().denominator().markInterested();
+        transport.timeSignature().numerator().addValueObserver(value -> transportTimeSignatureNumerator = value);
+        transport.timeSignature().denominator().addValueObserver(value -> transportTimeSignatureDenominator = value);
         transport.tempo().markInterested();
         transport.tempo().name().markInterested();
         transport.tempo().value().markInterested();
@@ -480,8 +503,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void initGlobalSettingsOverlay() {
         for (int index = 0; index < encoders.length; index++) {
             final int encoderIndex = index;
-            encoders[index].bindContinuousEncoder(globalSettingsLayer, () -> false,
-                    inc -> adjustGlobalSettings(encoderIndex, inc));
+            encoders[index].bindEncoder(globalSettingsLayer, inc -> {
+                final int steps = globalSettingsAccumulators[encoderIndex].consume(inc);
+                if (steps != 0) {
+                    adjustGlobalSettings(encoderIndex, steps);
+                }
+            });
             encoders[index].bindTouched(globalSettingsLayer,
                     touched -> handleGlobalSettingsTouch(encoderIndex, touched));
         }
@@ -524,6 +551,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isTransportPlaying() {
         return transport != null && transport.isPlaying().get();
+    }
+
+    public int getTransportTimeSignatureNumerator() {
+        return transportTimeSignatureNumerator;
+    }
+
+    public int getTransportTimeSignatureDenominator() {
+        return transportTimeSignatureDenominator;
     }
 
     private BiColorLightState getRecordState() {
@@ -571,6 +606,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private BiColorLightState getStepState() {
         if (modeState.activeMode() == Mode.MELODIC_STEP && melodicStepMode != null) {
             return melodicStepMode.getModeButtonLightState();
+        }
+        if (modeState.activeMode() == Mode.NESTED_RHYTHM && nestedRhythmMode != null) {
+            return nestedRhythmMode.getModeButtonLightState();
         }
         return BiColorLightState.OFF;
     }
@@ -679,10 +717,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (modeState.activeMode() == Mode.DRUM) {
             activeDrumSubMode = activeDrumSubMode.next();
+            switchActiveMode();
+            notifyAction("Mode", activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum");
         } else {
             modeState.activateDrum();
             switchActiveMode();
-            notifyAction("Mode", "Drum");
+            notifyAction("Mode", activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum");
         }
     }
 
@@ -732,7 +772,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (modeState.activeMode() == Mode.CHORD_STEP) {
-            if (!pressed || isGlobalShiftHeld() || isGlobalAltHeld()) {
+            if (!pressed || isGlobalAltHeld()) {
                 return;
             }
             enterMelodicStepMode();
@@ -762,6 +802,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (!enteringPerform) {
+            if (performMode.isTrackActionMode()) {
+                performMode.toggleTrackActionMode();
+                notifyAction("Mode", performMode.activePageLabel());
+                return;
+            }
             performMode.toggleOrientation();
         }
         notifyAction("Mode", performMode.activePageLabel());
@@ -964,10 +1009,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode.deactivate();
         chordStepMode.deactivate();
         melodicStepMode.deactivate();
+        nestedRhythmMode.deactivate();
         performMode.deactivate();
         if (modeState.activeMode() == Mode.DRUM) {
             applyDrumPinningIfEnabled();
-            drumSequenceMode.activate();
+            if (activeDrumSubMode == DrumSubMode.NESTED_RHYTHM) {
+                nestedRhythmMode.activate();
+            } else {
+                drumSequenceMode.activate();
+            }
             refreshSurfaceLights();
             return;
         }
@@ -977,6 +1027,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             chordStepMode.activate();
         } else if (modeState.activeMode() == Mode.MELODIC_STEP) {
             melodicStepMode.activate();
+        } else if (modeState.activeMode() == Mode.NESTED_RHYTHM) {
+            nestedRhythmMode.activate();
         } else {
             performMode.activate();
         }
@@ -1120,6 +1172,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notifyAction("Mode", "Step");
     }
 
+    public void enterNestedRhythmMode() {
+        suppressNextMelodicStepRelease = true;
+        activeDrumSubMode = DrumSubMode.NESTED_RHYTHM;
+        modeState.activateDrum();
+        switchActiveMode();
+        notifyAction("Mode", "Nested Rhythm");
+    }
+
     public boolean isEuclidFullClipEnabled() {
         return euclidScopePref != null
                 && FireControlPreferences.EUCLID_SCOPE_FULL_CLIP.equals(
@@ -1137,12 +1197,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 && FireControlPreferences.shouldAutoPinFirstDrumMachine(drumPinModePref.get());
     }
 
+    private boolean shouldAutoPinStandardDrumMode() {
+        return modeState.activeMode() == Mode.DRUM
+                && activeDrumSubMode == DrumSubMode.STANDARD
+                && shouldAutoPinFirstDrumMachine();
+    }
+
     private void syncDrumPinningForActiveMode() {
         if (modeState.activeMode() == Mode.DRUM) {
-            if (shouldAutoPinFirstDrumMachine()) {
+            if (shouldAutoPinStandardDrumMode()) {
                 applyDrumPinningIfEnabled();
             } else {
-                releaseAutoPinnedDrumContext(false);
+                releaseAutoPinnedDrumContext(true);
             }
             return;
         }
@@ -1150,7 +1216,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void applyDrumPinningIfEnabled() {
-        if (!shouldAutoPinFirstDrumMachine() || drumAutoPinApplied || deviceLocator == null || viewControl == null) {
+        if (!shouldAutoPinStandardDrumMode() || drumAutoPinApplied || deviceLocator == null || viewControl == null) {
             return;
         }
 
@@ -1170,7 +1236,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void ensureDrumPinningStillValid() {
-        if (modeState.activeMode() != Mode.DRUM || !shouldAutoPinFirstDrumMachine() || !drumAutoPinApplied
+        if (!shouldAutoPinStandardDrumMode() || !drumAutoPinApplied
                 || viewControl == null || deviceLocator == null) {
             return;
         }
@@ -1254,10 +1320,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         final String modeLabel = switch (modeState.activeMode()) {
-            case DRUM -> "Drum";
+            case DRUM -> activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum";
             case NOTE_PLAY -> "Note";
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melodic Step";
+            case NESTED_RHYTHM -> "Nested Rhythm";
             case PERFORM -> "Perform";
         };
         oled.valueInfo("Mode", modeLabel);
@@ -1324,6 +1391,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         globalSettingsOverlayActive = true;
+        drumSequenceMode.deactivate();
+        notePlayMode.deactivate();
+        chordStepMode.deactivate();
+        melodicStepMode.deactivate();
+        nestedRhythmMode.deactivate();
+        performMode.deactivate();
         globalSettingsLayer.activate();
         showGlobalSettingsOverview();
         refreshSurfaceLights();
@@ -1335,6 +1408,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         globalSettingsOverlayActive = false;
         globalSettingsLayer.deactivate();
+        switchActiveMode();
         oled.clearScreenDelayed();
         refreshSurfaceLights();
     }
@@ -1342,7 +1416,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void updateGlobalSettingsOverlayState() {
         final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
         final boolean shouldShow = browserButton != null
-                && globalSettingsGestureArmed
                 && browserButton.isPressed()
                 && isGlobalShiftHeld()
                 && !isGlobalAltHeld()
@@ -1367,7 +1440,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (encoderIndex == 0) {
-            sharedPitchContext.adjustRootNote(inc);
+            final int nextRoot = Math.max(0, Math.min(11, sharedPitchContext.getRootNote() + inc));
+            sharedPitchContext.setRootNote(nextRoot);
             oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
             return;
         }
@@ -1386,6 +1460,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleGlobalSettingsTouch(final int encoderIndex, final boolean touched) {
         if (!touched) {
+            globalSettingsAccumulators[encoderIndex].reset();
             showGlobalSettingsOverview();
             return;
         }
@@ -1429,11 +1504,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean isGlobalAltHeld() {
-        return altActive.get();
+        final BiColorButton button = getButton(NoteAssign.ALT);
+        return button != null ? button.isPressed() : altActive.get();
     }
 
     public boolean isGlobalShiftHeld() {
-        return shiftActive.get();
+        final BiColorButton button = getButton(NoteAssign.SHIFT);
+        return button != null ? button.isPressed() : shiftActive.get();
+    }
+
+    public void refreshGlobalSettingsOverlayState() {
+        updateGlobalSettingsOverlayState();
     }
 
     public void setMainEncoderPressed(final boolean pressed) {
@@ -1461,7 +1542,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (inc == 0 || viewControl == null) {
             return;
         }
-        if (modeState.activeMode() == Mode.DRUM && shouldAutoPinFirstDrumMachine()) {
+        if (shouldAutoPinStandardDrumMode()) {
             oled.valueInfo("Track Sel.", "Pinned");
             notifyPopup("Track Sel.", "Pinned");
             return;
@@ -1500,12 +1581,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleBrowserPressed(final boolean pressed) {
         if (!pressed) {
-            globalSettingsGestureArmed = false;
+            browserPressToken++;
             updateGlobalSettingsOverlayState();
             oled.clearScreenDelayed();
             return;
         }
-        globalSettingsGestureArmed = isGlobalShiftHeld() && !isGlobalAltHeld();
         updateGlobalSettingsOverlayState();
         if (isPopupBrowserActive()) {
             popupBrowser.cancel();
@@ -1515,6 +1595,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (isGlobalShiftHeld() && !isGlobalAltHeld()) {
             activateGlobalSettingsOverlay();
             notifyAction("Settings", "Global");
+            return;
+        }
+        final int pressToken = ++browserPressToken;
+        host.scheduleTask(() -> maybeOpenPopupBrowser(pressToken), BROWSER_OPEN_DEFER_MS);
+    }
+
+    private void maybeOpenPopupBrowser(final int pressToken) {
+        if (pressToken != browserPressToken) {
+            return;
+        }
+        final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
+        if (browserButton == null || !browserButton.isPressed()) {
+            return;
+        }
+        if (isGlobalShiftHeld() || isGlobalAltHeld() || globalSettingsOverlayActive || isPopupBrowserActive()) {
             return;
         }
         openPopupBrowser();

@@ -184,7 +184,7 @@ Useful live-note controls:
 - `MUTE_1`: sustain
 - `MUTE_2`: sostenuto
 
-`Melodic Step` and `Chord Step` now live behind `STEP SEQ` rather than under `NOTE`.
+`Melodic Step` and `Chord Step` live behind `STEP SEQ`. `Nested Rhythm` is now the second main `DRUM` surface.
 
 Quick start:
 
@@ -196,7 +196,7 @@ Quick start:
 The shared `Root Key`, `Scale`, and `Octave` are global across `NOTE`, `Chord Step`, `Melodic Step`, and the held `SHIFT + BROWSER` settings overlay.
 
 ### Chord Step workflow
-Press `STEP SEQ` once to enter `Melodic Step`, then press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
+Press `STEP SEQ` once to enter `Melodic Step`. Press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
 
 `Chord Step` is the chord-oriented note-step workflow.
 
@@ -328,6 +328,62 @@ Notes on generation:
 - `Call/Resp` creates a call phrase and an answering phrase
 - `Rolling` targets denser rolling bassline motion
 - the OLED generation message shows the current mode family, for example `Acd.RootAnswer`
+
+### Nested Rhythm mode
+
+`Nested Rhythm` is the second main `DRUM` surface. It generates rhythm from nested segment divisions rather than fixed-grid step placement, so it is suited to tuplets, ratchets, asymmetric subdivisions, and other layered rhythmic structures that are awkward to program directly on a coarse step grid (or, frankly, awkward to program/play - pretty good to change up your usual rythms). It has mostly been tested in 4/4 so far but should support other meters too.
+
+The mode slices segments into symmetric and asymmetric subdivisions, writes the exact result onto a hidden fine clip grid, then projects the generated hits back to the Fire. It also adds musical expression layers for velocity, pressure, timbre, and related hit variation that can be rotated across the generated hits for different feels without rebuilding the structure from scratch.
+
+If you enter the mode with a selected clip slot that is still empty, the mode now generates its default starter pattern automatically once.
+
+- press `DRUM` again while already in `DRUM` to toggle between standard drum sequencing and `Nested Rhythm`
+- `STEP SEQ`: enter `Melodic Step`
+- press `DRUM` again to return to standard drum sequencing
+- Row 1: clip row
+- Rows 2-3: projected rhythm view
+- Row 4: first 16 generated hits in hit order, shown by velocity with playhead highlight
+
+Main gestures:
+
+- `PATTERN UP`: generate the current nested rhythm into the selected clip
+- hold `MUTE_2`, then tap a projected rhythm pad in Rows 2-3: set the last step within the 32-step edit view
+- `PATTERN DOWN` or `ALT` + `MUTE_4`: reset hit-level edits for the current selected clip
+- hold a projected rhythm pad: target the nearest generated hit while held
+- tap a bottom-row hit pad: toggle that hit on or off
+- hold a bottom-row hit pad while turning an expression encoder: edit that hit directly
+- while a hit is held, Row 1 becomes an 8-step recurrence mask for that hit
+- hold `SHIFT` and tap a hit pad: reset that hit's local edits
+
+Encoder pages:
+
+- `Channel`: density with `SHIFT` for generated recurrence, tuplet count with `ALT` for cover and `SHIFT` for phase, ratchet count with `ALT` for width and `SHIFT` for phase, and chance with `ALT` for baseline and `SHIFT` for rotation
+- `Mixer`: volume, pan, send 1, send 2
+- `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
+- `User 2`: linear pitch, clip length with `ALT` for play start, reset hit edits, transport meter readout
+
+Timing note:
+
+- note timing is not editable from the Fire in this mode
+- exact starts are written to a hidden fine grid inside the clip
+- the Fire pad view is a projection of that rhythm, not the literal note grid
+
+Control note:
+
+- `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
+- `SHIFT + Density` now generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first
+- when `Density` thins a tuplet- or ratchet-owned span, it now removes visible hits from that claimed span without reviving an underlying base pulse there
+- `Vel Spread` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
+- `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit
+- `Chance` is a native Bitwig note chance lane here: plain turn edits chance depth, `ALT` edits chance baseline, `SHIFT` edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit
+- while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped
+- `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
+- `User 2 / Encoder 2` controls generated clip length in bars, with `ALT` adjusting clip play start in meter-aware beat steps; `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
+- `Tuplet` and `Ratchet` both default to `Off`
+- `Cover` now sets how many consecutive half-bars are claimed by the tuplet span, and `Tuplet Phase` rotates that continuous claimed region across the clip
+- `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
+- available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`
+- `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 
 ### PERFORM mode
