@@ -372,7 +372,8 @@
       </ul>
 
       <h3>Nested Rhythm workflow</h3>
-      <p><code>Nested Rhythm</code> is the second main <code>DRUM</code> surface: a separate non-editable generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.</p>
+      <p><code>Nested Rhythm</code> is the second main <code>DRUM</code> surface. It generates rhythm from nested segment divisions rather than fixed-grid step placement, so it is suited to tuplets, ratchets, asymmetric subdivisions, and other layered rhythmic structures that are awkward to program directly on a coarse step grid.</p>
+      <p>The mode slices segments into symmetric and asymmetric subdivisions, writes the exact result onto a hidden fine clip grid, then projects the generated hits back to the Fire. It also adds musical expression layers for velocity, pressure, timbre, and related hit variation that can be rotated across the generated hits for different feels without rebuilding the structure from scratch.</p>
       <p>If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern automatically once.</p>
       <ul>
         <li>press <code>DRUM</code> again while already in <code>DRUM</code>: toggle to <code>Nested Rhythm</code></li>

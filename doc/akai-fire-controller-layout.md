@@ -333,7 +333,7 @@ Melodic recurrence editing:
 
 ## Nested Rhythm
 
-`Nested Rhythm` is the second main `DRUM` surface: a separate non-editable rhythm generator mode for exact tuplets and ratchets on a hidden fine clip grid.
+`Nested Rhythm` is the second main `DRUM` surface. It is a generator-based drum workflow that writes exact timing to a hidden fine clip grid and projects the resulting hits back to the Fire.
 
 If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern automatically once.
 

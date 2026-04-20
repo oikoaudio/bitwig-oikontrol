@@ -2,6 +2,12 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.7.0 - Nested Rhythm mode and global control fixes
+- Added a new Akai Fire `Nested Rhythm` drum mode for generating rhythm from nested segment divisions rather than fixed-grid step placement. The mode slices segments into symmetric and asymmetric subdivisions (tuplets and ratches) in a musically interesting way, and adds expression layer profiles for pressure, timbre, velocity, and chance that can be rotated across the generated hits. Rhythmic structures can be changed on the fly, generated hits can be embellished with per-hit edits, and recurrence can be generated or edited using the same gesture as in `Melodic Step`.
+- (improvement) `PERFORM` now exits the `SHIFT + PERFORM` track-action page for easier exit
+- `SHIFT + BROWSER` global-settings access is more robust, including in Drum Seq
+- global root/scale/octave settings now use slower stepped encoders, clamped scale bounds, and safer scale lookup handling
+
 ## 2.6.0 - Perform track actions and encoder behavior refinement
 - Added a `SHIFT + PERFORM` track-action page for `Stop`, `Solo`, `Mute`, and `Arm`
 - Unified Akai Fire encoder turn and touch-reset behavior behind shared control helpers
