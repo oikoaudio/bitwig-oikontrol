@@ -1,6 +1,7 @@
 package com.oikoaudio.fire;
 
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
@@ -39,6 +40,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
     private static final int SETTINGS_PAD_COLUMNS = 16;
     private static final int SETTINGS_PAD_ROWS = 4;
+    private static final int GLOBAL_ROOT_ENCODER_THRESHOLD = 16;
+    private static final int GLOBAL_SCALE_ENCODER_THRESHOLD = 8;
+    private static final int GLOBAL_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
     private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
     private static final boolean[][] SETTINGS_LOGO = {
@@ -77,6 +81,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private Layer mainLayer;
     private Layer globalSettingsLayer;
+    private final EncoderStepAccumulator[] globalSettingsAccumulators = new EncoderStepAccumulator[]{
+            new EncoderStepAccumulator(GLOBAL_ROOT_ENCODER_THRESHOLD),
+            new EncoderStepAccumulator(GLOBAL_SCALE_ENCODER_THRESHOLD),
+            new EncoderStepAccumulator(GLOBAL_OCTAVE_ENCODER_THRESHOLD),
+            new EncoderStepAccumulator(GLOBAL_SCALE_ENCODER_THRESHOLD)
+    };
     private final RgbButton[] rgbButtons = new RgbButton[64];
     private final TouchEncoder[] encoders = new TouchEncoder[4];
     private final MultiStateHardwareLight[] stateLights = new MultiStateHardwareLight[4];
@@ -492,8 +502,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void initGlobalSettingsOverlay() {
         for (int index = 0; index < encoders.length; index++) {
             final int encoderIndex = index;
-            encoders[index].bindContinuousEncoder(globalSettingsLayer, () -> false,
-                    inc -> adjustGlobalSettings(encoderIndex, inc));
+            encoders[index].bindEncoder(globalSettingsLayer, inc -> {
+                final int steps = globalSettingsAccumulators[encoderIndex].consume(inc);
+                if (steps != 0) {
+                    adjustGlobalSettings(encoderIndex, steps);
+                }
+            });
             encoders[index].bindTouched(globalSettingsLayer,
                     touched -> handleGlobalSettingsTouch(encoderIndex, touched));
         }
@@ -1376,6 +1390,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         globalSettingsOverlayActive = true;
+        drumSequenceMode.deactivate();
+        notePlayMode.deactivate();
+        chordStepMode.deactivate();
+        melodicStepMode.deactivate();
+        nestedRhythmMode.deactivate();
+        performMode.deactivate();
         globalSettingsLayer.activate();
         showGlobalSettingsOverview();
         refreshSurfaceLights();
@@ -1387,6 +1407,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         globalSettingsOverlayActive = false;
         globalSettingsLayer.deactivate();
+        switchActiveMode();
         oled.clearScreenDelayed();
         refreshSurfaceLights();
     }
@@ -1419,7 +1440,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (encoderIndex == 0) {
-            sharedPitchContext.adjustRootNote(inc);
+            final int nextRoot = Math.max(0, Math.min(11, sharedPitchContext.getRootNote() + inc));
+            sharedPitchContext.setRootNote(nextRoot);
             oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
             return;
         }
@@ -1438,6 +1460,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleGlobalSettingsTouch(final int encoderIndex, final boolean touched) {
         if (!touched) {
+            globalSettingsAccumulators[encoderIndex].reset();
             showGlobalSettingsOverview();
             return;
         }
