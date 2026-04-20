@@ -1508,7 +1508,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (inc == 0 || viewControl == null) {
             return;
         }
-        if (modeState.activeMode() == Mode.DRUM && shouldAutoPinFirstDrumMachine()) {
+        if (shouldAutoPinStandardDrumMode()) {
             oled.valueInfo("Track Sel.", "Pinned");
             notifyPopup("Track Sel.", "Pinned");
             return;
