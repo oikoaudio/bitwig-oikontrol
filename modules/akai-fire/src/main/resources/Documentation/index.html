@@ -254,7 +254,7 @@
         <li><code>MUTE_1</code>: sustain</li>
         <li><code>MUTE_2</code>: sostenuto</li>
       </ul>
-      <p><code>Melodic Step</code> and <code>Chord Step</code> now live behind <code>STEP SEQ</code> rather than under <code>NOTE</code>.</p>
+      <p><code>Melodic Step</code> and <code>Chord Step</code> live behind <code>STEP SEQ</code>. <code>Nested Rhythm</code> is now the second main <code>DRUM</code> surface.</p>
       <p>Quick start:</p>
       <ol>
         <li>Enter <code>NOTE</code>.</li>
@@ -369,6 +369,55 @@
         <li><code>Call/Resp</code> creates a call phrase and an answering phrase</li>
         <li><code>Rolling</code> targets denser rolling bassline motion</li>
         <li>the OLED generation message shows the current mode family, for example <code>Acd.RootAnswer</code></li>
+      </ul>
+
+      <h3>Nested Rhythm workflow</h3>
+      <p><code>Nested Rhythm</code> is the second main <code>DRUM</code> surface. It generates rhythm from nested segment divisions rather than fixed-grid step placement, so it is suited to tuplets, ratchets, asymmetric subdivisions, and other layered rhythmic structures that are awkward to program directly on a coarse step grid.</p>
+      <p>The mode slices segments into symmetric and asymmetric subdivisions, writes the exact result onto a hidden fine clip grid, then projects the generated hits back to the Fire. It also adds musical expression layers for velocity, pressure, timbre, and related hit variation that can be rotated across the generated hits for different feels without rebuilding the structure from scratch.</p>
+      <p>If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern automatically once.</p>
+      <ul>
+        <li>press <code>DRUM</code> again while already in <code>DRUM</code>: toggle to <code>Nested Rhythm</code></li>
+        <li><code>STEP SEQ</code>: enter <code>Melodic Step</code></li>
+        <li>press <code>DRUM</code> while in <code>Nested Rhythm</code>: return to standard drum sequencing</li>
+        <li>Row 1: clip row</li>
+        <li>Rows 2-3: projected rhythm view</li>
+        <li>Row 4: first 16 generated hits in hit order, shown by velocity with playhead highlight</li>
+        <li><code>PATTERN UP</code>: generate the current rhythm into the selected clip</li>
+        <li>hold <code>MUTE_2</code>, then tap a projected rhythm pad in Rows 2-3: set the last step within the 32-step edit view</li>
+        <li><code>PATTERN DOWN</code> or <code>ALT</code> + <code>MUTE_4</code>: reset hit edits for the current selected clip</li>
+        <li>hold a projected rhythm pad: target the nearest generated hit while held</li>
+        <li>tap a bottom-row hit pad: toggle that generated hit on or off</li>
+        <li>hold a bottom-row hit pad while turning an expression encoder: edit that hit directly</li>
+        <li>while a hit is held, Row 1 becomes an 8-step recurrence mask for that hit</li>
+        <li><code>SHIFT</code> + hit pad: reset that hit's local edits</li>
+      </ul>
+      <p>Encoder pages:</p>
+      <ul>
+        <li><code>Channel</code>: density with <code>SHIFT</code> for generated recurrence, tuplet count with <code>ALT</code> for cover and <code>SHIFT</code> for phase, ratchet count with <code>ALT</code> for width and <code>SHIFT</code> for phase, and chance with <code>ALT</code> for baseline and <code>SHIFT</code> for rotation</li>
+        <li><code>Mixer</code>: volume, pan, send 1, send 2</li>
+        <li><code>User 1</code>: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, <code>ALT</code> edits center, and <code>SHIFT</code> edits rotation; with a hit held, plain turn edits that hit directly</li>
+        <li><code>User 2</code>: linear pitch, clip length with <code>ALT</code> for play start, reset hit edits, transport meter readout</li>
+      </ul>
+      <p>Timing note:</p>
+      <ul>
+        <li>exact starts are written to a hidden fine grid in the Bitwig clip</li>
+        <li>the Fire pads do not edit those raw start times directly</li>
+        <li>the visible rhythm rows are a projected overview rather than a literal note grid</li>
+      </ul>
+      <p>Control note:</p>
+      <ul>
+        <li><code>Density</code> is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately</li>
+        <li><code>SHIFT + Density</code> now generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first</li>
+        <li>when <code>Density</code> thins a tuplet- or ratchet-owned span, it removes visible hits from that claimed span without reviving an underlying base pulse there</li>
+        <li><code>User 1</code> is the expression page; it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit</li>
+        <li><code>Chance</code> is a native Bitwig note chance lane here: plain turn edits chance depth, <code>ALT</code> edits chance baseline, <code>SHIFT</code> edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit</li>
+        <li>while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped</li>
+        <li><code>User 2</code> pitch is a single non-wrapping note control rather than separate root and octave knobs</li>
+        <li><code>User 2 / Encoder 2</code> controls generated clip length in bars, with <code>ALT</code> adjusting clip play start in meter-aware beat steps; <code>User 2 / Encoder 4</code> shows the current Bitwig transport meter used by the generator</li>
+        <li><code>Tuplet</code> stays a half-bar transform, not a per-quarter burst; <code>Cover</code> sets how many consecutive half-bars are claimed, and <code>Tuplet Phase</code> rotates that continuous claimed region across the clip</li>
+        <li><code>Ratchet Width</code> chooses phrase beats in deterministic priority order, and <code>Ratchet Phase</code> rotates that chosen set across the actual beat positions of the clip</li>
+        <li>available <code>Tuplet</code> counts now depend on meter and claimed span; in <code>4/4</code> that still yields <code>3 / 5 / 7</code>, while <code>5/4</code> can expose counts such as <code>3 / 4 / 6 / 7</code></li>
+        <li><code>Ratchet</code> supports even and odd burst counts including <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code></li>
       </ul>
 
       <h3>Chord Step workflow</h3>

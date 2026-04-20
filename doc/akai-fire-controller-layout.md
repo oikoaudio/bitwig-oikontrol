@@ -6,13 +6,13 @@ It replaces the older "target layout" notes that drifted away from the code. Whe
 
 ## Top-Level Modes
 
-The Fire exposes four top-level workflows. Three are selected by the large mode buttons, and `STEP` is entered with `STEP SEQ` from the current note or drum context.
+The Fire exposes four top-level workflows. Three are selected by the large mode buttons, and `STEP` is entered with `STEP SEQ` from the current note or drum context. `DRUM` now has two main surfaces: standard drum sequencing and `Nested Rhythm`.
 
 | Button | Role | Notes |
 | --- | --- | --- |
 | `DRUM` | Drum sequencing | XOX Drum sequencing |
 | `NOTE` | Live note input | Cycles to `Harmonic mode` on second press |
-| `STEP` | Step sequencing | Cycles between `Melodic Step` and `Chord seq` modes |
+| `STEP` | Step sequencing | Enters `Melodic Step`; press again to switch to `Chord Step` |
 | `PERFORM` | Clip launcher | Cycles between a vertical and a horizontal `16x4` clip grid |
 
 ## Shared Transport And Utility Controls
@@ -151,7 +151,7 @@ Pressing `NOTE` again enters a different Harmonic pad layout where each pad can 
 | `NOTE` | Cycle note layout family |
 | `ALT + NOTE` | Toggle live-note layout shortcut (`Chromatic` / `In Key`, or harmonic layout variant) |
 | `STEP SEQ` | Enter `Melodic Step`; when already there, press again to switch to `Chord Step` |
-| `SHIFT + STEP SEQ` | Accent mode in `Melodic Step` |
+| `DRUM` while already in `DRUM` | Toggle between standard drum sequencing and `Nested Rhythm` |
 | `BANK LEFT/RIGHT` | Octave down / up |
 | `PATTERN UP/DOWN` | Octave up / down |
 | `SHIFT + PATTERN UP/DOWN` | Root up / down |
@@ -330,6 +330,66 @@ Melodic recurrence editing:
 - Tap top-row pads to toggle recurrence hits within the current span.
 - Hold the first top-row pad as a span anchor, then tap another top-row pad to set the recurrence span.
 - `User 1 / Encoder 4` shows the current recurrence summary for the held target step(s).
+
+## Nested Rhythm
+
+`Nested Rhythm` is the second main `DRUM` surface. It is a generator-based drum workflow that writes exact timing to a hidden fine clip grid and projects the resulting hits back to the Fire.
+
+If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern automatically once.
+
+### Pad Layout
+
+| Pad row | Role |
+| --- | --- |
+| Row 1 | Clip row |
+| Rows 2-3 | 32-bin projected rhythm view |
+| Row 4 | First 16 generated hits in hit order, shown by velocity with playhead highlight |
+
+### Main Nested Rhythm Gestures
+
+| Action | Result |
+| --- | --- |
+| `DRUM` while already in `DRUM` | Toggle between standard drum sequencing and `Nested Rhythm` |
+| `STEP SEQ` | Enter `Melodic Step` |
+| `DRUM` while in `Nested Rhythm` | Return to standard drum sequencing |
+| `PATTERN UP` | Generate current nested rhythm into the selected clip |
+| Hold `MUTE_2`, then tap a projected rhythm pad | Set the last step within the 32-step edit view |
+| `PATTERN DOWN` or `ALT` + `MUTE_4` | Reset hit edits for the current selected clip |
+| Hold projected rhythm pad | Target the nearest generated hit while held |
+| Tap bottom-row hit pad | Toggle that generated hit on/off |
+| Hold bottom-row hit pad while turning an expression encoder | Edit that hit directly |
+| Hold a hit, then use Row 1 pads 1-8 | Edit that hit's recurrence mask across up to 8 phrase revolutions |
+| `SHIFT` + hit pad | Reset that hit's local edits |
+
+### Nested Rhythm Encoders
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Density / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
+| `Mixer` | Volume | Pan | Send 1 | Send 2 |
+| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
+| `User 2` | Linear pitch | Clip length / `ALT`: play start | Reset hit edits | Meter readout |
+
+Timing note:
+
+- exact starts are written to a hidden fine grid in the Bitwig clip
+- the Fire pads do not edit those raw start times directly
+- the visible rhythm row is a projected overview rather than a literal note grid
+
+Control note:
+
+- `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
+- `SHIFT + Density` generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first
+- when `Density` thins a tuplet- or ratchet-owned span, it removes visible hits from that claimed span without reviving an underlying base pulse there
+- `User 1` is the expression page; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
+- `Channel / Encoder 4` writes Bitwig note chance: plain turn edits chance depth, `ALT` edits chance baseline, and `SHIFT` edits chance rotation; holding a hit turns the plain action into a direct chance edit for that hit
+- while a hit is held, Row 1 temporarily becomes an 8-pad recurrence mask instead of the clip row
+- `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
+- `User 2 / Encoder 2` controls generated clip length in bars, with `ALT` adjusting clip play start in meter-aware beat steps; `User 2 / Encoder 4` shows the current transport meter
+- `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that continuous claimed region across the clip
+- `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
+- available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`
+- `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
 
 ## PERFORM Mode
 

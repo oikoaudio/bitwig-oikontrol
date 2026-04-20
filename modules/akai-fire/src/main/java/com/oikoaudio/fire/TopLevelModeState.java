@@ -6,6 +6,7 @@ public final class TopLevelModeState {
         NOTE_PLAY,
         CHORD_STEP,
         MELODIC_STEP,
+        NESTED_RHYTHM,
         PERFORM
     }
 
@@ -43,12 +44,21 @@ public final class TopLevelModeState {
     }
 
     public void enterMelodicStepMode() {
-        previousNonStepMode = activeMode == Mode.MELODIC_STEP ? Mode.NOTE_PLAY : activeMode;
+        previousNonStepMode = (activeMode == Mode.MELODIC_STEP || activeMode == Mode.NESTED_RHYTHM)
+                ? Mode.NOTE_PLAY
+                : activeMode;
         activeMode = Mode.MELODIC_STEP;
     }
 
     public Mode exitMelodicStepMode() {
         activeMode = previousNonStepMode == Mode.MELODIC_STEP ? Mode.NOTE_PLAY : previousNonStepMode;
         return activeMode;
+    }
+
+    public void enterNestedRhythmMode() {
+        previousNonStepMode = (activeMode == Mode.MELODIC_STEP || activeMode == Mode.NESTED_RHYTHM)
+                ? Mode.NOTE_PLAY
+                : activeMode;
+        activeMode = Mode.NESTED_RHYTHM;
     }
 }

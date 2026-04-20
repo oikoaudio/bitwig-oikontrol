@@ -98,8 +98,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final int AUDITION_VELOCITY = 96;
     private static final int LIVE_NOTE_ENCODER_THRESHOLD = 4;
     private static final int LIVE_LAYOUT_ENCODER_THRESHOLD = 6;
-    private static final int CHORD_ROOT_ENCODER_THRESHOLD = 8;
-    private static final int CHORD_OCTAVE_ENCODER_THRESHOLD = 6;
+    private static final int CHORD_ROOT_ENCODER_THRESHOLD = 16;
+    private static final int CHORD_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final int CHORD_FAMILY_ENCODER_THRESHOLD = 8;
     private static final int LIVE_VELOCITY_ENCODER_THRESHOLD = 1;
     private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 6;
@@ -3131,7 +3131,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private MusicalScale getScale() {
-        return scaleLibrary.getMusicalScale(driver.getSharedScaleIndex());
+        final int scaleCount = scaleLibrary.getMusicalScalesCount();
+        final int safeIndex = Math.max(0, Math.min(scaleCount - 1, driver.getSharedScaleIndex()));
+        return scaleLibrary.getMusicalScale(safeIndex);
     }
 
     public MusicalScale getCurrentScale() {
