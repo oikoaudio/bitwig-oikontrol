@@ -17,34 +17,50 @@ Semantic versioning:
 
 `tick` - bug fixes and minor additions
 
-## User guide
+## For users
 
 - User guide source: `doc/user-guide.md`
-- Bundled help inside Bitwig (press the ? symbol) opens `index.html`
+- Bundled help inside Bitwig: press the `?` symbol to open `index.html`
 
 High-level controller summary:
 
 - **Launch Control XL (Mk2)** keeps the Bitwig factory-template workflow intact, while adding user-templates for drum machine control, the Richie Hawtin / Eric Ahrens arp workflow from `rhbitwig` and a mode targeting 6-7 remote pages in one view.
 
-- **Akai Fire** provides OLED and optional on-screen feedback for most parameters, shared root/scale/octave control, step micro-timing, configurable device pinning and four top-level modes: 
+- **Akai Fire** provides OLED and optional on-screen feedback for most parameters, shared root/scale/octave control, step micro-timing, configurable device pinning, and a broader multi-workflow surface built around the Fire’s mode buttons:
 
-`STEP` - a generative melodic step sequencer
+`DRUM` - standard x0x drum sequencing, plus a `Nested Rhythm` generative sequencer for layered rhythmic structures
 
-`NOTE` - note play with many scale modes
+`NOTE` - two live note input modes with isomorphic and harmonic layouts
 
-`PERFORM` - clip launching and clip management
+`STEP SEQ` - `Melodic Step` and `Chord Step` workflows for generated melodic sequencing and chord-based step entry
 
-`DRUM` - an X0X sequencer mode forked from the rhbitwig extension (see attribution section)
+`PERFORM` - clip launching, clip management, and a `SHIFT + PERFORM` track-action page
 
-`SHIFT + PERFORM` - a latched global `Settings` page for shared `Root Key`, `Scale`, and `Octave`
+`SHIFT + BROWSER` - a held global settings overlay for shared `Root Key`, `Scale`, and `Octave`
 
-## Requirements
+## Documentation
+
+- `doc/user-guide.md`: canonical user guide source for both controllers
+- `CHANGES.md`: release notes and running changelog
+
+## Quick install
+
+1. Download a prebuilt `.bwextension` artifact from the releases section
+2. Copy the resulting file into Bitwig’s user extensions folder:
+   - Linux: `~/Bitwig Studio/Extensions/`
+   - macOS: `~/Documents/Bitwig Studio/Extensions/`
+   - Windows: `~/Documents/Bitwig Studio/Extensions/`
+3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Oikontrol Fire` or `OikontrolLCXL`.
+
+## For developers
+
+### Requirements
 
 - **Java:** built and tested with JDK 21.
 - **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in 6.0 (tested beta 12)
 - **Controllers:** Novation Launch Control XL Mk2, Akai Fire
 
-## Building & testing
+### Building & testing
 
 All sources, including the Bitwig framework helpers, live inside this repository. 
 
@@ -84,11 +100,10 @@ Current artifact names:
 - `modules/akai-fire/build/libs/OikontrolFire.bwextension`
 - `modules/launchcontrol/build/libs/OikontrolLCXL.bwextension`
 
-## Documentation
-- `doc/user-guide.md`: canonical user guide source for both controllers.
-- Architecural Decision Record (ADR) under `doc/adr/` e.g. `0000-use-adrs.md` (process) and `0001-architecture-summary.md` (factory/user modes, Template 8 arp, Java/API targets).
-- `CHANGES.md`: running changelog of code edits.
-- `vscode-debug.md`: how to attach VS Code’s debugger to Bitwig (JDWP).
+### Developer documentation
+
+- Architectural Decision Records under `doc/adr/`, for example `0000-use-adrs.md` and `0001-architecture-summary.md`
+- `vscode-debug.md`: how to attach VS Code’s debugger to Bitwig (JDWP) for inspection while running the extension
 
 ## Attribution
 
