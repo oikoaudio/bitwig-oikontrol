@@ -787,6 +787,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (!enteringPerform) {
+            if (performMode.isTrackActionMode()) {
+                performMode.toggleTrackActionMode();
+                notifyAction("Mode", performMode.activePageLabel());
+                return;
+            }
             performMode.toggleOrientation();
         }
         notifyAction("Mode", performMode.activePageLabel());
