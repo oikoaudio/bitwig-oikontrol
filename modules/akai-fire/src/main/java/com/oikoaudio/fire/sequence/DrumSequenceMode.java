@@ -238,6 +238,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         final BiColorButton shiftButton = driver.getButton(NoteAssign.SHIFT);
         shiftButton.bind(mainLayer, shiftActive, BiColorLightState.GREEN_HALF, BiColorLightState.OFF);
+        shiftActive.addValueObserver(ignored -> driver.refreshGlobalSettingsOverlayState());
 
         final BiColorButton altButton = driver.getButton(NoteAssign.ALT);
         altButton.bind(mainLayer, altActive, BiColorLightState.GREEN_HALF, BiColorLightState.OFF);

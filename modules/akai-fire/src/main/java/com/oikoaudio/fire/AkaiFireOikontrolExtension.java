@@ -38,6 +38,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
     private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
+    private static final int BROWSER_OPEN_DEFER_MS = 40;
     private static final int SETTINGS_PAD_COLUMNS = 16;
     private static final int SETTINGS_PAD_ROWS = 4;
     private static final int GLOBAL_ROOT_ENCODER_THRESHOLD = 16;
@@ -136,7 +137,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private boolean globalSettingsOverlayActive = false;
-    private boolean globalSettingsGestureArmed = false;
+    private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
     private int transportTimeSignatureDenominator = 4;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
@@ -1415,7 +1416,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void updateGlobalSettingsOverlayState() {
         final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
         final boolean shouldShow = browserButton != null
-                && globalSettingsGestureArmed
                 && browserButton.isPressed()
                 && isGlobalShiftHeld()
                 && !isGlobalAltHeld()
@@ -1504,11 +1504,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean isGlobalAltHeld() {
-        return altActive.get();
+        final BiColorButton button = getButton(NoteAssign.ALT);
+        return button != null ? button.isPressed() : altActive.get();
     }
 
     public boolean isGlobalShiftHeld() {
-        return shiftActive.get();
+        final BiColorButton button = getButton(NoteAssign.SHIFT);
+        return button != null ? button.isPressed() : shiftActive.get();
+    }
+
+    public void refreshGlobalSettingsOverlayState() {
+        updateGlobalSettingsOverlayState();
     }
 
     public void setMainEncoderPressed(final boolean pressed) {
@@ -1575,12 +1581,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleBrowserPressed(final boolean pressed) {
         if (!pressed) {
-            globalSettingsGestureArmed = false;
+            browserPressToken++;
             updateGlobalSettingsOverlayState();
             oled.clearScreenDelayed();
             return;
         }
-        globalSettingsGestureArmed = isGlobalShiftHeld() && !isGlobalAltHeld();
         updateGlobalSettingsOverlayState();
         if (isPopupBrowserActive()) {
             popupBrowser.cancel();
@@ -1590,6 +1595,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (isGlobalShiftHeld() && !isGlobalAltHeld()) {
             activateGlobalSettingsOverlay();
             notifyAction("Settings", "Global");
+            return;
+        }
+        final int pressToken = ++browserPressToken;
+        host.scheduleTask(() -> maybeOpenPopupBrowser(pressToken), BROWSER_OPEN_DEFER_MS);
+    }
+
+    private void maybeOpenPopupBrowser(final int pressToken) {
+        if (pressToken != browserPressToken) {
+            return;
+        }
+        final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
+        if (browserButton == null || !browserButton.isPressed()) {
+            return;
+        }
+        if (isGlobalShiftHeld() || isGlobalAltHeld() || globalSettingsOverlayActive || isPopupBrowserActive()) {
             return;
         }
         openPopupBrowser();
