@@ -1408,10 +1408,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         final int barIndex = beatIndex / meterNumerator();
         final int beatInBar = beatIndex % meterNumerator();
-        if (clipBarCount == 1) {
-            return beatIndex == 0 ? "Start" : Integer.toString(beatInBar + 1);
-        }
-        return beatIndex == 0 ? "Start" : "%d.%d".formatted(barIndex + 1, beatInBar + 1);
+        return "%d.%d".formatted(barIndex + 1, beatInBar + 1);
     }
 
     private String meterLabel() {
