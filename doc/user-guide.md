@@ -345,7 +345,8 @@ If you enter the mode with a selected clip slot that is still empty, the mode no
 Main gestures:
 
 - `PATTERN UP`: generate the current nested rhythm into the selected clip
-- `PATTERN DOWN` or `MUTE_2`: reset hit-level edits
+- hold `MUTE_2`, then tap a projected rhythm pad in Rows 2-3: set the last step within the 32-step edit view
+- `PATTERN DOWN` or `ALT` + `MUTE_4`: reset hit-level edits for the current selected clip
 - hold a projected rhythm pad: target the nearest generated hit while held
 - tap a bottom-row hit pad: toggle that hit on or off
 - hold a bottom-row hit pad while turning an expression encoder: edit that hit directly

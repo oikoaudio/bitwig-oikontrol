@@ -69,6 +69,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final EncoderBankLayout encoderBankLayout;
     private final NestedRhythmGenerator generator = new NestedRhythmGenerator();
     private final BooleanValueObject selectHeld = new BooleanValueObject();
+    private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
@@ -108,6 +109,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private double chanceDepth = 0.0;
     private int chanceRotation = 0;
     private int clipBarCount = 1;
+    private int lastStepIndex = NestedRhythmLoopLength.STEP_COUNT - 1;
 
     public NestedRhythmMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "NESTED_RHYTHM_MODE");
@@ -186,6 +188,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
         selectHeld.set(false);
+        fixedLengthHeld.set(false);
         copyHeld.set(false);
         deleteHeld.set(false);
         encoderLayer.deactivate();
@@ -210,10 +213,13 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }, () -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF);
 
         driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> {
+            fixedLengthHeld.set(pressed);
             if (pressed) {
-                clearPulseEdits();
+                oled.valueInfo("Last Step", "Structure pad");
+            } else {
+                oled.clearScreenDelayed();
             }
-        }, () -> BiColorLightState.AMBER_HALF);
+        }, () -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF);
 
         driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> {
             copyHeld.set(pressed);
@@ -225,6 +231,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }, () -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
 
         driver.getButton(NoteAssign.MUTE_4).bindPressed(this, pressed -> {
+            if (pressed && driver.isGlobalAltHeld()) {
+                clearPulseEdits();
+                return;
+            }
             deleteHeld.set(pressed);
             if (pressed) {
                 oled.valueInfo("Delete", "Clip / hit");
@@ -247,6 +257,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         if (padIndex < CLIP_ROW_PAD_COUNT) {
             clipHandler.handlePadPress(padIndex, pressed);
+            return;
+        }
+        if (fixedLengthHeld.get() && padIndex < VELOCITY_PAD_OFFSET) {
+            if (pressed) {
+                setLastStep(padIndex - STRUCTURE_PAD_OFFSET);
+            }
             return;
         }
         if (padIndex < VELOCITY_PAD_OFFSET) {
@@ -310,10 +326,21 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (padIndex < CLIP_ROW_PAD_COUNT) {
             return clipHandler.getPadLight(padIndex);
         }
+        if (fixedLengthHeld.get() && padIndex < VELOCITY_PAD_OFFSET) {
+            return lastStepPadLight(padIndex - STRUCTURE_PAD_OFFSET);
+        }
         if (padIndex < VELOCITY_PAD_OFFSET) {
             return structurePadLight(padIndex - STRUCTURE_PAD_OFFSET);
         }
         return velocityPadLight(padIndex - VELOCITY_PAD_OFFSET);
+    }
+
+    private RgbLigthState lastStepPadLight(final int stepIndex) {
+        if (stepIndex > lastStepIndex) {
+            return RgbLigthState.OFF;
+        }
+        final RgbLigthState base = clipBaseColor();
+        return stepIndex == lastStepIndex ? base.getBrightest() : base.getVeryDimmed();
     }
 
     private RgbLigthState structurePadLight(final int bin) {
@@ -1292,6 +1319,18 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
     }
 
+    private void setLastStep(final int stepIndex) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        lastStepIndex = NestedRhythmLoopLength.normalizeLastStepIndex(stepIndex);
+        refreshClipCursor();
+        cursorClip.getLoopLength().set(loopLengthBeats());
+        final String label = Integer.toString(lastStepIndex + 1);
+        oled.valueInfo("Last Step", label);
+        driver.notifyPopup("Last Step", label);
+    }
+
     private EncoderSlotBinding mixerSlot(final int index, final String label) {
         return new EncoderSlotBinding() {
             @Override
@@ -1744,7 +1783,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private double loopLengthBeats() {
-        return NestedRhythmGenerator.beatsPerBar(meterNumerator(), meterDenominator()) * clipBarCount;
+        return NestedRhythmLoopLength.loopLengthBeats(
+                NestedRhythmGenerator.beatsPerBar(meterNumerator(), meterDenominator()) * clipBarCount,
+                lastStepIndex);
     }
 
     private int totalRatchetRegions() {

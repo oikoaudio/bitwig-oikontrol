@@ -353,7 +353,8 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 | `STEP SEQ` | Enter `Melodic Step` |
 | `DRUM` while in `Nested Rhythm` | Return to standard drum sequencing |
 | `PATTERN UP` | Generate current nested rhythm into the selected clip |
-| `PATTERN DOWN` or `MUTE_2` | Reset hit edits |
+| Hold `MUTE_2`, then tap a projected rhythm pad | Set the last step within the 32-step edit view |
+| `PATTERN DOWN` or `ALT` + `MUTE_4` | Reset hit edits for the current selected clip |
 | Hold projected rhythm pad | Target the nearest generated hit while held |
 | Tap bottom-row hit pad | Toggle that generated hit on/off |
 | Hold bottom-row hit pad while turning an expression encoder | Edit that hit directly |
