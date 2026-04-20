@@ -333,6 +333,8 @@ Notes on generation:
 
 `Nested Rhythm` is the second main `DRUM` surface. It is a separate, non-editable rhythm generator mode that writes exact tuplets and ratchets onto a hidden fine clip grid, then projects the result back to the Fire.
 
+If you enter the mode with a selected clip slot that is still empty, the mode now generates its default starter pattern automatically once.
+
 - press `DRUM` again while already in `DRUM` to toggle between standard drum sequencing and `Nested Rhythm`
 - `STEP SEQ`: enter `Melodic Step`
 - press `DRUM` again to return to standard drum sequencing
@@ -352,8 +354,8 @@ Main gestures:
 
 Encoder pages:
 
-- `Channel`: density, tuplet count with `ALT` for cover and `SHIFT` for phase, ratchet count with `ALT` for width and `SHIFT` for phase, and chance with `ALT` for baseline and `SHIFT` for rotation
-- `Mixer`: currently unused
+- `Channel`: density with `SHIFT` for generated recurrence, tuplet count with `ALT` for cover and `SHIFT` for phase, ratchet count with `ALT` for width and `SHIFT` for phase, and chance with `ALT` for baseline and `SHIFT` for rotation
+- `Mixer`: volume, pan, send 1, send 2
 - `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
 - `User 2`: linear pitch, clip length, reset hit edits, transport meter readout
 
@@ -366,13 +368,14 @@ Timing note:
 Control note:
 
 - `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
+- `SHIFT + Density` now generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first
+- when `Density` thins a tuplet- or ratchet-owned span, it now removes visible hits from that claimed span without reviving an underlying base pulse there
 - `Vel Spread` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
 - `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit
 - `Chance` is a native Bitwig note chance lane here: plain turn edits chance depth, `ALT` edits chance baseline, `SHIFT` edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit
 - while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
-- `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits
 - `Tuplet` and `Ratchet` both default to `Off`
 - `Cover` now sets how many consecutive half-bars are claimed by the tuplet span, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip

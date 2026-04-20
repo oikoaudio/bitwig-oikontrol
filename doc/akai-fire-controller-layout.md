@@ -335,6 +335,8 @@ Melodic recurrence editing:
 
 `Nested Rhythm` is the second main `DRUM` surface: a separate non-editable rhythm generator mode for exact tuplets and ratchets on a hidden fine clip grid.
 
+If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern automatically once.
+
 ### Pad Layout
 
 | Pad row | Role |
@@ -356,15 +358,14 @@ Melodic recurrence editing:
 | Tap bottom-row hit pad | Toggle that generated hit on/off |
 | Hold bottom-row hit pad while turning an expression encoder | Edit that hit directly |
 | Hold a hit, then use Row 1 pads 1-8 | Edit that hit's recurrence mask across up to 8 phrase revolutions |
-| Hold `MUTE_4` + hit pad | Delete gesture remains available for clip actions; hit toggling is direct on the bottom row |
 | `SHIFT` + hit pad | Reset that hit's local edits |
 
 ### Nested Rhythm Encoders
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Density | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
-| `Mixer` | Unused | Unused | Unused | Unused |
+| `Channel` | Density / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
+| `Mixer` | Volume | Pan | Send 1 | Send 2 |
 | `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
 | `User 2` | Linear pitch | Clip length | Reset hit edits | Meter readout |
 
@@ -377,12 +378,13 @@ Timing note:
 Control note:
 
 - `Density` is still a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
+- `SHIFT + Density` generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first
+- when `Density` thins a tuplet- or ratchet-owned span, it removes visible hits from that claimed span without reviving an underlying base pulse there
 - `User 1` is the expression page; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
 - `Channel / Encoder 4` writes Bitwig note chance: plain turn edits chance depth, `ALT` edits chance baseline, and `SHIFT` edits chance rotation; holding a hit turns the plain action into a direct chance edit for that hit
 - while a hit is held, Row 1 temporarily becomes an 8-pad recurrence mask instead of the clip row
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
 - `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
-- `Hit Gate` edits the held hit when one is being held; otherwise it applies to all current generated hits
 - `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
 - available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`
