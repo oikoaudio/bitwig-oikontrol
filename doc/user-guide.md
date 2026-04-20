@@ -358,7 +358,7 @@ Encoder pages:
 - `Channel`: density with `SHIFT` for generated recurrence, tuplet count with `ALT` for cover and `SHIFT` for phase, ratchet count with `ALT` for width and `SHIFT` for phase, and chance with `ALT` for baseline and `SHIFT` for rotation
 - `Mixer`: volume, pan, send 1, send 2
 - `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
-- `User 2`: linear pitch, clip length, reset hit edits, transport meter readout
+- `User 2`: linear pitch, clip length with `ALT` for play start, reset hit edits, transport meter readout
 
 Timing note:
 
@@ -376,7 +376,7 @@ Control note:
 - `Chance` is a native Bitwig note chance lane here: plain turn edits chance depth, `ALT` edits chance baseline, `SHIFT` edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit
 - while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
-- `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
+- `User 2 / Encoder 2` controls generated clip length in bars, with `ALT` adjusting clip play start in meter-aware beat steps; `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
 - `Tuplet` and `Ratchet` both default to `Off`
 - `Cover` now sets how many consecutive half-bars are claimed by the tuplet span, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip

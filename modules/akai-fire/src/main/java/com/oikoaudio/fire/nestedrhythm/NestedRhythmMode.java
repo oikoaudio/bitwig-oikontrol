@@ -127,6 +127,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         this.cursorClip.setStepSize(CLIP_STEP_SIZE);
         this.cursorClip.scrollToKey(0);
         this.cursorClip.scrollToStep(0);
+        this.cursorClip.getPlayStart().markInterested();
         this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
         final PinnableCursorDevice cursorDevice = cursorTrack.createCursorDevice("NESTED_RHYTHM_DEVICE",
@@ -597,96 +598,6 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         pendingPulseWrites.remove(noteStep.x());
     }
 
-    private double shapedUnitExpression(final int order,
-                                        final double center,
-                                        final double spread,
-                                        final int rotation) {
-        return clampUnit(center + spread * contourNormalized(order, rotation));
-    }
-
-    private double shapedSignedExpression(final int order,
-                                          final double center,
-                                          final double spread,
-                                          final int rotation) {
-        return clampSignedUnit(center + spread * contourNormalized(order, rotation));
-    }
-
-    private double shapedPitchExpression(final int order,
-                                         final double center,
-                                         final double spread,
-                                         final int rotation) {
-        return clampPitchExpression(center + spread * contourNormalized(order, rotation));
-    }
-
-    private double shapedChance(final int order,
-                                final NestedRhythmPattern.Role role,
-                                final double baseline,
-                                final double depth,
-                                final int rotation) {
-        final double contour = (1.0 - contourNormalized(order, rotation)) * 0.5;
-        final double attenuation = depth * chanceRoleWeight(role) * contour;
-        return clampUnit(baseline - attenuation);
-    }
-
-    private double chanceRoleWeight(final NestedRhythmPattern.Role role) {
-        return switch (role) {
-            case PRIMARY_ANCHOR -> 0.10;
-            case SECONDARY_ANCHOR -> 0.25;
-            case TUPLET_LEAD -> 0.22;
-            case TUPLET_INTERIOR -> 0.75;
-            case RATCHET_LEAD -> 0.18;
-            case RATCHET_INTERIOR -> 0.82;
-            case PICKUP -> 0.55;
-        };
-    }
-
-    private double recurrenceRoleWeight(final NestedRhythmPattern.Role role) {
-        return switch (role) {
-            case PRIMARY_ANCHOR -> 0.42;
-            case SECONDARY_ANCHOR -> 0.50;
-            case TUPLET_LEAD -> 0.54;
-            case TUPLET_INTERIOR -> 0.82;
-            case RATCHET_LEAD -> 0.58;
-            case RATCHET_INTERIOR -> 0.92;
-            case PICKUP -> 0.68;
-        };
-    }
-
-    private RecurrencePattern generatedRecurrence(final int order, final NestedRhythmPattern.Role role) {
-        if (recurrenceDepth <= 0.0001) {
-            return RecurrencePattern.of(0, 0);
-        }
-        final int span = RecurrencePattern.EDITOR_DEFAULT_SPAN;
-        final double weakness = (1.0 - contourNormalized(order, 0)) * 0.5;
-        final double dropoutStrength = recurrenceDepth * recurrenceRoleWeight(role) * (0.5 + weakness * 0.5);
-        final int dropoutCount = Math.max(0, Math.min(span - 1,
-                (int) Math.round(dropoutStrength * (span - 1))));
-        if (dropoutCount == 0) {
-            return RecurrencePattern.of(0, 0);
-        }
-        final int activeCount = span - dropoutCount;
-        return RecurrencePattern.of(span, distributedMask(span, activeCount, order));
-    }
-
-    private int distributedMask(final int span, final int activeCount, final int rotation) {
-        int mask = 0;
-        for (int index = 0; index < span; index++) {
-            final int previous = (index * activeCount) / span;
-            final int next = ((index + 1) * activeCount) / span;
-            if (next != previous) {
-                mask |= 1 << Math.floorMod(index + rotation, span);
-            }
-        }
-        if (mask == 0) {
-            mask = 1 << Math.floorMod(rotation, span);
-        }
-        return mask;
-    }
-
-    private double contourNormalized(final int order, final int rotation) {
-        return NestedRhythmGenerator.contourAt(order + rotation) / 18.0;
-    }
-
     private void clearPulseEdits() {
         for (final EditablePulse pulse : editablePulses) {
             pulse.resetEdits();
@@ -865,10 +776,13 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Ptc Rotate", this::pitchExpressionRotationLabel, this::adjustPitchExpressionRotation))
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Pitch\n2: Length\n3: Reset Hits\n4: Meter",
+                "1: Pitch\n2: Length / Alt Play Start\n3: Reset Hits\n4: Meter",
                 new EncoderSlotBinding[]{
                         choiceSlot("Pitch", this::pitchLabel, this::adjustPitch),
-                        choiceSlot("Length", this::clipLengthLabel, this::adjustClipBarCount),
+                        modifierChoiceSlot(
+                                view("Length", this::clipLengthLabel, this::adjustClipBarCount),
+                                view("Play Start", this::playStartLabel, this::adjustPlayStart),
+                                null),
                         choiceSlot("Reset", () -> editablePulses.isEmpty() ? "No Hits" : "Ready", this::resetHitsFromEncoder),
                         choiceSlot("Meter", this::meterLabel, this::ignoreEncoder)
                 }));
@@ -1200,7 +1114,20 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         tupletCover = Math.max(0, Math.min(totalTupletHalfBars(), tupletCover));
         tupletPhase = Math.floorMod(tupletPhase, totalTupletHalfBars());
         tupletCount = normalizeTupletCount(tupletCount);
+        clampPlayStartToLoop();
         generatePattern("Length", clipLengthLabel());
+    }
+
+    private void adjustPlayStart(final int amount) {
+        if (amount == 0 || !ensureClipAvailable()) {
+            return;
+        }
+        refreshClipCursor();
+        final double next = NestedRhythmPlayStart.increment(
+                cursorClip.getPlayStart().get(), loopLengthBeats(), meterDenominator(), amount);
+        cursorClip.getPlayStart().set(next);
+        oled.valueInfo("Play Start", playStartLabel());
+        driver.notifyPopup("Play Start", playStartLabel());
     }
 
     private void adjustChancePrimary(final int amount) {
@@ -1326,6 +1253,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         lastStepIndex = NestedRhythmLoopLength.normalizeLastStepIndex(stepIndex);
         refreshClipCursor();
         cursorClip.getLoopLength().set(loopLengthBeats());
+        clampPlayStartToLoop();
         final String label = Integer.toString(lastStepIndex + 1);
         oled.valueInfo("Last Step", label);
         driver.notifyPopup("Last Step", label);
@@ -1470,6 +1398,22 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return "%d Bar%s".formatted(clipBarCount, clipBarCount == 1 ? "" : "s");
     }
 
+    private String playStartLabel() {
+        final double step = NestedRhythmPlayStart.beatStep(meterDenominator());
+        final double playStart = NestedRhythmPlayStart.wrap(cursorClip.getPlayStart().get(), loopLengthBeats());
+        final double beatIndexDouble = playStart / step;
+        final int beatIndex = (int) Math.round(beatIndexDouble);
+        if (Math.abs(beatIndexDouble - beatIndex) > 0.0001) {
+            return "%.2f".formatted(playStart);
+        }
+        final int barIndex = beatIndex / meterNumerator();
+        final int beatInBar = beatIndex % meterNumerator();
+        if (clipBarCount == 1) {
+            return beatIndex == 0 ? "Start" : Integer.toString(beatInBar + 1);
+        }
+        return beatIndex == 0 ? "Start" : "%d.%d".formatted(barIndex + 1, beatInBar + 1);
+    }
+
     private String meterLabel() {
         return "%d/%d".formatted(meterNumerator(), meterDenominator());
     }
@@ -1609,6 +1553,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
         }
         return true;
+    }
+
+    private void clampPlayStartToLoop() {
+        refreshClipCursor();
+        cursorClip.getPlayStart().set(NestedRhythmPlayStart.wrap(cursorClip.getPlayStart().get(), loopLengthBeats()));
     }
 
     private void refreshSelectedClipState() {
@@ -1849,21 +1798,24 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
 
         private double effectivePressure() {
-            return clampUnit(shapedUnitExpression(order, pressureCenter, pressureSpread, pressureRotation) + pressureOffset);
+            return clampUnit(NestedRhythmContourShaper.shapeUnitExpression(
+                    order, pressureCenter, pressureSpread, pressureRotation) + pressureOffset);
         }
 
         private double effectiveTimbre() {
-            return clampSignedUnit(shapedSignedExpression(order, timbreCenter, timbreSpread, timbreRotation)
-                    + timbreOffset);
+            return clampSignedUnit(NestedRhythmContourShaper.shapeSignedExpression(
+                    order, timbreCenter, timbreSpread, timbreRotation) + timbreOffset);
         }
 
         private double effectivePitchExpression() {
-            return clampPitchExpression(shapedPitchExpression(order, pitchExpressionCenter, pitchExpressionSpread,
-                    pitchExpressionRotation) + pitchExpressionOffset);
+            return clampPitchExpression(NestedRhythmContourShaper.shapePitchExpression(
+                    order, pitchExpressionCenter, pitchExpressionSpread, pitchExpressionRotation)
+                    + pitchExpressionOffset);
         }
 
         private double effectiveChance() {
-            return clampUnit(shapedChance(order, role, chanceBaseline, chanceDepth, chanceRotation) + chanceOffset);
+            return clampUnit(NestedRhythmContourShaper.shapeChance(
+                    order, role, chanceBaseline, chanceDepth, chanceRotation) + chanceOffset);
         }
 
         private RecurrencePattern effectiveRecurrence() {
@@ -1871,7 +1823,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
 
         private void applyGeneratedRecurrence() {
-            final RecurrencePattern recurrence = generatedRecurrence(order, role);
+            final RecurrencePattern recurrence = NestedRhythmContourShaper.generatedRecurrence(
+                    order, role, recurrenceDepth);
             recurrenceLength = recurrence.length();
             recurrenceMask = recurrence.mask();
         }

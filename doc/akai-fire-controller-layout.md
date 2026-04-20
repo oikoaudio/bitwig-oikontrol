@@ -368,7 +368,7 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 | `Channel` | Density / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
 | `Mixer` | Volume | Pan | Send 1 | Send 2 |
 | `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
-| `User 2` | Linear pitch | Clip length | Reset hit edits | Meter readout |
+| `User 2` | Linear pitch | Clip length / `ALT`: play start | Reset hit edits | Meter readout |
 
 Timing note:
 
@@ -385,7 +385,7 @@ Control note:
 - `Channel / Encoder 4` writes Bitwig note chance: plain turn edits chance depth, `ALT` edits chance baseline, and `SHIFT` edits chance rotation; holding a hit turns the plain action into a direct chance edit for that hit
 - while a hit is held, Row 1 temporarily becomes an 8-pad recurrence mask instead of the clip row
 - `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
-- `User 2 / Encoder 2` controls generated clip length in bars, and `User 2 / Encoder 4` shows the current transport meter
+- `User 2 / Encoder 2` controls generated clip length in bars, with `ALT` adjusting clip play start in meter-aware beat steps; `User 2 / Encoder 4` shows the current transport meter
 - `Tuplet` stays a half-bar transform, not a per-quarter burst; `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that continuous claimed region across the clip
 - `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
 - available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`
