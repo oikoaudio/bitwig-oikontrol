@@ -76,7 +76,7 @@ Project-specific instructions for coding agents working in this repository.
 - `doc/user-guide.md` is the canonical user guide source.
 - Update user-facing documentation at the end of a feature or completed behaviour change, not after every intermediate implementation step.
 - If controller behaviour or layout changes by the end of the feature, update `doc/user-guide.md`.
-- The bundled in-app help pages at `modules/akai-fire/src/main/resources/Documentation/index.html` and `modules/launchcontrol/src/main/resources/Documentation/index.html` should be synced with `doc/user-guide.md` before the feature is considered complete when user-facing documentation changes.
+- Bundled in-app help is generated from `doc/user-guide.md` by the Gradle `generateBundledDocumentation` task; do not hand-edit generated `Documentation/index.html` output.
 - Record notable code changes in `CHANGES.md` when appropriate.
 
 ## Implementation Notes

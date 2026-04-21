@@ -27,3 +27,276 @@ subprojects {
         ]
     }
 }
+
+def escapeHtml = { String text ->
+    text
+            .replace('&', '&amp;')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+            .replace('"', '&quot;')
+}
+
+def renderInlineMarkdown
+renderInlineMarkdown = { String text ->
+    def escaped = escapeHtml(text)
+    escaped = escaped.replaceAll(/`([^`]+)`/, '<code>$1</code>')
+    escaped = escaped.replaceAll(/\*\*([^*]+)\*\*/, '<strong>$1</strong>')
+    escaped
+}
+
+def splitMarkdownTableRow = { String line ->
+    def trimmed = line.trim()
+    if (trimmed.startsWith('|')) {
+        trimmed = trimmed.substring(1)
+    }
+    if (trimmed.endsWith('|')) {
+        trimmed = trimmed.substring(0, trimmed.length() - 1)
+    }
+    trimmed.split(/\|/, -1).collect { it.trim() }
+}
+
+def renderMarkdownToHtml = { String markdown ->
+    def html = new StringBuilder()
+    def lines = markdown.readLines()
+    def paragraph = []
+    def listStack = []
+    def inTable = false
+
+    def closeParagraph = {
+        if (!paragraph.isEmpty()) {
+            html << '      <p>' << renderInlineMarkdown(paragraph.join(' ')) << '</p>\n'
+            paragraph.clear()
+        }
+    }
+
+    def closeOneList = {
+        def list = listStack.remove(listStack.size() - 1)
+        if (list.liOpen) {
+            html << '</li>\n'
+        }
+        html << "      </${list.type}>\n"
+    }
+
+    def closeAllLists = {
+        while (!listStack.isEmpty()) {
+            closeOneList()
+        }
+    }
+
+    def closeListsDeeperThan
+    closeListsDeeperThan = { int indent ->
+        while (!listStack.isEmpty() && listStack.last().indent > indent) {
+            closeOneList()
+        }
+    }
+
+    def ensureList = { String type, int indent ->
+        closeListsDeeperThan(indent)
+        if (!listStack.isEmpty() && listStack.last().indent == indent && listStack.last().type != type) {
+            closeOneList()
+        }
+        if (listStack.isEmpty() || listStack.last().indent < indent) {
+            if (!listStack.isEmpty() && listStack.last().liOpen) {
+                html << '\n'
+            }
+            html << "      <${type}>\n"
+            listStack << [type: type, indent: indent, liOpen: false]
+        }
+    }
+
+    def closeTable = {
+        if (inTable) {
+            html << '      </tbody>\n'
+            html << '      </table>\n'
+            inTable = false
+        }
+    }
+
+    for (int i = 0; i < lines.size(); i++) {
+        def line = lines[i]
+        def trimmed = line.trim()
+
+        if (trimmed.isEmpty()) {
+            closeParagraph()
+            closeAllLists()
+            closeTable()
+            continue
+        }
+
+        if (trimmed.startsWith('|') && i + 1 < lines.size() && lines[i + 1].trim() ==~ /^\|?[\s:-]+\|[\s|:-]*$/) {
+            closeParagraph()
+            closeAllLists()
+            closeTable()
+            def headers = splitMarkdownTableRow(trimmed)
+            html << '      <table>\n'
+            html << '        <thead><tr>'
+            headers.each { html << '<th>' << renderInlineMarkdown(it) << '</th>' }
+            html << '</tr></thead>\n'
+            html << '        <tbody>\n'
+            inTable = true
+            i++
+            continue
+        }
+
+        if (inTable && trimmed.startsWith('|')) {
+            def cells = splitMarkdownTableRow(trimmed)
+            html << '          <tr>'
+            cells.each { html << '<td>' << renderInlineMarkdown(it) << '</td>' }
+            html << '</tr>\n'
+            continue
+        }
+        closeTable()
+
+        def heading = trimmed =~ /^(#{1,3})\s+(.+)$/
+        if (heading.matches()) {
+            closeParagraph()
+            closeAllLists()
+            def level = heading[0][1].length()
+            html << "      <h${level}>" << renderInlineMarkdown(heading[0][2]) << "</h${level}>\n"
+            continue
+        }
+
+        def unordered = line =~ /^\s*[-*]\s+(.+)$/
+        def ordered = line =~ /^\s*\d+\.\s+(.+)$/
+        if (unordered.matches() || ordered.matches()) {
+            closeParagraph()
+            closeTable()
+            def wantedType = unordered.matches() ? 'ul' : 'ol'
+            def indent = line.takeWhile { it == ' ' }.length()
+            ensureList(wantedType, indent)
+            if (listStack.last().liOpen) {
+                html << '</li>\n'
+            }
+            def item = unordered.matches() ? unordered[0][1] : ordered[0][1]
+            html << '        <li>' << renderInlineMarkdown(item)
+            listStack.last().liOpen = true
+            continue
+        }
+
+        closeAllLists()
+        paragraph << trimmed
+    }
+
+    closeParagraph()
+    closeAllLists()
+    closeTable()
+    html.toString()
+}
+
+def renderUserGuideDocument = { String markdown ->
+    """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bitwig Oikontrol User Guide</title>
+  <style>
+    :root {
+      --paper: #f4efe7;
+      --ink: #162028;
+      --muted: #55636f;
+      --panel: #fffdf9;
+      --line: #d7c2a8;
+      --accent: #bb5a2a;
+      --code: #f1ece4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.6 "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top left, #fbf7ef 0%, var(--paper) 46%, #ece4d8 100%);
+    }
+    .shell { max-width: 1080px; margin: 0 auto; padding: 32px 24px 72px; }
+    .hero, main {
+      background: rgba(255, 253, 249, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(33, 24, 16, 0.08);
+    }
+    .hero { padding: 28px; margin-bottom: 22px; }
+    main { padding: 28px; }
+    h1, h2, h3 { line-height: 1.2; margin: 28px 0 12px; }
+    h1:first-child, h2:first-child, h3:first-child { margin-top: 0; }
+    h1 { font-size: 2.3rem; }
+    h2 { font-size: 1.65rem; border-top: 1px solid var(--line); padding-top: 22px; }
+    h2:first-child { border-top: 0; padding-top: 0; }
+    h3 { font-size: 1.16rem; color: var(--accent); }
+    p { margin: 0 0 14px; }
+    ul, ol { margin: 0 0 16px; padding-left: 24px; }
+    li { margin: 0 0 7px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 22px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f1e4d2; }
+    code {
+      background: var(--code);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.94em;
+    }
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .lede { color: var(--muted); font-size: 1.06rem; margin-bottom: 0; }
+    .footer { margin-top: 28px; color: var(--muted); font-size: 0.95rem; }
+    @media (max-width: 720px) {
+      .shell { padding: 18px 12px 48px; }
+      .hero, main { padding: 18px; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="kicker">Bitwig Oikontrol</div>
+      <p class="lede">Bundled help generated from <code>doc/user-guide.md</code>.</p>
+    </section>
+    <main>
+${renderMarkdownToHtml(markdown)}
+      <p class="footer">Canonical source for this guide is maintained in the repository as <code>doc/user-guide.md</code>. This bundled HTML is generated during the Gradle resource build.</p>
+    </main>
+  </div>
+</body>
+</html>
+"""
+}
+
+tasks.register('generateBundledDocumentation') {
+    def sourceFile = layout.projectDirectory.file('doc/user-guide.md')
+    def akaiFireOutput = project(':modules:akai-fire').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
+    def launchControlOutput = project(':modules:launchcontrol').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
+    inputs.file(sourceFile)
+    outputs.files(akaiFireOutput, launchControlOutput)
+
+    doLast {
+        def rendered = renderUserGuideDocument(sourceFile.asFile.getText('UTF-8'))
+        [akaiFireOutput, launchControlOutput].each {
+            def outputFile = it.asFile
+            outputFile.parentFile.mkdirs()
+            outputFile.text = rendered
+        }
+    }
+}
+
+configure([project(':modules:akai-fire'), project(':modules:launchcontrol')]) {
+    tasks.named('processResources') {
+        dependsOn(rootProject.tasks.named('generateBundledDocumentation'))
+    }
+}
