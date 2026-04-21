@@ -19,8 +19,9 @@ Semantic versioning:
 
 ## For users
 
-- User guide source: `doc/user-guide.md`
-- Bundled help inside Bitwig: press the `?` symbol to open `index.html`
+- User guide source: [doc/user-guide.md](doc/user-guide.md)
+- Open the bundled HTML help directly: [Akai Fire help](modules/akai-fire/src/main/resources/Documentation/index.html) or [Launch Control XL help](modules/launchcontrol/src/main/resources/Documentation/index.html)
+- Bundled help inside Bitwig: press the `?` symbol to open the same `Documentation/index.html`
 
 High-level controller summary:
 
