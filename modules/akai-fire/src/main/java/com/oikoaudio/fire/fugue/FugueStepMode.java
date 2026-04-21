@@ -444,7 +444,9 @@ public final class FugueStepMode extends Layer {
             return;
         }
         if (!edit.changed) {
-            setClipPlayStart(edit.step);
+            writeTemplatePadEditNote(edit.withChanged(true));
+            regenerateAllEnabledDerivedLinesSilently();
+            oled.valueInfo("Template", "Added " + currentTemplatePadEditLabel());
             oled.clearScreenDelayed();
             return;
         }
