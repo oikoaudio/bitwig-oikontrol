@@ -70,8 +70,14 @@ public final class FugueClipAdapter {
                 }
                 final double duration = stepLength * Math.max(step.gate(), 0.02);
                 clip.setStep(channel, i, step.pitch(), step.velocity(), duration);
+                applyGeneratedNoteExpression(clip.getStep(channel, i, step.pitch()), step);
             }
         }
+    }
+
+    private static void applyGeneratedNoteExpression(final NoteStep noteStep, final MelodicPattern.Step step) {
+        noteStep.setChance(Math.min(0.999, step.chance()));
+        noteStep.setIsChanceEnabled(step.chance() < 0.999);
     }
 
     public static void duplicateChannelRange(final PinnableCursorClip clip,

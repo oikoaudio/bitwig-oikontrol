@@ -128,7 +128,7 @@ public final class MelodicLineTransformer {
             case REVERSE -> loopSteps - 1 - sourceIndex;
             case PING_PONG -> sourceIndex < loopSteps / 2
                     ? sourceIndex
-                    : loopSteps - 1 - sourceIndex;
+                    : loopSteps / 2 + loopSteps - 1 - sourceIndex;
         };
     }
 }

@@ -80,6 +80,17 @@ class MelodicLineTransformerTest {
     }
 
     @Test
+    void pingPongKeepsSecondHalfInsideSecondHalf() {
+        final FuguePattern transformed = MelodicLineTransformer.transform(longSource(),
+                new FugueLineSettings(FugueDirection.PING_PONG, FugueSpeed.NORMAL, 0, 0), major(), 0);
+
+        assertStep(transformed, 0, 60);
+        assertStep(transformed, 16, 62);
+        assertStep(transformed, 39, 67);
+        assertStep(transformed, 55, 65);
+    }
+
+    @Test
     void speedUpCanCreateThirtySecondNotesFromSixteenthSourceSteps() {
         final FuguePattern transformed = MelodicLineTransformer.transform(sixteenthRunSource(),
                 new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0), major(), 0);
@@ -217,6 +228,15 @@ class MelodicLineTransformerTest {
             steps.set(offset + 8, note(offset + 8, 64));
         }
         return new FuguePattern(steps, 128);
+    }
+
+    private static FuguePattern longSource() {
+        final List<MelodicPattern.Step> steps = emptySteps();
+        steps.set(0, note(0, 60));
+        steps.set(16, note(16, 62));
+        steps.set(40, note(40, 65));
+        steps.set(56, note(56, 67));
+        return new FuguePattern(steps, 64);
     }
 
     private static FuguePattern sixteenthRunSource() {

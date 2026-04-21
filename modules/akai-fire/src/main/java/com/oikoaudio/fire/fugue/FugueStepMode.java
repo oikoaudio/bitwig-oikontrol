@@ -154,12 +154,70 @@ public final class FugueStepMode extends Layer {
         final TouchEncoder[] encoders = driver.getEncoders();
         encoders[0].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
                 driver::isGlobalShiftHeld, this::adjustDirectionOrPreset);
+        encoders[0].bindTouched(this, touched -> showEncoderTouchValue(0, touched));
         encoders[1].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
                 driver::isGlobalShiftHeld, inc -> adjustSpeed(activeLineIndex(), inc));
+        encoders[1].bindTouched(this, touched -> showEncoderTouchValue(1, touched));
         encoders[2].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
                 driver::isGlobalShiftHeld, inc -> adjustStartOffset(activeLineIndex(), inc));
+        encoders[2].bindTouched(this, touched -> showEncoderTouchValue(2, touched));
         encoders[3].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
                 driver::isGlobalShiftHeld, this::adjustPitch);
+        encoders[3].bindTouched(this, touched -> showEncoderTouchValue(3, touched));
+    }
+
+    private void showEncoderTouchValue(final int encoderIndex, final boolean touched) {
+        if (!touched) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
+            showTemplateEncoderValue(encoderIndex);
+            return;
+        }
+        showDerivedLineEncoderValue(activeLineIndex(), encoderIndex);
+    }
+
+    private void showTemplateEncoderValue(final int encoderIndex) {
+        switch (encoderIndex) {
+            case 0 -> oled.valueInfo("Template Root", NoteGridLayout.noteName(driver.getSharedRootNote()));
+            case 1 -> oled.valueInfo("Template Scale", driver.getSharedScaleDisplayName());
+            case 2 -> oled.valueInfo("Template Octave", Integer.toString(driver.getSharedOctave()));
+            case 3 -> oled.valueInfo("Template Notes", Integer.toString(sourceStepCount()));
+            default -> { }
+        }
+    }
+
+    private void showDerivedLineEncoderValue(final int line, final int encoderIndex) {
+        final FugueLineSettings settings = lineSettings[line];
+        switch (encoderIndex) {
+            case 0 -> {
+                if (driver.isGlobalAltHeld()) {
+                    oled.valueInfo(lineLabel(line) + " Velocity", "%+d".formatted(settings.velocityOffset()));
+                } else if (driver.isGlobalShiftHeld()) {
+                    oled.valueInfo(lineLabel(line) + " Preset", linePresets[line].label());
+                } else {
+                    oled.valueInfo(lineLabel(line) + " Direction", settings.direction().label());
+                }
+            }
+            case 1 -> {
+                if (driver.isGlobalAltHeld()) {
+                    oled.valueInfo(lineLabel(line) + " Chance", settings.chancePercent() + "%");
+                } else {
+                    oled.valueInfo(lineLabel(line) + " Tempo", settings.speed().label());
+                }
+            }
+            case 2 -> {
+                if (driver.isGlobalAltHeld()) {
+                    oled.valueInfo(lineLabel(line) + " Gate", settings.gatePercent() + "%");
+                } else {
+                    oled.valueInfo(lineLabel(line) + " Start", Integer.toString(settings.startOffset() + 1));
+                }
+            }
+            case 3 -> oled.valueInfo(lineLabel(line) + " Interval",
+                    FuguePitchIntervals.label(settings.pitchDegreeOffset()));
+            default -> { }
+        }
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {

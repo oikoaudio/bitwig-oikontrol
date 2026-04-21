@@ -1,10 +1,13 @@
 package com.oikoaudio.fire.fugue;
 
 import com.bitwig.extension.controller.api.NoteStep;
+import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.oikoaudio.fire.melodic.MelodicPattern;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,6 +65,25 @@ class FugueClipAdapterTest {
         assertEquals(2.0, source.step(0).gate());
     }
 
+    @Test
+    void writeDerivedLineAppliesChanceToGeneratedNotes() {
+        final double[] generatedChance = {1.0};
+        final boolean[] chanceEnabled = {false};
+        final int[] writtenNotes = {0};
+        final PinnableCursorClip clip = writableClip(generatedChance, chanceEnabled, writtenNotes);
+        final List<MelodicPattern.Step> steps = new ArrayList<>();
+        for (int i = 0; i < FuguePattern.MAX_STEPS; i++) {
+            steps.add(MelodicPattern.Step.rest(i));
+        }
+        steps.set(0, new MelodicPattern.Step(0, true, false, 60, 96, 1.0, 0.5, false, false, 0, 0));
+
+        FugueClipAdapter.writeDerivedLine(clip, Map.of(), 1, new FuguePattern(steps, 16), 0.125);
+
+        assertEquals(1, writtenNotes[0]);
+        assertEquals(0.5, generatedChance[0]);
+        assertTrue(chanceEnabled[0]);
+    }
+
     private static void put(final Map<Integer, Map<Integer, Map<Integer, NoteStep>>> steps, final NoteStep note) {
         steps.computeIfAbsent(note.channel(), ignored -> new HashMap<>())
                 .computeIfAbsent(note.x(), ignored -> new HashMap<>())
@@ -85,6 +107,38 @@ class FugueClipAdapterTest {
                     case "duration" -> duration;
                     case "recurrenceLength", "recurrenceMask" -> 0;
                     case "toString" -> "NoteStepStub";
+                    default -> defaultValue(method.getReturnType());
+                });
+    }
+
+    private static PinnableCursorClip writableClip(final double[] generatedChance,
+                                                   final boolean[] chanceEnabled,
+                                                   final int[] writtenNotes) {
+        final NoteStep generatedStep = (NoteStep) Proxy.newProxyInstance(
+                NoteStep.class.getClassLoader(),
+                new Class[]{NoteStep.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "setChance" -> {
+                        generatedChance[0] = (double) args[0];
+                        yield null;
+                    }
+                    case "setIsChanceEnabled" -> {
+                        chanceEnabled[0] = (boolean) args[0];
+                        yield null;
+                    }
+                    case "toString" -> "GeneratedNoteStepStub";
+                    default -> defaultValue(method.getReturnType());
+                });
+        return (PinnableCursorClip) Proxy.newProxyInstance(
+                PinnableCursorClip.class.getClassLoader(),
+                new Class[]{PinnableCursorClip.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "setStep" -> {
+                        writtenNotes[0]++;
+                        yield null;
+                    }
+                    case "getStep" -> generatedStep;
+                    case "toString" -> "WritableClipStub";
                     default -> defaultValue(method.getReturnType());
                 });
     }
