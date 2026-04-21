@@ -17,6 +17,7 @@ import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.utils.PatternButtons;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -66,6 +67,7 @@ public final class FugueStepMode extends Layer {
     private int sourceRebuildToken = 0;
     private boolean mainEncoderPressConsumed = false;
     private boolean active = false;
+    private TemplatePadEdit templatePadEdit = null;
 
     public FugueStepMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "FUGUE_STEP_MODE");
@@ -164,16 +166,40 @@ public final class FugueStepMode extends Layer {
     private void bindEncoders() {
         final TouchEncoder[] encoders = driver.getEncoders();
         encoders[0].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, this::adjustDirectionOrPreset);
+                driver::isGlobalShiftHeld, inc -> {
+                    if (templatePadEdit != null) {
+                        adjustTemplatePadVelocity(inc);
+                    } else {
+                        adjustDirectionOrPreset(inc);
+                    }
+                });
         encoders[0].bindTouched(this, touched -> showEncoderTouchValue(0, touched));
         encoders[1].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, inc -> adjustSpeed(activeLineIndex(), inc));
+                driver::isGlobalShiftHeld, inc -> {
+                    if (templatePadEdit != null) {
+                        adjustTemplatePadChance(inc);
+                    } else {
+                        adjustSpeed(activeLineIndex(), inc);
+                    }
+                });
         encoders[1].bindTouched(this, touched -> showEncoderTouchValue(1, touched));
         encoders[2].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, inc -> adjustStartOffset(activeLineIndex(), inc));
+                driver::isGlobalShiftHeld, inc -> {
+                    if (templatePadEdit != null) {
+                        adjustTemplatePadGate(inc);
+                    } else {
+                        adjustStartOffset(activeLineIndex(), inc);
+                    }
+                });
         encoders[2].bindTouched(this, touched -> showEncoderTouchValue(2, touched));
         encoders[3].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, this::adjustPitch);
+                driver::isGlobalShiftHeld, inc -> {
+                    if (templatePadEdit != null) {
+                        transposeTemplatePadEdit(inc);
+                    } else {
+                        adjustPitch(inc);
+                    }
+                });
         encoders[3].bindTouched(this, touched -> showEncoderTouchValue(3, touched));
     }
 
@@ -189,6 +215,10 @@ public final class FugueStepMode extends Layer {
             return;
         }
         if (inc == 0) {
+            return;
+        }
+        if (templatePadEdit != null) {
+            transposeTemplatePadEdit(inc);
             return;
         }
         driver.markMainEncoderTurned();
@@ -212,6 +242,14 @@ public final class FugueStepMode extends Layer {
     private void handleMainEncoderPress(final boolean pressed) {
         if (driver.isPopupBrowserActive()) {
             driver.routeBrowserMainEncoderPress(pressed);
+            return;
+        }
+        if (templatePadEdit != null) {
+            if (pressed) {
+                oled.valueInfo("Template Pitch", currentTemplatePadEditLabel());
+            } else {
+                oled.clearScreenDelayed();
+            }
             return;
         }
         driver.setMainEncoderPressed(pressed);
@@ -269,11 +307,25 @@ public final class FugueStepMode extends Layer {
             oled.clearScreenDelayed();
             return;
         }
+        if (templatePadEdit != null) {
+            showTemplatePadEditEncoderValue(encoderIndex);
+            return;
+        }
         if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
             showTemplateEncoderValue(encoderIndex);
             return;
         }
         showDerivedLineEncoderValue(activeLineIndex(), encoderIndex);
+    }
+
+    private void showTemplatePadEditEncoderValue(final int encoderIndex) {
+        switch (encoderIndex) {
+            case 0 -> oled.valueInfo("Template Velocity", Integer.toString(templatePadVelocity()));
+            case 1 -> oled.valueInfo("Template Chance", "%d%%".formatted((int) Math.round(templatePadChance() * 100.0)));
+            case 2 -> oled.valueInfo("Template Gate", "%.2f".formatted(templatePadDuration()));
+            case 3 -> oled.valueInfo("Template Pitch", currentTemplatePadEditLabel());
+            default -> { }
+        }
     }
 
     private void showTemplateEncoderValue(final int encoderIndex) {
@@ -330,18 +382,175 @@ public final class FugueStepMode extends Layer {
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
+        final int line = padIndex / PAD_COLUMNS;
+        final int column = padIndex % PAD_COLUMNS;
+        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            handleTemplatePadPress(column, pressed);
+            return;
+        }
         if (!pressed) {
             return;
         }
-        final int line = padIndex / PAD_COLUMNS;
-        final int column = padIndex % PAD_COLUMNS;
         selectLine(line);
-        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
-            setClipPlayStart(bucketStart(column));
+        setStartOffset(line, bucketStart(column));
+    }
+
+    private void handleTemplatePadPress(final int column, final boolean pressed) {
+        if (pressed) {
+            selectLine(FugueClipAdapter.SOURCE_CHANNEL);
+            templatePadEdit = createTemplatePadEdit(column);
+            oled.valueInfo("Template", currentTemplatePadEditLabel());
+            return;
+        }
+        if (templatePadEdit == null || templatePadEdit.column != column) {
+            return;
+        }
+        finishTemplatePadEdit();
+    }
+
+    private TemplatePadEdit createTemplatePadEdit(final int column) {
+        final int start = bucketStart(column);
+        final int end = bucketEnd(column);
+        return findTemplateNoteInRange(start, end)
+                .map(note -> new TemplatePadEdit(column, start, note.x(), note.y(), true, false,
+                        (int) Math.round(note.velocity() * 127.0), note.chance(), note.duration()))
+                .orElseGet(() -> new TemplatePadEdit(column, start, start, defaultTemplatePitch(), false, false,
+                        96, 1.0, STEP_LENGTH * 2));
+    }
+
+    private java.util.Optional<NoteStep> findTemplateNoteInRange(final int start, final int end) {
+        final Map<Integer, Map<Integer, NoteStep>> channelSteps =
+                noteStepsByChannel.getOrDefault(FugueClipAdapter.SOURCE_CHANNEL, Map.of());
+        return channelSteps.entrySet().stream()
+                .filter(entry -> entry.getKey() >= start && entry.getKey() < end)
+                .flatMap(entry -> entry.getValue().values().stream())
+                .filter(note -> note.state() == NoteStep.State.NoteOn)
+                .min(Comparator.comparingInt(NoteStep::y).thenComparingInt(NoteStep::x));
+    }
+
+    private int defaultTemplatePitch() {
+        return driver.getSharedMusicalScale().computeNote(driver.getSharedRootNote(), driver.getSharedOctave() + 1, 0);
+    }
+
+    private void finishTemplatePadEdit() {
+        final TemplatePadEdit edit = templatePadEdit;
+        templatePadEdit = null;
+        if (!edit.changed && edit.existed) {
+            cursorClip.clearStep(FugueClipAdapter.SOURCE_CHANNEL, edit.step, edit.pitch);
+            removeCachedSourceNote(edit.step, edit.pitch);
+            scheduleSourceRebuild(SOURCE_EDIT_REBUILD_DELAY_MS);
+            oled.valueInfo("Template", "Removed");
             oled.clearScreenDelayed();
             return;
         }
-        setStartOffset(line, bucketStart(column));
+        if (!edit.changed) {
+            setClipPlayStart(edit.step);
+            oled.clearScreenDelayed();
+            return;
+        }
+        regenerateAllEnabledDerivedLinesSilently();
+        oled.clearScreenDelayed();
+    }
+
+    private void transposeTemplatePadEdit(final int inc) {
+        if (templatePadEdit == null) {
+            return;
+        }
+        final TemplatePadEdit edit = templatePadEdit;
+        final int nextPitch = ScaleAwareTransposer.transposeByScaleDegrees(edit.pitch, inc,
+                driver.getSharedMusicalScale(), driver.getSharedRootNote());
+        if (nextPitch == edit.pitch && edit.existed) {
+            return;
+        }
+        if (edit.existed) {
+            cursorClip.clearStep(FugueClipAdapter.SOURCE_CHANNEL, edit.step, edit.pitch);
+            removeCachedSourceNote(edit.step, edit.pitch);
+        }
+        writeTemplatePadEditNote(edit.withPitch(nextPitch).withChanged(true));
+        oled.valueInfo("Template Pitch", currentTemplatePadEditLabel());
+    }
+
+    private void adjustTemplatePadVelocity(final int inc) {
+        if (templatePadEdit == null) {
+            return;
+        }
+        writeTemplatePadEditNote(templatePadEdit.withVelocity(templatePadVelocity() + inc * 4).withChanged(true));
+        oled.valueInfo("Template Velocity", Integer.toString(templatePadVelocity()));
+    }
+
+    private void adjustTemplatePadChance(final int inc) {
+        if (templatePadEdit == null) {
+            return;
+        }
+        writeTemplatePadEditNote(templatePadEdit.withChance(templatePadChance() + inc * 0.05).withChanged(true));
+        oled.valueInfo("Template Chance", "%d%%".formatted((int) Math.round(templatePadChance() * 100.0)));
+    }
+
+    private void adjustTemplatePadGate(final int inc) {
+        if (templatePadEdit == null) {
+            return;
+        }
+        writeTemplatePadEditNote(templatePadEdit.withDuration(templatePadDuration() + inc * STEP_LENGTH).withChanged(true));
+        oled.valueInfo("Template Gate", "%.2f".formatted(templatePadDuration()));
+    }
+
+    private void writeTemplatePadEditNote(final TemplatePadEdit nextEdit) {
+        if (templatePadEdit != null && templatePadEdit.existed) {
+            cursorClip.clearStep(FugueClipAdapter.SOURCE_CHANNEL, templatePadEdit.step, templatePadEdit.pitch);
+            removeCachedSourceNote(templatePadEdit.step, templatePadEdit.pitch);
+        }
+        cursorClip.setStep(FugueClipAdapter.SOURCE_CHANNEL, nextEdit.step, nextEdit.pitch,
+                nextEdit.velocity, nextEdit.duration);
+        final NoteStep note = cursorClip.getStep(FugueClipAdapter.SOURCE_CHANNEL, nextEdit.step, nextEdit.pitch);
+        note.setChance(Math.min(0.999, nextEdit.chance));
+        note.setIsChanceEnabled(nextEdit.chance < 0.999);
+        cacheSourceNote(note);
+        templatePadEdit = nextEdit.withExisted(true);
+    }
+
+    private int templatePadVelocity() {
+        return templatePadEdit == null ? 96 : templatePadEdit.velocity;
+    }
+
+    private double templatePadChance() {
+        return templatePadEdit == null ? 1.0 : templatePadEdit.chance;
+    }
+
+    private double templatePadDuration() {
+        return templatePadEdit == null ? STEP_LENGTH * 2 : templatePadEdit.duration;
+    }
+
+    private String currentTemplatePadEditLabel() {
+        if (templatePadEdit == null) {
+            return "";
+        }
+        return "%s%d".formatted(NoteGridLayout.noteName(templatePadEdit.pitch), templatePadEdit.pitch / 12 - 1);
+    }
+
+    private void cacheSourceNote(final NoteStep note) {
+        if (note.state() != NoteStep.State.NoteOn) {
+            return;
+        }
+        noteStepsByChannel.computeIfAbsent(FugueClipAdapter.SOURCE_CHANNEL, ignored -> new HashMap<>())
+                .computeIfAbsent(note.x(), ignored -> new HashMap<>())
+                .put(note.y(), note);
+    }
+
+    private void removeCachedSourceNote(final int step, final int pitch) {
+        final Map<Integer, Map<Integer, NoteStep>> channelSteps = noteStepsByChannel.get(FugueClipAdapter.SOURCE_CHANNEL);
+        if (channelSteps == null) {
+            return;
+        }
+        final Map<Integer, NoteStep> notesAtStep = channelSteps.get(step);
+        if (notesAtStep != null) {
+            notesAtStep.remove(pitch);
+            if (notesAtStep.isEmpty()) {
+                channelSteps.remove(step);
+            }
+        }
+        if (channelSteps.isEmpty()) {
+            noteStepsByChannel.remove(FugueClipAdapter.SOURCE_CHANNEL);
+        }
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -888,5 +1097,35 @@ public final class FugueStepMode extends Layer {
 
     private String lineLabel(final int line) {
         return "Line " + (line + 1);
+    }
+
+    private record TemplatePadEdit(int column, int bucketStart, int step, int pitch, boolean existed, boolean changed,
+                                   int velocity, double chance, double duration) {
+        TemplatePadEdit withPitch(final int value) {
+            return new TemplatePadEdit(column, bucketStart, step, value, existed, changed, velocity, chance, duration);
+        }
+
+        TemplatePadEdit withVelocity(final int value) {
+            return new TemplatePadEdit(column, bucketStart, step, pitch, existed, changed,
+                    Math.max(1, Math.min(127, value)), chance, duration);
+        }
+
+        TemplatePadEdit withChance(final double value) {
+            return new TemplatePadEdit(column, bucketStart, step, pitch, existed, changed, velocity,
+                    Math.max(0.0, Math.min(1.0, value)), duration);
+        }
+
+        TemplatePadEdit withDuration(final double value) {
+            return new TemplatePadEdit(column, bucketStart, step, pitch, existed, changed, velocity, chance,
+                    Math.max(STEP_LENGTH * 0.02, value));
+        }
+
+        TemplatePadEdit withExisted(final boolean value) {
+            return new TemplatePadEdit(column, bucketStart, step, pitch, value, changed, velocity, chance, duration);
+        }
+
+        TemplatePadEdit withChanged(final boolean value) {
+            return new TemplatePadEdit(column, bucketStart, step, pitch, existed, value, velocity, chance, duration);
+        }
     }
 }
