@@ -45,15 +45,15 @@ public final class FugueStepMode extends Layer {
     private final Map<Integer, Map<Integer, Map<Integer, NoteStep>>> noteStepsByChannel = new HashMap<>();
     private final FugueLineSettings[] lineSettings = {
             FugueLineSettings.init(),
-            FuguePreset.BASS_AUGMENTED.settings(),
-            FuguePreset.HIGH_HALF.settings(),
-            FuguePreset.REVERSE_DOUBLE.settings()
+            FuguePreset.BASS_OCTAVE.settings(),
+            FuguePreset.THIRD_TRIPLET.settings(),
+            FuguePreset.TENTH_DOUBLE.settings()
     };
     private final FuguePreset[] linePresets = {
             FuguePreset.INIT,
-            FuguePreset.BASS_AUGMENTED,
-            FuguePreset.HIGH_HALF,
-            FuguePreset.REVERSE_DOUBLE
+            FuguePreset.BASS_OCTAVE,
+            FuguePreset.THIRD_TRIPLET,
+            FuguePreset.TENTH_DOUBLE
     };
     private final boolean[] lineEnabled = {true, true, true, true};
 
@@ -522,6 +522,9 @@ public final class FugueStepMode extends Layer {
     }
 
     private void regenerateAllEnabledDerivedLinesSilently() {
+        if (!hasSourceNotes()) {
+            return;
+        }
         for (int line = FugueClipAdapter.FIRST_DERIVED_CHANNEL; line <= FugueClipAdapter.LAST_DERIVED_CHANNEL; line++) {
             if (lineEnabled[line]) {
                 regenerateLine(line);
@@ -543,6 +546,11 @@ public final class FugueStepMode extends Layer {
     }
 
     private void regenerateAllDerivedLines() {
+        if (!hasSourceNotes()) {
+            oled.valueInfo("Fugue", "No Ch1 notes");
+            oled.clearScreenDelayed();
+            return;
+        }
         for (int line = FugueClipAdapter.FIRST_DERIVED_CHANNEL; line <= FugueClipAdapter.LAST_DERIVED_CHANNEL; line++) {
             regenerateLine(line);
         }
@@ -607,6 +615,9 @@ public final class FugueStepMode extends Layer {
             return;
         }
         final FuguePattern source = sourcePattern();
+        if (!hasNotes(source)) {
+            return;
+        }
         final FuguePattern transformed = MelodicLineTransformer.transform(source, lineSettings[line],
                 driver.getSharedMusicalScale(), driver.getSharedRootNote());
         FugueClipAdapter.writeDerivedLine(cursorClip, noteStepsByChannel, line, transformed, STEP_LENGTH);
@@ -649,6 +660,21 @@ public final class FugueStepMode extends Layer {
 
     private void handlePlayingStep(final int clipPlayingStep) {
         this.playingStep = clipPlayingStep >= 0 && clipPlayingStep < STEP_COUNT ? clipPlayingStep : -1;
+    }
+
+    private boolean hasSourceNotes() {
+        return hasNotes(sourcePattern());
+    }
+
+    private boolean hasNotes(final FuguePattern pattern) {
+        for (int i = 0; i < pattern.loopSteps(); i++) {
+            for (final MelodicPattern.Step step : pattern.notesAt(i)) {
+                if (step.active() && !step.tieFromPrevious() && step.pitch() != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private String lineLabel(final int line) {

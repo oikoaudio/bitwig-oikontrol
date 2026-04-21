@@ -2,7 +2,10 @@ package com.oikoaudio.fire.fugue;
 
 public enum FuguePreset {
     INIT("Init", FugueLineSettings.init()),
-    BASS_AUGMENTED("Bass /8", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 1, -7)),
+    BASS_OCTAVE("Bass /8", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 0, -7)),
+    THIRD_TRIPLET("3rd 2trp", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2_TRIPLET, 0, 2)),
+    TENTH_DOUBLE("10th x2", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 9)),
+    BASS_AUGMENTED("BassOld", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 1, -7)),
     HIGH_HALF("High /2", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_2, 1, 18)),
     REVERSE_DOUBLE("Rev x2", new FugueLineSettings(FugueDirection.REVERSE, FugueSpeed.TIMES_2, 1, 11)),
     FIFTH_DOUBLE("5th x2", new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 4)),
