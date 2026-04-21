@@ -16,3 +16,6 @@ build/
 /doc/dev
 /doc/dev/
 /ref/
+
+# Docs site - experimental WIP left out for now
+/docs-site

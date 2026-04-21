@@ -107,377 +107,257 @@ Quick start:
 
 ## Akai Fire
 
-The Akai Fire extension is a clip, note, and sequencer workflow built around four top-level modes:
+The Akai Fire extension is organized around four top-level workflows.
 
-- `STEP`
-- `DRUM`
-- `NOTE`
-- `PERFORM`
+| Button | Workflow | Role |
+| --- | --- | --- |
+| `DRUM` | Drum sequencing | XOX-style drum sequencing; press again for `Nested Rhythm` |
+| `NOTE` | Live note input | 16x4 note surface; press again for harmonic note layout |
+| `STEP SEQ` | Step sequencing | Enters `Melodic Step`; press again for `Chord Step` |
+| `PERFORM` | Clip launching | 16x4 clip grid and track actions |
+
+Shared pitch context is global across `NOTE`, `Melodic Step`, `Chord Step`, and the settings overlay. `Root Key`, `Scale`, and `Octave` changes in one of those places update the others.
+
+Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colors. `Pad Brightness` and `Pad Saturation` control how strongly those project colors translate to the Fire LEDs.
+
+### Shared controls
+
+| Control | Action |
+| --- | --- |
+| `PLAY` | Toggle transport, with retrigger-on-start behavior |
+| `ALT + PLAY` | Retrigger current clip |
+| `REC` | Clip record in `DRUM`; arranger record in `NOTE` and `PERFORM` |
+| `ALT + REC` | Arranger automation write |
+| `PATTERN` | Clip launcher automation write |
+| `SHIFT + PATTERN` | Metronome |
+| `ALT + PATTERN` | Clip launcher overdub |
+| `BROWSER` | Open or close Bitwig popup browser |
+| `SHIFT + BROWSER` | Hold global pitch settings overlay |
+| `ALT + BROWSER` | Open browser after the current device / insertion context |
+| `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
+
+When the popup browser is open, `SELECT` turn moves through results, `SELECT` press commits the selected result, and `BROWSER` closes the browser.
+
+### Main SELECT encoder
+
+Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
+
+| Role | Turn | Press / hold behavior |
+| --- | --- | --- |
+| `Last Touched Parameter` | Adjust last touched Bitwig parameter | Reset parameter to default |
+| `Shuffle` | Adjust groove shuffle; `0` disables shuffle | None |
+| `Tempo` | Adjust project tempo | None |
+| `Note Repeat` | Select repeat division; `Off` disables repeat | Active repeat control |
+| `Track Select` | Previous / next track | Hold while turning to jump by visible pages |
+| `Drum Grid` | Drum-step grid resolution | `DRUM` mode only |
 
 ### DRUM mode
 
-`DRUM` is the default sequencer-oriented workflow.
+`DRUM` is the default sequencer-oriented workflow for a Drum Machine. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
 
-Pad colors in `DRUM` follow the Bitwig track or drum-lane color context. The brightness and saturation preferences affect how strongly those project colors translate to the Fire LEDs, so perceived intensity will vary with the chosen track color.
+| Pad row | Role |
+| --- | --- |
+| Row 1 | Clip slots |
+| Row 2 | Visible drum slots |
+| Rows 3-4 | 32 visible steps for the selected lane |
 
-- Row 1: clip slots
-- Row 2: visible drum slots
-- Rows 3-4: 32 visible steps for the selected lane
+| Control | Action |
+| --- | --- |
+| `STEP SEQ` | Enter `Melodic Step` |
+| `SHIFT + STEP SEQ` | Accent entry and editing |
+| `ALT + STEP SEQ` | Fill |
+| `BANK LEFT/RIGHT` | Move or rotate pattern |
+| `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| `MUTE_1` | Select |
+| `MUTE_2` | Last Step |
+| `MUTE_3` | Copy / paste |
+| `MUTE_4` | Delete / reset |
 
-Main gestures:
+Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.
 
-- `STEP SEQ`: enter `Melodic Step`
-- `SHIFT + STEP SEQ`: accent entry and accent editing
-- `ALT + STEP SEQ`: Fill
-- `BANK LEFT/RIGHT`: pattern shift and movement
-- `SHIFT + BANK LEFT/RIGHT`: fine nudge
-- `ALT + BANK LEFT/RIGHT`: halve / double clip length
+Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 
-In `DRUM`, hold `Paste` and press a clip slot, drum pad, or step. The currently selected item of the same type is used as the source to copy from:
-
-- clip-row paste uses the currently selected clip slot as the source to copy from, or falls back to the playing clip on that track if no clip was explicitly selected
-- drum-pad paste uses the currently selected drum pad as the source to copy from
-- step paste uses the currently selected step as the source to copy from
-
-Encoder pages:
-
-- `Channel`: shared step expression editing
-- `Mixer`: volume, pan, and sends
-- `User 1`: step behavior page
-- `User 2`: Euclid controls
-
-Preferences that matter:
-
-- `Drum Mode Pinning`
-- `Step Seq Pad Audition`
-- `Clip Launch Mode`
-- `Clip Launch Quantization`
-- `Euclid Scope`
-
-Quick start:
-
-1. Load a Drum Machine on a Bitwig track.
-2. Enter `DRUM` mode.
-3. If `Drum Mode Pinning` is set to `Auto-select First Drum Machine`, the script will focus and pin the first Drum Machine it finds.
-4. If `Drum Mode Pinning` is set to `Follow Selection`, the drum sequencer follows the currently selected drum track/device context.
-5. Select a lane on row 2.
-6. Program steps on the lower two rows.
-7. Hold `STEP SEQ` to accent notes or add accented hits quickly.
-
-### NOTE mode
-
-`NOTE` provides a 16x4 isomorphic playing surface.
-
-- `Chromatic` and `In Key` layouts
-- shared root key, scale, and octave center, with local layout controls
-- LED and OLED note feedback
-- `Pitch Gliss` on the Channel encoder page
-- `Velocity Sensitivity` with `SHIFT + Encoder 3` for `Default Velocity`
-
-Useful live-note controls:
-
-- `PATTERN UP/DOWN`: shared octave
-- `ALT + NOTE`: toggle the local live-note layout shortcut
-- `SHIFT + Encoder 4`: local layout (`Chromatic` / `In Key` in melodic note mode)
-- `Encoder 4`: shared scale
-- `ALT + Encoder 4`: shared root
-- `MUTE_1`: sustain
-- `MUTE_2`: sostenuto
-
-`Melodic Step` and `Chord Step` live behind `STEP SEQ`. `Nested Rhythm` is now the second main `DRUM` surface.
-
-Quick start:
-
-1. Enter `NOTE`.
-2. Play notes directly on the pad grid.
-3. Press `NOTE` again to move between the primary note-family surfaces.
-4. Use `ALT + NOTE` or `SHIFT + Encoder 4` for the local layout, `PATTERN UP/DOWN` for shared octave, `Encoder 4` for shared scale, `ALT + Encoder 4` for shared root, and the Channel page for `Pitch Gliss` and live velocity response.
-
-The shared `Root Key`, `Scale`, and `Octave` are global across `NOTE`, `Chord Step`, `Melodic Step`, and the held `SHIFT + BROWSER` settings overlay.
-
-### Chord Step workflow
-Press `STEP SEQ` once to enter `Melodic Step`. Press `STEP SEQ` again to switch to `Chord Step`. Press `NOTE` to return to live note input.
-
-`Chord Step` is the chord-oriented note-step workflow.
-
-- Row 1: clip row
-- Row 2: chord definition or curated chord slots
-- Rows 3-4: 32 visible steps
-- the builder defaults to in-key view and uses the same shared root/scale as live NOTE
-- In chord definition mode, first pick which notes should be in the chord on row 2, then place it on steps on the lower two rows.
-- If you select one of the pre-defined chord families, the workflow mirrors Drum sequencing: pick a chord, then place or remove it on as many steps as you like
-- Holding one or more step pads while pressing a chord pad rewrites those held steps with the chosen chord
-
-Important gestures:
-
-- top row clip pads: launch, select, create, and paste clips; `Delete` clears clip contents and `Shift + Delete` removes the clip object
-- `PATTERN DOWN/UP`: previous/next visible step page
-- `STEP SEQ`: enter `Melodic Step`
-- `SHIFT + STEP SEQ`: accent toggle/edit
-- `ALT + STEP SEQ`: Fill
-- tap an empty step pad: place the selected chord
-- tap a lit step pad: remove the chord from that step
-- `BANK LEFT/RIGHT`: move written step content left or right
-- `SHIFT + BANK LEFT/RIGHT`: experimental micro-timing nudge for chord material; behavior is currently temperamental
-- `ALT + BANK LEFT/RIGHT`: halve / double clip length
-- `MUTE_1`: select / load step
-- `MUTE_2`: last-step target mode
-- `MUTE_3`: paste to target step or clip slot
-- `MUTE_4`: delete target step or clip
-- `ALT + MUTE_4`: invert chord
-- `SHIFT + ALT + MUTE_4`: invert chord in the opposite direction
-- `Encoder 3`: chord family
-- `ALT + Encoder 3`: chord family page
-- `Encoder 4`: interpretation (`As Is` / `In Scale`)
-- `SHIFT + Encoder 4`: shared scale
-- `ALT + Encoder 4`: shared root
-
-Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch to a different bank or slot; it only changes how the selected slot is rendered. In `As Is`, the stored chord shape is transposed from the current root. In `In Scale`, the same slot is rebuilt from the current shared scale and root, so changing scale can reharmonize the result.
-
-Timing note:
-
-- coarse nudge is intentionally disabled in `Chord Step`
-- chord-step micro-timing is currently temperamental and should be treated as experimental
-
-### Melodic STEP mode
-
-`STEP` is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks.
-It edits a 2-bar / 32-step window and does not expand beyond that range from within the mode.
-
-- Row 1: clip row
-- Row 2: compact 16-note in-scale pitch pool
-- Rows 3-4: 32 visible steps
-- generated phrases are constrained to the current pitch pool
-- different generator modes provide different phrase grammars such as `Acid`, `Motif`, `Call/Resp`, `Rolling`, and `Octave`
-
-Main ideas:
-
-- `Pattern Up` works on the pitch pool
-- `Pattern Down` works on the phrase
-- if you manually edit the pitch pool, it is treated as user-owned and is not auto-replaced on mode switch
-- if the pool was auto-generated, first generation in a different mode can rebuild it for that mode
-- changing pool octave center no longer rewrites the selected clip immediately
-
-Important gestures:
-
-- top row clip pads: launch, select, create, and paste clips; `Delete` clears clip contents and `Shift + Delete` removes the clip object
-- tap a pitch pad: add or remove that note from the pool
-- tap a step pad: place, clear, or load that step depending on state
-- hold a step pad and turn encoders: edit that held step directly
-- `SHIFT + STEP SEQ`: hold and tap a step to toggle accent
-- `PATTERN UP`: generate a new pitch pool for the current mode
-- `ALT + PATTERN UP`: mutate the current pitch pool
-- `PATTERN DOWN`: generate a new phrase from the current mode
-- `ALT + PATTERN DOWN`: mutate the current phrase
-- `SHIFT + PATTERN UP` and `SHIFT + PATTERN DOWN`: cycle the current view between `Notes`, `Expression`, and `Process`
-- `BANK LEFT/RIGHT`: rotate the phrase
-- `ALT + BANK LEFT/RIGHT`: halve or double the clip length
-
-Encoder pages:
-
-- `Channel`: engine, density, pitch-pool octave center, mutation type
-- `Mixer`: melodic process transforms
-- `User 1`: engine macro, tension, legato, recurrence helper
-- `User 2`: selected or held step octave, gate, velocity, articulation
-
-Channel page details:
-
-- Encoder 1: `Engine`
-- `ALT + Encoder 1`: engine subtype / family when available
-- Encoder 2: `Density`
-- Encoder 3: pitch-pool octave center
-- `ALT + Encoder 3`: shared root key
-- Encoder 4: `Mutation Type`
-- `ALT + Encoder 4`: mutation strength
-
-User 1 page details:
-
-- Encoder 1: engine-specific macro such as motion, contour, answer, movement, or jump
-- Encoder 2: tension
-- Encoder 3: legato
-- Encoder 4: recurrence span helper
-
-Recurrence editing:
-
-- hold one or more active melodic steps to enter recurrence targeting
-- while steps are held, the top clip row becomes an 8-pad recurrence editor instead of clip launch
-- tap pads on that top row to toggle recurrence hits within the current span
-- hold the first top-row pad as a span anchor, then tap another top-row pad to set the recurrence span
-- touch `User 1 / Encoder 4` to see the current recurrence summary for the held step set
-- recurrence editing currently applies only to held active note steps
-
-Melodic left-side buttons now align with the shared sequencer clip/edit workflow:
-
-- `MUTE_1`: select clip without launch
-- `MUTE_2`: last-step target mode
-- `MUTE_3`: paste to clip slot
-- `MUTE_4`: clear step or clear clip contents
-- `SHIFT + MUTE_4` on a clip pad: remove the clip object
-
-Melodic transform controls moved to the `Mixer` page:
-
-- Encoder 1: halve / double length
-- Encoder 2: swivel / mirror-double
-- Encoder 3: reverse
-- Encoder 4: invert down / up
-
-Notes on generation:
-
-- `Acid` focuses on bassline-style phrase families
-- `Motif` focuses on short melodic cells with repetition and variation
-- `Call/Resp` creates a call phrase and an answering phrase
-- `Rolling` targets denser rolling bassline motion
-- the OLED generation message shows the current mode family, for example `Acd.RootAnswer`
+| Encoder page | Encoders |
+| --- | --- |
+| `Channel` | Shared step-expression editing |
+| `Mixer` | Track volume, pan, send 1, send 2 |
+| `User 1` | Step behavior page |
+| `User 2` | Euclid length, pulses, rotation, accent density |
 
 ### Nested Rhythm mode
 
-`Nested Rhythm` is the second main `DRUM` surface. It generates rhythm from nested segment divisions rather than fixed-grid step placement, so it is suited to tuplets, ratchets, asymmetric subdivisions, and other layered rhythmic structures that are awkward to program directly on a coarse step grid (or, frankly, awkward to program/play - pretty good to change up your usual rythms). It has mostly been tested in 4/4 so far but should support other meters too.
+`Nested Rhythm` is the second `DRUM` surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.
 
-The mode slices segments into symmetric and asymmetric subdivisions, writes the exact result onto a hidden fine clip grid, then projects the generated hits back to the Fire. It also adds musical expression layers for velocity, pressure, timbre, and related hit variation that can be rotated across the generated hits for different feels without rebuilding the structure from scratch.
+If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern once.
 
-If you enter the mode with a selected clip slot that is still empty, the mode now generates its default starter pattern automatically once.
+| Pad row | Role |
+| --- | --- |
+| Row 1 | Clip row; becomes recurrence mask while a hit is held |
+| Rows 2-3 | 32-bin projected rhythm view |
+| Row 4 | First 16 generated hits in hit order, shown by velocity with playhead highlight |
 
-- press `DRUM` again while already in `DRUM` to toggle between standard drum sequencing and `Nested Rhythm`
-- `STEP SEQ`: enter `Melodic Step`
-- press `DRUM` again to return to standard drum sequencing
-- Row 1: clip row
-- Rows 2-3: projected rhythm view
-- Row 4: first 16 generated hits in hit order, shown by velocity with playhead highlight
+| Control | Action |
+| --- | --- |
+| `DRUM` while in standard `DRUM` | Enter `Nested Rhythm` |
+| `DRUM` while in `Nested Rhythm` | Return to standard `DRUM` |
+| `STEP SEQ` | Enter `Melodic Step` |
+| `PATTERN UP` | Generate current nested rhythm into the selected clip |
+| `PATTERN DOWN` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
+| Hold `MUTE_2` + projected rhythm pad | Set last step within the 32-step edit view |
+| Hold projected rhythm pad | Target nearest generated hit |
+| Tap bottom-row hit pad | Toggle that hit |
+| Hold bottom-row hit pad + expression encoder | Edit that hit directly |
+| `SHIFT` + hit pad | Reset that hit's local edits |
 
-Main gestures:
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Density / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
+| `Mixer` | Volume | Pan | Send 1 | Send 2 |
+| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
+| `User 2` | Linear pitch | Clip length / `ALT`: play start | Reset hit edits | Meter readout |
 
-- `PATTERN UP`: generate the current nested rhythm into the selected clip
-- hold `MUTE_2`, then tap a projected rhythm pad in Rows 2-3: set the last step within the 32-step edit view
-- `PATTERN DOWN` or `ALT` + `MUTE_4`: reset hit-level edits for the current selected clip
-- hold a projected rhythm pad: target the nearest generated hit while held
-- tap a bottom-row hit pad: toggle that hit on or off
-- hold a bottom-row hit pad while turning an expression encoder: edit that hit directly
-- while a hit is held, Row 1 becomes an 8-step recurrence mask for that hit
-- hold `SHIFT` and tap a hit pad: reset that hit's local edits
+Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.
 
-Encoder pages:
+Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that span. Ratchet is a beat-burst transform: `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates those beats. Tuplet counts are meter-aware; in `4/4` they include `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`. Ratchet supports `2 / 3 / 4 / 5 / 6 / 7 / 8`.
 
-- `Channel`: density with `SHIFT` for generated recurrence, tuplet count with `ALT` for cover and `SHIFT` for phase, ratchet count with `ALT` for width and `SHIFT` for phase, and chance with `ALT` for baseline and `SHIFT` for rotation
-- `Mixer`: volume, pan, send 1, send 2
-- `User 1`: velocity, pressure, timbre, and pitch-expression lanes; with no hit held, plain turn edits spread, `ALT` edits center, and `SHIFT` edits rotation; with a hit held, plain turn edits that hit directly
-- `User 2`: linear pitch, clip length with `ALT` for play start, reset hit edits, transport meter readout
+### NOTE mode
 
-Timing note:
+`NOTE` is a 16x4 isomorphic playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from `Default Note Input Octave`.
 
-- note timing is not editable from the Fire in this mode
-- exact starts are written to a hidden fine grid inside the clip
-- the Fire pad view is a projection of that rhythm, not the literal note grid
+| Area / Control | Role |
+| --- | --- |
+| Pad matrix | 16x4 note grid |
+| Pad LEDs | Root, in-scale, and out-of-scale feedback |
+| `NOTE` | Cycle note layout family |
+| `ALT + NOTE` | Toggle live-note layout shortcut |
+| `STEP SEQ` | Enter `Melodic Step`; press again for `Chord Step` |
+| `BANK LEFT/RIGHT` or `PATTERN UP/DOWN` | Shared octave down / up |
+| `SHIFT + PATTERN UP/DOWN` | Shared root down / up |
+| `MUTE_1` | Sustain |
+| `MUTE_2` | Sostenuto |
+| `MUTE_3` | Note Repeat toggle |
+| `KNOB MODE` | Cycle live-note encoder pages |
 
-Control note:
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Mod | Pitch Gliss | Velocity sensitivity / `SHIFT`: Default velocity | Shared scale / `ALT`: Shared root key / `SHIFT`: local layout |
+| `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
+| `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
+| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
-- `Density` still acts as a thinning control, but the mode currently opens at maximum density so newly enabled tuplets and ratchets are audible immediately
-- `SHIFT + Density` now generates a default recurrence pattern over up to 8 phrase revolutions; stronger hits recur more often and weaker/interior hits drop out first
-- when `Density` thins a tuplet- or ratchet-owned span, it now removes visible hits from that claimed span without reviving an underlying base pulse there
-- `Vel Spread` scales offsets around a configurable `Velocity Center` instead of dragging the whole pattern up or down
-- `User 1` is the expression page: it writes Bitwig note-expression values for velocity shaping, pressure, timbre, and pitch expression, and a held hit turns the plain encoder action into a direct edit for that hit
-- `Chance` is a native Bitwig note chance lane here: plain turn edits chance depth, `ALT` edits chance baseline, `SHIFT` edits chance rotation, and a held hit turns the plain encoder action into a direct chance edit for that hit
-- while a hit is held, Row 1 temporarily switches from clip launch to recurrence editing; lit pads mean that hit plays on those phrase revolutions, dim pads mean it is skipped
-- `User 2` pitch is a single non-wrapping note control rather than separate root and octave knobs
-- `User 2 / Encoder 2` controls generated clip length in bars, with `ALT` adjusting clip play start in meter-aware beat steps; `User 2 / Encoder 4` shows the current Bitwig transport meter used by the generator
-- `Tuplet` and `Ratchet` both default to `Off`
-- `Cover` now sets how many consecutive half-bars are claimed by the tuplet span, and `Tuplet Phase` rotates that continuous claimed region across the clip
-- `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates that chosen set across the actual beat positions of the clip
-- available `Tuplet` counts now depend on meter and claimed span; in `4/4` that still yields `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`
-- `Ratchet` supports even and odd burst counts including `2 / 3 / 4 / 5 / 6 / 7 / 8`
+### Melodic Step mode
 
+`Melodic Step` is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks. It edits a 2-bar / 32-step window and keeps generated phrases constrained to the current pitch pool.
+
+| Pad row | Role |
+| --- | --- |
+| Row 1 | Clip row; becomes recurrence editor while active steps are held |
+| Row 2 | 16-note pitch pool |
+| Rows 3-4 | 32-step melodic phrase |
+
+| Control | Action |
+| --- | --- |
+| Tap pitch-pool pad | Add / remove that pitch |
+| Hold step + pitch-pool pad | Assign that pitch to the held step |
+| Tap step | Toggle, place, clear, or select step depending on state |
+| Hold step + encoder | Edit held step directly |
+| `SHIFT + STEP SEQ` hold | Accent gesture for melodic steps |
+| `PATTERN UP` / `ALT + PATTERN UP` | Generate / mutate pitch pool |
+| `PATTERN DOWN` / `ALT + PATTERN DOWN` | Generate / mutate phrase |
+| `SHIFT + PATTERN UP/DOWN` | Cycle `Notes`, `Expression`, and `Process` views |
+| `BANK LEFT/RIGHT` | Rotate phrase |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+
+| Left-side button | Action |
+| --- | --- |
+| `MUTE_1` | Select clip without launch |
+| `MUTE_2` | Last Step target mode |
+| `MUTE_3` | Paste to clip slot |
+| `MUTE_4` | Clear step or clip contents |
+| `SHIFT + MUTE_4` on clip pad | Remove clip object |
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Engine / `ALT`: subtype | Density | Pitch-pool octave / `ALT`: shared root | Mutation type / `ALT`: strength |
+| `Mixer` | Halve / double length | Swivel / mirror-double | Reverse | Invert down / up |
+| `User 1` | Engine macro | Tension | Legato | Recurrence span helper |
+| `User 2` | Selected or held step octave | Gate | Velocity | Articulation |
+
+Current generator modes are `Acid`, `Motif`, `Call/Resp`, `Rolling`, and `Octave`. If you manually edit the pitch pool, it becomes user-owned and is not auto-replaced on mode switch.
+
+For recurrence editing, hold one or more active melodic steps. Row 1 becomes an 8-pad recurrence editor; tap pads to toggle recurrence hits, or hold the first pad as a span anchor and tap another pad to set the recurrence span.
+
+### Chord Step mode
+
+Press `STEP SEQ` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to return to live note input.
+
+`Chord Step` is the chord-oriented note-step workflow. The builder defaults to in-key view and uses the same shared root and scale as live `NOTE`.
+
+| Pad row | Role |
+| --- | --- |
+| Row 1 | Clip row |
+| Row 2 | Curated chord slots or builder notes |
+| Rows 3-4 | 32 visible steps |
+
+| Control | Action |
+| --- | --- |
+| Tap empty step | Place selected chord |
+| Tap lit step | Remove chord |
+| Hold step pad(s) + chord pad | Rewrite held steps with that chord |
+| Tap chord pad with no held step | Audition chord, if enabled |
+| `STEP SEQ` | Return to `Melodic Step` |
+| `PATTERN UP/DOWN` | Page visible chord-step window |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
+| `SHIFT + BANK LEFT/RIGHT` | Experimental micro-timing nudge for visible chord material |
+
+| Left-side button | Action |
+| --- | --- |
+| `MUTE_1` | Select / load step |
+| `MUTE_2` | Last Step target mode |
+| `MUTE_3` | Paste to target step or clip slot |
+| `MUTE_4` | Delete step or clip |
+| `ALT + MUTE_4` | Invert chord |
+| `SHIFT + ALT + MUTE_4` | Invert chord in the opposite direction |
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Chord octave / `ALT`: shared root | Velocity sensitivity / `SHIFT`: default velocity | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: shared root |
+| `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
+| `User 1` | Note velocity edit | Note chance edit | Recurrence-oriented note editing | Recurrence-oriented note editing |
+| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
+
+Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch bank, page, or slot; it only changes how the selected slot is rendered. `As Is` transposes the stored chord shape from the current root. `In Scale` rebuilds that slot from the current shared scale and root.
+
+Coarse nudge is intentionally disabled in `Chord Step`; micro-timing is currently temperamental and should be treated as experimental.
 
 ### PERFORM mode
 
-`PERFORM` is the clip-launch and performance surface.
+`PERFORM` is the 16x4 clip-launch and performance surface. Filled slots select and launch. Empty slots create a new clip using `Default Clip Length`, then launch.
 
-Pad colors in `PERFORM` also follow Bitwig track and clip color context rather than a fixed Oikontrol palette.
+| Control | Action |
+| --- | --- |
+| `MUTE_1` + pad | Select without launching |
+| `MUTE_2` | Double selected visible clip length |
+| `SHIFT + MUTE_2` | Halve selected visible clip length |
+| `MUTE_3` + pad | Paste selected clip to target slot |
+| `MUTE_4` + pad | Delete |
+| `BANK LEFT/RIGHT` | Scroll tracks by visible page |
+| `SHIFT + BANK LEFT/RIGHT` | Scroll tracks by one |
+| `PATTERN UP/DOWN` | Scroll scenes by visible page |
+| `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
+| `KNOB MODE` | Cycle Perform encoder pages |
+| `SHIFT + PERFORM` | Toggle latched track-action page |
 
-- pads show clip color and launch state
-- empty slots can create a new clip using the current `Default Clip Length` preference
-- quick select, copy, delete, and clip-length gestures live on the `MUTE` buttons
+Track-action page rows are stop, solo, mute, and arm for the 16 visible tracks.
 
-Important gestures:
-
-- hold `MUTE_1` + pad: select without launching
-- hold `MUTE_3` + pad: paste the currently selected clip to the target slot
-- hold `MUTE_4` + pad: delete
-- `MUTE_2`: double visible clip length
-- `SHIFT + MUTE_2`: halve visible clip length
-- `BANK LEFT/RIGHT`: scroll tracks
-- `PATTERN` up/down: scroll scenes
-- hold `SHIFT` while scrolling for single-step movement
-
-Encoder pages:
-
-- `Channel`: global remotes 1-4
-- `Mixer`: volume, pan, send 1, send 2
-- `User 1`: track remotes 1-4
-- `User 2`: selected device remotes 1-4
-
-Track-action page:
-
-- `SHIFT + PERFORM`: toggle the latched track-action page
-- row 1: stop for the 16 visible tracks
-- row 2: solo for the 16 visible tracks
-- row 3: mute for the 16 visible tracks
-- row 4: arm for the 16 visible tracks
-- row colors are blue/dark for stop, yellow for solo, orange for mute, and red for arm
-
-Global settings overlay:
-
-- `SHIFT + BROWSER`: hold the global `Root Key` / `Scale` / `Octave` overlay from any mode
-- Encoder 1 adjusts shared root
-- Encoder 2 adjusts shared scale
-- Encoder 3 adjusts shared octave
-- releasing `BROWSER` returns to the active mode view
-
-### Main encoder and transport
-
-Tap `SELECT` to swap the `SELECT` encoder between `Last Touched Parameter` and the currently selected alternate role.
-
-Press `SHIFT + SELECT` to choose that alternate role by cycling through the full role list:
-
-- `Last Touched Parameter`
-- `Shuffle`
-- `Tempo`
-- `Note Repeat`
-- `Track Select`
-- `Drum Grid`
-
-When `Note Repeat` is active:
-
-- the first encoder position is `Off`
-- turning `SELECT` past `Off` enables repeat at the chosen division
-
-When `Track Select` is active:
-
-- Turn `SELECT` to move to the previous or next track
-- Hold `SELECT` while turning to jump by track pages
-- In `DRUM` mode with automatic drum pinning enabled, the encoder falls back to `Drum Grid`
-
-When `Drum Grid` is active:
-
-- turn `SELECT` to change Drum Step grid resolution
-- this role is only meaningful in `DRUM` mode
-
-When `Shuffle` is active:
-
-- turning `SELECT` down to `0` switches shuffle `Off`
-- turning it up from `0` enables shuffle again
-
-Shared transport behavior:
-
-- `PLAY`: transport toggle with retrigger-on-start behavior
-- `ALT + PLAY`: retrigger the current clip
-- `REC`: clip recording in `DRUM`, arranger record in `NOTE` and `PERFORM`
-- `ALT + REC`: arranger automation write
-- `PATTERN`: clip launcher automation write
-- `SHIFT + PATTERN`: metronome
-- `ALT + PATTERN`: clip launcher overdub
-- `BROWSER`: open or close Bitwig popup browser
-- `ALT + BROWSER`: open browser after the current device / insertion context
-- `SHIFT + ALT + BROWSER`: open browser before the current device / insertion context
-- `SHIFT + BROWSER`: hold global pitch settings instead of opening the browser
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Project Remote 1 | Project Remote 2 | Project Remote 3 | Project Remote 4 |
+| `Mixer` | Selected track volume | Selected track pan | Selected track send 1 | Selected track send 2 |
+| `User 1` | Selected track remote 1 | Remote 2 | Remote 3 | Remote 4 |
+| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 ## Preferences
 
