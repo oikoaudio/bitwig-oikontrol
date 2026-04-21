@@ -106,12 +106,8 @@ public final class FugueClipAdapter {
     public static void clearChannel(final PinnableCursorClip clip,
                                     final Map<Integer, Map<Integer, Map<Integer, NoteStep>>> observedSteps,
                                     final int channel) {
-        final Map<Integer, Map<Integer, NoteStep>> channelSteps = observedSteps.getOrDefault(channel, Map.of());
-        for (final Map.Entry<Integer, Map<Integer, NoteStep>> stepEntry : channelSteps.entrySet()) {
-            final int x = stepEntry.getKey();
-            for (final Integer pitch : stepEntry.getValue().keySet()) {
-                clip.clearStep(channel, x, pitch);
-            }
+        for (int x = 0; x < FuguePattern.MAX_STEPS; x++) {
+            clip.clearStepsAtX(channel, x);
         }
     }
 }

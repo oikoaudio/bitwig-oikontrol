@@ -29,8 +29,11 @@ public final class FugueStepMode extends Layer {
     private static final int ENCODER_THRESHOLD = 5;
     private static final int ENCODER_FINE_THRESHOLD = 10;
     private static final int SOURCE_CHANGE_REBUILD_DELAY_MS = 20;
+    private static final int SOURCE_EDIT_REBUILD_DELAY_MS = 250;
+    private static final int BAR_STEPS = 32;
     private static final int MAX_LOOP_STEPS = STEP_COUNT;
     private static final int MIN_LOOP_STEPS = 1;
+    private static final int[] CLIP_LENGTH_STEPS = {8, 16, 32, 64, 96, 128, 160, 192, 224, 256};
     private static final RgbLigthState[] LINE_COLORS = {
             new RgbLigthState(112, 0, 0, true),
             new RgbLigthState(112, 44, 0, true),
@@ -61,6 +64,8 @@ public final class FugueStepMode extends Layer {
     private int loopSteps = DEFAULT_LOOP_STEPS;
     private int playingStep = -1;
     private int sourceRebuildToken = 0;
+    private boolean mainEncoderPressConsumed = false;
+    private boolean active = false;
 
     public FugueStepMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "FUGUE_STEP_MODE");
@@ -77,6 +82,7 @@ public final class FugueStepMode extends Layer {
         this.cursorClip.scrollToKey(0);
         this.cursorClip.scrollToStep(0);
         this.cursorClip.getLoopLength().markInterested();
+        this.cursorClip.getPlayStart().markInterested();
         this.cursorClip.getLoopLength().addValueObserver(length ->
                 loopSteps = Math.max(1, Math.min(STEP_COUNT, (int) Math.round(length / STEP_LENGTH))));
         this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
@@ -85,6 +91,7 @@ public final class FugueStepMode extends Layer {
         bindPads();
         bindButtons();
         bindEncoders();
+        bindMainEncoder();
     }
 
     public BiColorLightState getModeButtonLightState() {
@@ -96,6 +103,8 @@ public final class FugueStepMode extends Layer {
 
     @Override
     protected void onActivate() {
+        active = true;
+        refreshSourceCacheFromClip();
         patternButtons.setUpCallback(pressed -> {
             if (pressed) {
                 cyclePreset(activeLineIndex(), 1);
@@ -112,6 +121,8 @@ public final class FugueStepMode extends Layer {
 
     @Override
     protected void onDeactivate() {
+        active = false;
+        sourceRebuildToken++;
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
     }
@@ -166,6 +177,93 @@ public final class FugueStepMode extends Layer {
         encoders[3].bindTouched(this, touched -> showEncoderTouchValue(3, touched));
     }
 
+    private void bindMainEncoder() {
+        final TouchEncoder mainEncoder = driver.getMainEncoder();
+        mainEncoder.bindEncoder(this, this::handleMainEncoder);
+        mainEncoder.bindTouched(this, this::handleMainEncoderPress);
+    }
+
+    private void handleMainEncoder(final int inc) {
+        if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoder(inc);
+            return;
+        }
+        if (inc == 0) {
+            return;
+        }
+        driver.markMainEncoderTurned();
+        final boolean fine = driver.isGlobalShiftHeld();
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            driver.adjustTempo(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+            driver.adjustGrooveShuffleAmount(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            oled.valueInfo("Note Repeat", "Fugue only");
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            oled.valueInfo("Drum Grid", "Drum only");
+        } else {
+            driver.adjustMainCursorParameter(inc, fine);
+        }
+    }
+
+    private void handleMainEncoderPress(final boolean pressed) {
+        if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoderPress(pressed);
+            return;
+        }
+        driver.setMainEncoderPressed(pressed);
+        if (pressed && driver.isGlobalShiftHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.cycleMainEncoderRolePreference();
+            return;
+        }
+        if (!pressed && mainEncoderPressConsumed) {
+            mainEncoderPressConsumed = false;
+            return;
+        }
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
+            driver.toggleMainEncoderRolePreference();
+            return;
+        }
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showTempoInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showGrooveShuffleInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Note Repeat", "Fugue only");
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Drum Grid", "Drum only");
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (pressed) {
+            driver.showMainCursorParameterInfo();
+        }
+    }
+
     private void showEncoderTouchValue(final int encoderIndex, final boolean touched) {
         if (!touched) {
             oled.clearScreenDelayed();
@@ -179,11 +277,22 @@ public final class FugueStepMode extends Layer {
     }
 
     private void showTemplateEncoderValue(final int encoderIndex) {
+        if (driver.isGlobalAltHeld()) {
+            final FugueLineSettings settings = lineSettings[FugueClipAdapter.SOURCE_CHANNEL];
+            switch (encoderIndex) {
+                case 0 -> oled.valueInfo("Line 1 Velocity", "%+d".formatted(settings.velocityOffset()));
+                case 1 -> oled.valueInfo("Line 1 Chance", settings.chancePercent() + "%");
+                case 2 -> oled.valueInfo("Line 1 Gate", settings.gatePercent() + "%");
+                case 3 -> oled.valueInfo("Play Start", formatPlayStart(cursorClip.getPlayStart().get()));
+                default -> { }
+            }
+            return;
+        }
         switch (encoderIndex) {
             case 0 -> oled.valueInfo("Template Root", NoteGridLayout.noteName(driver.getSharedRootNote()));
             case 1 -> oled.valueInfo("Template Scale", driver.getSharedScaleDisplayName());
-            case 2 -> oled.valueInfo("Template Octave", Integer.toString(driver.getSharedOctave()));
-            case 3 -> oled.valueInfo("Template Notes", Integer.toString(sourceStepCount()));
+            case 2 -> oled.valueInfo("Clip Length", formatSteps(currentLoopSteps()));
+            case 3 -> oled.valueInfo("Play Start", formatPlayStart(cursorClip.getPlayStart().get()));
             default -> { }
         }
     }
@@ -380,6 +489,11 @@ public final class FugueStepMode extends Layer {
 
     private void adjustDirectionOrPreset(final int inc) {
         if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
+            if (driver.isGlobalAltHeld()) {
+                adjustVelocityOffset(FugueClipAdapter.SOURCE_CHANNEL, inc);
+                applySourceVelocityDelta(inc * 4);
+                return;
+            }
             adjustTemplateRoot(inc);
             return;
         }
@@ -398,6 +512,11 @@ public final class FugueStepMode extends Layer {
 
     private void adjustSpeed(final int line, final int inc) {
         if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            if (driver.isGlobalAltHeld()) {
+                adjustChance(FugueClipAdapter.SOURCE_CHANNEL, inc);
+                applySourceChancePercent();
+                return;
+            }
             adjustTemplateScale(inc);
             return;
         }
@@ -411,7 +530,13 @@ public final class FugueStepMode extends Layer {
 
     private void adjustStartOffset(final int line, final int inc) {
         if (line == FugueClipAdapter.SOURCE_CHANNEL) {
-            adjustTemplateOctave(inc);
+            if (driver.isGlobalAltHeld()) {
+                final int previousGatePercent = lineSettings[FugueClipAdapter.SOURCE_CHANNEL].gatePercent();
+                adjustGate(FugueClipAdapter.SOURCE_CHANNEL, inc);
+                applySourceGateScale(previousGatePercent);
+                return;
+            }
+            adjustTemplateClipLength(inc);
             return;
         }
         if (driver.isGlobalAltHeld()) {
@@ -430,7 +555,7 @@ public final class FugueStepMode extends Layer {
     private void adjustPitch(final int inc) {
         final int line = activeLineIndex();
         if (line == FugueClipAdapter.SOURCE_CHANNEL) {
-            showTemplateInfo();
+            adjustTemplatePlayStart(inc);
             return;
         }
         if (driver.isGlobalAltHeld()) {
@@ -472,6 +597,38 @@ public final class FugueStepMode extends Layer {
         afterLineSettingsChanged(line, "Gate", lineSettings[line].gatePercent() + "%");
     }
 
+    private void applySourceVelocityDelta(final int delta) {
+        forEachSourceNote(note -> note.setVelocity(Math.max(1.0, Math.min(127.0,
+                Math.round(note.velocity() * 127.0) + delta)) / 127.0));
+    }
+
+    private void applySourceChancePercent() {
+        final double chance = Math.min(0.999,
+                lineSettings[FugueClipAdapter.SOURCE_CHANNEL].chancePercent() / 100.0);
+        forEachSourceNote(note -> {
+            note.setChance(chance);
+            note.setIsChanceEnabled(chance < 0.999);
+        });
+    }
+
+    private void applySourceGateScale(final int previousGatePercent) {
+        final int nextGatePercent = lineSettings[FugueClipAdapter.SOURCE_CHANNEL].gatePercent();
+        final double factor = nextGatePercent / (double) Math.max(1, previousGatePercent);
+        forEachSourceNote(note -> note.setDuration(Math.max(STEP_LENGTH * 0.02, note.duration() * factor)));
+    }
+
+    private void forEachSourceNote(final java.util.function.Consumer<NoteStep> action) {
+        final Map<Integer, Map<Integer, NoteStep>> channelSteps =
+                noteStepsByChannel.getOrDefault(FugueClipAdapter.SOURCE_CHANNEL, Map.of());
+        for (final Map<Integer, NoteStep> notesAtStep : channelSteps.values()) {
+            for (final NoteStep note : notesAtStep.values()) {
+                if (note.state() == NoteStep.State.NoteOn) {
+                    action.accept(note);
+                }
+            }
+        }
+    }
+
     private void cyclePreset(final int line, final int inc) {
         if (line == FugueClipAdapter.SOURCE_CHANNEL) {
             showTemplateInfo();
@@ -504,19 +661,51 @@ public final class FugueStepMode extends Layer {
         regenerateAllEnabledDerivedLinesSilently();
     }
 
-    private void adjustTemplateOctave(final int inc) {
-        driver.adjustSharedOctave(inc);
-        oled.valueInfo("Template Octave", Integer.toString(driver.getSharedOctave()));
-        oled.clearScreenDelayed();
-        regenerateAllEnabledDerivedLinesSilently();
+    private void adjustTemplateClipLength(final int inc) {
+        final int currentLoopSteps = currentLoopSteps();
+        final int nextLoopSteps = nextClipLengthSteps(currentLoopSteps, inc);
+        if (nextLoopSteps == currentLoopSteps) {
+            oled.valueInfo("Clip Length", nextLoopSteps == MAX_LOOP_STEPS ? "Max" : "Min");
+            oled.clearScreenDelayed();
+            return;
+        }
+        cursorClip.getLoopLength().set(nextLoopSteps * STEP_LENGTH);
+        loopSteps = nextLoopSteps;
+        hostRebuildAfterClipLengthChange("Clip Length", formatSteps(nextLoopSteps));
+    }
+
+    private int nextClipLengthSteps(final int currentLoopSteps, final int inc) {
+        if (inc == 0) {
+            return currentLoopSteps;
+        }
+        if (inc > 0) {
+            for (final int candidate : CLIP_LENGTH_STEPS) {
+                if (candidate > currentLoopSteps) {
+                    return candidate;
+                }
+            }
+            return CLIP_LENGTH_STEPS[CLIP_LENGTH_STEPS.length - 1];
+        }
+        for (int i = CLIP_LENGTH_STEPS.length - 1; i >= 0; i--) {
+            final int candidate = CLIP_LENGTH_STEPS[i];
+            if (candidate < currentLoopSteps) {
+                return candidate;
+            }
+        }
+        return CLIP_LENGTH_STEPS[0];
+    }
+
+    private void adjustTemplatePlayStart(final int inc) {
+        final int currentStart = (int) Math.round(cursorClip.getPlayStart().get() / STEP_LENGTH);
+        setClipPlayStart(Math.max(0, Math.min(loopSteps - 1, currentStart + inc)));
     }
 
     private void showTemplateInfo() {
         oled.detailInfo("Template",
-                "Root %s\nScale %s\nOct %d\nNotes %d".formatted(
+                "Root %s\nScale %s\nLen %s\nNotes %d".formatted(
                         NoteGridLayout.noteName(driver.getSharedRootNote()),
                         driver.getSharedScaleDisplayName(),
-                        driver.getSharedOctave(),
+                        formatSteps(currentLoopSteps()),
                         sourceStepCount()));
         oled.clearScreenDelayed();
     }
@@ -624,6 +813,9 @@ public final class FugueStepMode extends Layer {
     }
 
     private void handleNoteStepObject(final NoteStep noteStep) {
+        if (!active) {
+            return;
+        }
         final int channel = noteStep.channel();
         final int x = noteStep.x();
         final int y = noteStep.y();
@@ -639,23 +831,40 @@ public final class FugueStepMode extends Layer {
                 noteStepsByChannel.remove(channel);
             }
             if (channel == FugueClipAdapter.SOURCE_CHANNEL) {
-                scheduleSourceRebuild();
+                scheduleSourceRebuild(SOURCE_EDIT_REBUILD_DELAY_MS);
             }
             return;
         }
         notesAtStep.put(y, noteStep);
         if (channel == FugueClipAdapter.SOURCE_CHANNEL) {
-            scheduleSourceRebuild();
+            scheduleSourceRebuild(SOURCE_EDIT_REBUILD_DELAY_MS);
         }
     }
 
-    private void scheduleSourceRebuild() {
+    private void refreshSourceCacheFromClip() {
+        noteStepsByChannel.clear();
+        final Map<Integer, Map<Integer, NoteStep>> sourceSteps =
+                noteStepsByChannel.computeIfAbsent(FugueClipAdapter.SOURCE_CHANNEL, ignored -> new HashMap<>());
+        for (int x = 0; x < FuguePattern.MAX_STEPS; x++) {
+            for (int y = 0; y < 128; y++) {
+                final NoteStep step = cursorClip.getStep(FugueClipAdapter.SOURCE_CHANNEL, x, y);
+                if (step.state() == NoteStep.State.NoteOn) {
+                    sourceSteps.computeIfAbsent(x, ignored -> new HashMap<>()).put(y, step);
+                }
+            }
+        }
+        if (sourceSteps.isEmpty()) {
+            noteStepsByChannel.remove(FugueClipAdapter.SOURCE_CHANNEL);
+        }
+    }
+
+    private void scheduleSourceRebuild(final int delayMs) {
         final int token = ++sourceRebuildToken;
         driver.getHost().scheduleTask(() -> {
             if (token == sourceRebuildToken) {
                 regenerateAllEnabledDerivedLinesSilently();
             }
-        }, SOURCE_CHANGE_REBUILD_DELAY_MS);
+        }, delayMs);
     }
 
     private void handlePlayingStep(final int clipPlayingStep) {
