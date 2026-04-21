@@ -1,0 +1,599 @@
+package com.oikoaudio.fire.fugue;
+
+import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.NoteStep;
+import com.bitwig.extension.controller.api.PinnableCursorClip;
+import com.bitwig.extensions.framework.Layer;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
+import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.display.OledDisplay;
+import com.oikoaudio.fire.lights.BiColorLightState;
+import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.melodic.MelodicPattern;
+import com.oikoaudio.fire.melodic.MelodicRenderer;
+import com.oikoaudio.fire.note.NoteGridLayout;
+import com.oikoaudio.fire.sequence.EncoderMode;
+import com.oikoaudio.fire.utils.PatternButtons;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public final class FugueStepMode extends Layer {
+    private static final int STEP_COUNT = FuguePattern.MAX_STEPS;
+    private static final int DEFAULT_LOOP_STEPS = 32;
+    private static final double STEP_LENGTH = 0.125;
+    private static final int LINE_COUNT = 4;
+    private static final int PAD_COLUMNS = 16;
+    private static final int ENCODER_THRESHOLD = 5;
+    private static final int ENCODER_FINE_THRESHOLD = 10;
+    private static final int SOURCE_CHANGE_REBUILD_DELAY_MS = 20;
+    private static final int MAX_LOOP_STEPS = STEP_COUNT;
+    private static final int MIN_LOOP_STEPS = 1;
+    private static final RgbLigthState[] LINE_COLORS = {
+            new RgbLigthState(112, 0, 0, true),
+            new RgbLigthState(112, 44, 0, true),
+            new RgbLigthState(104, 88, 0, true),
+            new RgbLigthState(0, 88, 32, true)
+    };
+
+    private final AkaiFireOikontrolExtension driver;
+    private final OledDisplay oled;
+    private final PatternButtons patternButtons;
+    private final PinnableCursorClip cursorClip;
+    private final Map<Integer, Map<Integer, Map<Integer, NoteStep>>> noteStepsByChannel = new HashMap<>();
+    private final FugueLineSettings[] lineSettings = {
+            FugueLineSettings.init(),
+            FuguePreset.BASS_AUGMENTED.settings(),
+            FuguePreset.HIGH_HALF.settings(),
+            FuguePreset.REVERSE_DOUBLE.settings()
+    };
+    private final FuguePreset[] linePresets = {
+            FuguePreset.INIT,
+            FuguePreset.BASS_AUGMENTED,
+            FuguePreset.HIGH_HALF,
+            FuguePreset.REVERSE_DOUBLE
+    };
+    private final boolean[] lineEnabled = {true, true, true, true};
+
+    private EncoderMode activeEncoderMode = EncoderMode.CHANNEL;
+    private int loopSteps = DEFAULT_LOOP_STEPS;
+    private int playingStep = -1;
+    private int sourceRebuildToken = 0;
+
+    public FugueStepMode(final AkaiFireOikontrolExtension driver) {
+        super(driver.getLayers(), "FUGUE_STEP_MODE");
+        this.driver = driver;
+        this.oled = driver.getOled();
+        this.patternButtons = driver.getPatternButtons();
+
+        final ControllerHost host = driver.getHost();
+        final CursorTrack cursorTrack = host.createCursorTrack("FUGUE_STEP", "Fugue Step", 8, 16, true);
+        cursorTrack.name().markInterested();
+        cursorTrack.canHoldNoteData().markInterested();
+        this.cursorClip = cursorTrack.createLauncherCursorClip("FUGUE_STEP_CLIP", "FUGUE_STEP_CLIP", STEP_COUNT, 128);
+        this.cursorClip.setStepSize(STEP_LENGTH);
+        this.cursorClip.scrollToKey(0);
+        this.cursorClip.scrollToStep(0);
+        this.cursorClip.getLoopLength().markInterested();
+        this.cursorClip.getLoopLength().addValueObserver(length ->
+                loopSteps = Math.max(1, Math.min(STEP_COUNT, (int) Math.round(length / STEP_LENGTH))));
+        this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
+        this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
+
+        bindPads();
+        bindButtons();
+        bindEncoders();
+    }
+
+    public BiColorLightState getModeButtonLightState() {
+        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : BiColorLightState.RED_FULL;
+    }
+
+    public void notifyBlink(final int blinkTicks) {
+    }
+
+    @Override
+    protected void onActivate() {
+        patternButtons.setUpCallback(pressed -> {
+            if (pressed) {
+                cyclePreset(activeLineIndex(), 1);
+            }
+        }, () -> BiColorLightState.GREEN_HALF);
+        patternButtons.setDownCallback(pressed -> {
+            if (pressed) {
+                regenerateAllDerivedLines();
+            }
+        }, () -> BiColorLightState.AMBER_HALF);
+        oled.valueInfo("Fugue", "Line " + (activeLineIndex() + 1));
+        oled.clearScreenDelayed();
+    }
+
+    @Override
+    protected void onDeactivate() {
+        patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
+        patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
+    }
+
+    private void bindPads() {
+        final var pads = driver.getRgbButtons();
+        for (int index = 0; index < pads.length; index++) {
+            final int padIndex = index;
+            pads[index].bindPressed(this, pressed -> handlePadPress(padIndex, pressed), () -> getPadLight(padIndex));
+        }
+    }
+
+    private void bindButtons() {
+        driver.getButton(NoteAssign.KNOB_MODE).bindPressed(this, this::handleEncoderModeButton, this::encoderModeLight);
+        driver.getButton(NoteAssign.BANK_L).bindPressed(this, pressed -> {
+            if (pressed) {
+                if (driver.isGlobalAltHeld()) {
+                    halveClipLength();
+                } else {
+                    adjustStartOffset(activeLineIndex(), -1);
+                }
+            }
+        }, () -> BiColorLightState.HALF);
+        driver.getButton(NoteAssign.BANK_R).bindPressed(this, pressed -> {
+            if (pressed) {
+                if (driver.isGlobalAltHeld()) {
+                    doubleClipLength();
+                } else {
+                    adjustStartOffset(activeLineIndex(), 1);
+                }
+            }
+        }, () -> BiColorLightState.HALF);
+        driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> toggleLineEnabled(0, pressed), () -> lineLight(0));
+        driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> toggleLineEnabled(1, pressed), () -> lineLight(1));
+        driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> toggleLineEnabled(2, pressed), () -> lineLight(2));
+        driver.getButton(NoteAssign.MUTE_4).bindPressed(this, pressed -> toggleLineEnabled(3, pressed), () -> lineLight(3));
+    }
+
+    private void bindEncoders() {
+        final TouchEncoder[] encoders = driver.getEncoders();
+        encoders[0].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
+                driver::isGlobalShiftHeld, this::adjustDirectionOrPreset);
+        encoders[1].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
+                driver::isGlobalShiftHeld, inc -> adjustSpeed(activeLineIndex(), inc));
+        encoders[2].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
+                driver::isGlobalShiftHeld, inc -> adjustStartOffset(activeLineIndex(), inc));
+        encoders[3].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
+                driver::isGlobalShiftHeld, this::adjustPitch);
+    }
+
+    private void handlePadPress(final int padIndex, final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        final int line = padIndex / PAD_COLUMNS;
+        final int column = padIndex % PAD_COLUMNS;
+        selectLine(line);
+        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            setClipPlayStart(bucketStart(column));
+            oled.clearScreenDelayed();
+            return;
+        }
+        setStartOffset(line, bucketStart(column));
+    }
+
+    private RgbLigthState getPadLight(final int padIndex) {
+        final int line = padIndex / PAD_COLUMNS;
+        final int column = padIndex % PAD_COLUMNS;
+        if (line < 0 || line >= LINE_COUNT) {
+            return RgbLigthState.OFF;
+        }
+        final FuguePattern pattern = linePattern(line);
+        final boolean inLoop = column < activeBucketCount();
+        final boolean playing = playingBucket() == column;
+        final RgbLigthState color = line == activeLineIndex() ? LINE_COLORS[line].getBrightend() : LINE_COLORS[line];
+        final RgbLigthState rendered = MelodicRenderer.stepLight(bucketStep(pattern, column), false, inLoop, playing,
+                column, color);
+        return lineEnabled[line] ? rendered : rendered.getVeryDimmed();
+    }
+
+    private MelodicPattern.Step bucketStep(final FuguePattern pattern, final int column) {
+        if (column >= activeBucketCount()) {
+            return MelodicPattern.Step.rest(column);
+        }
+        final int start = bucketStart(column);
+        final int end = bucketEnd(column);
+        for (int step = start; step < end; step++) {
+            final MelodicPattern.Step candidate = pattern.step(step);
+            if (candidate.active() && !candidate.tieFromPrevious()) {
+                return candidate.withIndex(column);
+            }
+        }
+        return MelodicPattern.Step.rest(column);
+    }
+
+    private int activeBucketCount() {
+        return Math.max(1, Math.min(PAD_COLUMNS, loopSteps));
+    }
+
+    private int bucketStart(final int column) {
+        return column * loopSteps / PAD_COLUMNS;
+    }
+
+    private int bucketEnd(final int column) {
+        return Math.max(bucketStart(column) + 1, (column + 1) * loopSteps / PAD_COLUMNS);
+    }
+
+    private int playingBucket() {
+        if (playingStep < 0 || playingStep >= loopSteps) {
+            return -1;
+        }
+        return Math.max(0, Math.min(PAD_COLUMNS - 1, playingStep * PAD_COLUMNS / loopSteps));
+    }
+
+    private void setClipPlayStart(final int startStep) {
+        final double playStart = Math.max(0.0, Math.min((loopSteps - 1) * STEP_LENGTH, startStep * STEP_LENGTH));
+        cursorClip.getPlayStart().set(playStart);
+        oled.valueInfo("Play Start", formatPlayStart(playStart));
+    }
+
+    private String formatPlayStart(final double beatTime) {
+        final int stepIndex = (int) Math.round(beatTime / STEP_LENGTH);
+        final int quarterNote = (int) Math.floor(beatTime);
+        final int bar = quarterNote / 4;
+        final int beat = quarterNote % 4;
+        final int sixteenth = stepIndex % 4;
+        return "%d.%d.%d".formatted(bar + 1, beat + 1, sixteenth + 1);
+    }
+
+    private FuguePattern linePattern(final int line) {
+        if (line == 0) {
+            return sourcePattern();
+        }
+        if (!lineEnabled[line]) {
+            return FuguePattern.empty(loopSteps);
+        }
+        return MelodicLineTransformer.transform(sourcePattern(), lineSettings[line],
+                driver.getSharedMusicalScale(), driver.getSharedRootNote());
+    }
+
+    private FuguePattern sourcePattern() {
+        return FugueClipAdapter.sourceFromChannelOne(noteStepsByChannel, loopSteps, STEP_LENGTH);
+    }
+
+    private void handleEncoderModeButton(final boolean pressed) {
+        if (!pressed) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        selectEncoderMode(nextEncoderMode(activeEncoderMode));
+    }
+
+    private void selectEncoderMode(final EncoderMode mode) {
+        activeEncoderMode = mode;
+        oled.detailInfo("Fugue Line", lineLabel(activeLineIndex()));
+        oled.clearScreenDelayed();
+    }
+
+    private void selectLine(final int line) {
+        selectEncoderMode(switch (Math.max(0, Math.min(LINE_COUNT - 1, line))) {
+            case 1 -> EncoderMode.MIXER;
+            case 2 -> EncoderMode.USER_1;
+            case 3 -> EncoderMode.USER_2;
+            default -> EncoderMode.CHANNEL;
+        });
+    }
+
+    private int activeLineIndex() {
+        return switch (activeEncoderMode) {
+            case CHANNEL -> 0;
+            case MIXER -> 1;
+            case USER_1 -> 2;
+            case USER_2 -> 3;
+        };
+    }
+
+    private EncoderMode nextEncoderMode(final EncoderMode mode) {
+        return switch (mode) {
+            case CHANNEL -> EncoderMode.MIXER;
+            case MIXER -> EncoderMode.USER_1;
+            case USER_1 -> EncoderMode.USER_2;
+            case USER_2 -> EncoderMode.CHANNEL;
+        };
+    }
+
+    private BiColorLightState encoderModeLight() {
+        return activeEncoderMode.getState();
+    }
+
+    private BiColorLightState lineLight(final int line) {
+        if (line == activeLineIndex()) {
+            return lineEnabled[line] ? BiColorLightState.GREEN_FULL : BiColorLightState.RED_FULL;
+        }
+        return lineEnabled[line] ? BiColorLightState.GREEN_HALF : BiColorLightState.RED_HALF;
+    }
+
+    private void toggleLineEnabled(final int line, final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        lineEnabled[line] = !lineEnabled[line];
+        if (line > 0) {
+            regenerateLine(line);
+        }
+        oled.valueInfo(lineLabel(line), lineEnabled[line] ? "On" : "Muted");
+        oled.clearScreenDelayed();
+    }
+
+    private void adjustDirectionOrPreset(final int inc) {
+        if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
+            adjustTemplateRoot(inc);
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            adjustVelocityOffset(activeLineIndex(), inc);
+            return;
+        }
+        if (driver.isGlobalShiftHeld()) {
+            cyclePreset(activeLineIndex(), inc);
+            return;
+        }
+        final int line = activeLineIndex();
+        lineSettings[line] = lineSettings[line].withDirection(lineSettings[line].direction().next(inc));
+        afterLineSettingsChanged(line, "Direction", lineSettings[line].direction().label());
+    }
+
+    private void adjustSpeed(final int line, final int inc) {
+        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            adjustTemplateScale(inc);
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            adjustChance(line, inc);
+            return;
+        }
+        lineSettings[line] = lineSettings[line].withSpeed(lineSettings[line].speed().next(inc));
+        afterLineSettingsChanged(line, "Tempo", lineSettings[line].speed().label());
+    }
+
+    private void adjustStartOffset(final int line, final int inc) {
+        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            adjustTemplateOctave(inc);
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            adjustGate(line, inc);
+            return;
+        }
+        lineSettings[line] = lineSettings[line].withStartOffset(lineSettings[line].startOffset() + inc);
+        afterLineSettingsChanged(line, "Start", Integer.toString(lineSettings[line].startOffset() + 1));
+    }
+
+    private void setStartOffset(final int line, final int startOffset) {
+        lineSettings[line] = lineSettings[line].withStartOffset(startOffset);
+        afterLineSettingsChanged(line, "Start", Integer.toString(lineSettings[line].startOffset() + 1));
+    }
+
+    private void adjustPitch(final int inc) {
+        final int line = activeLineIndex();
+        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            showTemplateInfo();
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            adjustPitchOctaveJump(line, inc);
+            return;
+        }
+        adjustPitchDegreeOffset(line, inc);
+    }
+
+    private void adjustPitchDegreeOffset(final int line, final int inc) {
+        final int nextInterval = FuguePitchIntervals.nextDegreeInterval(lineSettings[line].pitchDegreeOffset(), inc);
+        lineSettings[line] = lineSettings[line].withPitchDegreeOffset(nextInterval);
+        afterLineSettingsChanged(line, "Interval", FuguePitchIntervals.label(nextInterval));
+    }
+
+    private void adjustPitchSemitoneOffset(final int line, final int inc) {
+        lineSettings[line] = lineSettings[line].withPitchSemitoneOffset(lineSettings[line].pitchSemitoneOffset() + inc);
+        afterLineSettingsChanged(line, "Semitone", "%+d".formatted(lineSettings[line].pitchSemitoneOffset()));
+    }
+
+    private void adjustPitchOctaveJump(final int line, final int inc) {
+        final int nextInterval = FuguePitchIntervals.octaveJump(lineSettings[line].pitchDegreeOffset(), inc);
+        lineSettings[line] = lineSettings[line].withPitchDegreeOffset(nextInterval);
+        afterLineSettingsChanged(line, "Interval", FuguePitchIntervals.label(nextInterval));
+    }
+
+    private void adjustVelocityOffset(final int line, final int inc) {
+        lineSettings[line] = lineSettings[line].withVelocityOffset(lineSettings[line].velocityOffset() + inc * 4);
+        afterLineSettingsChanged(line, "Velocity", "%+d".formatted(lineSettings[line].velocityOffset()));
+    }
+
+    private void adjustChance(final int line, final int inc) {
+        lineSettings[line] = lineSettings[line].withChancePercent(lineSettings[line].chancePercent() + inc * 5);
+        afterLineSettingsChanged(line, "Chance", lineSettings[line].chancePercent() + "%");
+    }
+
+    private void adjustGate(final int line, final int inc) {
+        lineSettings[line] = lineSettings[line].withGatePercent(lineSettings[line].gatePercent() + inc * 5);
+        afterLineSettingsChanged(line, "Gate", lineSettings[line].gatePercent() + "%");
+    }
+
+    private void cyclePreset(final int line, final int inc) {
+        if (line == FugueClipAdapter.SOURCE_CHANNEL) {
+            showTemplateInfo();
+            return;
+        }
+        linePresets[line] = linePresets[line].next(inc);
+        lineSettings[line] = linePresets[line].settings();
+        afterLineSettingsChanged(line, "Preset", linePresets[line].label());
+    }
+
+    private void afterLineSettingsChanged(final int line, final String title, final String value) {
+        if (line > 0) {
+            regenerateLine(line);
+        }
+        oled.valueInfo(lineLabel(line) + " " + title, value);
+        oled.clearScreenDelayed();
+    }
+
+    private void adjustTemplateRoot(final int inc) {
+        driver.adjustSharedRootNote(inc);
+        oled.valueInfo("Template Root", NoteGridLayout.noteName(driver.getSharedRootNote()));
+        oled.clearScreenDelayed();
+        regenerateAllEnabledDerivedLinesSilently();
+    }
+
+    private void adjustTemplateScale(final int inc) {
+        driver.adjustSharedScaleIndex(inc, -1);
+        oled.valueInfo("Template Scale", driver.getSharedScaleDisplayName());
+        oled.clearScreenDelayed();
+        regenerateAllEnabledDerivedLinesSilently();
+    }
+
+    private void adjustTemplateOctave(final int inc) {
+        driver.adjustSharedOctave(inc);
+        oled.valueInfo("Template Octave", Integer.toString(driver.getSharedOctave()));
+        oled.clearScreenDelayed();
+        regenerateAllEnabledDerivedLinesSilently();
+    }
+
+    private void showTemplateInfo() {
+        oled.detailInfo("Template",
+                "Root %s\nScale %s\nOct %d\nNotes %d".formatted(
+                        NoteGridLayout.noteName(driver.getSharedRootNote()),
+                        driver.getSharedScaleDisplayName(),
+                        driver.getSharedOctave(),
+                        sourceStepCount()));
+        oled.clearScreenDelayed();
+    }
+
+    private void regenerateAllEnabledDerivedLinesSilently() {
+        for (int line = FugueClipAdapter.FIRST_DERIVED_CHANNEL; line <= FugueClipAdapter.LAST_DERIVED_CHANNEL; line++) {
+            if (lineEnabled[line]) {
+                regenerateLine(line);
+            }
+        }
+    }
+
+    private int sourceStepCount() {
+        final FuguePattern source = sourcePattern();
+        int count = 0;
+        for (int i = 0; i < source.loopSteps(); i++) {
+            for (final MelodicPattern.Step step : source.notesAt(i)) {
+                if (step.active() && !step.tieFromPrevious()) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private void regenerateAllDerivedLines() {
+        for (int line = FugueClipAdapter.FIRST_DERIVED_CHANNEL; line <= FugueClipAdapter.LAST_DERIVED_CHANNEL; line++) {
+            regenerateLine(line);
+        }
+        oled.valueInfo("Fugue", "Rebuilt lines");
+        oled.clearScreenDelayed();
+    }
+
+    private void doubleClipLength() {
+        final int currentLoopSteps = currentLoopSteps();
+        if (currentLoopSteps >= MAX_LOOP_STEPS) {
+            oled.valueInfo("Clip Length", "Max");
+            oled.clearScreenDelayed();
+            return;
+        }
+        final int newLoopSteps = Math.min(MAX_LOOP_STEPS, currentLoopSteps * 2);
+        cursorClip.getLoopLength().set(newLoopSteps * STEP_LENGTH);
+        FugueClipAdapter.duplicateChannelRange(cursorClip, noteStepsByChannel, FugueClipAdapter.SOURCE_CHANNEL,
+                0, currentLoopSteps, currentLoopSteps);
+        loopSteps = newLoopSteps;
+        hostRebuildAfterClipLengthChange("Length", formatSteps(newLoopSteps));
+    }
+
+    private void halveClipLength() {
+        final int currentLoopSteps = currentLoopSteps();
+        if (currentLoopSteps <= MIN_LOOP_STEPS) {
+            oled.valueInfo("Clip Length", "Min");
+            oled.clearScreenDelayed();
+            return;
+        }
+        final int newLoopSteps = Math.max(MIN_LOOP_STEPS, currentLoopSteps / 2);
+        cursorClip.getLoopLength().set(newLoopSteps * STEP_LENGTH);
+        loopSteps = newLoopSteps;
+        hostRebuildAfterClipLengthChange("Length", formatSteps(newLoopSteps));
+    }
+
+    private void hostRebuildAfterClipLengthChange(final String title, final String value) {
+        driver.getHost().scheduleTask(this::regenerateAllEnabledDerivedLinesSilently, SOURCE_CHANGE_REBUILD_DELAY_MS);
+        oled.valueInfo(title, value);
+        oled.clearScreenDelayed();
+    }
+
+    private int currentLoopSteps() {
+        return Math.max(MIN_LOOP_STEPS, Math.min(MAX_LOOP_STEPS,
+                (int) Math.round(cursorClip.getLoopLength().get() / STEP_LENGTH)));
+    }
+
+    private String formatSteps(final int steps) {
+        final double beats = steps * STEP_LENGTH;
+        final double bars = beats / 4.0;
+        if (Math.rint(bars) == bars) {
+            return "%d Bars".formatted((int) bars);
+        }
+        return "%d Steps".formatted(steps);
+    }
+
+    private void regenerateLine(final int line) {
+        if (line <= FugueClipAdapter.SOURCE_CHANNEL || line >= LINE_COUNT) {
+            return;
+        }
+        if (!lineEnabled[line]) {
+            FugueClipAdapter.clearChannel(cursorClip, noteStepsByChannel, line);
+            return;
+        }
+        final FuguePattern source = sourcePattern();
+        final FuguePattern transformed = MelodicLineTransformer.transform(source, lineSettings[line],
+                driver.getSharedMusicalScale(), driver.getSharedRootNote());
+        FugueClipAdapter.writeDerivedLine(cursorClip, noteStepsByChannel, line, transformed, STEP_LENGTH);
+    }
+
+    private void handleNoteStepObject(final NoteStep noteStep) {
+        final int channel = noteStep.channel();
+        final int x = noteStep.x();
+        final int y = noteStep.y();
+        final Map<Integer, Map<Integer, NoteStep>> channelSteps =
+                noteStepsByChannel.computeIfAbsent(channel, ignored -> new HashMap<>());
+        final Map<Integer, NoteStep> notesAtStep = channelSteps.computeIfAbsent(x, ignored -> new HashMap<>());
+        if (noteStep.state() == NoteStep.State.Empty) {
+            notesAtStep.remove(y);
+            if (notesAtStep.isEmpty()) {
+                channelSteps.remove(x);
+            }
+            if (channelSteps.isEmpty()) {
+                noteStepsByChannel.remove(channel);
+            }
+            if (channel == FugueClipAdapter.SOURCE_CHANNEL) {
+                scheduleSourceRebuild();
+            }
+            return;
+        }
+        notesAtStep.put(y, noteStep);
+        if (channel == FugueClipAdapter.SOURCE_CHANNEL) {
+            scheduleSourceRebuild();
+        }
+    }
+
+    private void scheduleSourceRebuild() {
+        final int token = ++sourceRebuildToken;
+        driver.getHost().scheduleTask(() -> {
+            if (token == sourceRebuildToken) {
+                regenerateAllEnabledDerivedLinesSilently();
+            }
+        }, SOURCE_CHANGE_REBUILD_DELAY_MS);
+    }
+
+    private void handlePlayingStep(final int clipPlayingStep) {
+        this.playingStep = clipPlayingStep >= 0 && clipPlayingStep < STEP_COUNT ? clipPlayingStep : -1;
+    }
+
+    private String lineLabel(final int line) {
+        return "Line " + (line + 1);
+    }
+}

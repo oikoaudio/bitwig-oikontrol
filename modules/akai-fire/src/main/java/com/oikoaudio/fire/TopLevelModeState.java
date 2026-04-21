@@ -6,6 +6,7 @@ public final class TopLevelModeState {
         NOTE_PLAY,
         CHORD_STEP,
         MELODIC_STEP,
+        FUGUE_STEP,
         NESTED_RHYTHM,
         PERFORM
     }
@@ -33,6 +34,10 @@ public final class TopLevelModeState {
         activeMode = Mode.CHORD_STEP;
     }
 
+    public void activateFugueStep() {
+        activeMode = Mode.FUGUE_STEP;
+    }
+
     public boolean shouldIgnoreTopLevelStepPress(final boolean shiftHeld, final boolean altHeld) {
         return (activeMode == Mode.DRUM || activeMode == Mode.NOTE_PLAY
                 || activeMode == Mode.CHORD_STEP || activeMode == Mode.PERFORM)
@@ -44,7 +49,7 @@ public final class TopLevelModeState {
     }
 
     public void enterMelodicStepMode() {
-        previousNonStepMode = (activeMode == Mode.MELODIC_STEP || activeMode == Mode.NESTED_RHYTHM)
+        previousNonStepMode = isStepFamily(activeMode)
                 ? Mode.NOTE_PLAY
                 : activeMode;
         activeMode = Mode.MELODIC_STEP;
@@ -56,9 +61,13 @@ public final class TopLevelModeState {
     }
 
     public void enterNestedRhythmMode() {
-        previousNonStepMode = (activeMode == Mode.MELODIC_STEP || activeMode == Mode.NESTED_RHYTHM)
+        previousNonStepMode = isStepFamily(activeMode)
                 ? Mode.NOTE_PLAY
                 : activeMode;
         activeMode = Mode.NESTED_RHYTHM;
+    }
+
+    private boolean isStepFamily(final Mode mode) {
+        return mode == Mode.MELODIC_STEP || mode == Mode.FUGUE_STEP || mode == Mode.NESTED_RHYTHM;
     }
 }

@@ -42,6 +42,16 @@ class TopLevelModeStateTest {
     }
 
     @Test
+    void melodicExitFallsBackToNotePlayIfPreviousWasFugueStep() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        state.activateFugueStep();
+        state.enterMelodicStepMode();
+
+        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.exitMelodicStepMode());
+    }
+
+    @Test
     void topLevelStepPressIgnoreMatchesModifierRules() {
         final TopLevelModeState state = new TopLevelModeState();
 

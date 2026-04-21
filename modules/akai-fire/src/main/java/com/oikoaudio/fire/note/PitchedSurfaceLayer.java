@@ -1072,6 +1072,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 return;
             }
             if (pressed) {
+                if (isChordStepSurface()) {
+                    driver.enterFugueStepMode();
+                    return;
+                }
                 driver.enterMelodicStepMode();
             }
             return;
