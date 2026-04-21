@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 public final class FuguePattern {
-    public static final int MAX_STEPS = 256;
+    public static final int MAX_STEPS = 512;
 
     private final List<List<MelodicPattern.Step>> steps;
     private final int loopSteps;

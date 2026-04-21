@@ -122,6 +122,18 @@ class MelodicLineTransformerTest {
     }
 
     @Test
+    void slowTempoExpandsPositionsWithoutWrappingOntoEarlierBeats() {
+        final FuguePattern transformed = MelodicLineTransformer.transform(sixteenthRunSource(),
+                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 0, 0), major(), 0);
+
+        assertStep(transformed, 0, 60);
+        assertStep(transformed, 16, 62);
+        assertEquals(1, transformed.notesAt(0).stream().filter(step -> step.pitch() != null).count());
+        assertEquals(1, transformed.notesAt(16).stream().filter(step -> step.pitch() != null).count());
+        assertTrue(transformed.step(1).pitch() == null);
+    }
+
+    @Test
     void speedPaletteIncludesTripletAndDottedSlots() {
         assertEquals("2 dt", FugueSpeed.NORMAL.next(1).label());
         assertEquals("1 trp", FugueSpeed.TIMES_2_DOTTED.next(1).label());
@@ -169,8 +181,8 @@ class MelodicLineTransformerTest {
         assertEquals(12, FuguePitchIntervals.nextDegreeInterval(11, 1));
         assertEquals(19, FuguePitchIntervals.octaveJump(12, 1));
         assertEquals(5, FuguePitchIntervals.octaveJump(12, -1));
-        assertEquals("+19", FuguePitchIntervals.label(11));
-        assertEquals("+40", FuguePitchIntervals.label(23));
+        assertEquals("+11d", FuguePitchIntervals.label(11));
+        assertEquals("+23d", FuguePitchIntervals.label(23));
     }
 
     @Test

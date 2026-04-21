@@ -38,6 +38,9 @@ public final class MelodicLineTransformer {
                                              final int rootNote) {
         final int directionalIndex = directionalIndex(sourceIndex, phraseSteps, settings.direction());
         final int destination = transformedDestination(directionalIndex, phraseSteps, loopSteps, settings);
+        if (destination < 0 || destination >= loopSteps) {
+            return;
+        }
         final int pitch = ScaleAwareTransposer.transposeDiatonicThenChromatic(sourceStep.pitch(),
                 settings.pitchDegreeOffset(), settings.pitchSemitoneOffset(), scale, rootNote);
         final MelodicPattern.Step transformed = transformedStep(sourceStep, destination, pitch, settings);
@@ -66,6 +69,9 @@ public final class MelodicLineTransformer {
         final int period = settings.speed().isSpeedUp()
                 ? settings.speed().transformedLoopSteps(phraseSteps)
                 : loopSteps;
+        if (settings.speed().isSlowDown()) {
+            return settings.startOffset() + settings.speed().scaleStart(directionalIndex);
+        }
         return Math.floorMod(settings.startOffset() + settings.speed().scaleStart(directionalIndex), period);
     }
 

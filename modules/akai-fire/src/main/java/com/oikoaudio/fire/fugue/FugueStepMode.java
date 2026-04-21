@@ -34,7 +34,10 @@ public final class FugueStepMode extends Layer {
     private static final int BAR_STEPS = 32;
     private static final int MAX_LOOP_STEPS = STEP_COUNT;
     private static final int MIN_LOOP_STEPS = 1;
-    private static final int[] CLIP_LENGTH_STEPS = {8, 16, 32, 64, 96, 128, 160, 192, 224, 256};
+    private static final int[] CLIP_LENGTH_STEPS = {
+            8, 16, 32, 64, 96, 128, 160, 192, 224, 256,
+            288, 320, 352, 384, 416, 448, 480, 512
+    };
     private static final RgbLigthState[] LINE_COLORS = {
             new RgbLigthState(112, 0, 0, true),
             new RgbLigthState(112, 44, 0, true),
@@ -117,7 +120,7 @@ public final class FugueStepMode extends Layer {
                 regenerateAllDerivedLines();
             }
         }, () -> BiColorLightState.AMBER_HALF);
-        oled.valueInfo("Fugue", "Line " + (activeLineIndex() + 1));
+        showEncoderModeInfo();
         oled.clearScreenDelayed();
     }
 
@@ -335,7 +338,7 @@ public final class FugueStepMode extends Layer {
                 case 0 -> oled.valueInfo("Line 1 Velocity", "%+d".formatted(settings.velocityOffset()));
                 case 1 -> oled.valueInfo("Line 1 Chance", settings.chancePercent() + "%");
                 case 2 -> oled.valueInfo("Line 1 Gate", settings.gatePercent() + "%");
-                case 3 -> oled.valueInfo("Play Start", formatPlayStart(cursorClip.getPlayStart().get()));
+                case 3 -> oled.valueInfo("Clip Start", formatPlayStart(cursorClip.getPlayStart().get()));
                 default -> { }
             }
             return;
@@ -344,7 +347,7 @@ public final class FugueStepMode extends Layer {
             case 0 -> oled.valueInfo("Template Root", NoteGridLayout.noteName(driver.getSharedRootNote()));
             case 1 -> oled.valueInfo("Template Scale", driver.getSharedScaleDisplayName());
             case 2 -> oled.valueInfo("Clip Length", formatSteps(currentLoopSteps()));
-            case 3 -> oled.valueInfo("Play Start", formatPlayStart(cursorClip.getPlayStart().get()));
+            case 3 -> oled.valueInfo("Clip Start", formatPlayStart(cursorClip.getPlayStart().get()));
             default -> { }
         }
     }
@@ -445,8 +448,10 @@ public final class FugueStepMode extends Layer {
         }
         if (!edit.changed) {
             writeTemplatePadEditNote(edit.withChanged(true));
+            final String label = currentTemplatePadEditLabel();
+            templatePadEdit = null;
             regenerateAllEnabledDerivedLinesSilently();
-            oled.valueInfo("Template", "Added " + currentTemplatePadEditLabel());
+            oled.valueInfo("Template", "Added " + label);
             oled.clearScreenDelayed();
             return;
         }
@@ -607,7 +612,7 @@ public final class FugueStepMode extends Layer {
     private void setClipPlayStart(final int startStep) {
         final double playStart = Math.max(0.0, Math.min((loopSteps - 1) * STEP_LENGTH, startStep * STEP_LENGTH));
         cursorClip.getPlayStart().set(playStart);
-        oled.valueInfo("Play Start", formatPlayStart(playStart));
+        oled.valueInfo("Clip Start", formatPlayStart(playStart));
     }
 
     private String formatPlayStart(final double beatTime) {
@@ -644,8 +649,16 @@ public final class FugueStepMode extends Layer {
 
     private void selectEncoderMode(final EncoderMode mode) {
         activeEncoderMode = mode;
-        oled.detailInfo("Fugue Line", lineLabel(activeLineIndex()));
+        showEncoderModeInfo();
         oled.clearScreenDelayed();
+    }
+
+    private void showEncoderModeInfo() {
+        if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
+            oled.detailInfo("Fugue Settings", "1 Root\n2 Scale\n3 Clip Len\n4 Clip Start");
+            return;
+        }
+        oled.detailInfo(lineLabel(activeLineIndex()), "1 Dir\n2 Tempo\n3 Start\n4 Pitch");
     }
 
     private void selectLine(final int line) {
@@ -1098,7 +1111,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private String lineLabel(final int line) {
-        return "Line " + (line + 1);
+        return line == FugueClipAdapter.SOURCE_CHANNEL ? "Template" : "Var " + (line + 1);
     }
 
     private record TemplatePadEdit(int column, int bucketStart, int step, int pitch, boolean existed, boolean changed,

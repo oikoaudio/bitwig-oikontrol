@@ -38,6 +38,10 @@ public enum FugueSpeed {
         return numerator > denominator;
     }
 
+    boolean isSlowDown() {
+        return denominator > numerator;
+    }
+
     int transformedLoopSteps(final int sourceLoopSteps) {
         return Math.max(1, (int) Math.ceil(sourceLoopSteps * (double) denominator / numerator));
     }
