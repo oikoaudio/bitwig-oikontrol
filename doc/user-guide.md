@@ -363,9 +363,9 @@ For immediate derived-line feedback, change source expression from the controlle
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Perform encoder pages |
-| `SHIFT + PERFORM` | Toggle latched track-action page |
+| `SHIFT + PERFORM` | Toggle latched track-control pad page |
 
-Track-action page rows are stop, solo, mute, and arm for the 16 visible tracks.
+Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
 
 On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page. Hold `ALT` and turn `SELECT` to change the remote page for the active remote encoder page: project remotes on `Channel`, track remotes on `User 1`, and device remotes on `User 2`. This applies in both vertical and horizontal perform layouts.
 

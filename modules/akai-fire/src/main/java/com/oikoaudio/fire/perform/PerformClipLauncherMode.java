@@ -35,7 +35,7 @@ import java.util.Map;
 
 public class PerformClipLauncherMode extends Layer {
     private enum TrackActionRow {
-        STOP(0, "Stop", new RgbLigthState(0, 0, 96, true)),
+        SELECT(0, "Select", new RgbLigthState(0, 96, 96, true)),
         SOLO(1, "Solo", new RgbLigthState(96, 96, 0, true)),
         MUTE(2, "Mute", new RgbLigthState(110, 48, 0, true)),
         ARM(3, "Arm", new RgbLigthState(110, 0, 0, true));
@@ -471,9 +471,14 @@ public class PerformClipLauncherMode extends Layer {
         final String trackLabel = trackLabel(absoluteTrackIndex, visibleTrackIndex);
         track.selectInMixer();
         switch (actionRow) {
-            case STOP -> {
-                track.stop();
-                oled.valueInfo("Track Stop", trackLabel);
+            case SELECT -> {
+                if (isAltHeld()) {
+                    track.stop();
+                    oled.valueInfo("Track Stop", trackLabel);
+                    return;
+                }
+                track.selectInEditor();
+                oled.valueInfo("Track Select", trackLabel);
             }
             case SOLO -> {
                 track.solo().toggle(false);
@@ -629,10 +634,6 @@ public class PerformClipLauncherMode extends Layer {
         }
         if (selectHeld.get()) {
             showCurrentModeInfo();
-            return;
-        }
-        if (trackActionMode) {
-            showTrackActionInfo();
             return;
         }
         if (isSettingsHeld()) {
@@ -846,8 +847,8 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showTrackActionInfo() {
-        oled.detailInfo("Track Actions", "1: %s\n2: %s\n3: %s\n4: %s".formatted(
-                TrackActionRow.STOP.label,
+        oled.detailInfo("Track Controls", "1: %s / ALT Stop\n2: %s\n3: %s\n4: %s".formatted(
+                TrackActionRow.SELECT.label,
                 TrackActionRow.SOLO.label,
                 TrackActionRow.MUTE.label,
                 TrackActionRow.ARM.label));
@@ -942,6 +943,17 @@ public class PerformClipLauncherMode extends Layer {
             return currentPage;
         }
         return clamp(currentPage + inc, 0, pageCount - 1);
+    }
+
+    static String trackControlActionForPad(final int padIndex, final boolean altHeld) {
+        final TrackActionRow actionRow = TrackActionRow.fromPadIndex(padIndex);
+        if (actionRow == null) {
+            return "";
+        }
+        if (actionRow == TrackActionRow.SELECT && altHeld) {
+            return "Stop";
+        }
+        return actionRow.label;
     }
 
     private boolean canScrollTracks(final int direction) {
@@ -1067,16 +1079,22 @@ public class PerformClipLauncherMode extends Layer {
         }
         final RgbLigthState baseColor = actionRow.color;
         return switch (actionRow) {
-            case STOP -> {
+            case SELECT -> {
                 if (track.isQueuedForStop().get()) {
                     yield blinkFast(baseColor.getBrightest(), baseColor.getDimmed());
                 }
-                yield track.isStopped().get() ? baseColor.getDimmed() : baseColor.getBrightest();
+                yield isVisibleTrackSelected(visibleTrackIndex)
+                        ? baseColor.getBrightest()
+                        : track.isStopped().get() ? baseColor.getDimmed() : baseColor;
             }
             case SOLO -> track.solo().get() ? baseColor.getBrightest() : baseColor.getDimmed();
             case MUTE -> track.mute().get() ? baseColor.getBrightest() : baseColor.getDimmed();
             case ARM -> track.arm().get() ? baseColor.getBrightest() : baseColor.getDimmed();
         };
+    }
+
+    private boolean isVisibleTrackSelected(final int visibleTrackIndex) {
+        return selectedTrackIndex == trackBank.scrollPosition().get() + visibleTrackIndex;
     }
 
     private RgbLigthState settingsLogoState(final int padIndex) {
