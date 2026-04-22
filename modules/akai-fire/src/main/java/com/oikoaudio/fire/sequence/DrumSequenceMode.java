@@ -774,6 +774,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         driver.setMainEncoderPressed(press);
+        if (press && isAltHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.toggleCurrentDeviceWindow();
+            return;
+        }
         if (press && isShiftHeld()) {
             mainEncoderPressConsumed = true;
             driver.cycleMainEncoderRolePreference();

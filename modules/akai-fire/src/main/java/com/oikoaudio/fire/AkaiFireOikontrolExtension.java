@@ -1365,6 +1365,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
     }
 
+    public boolean toggleCurrentDeviceWindow() {
+        final PinnableCursorDevice selectedDevice = viewControl.getSelectedDevice();
+        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        final PinnableCursorDevice targetDevice = selectedDevice != null && selectedDevice.exists().get()
+                ? selectedDevice
+                : primaryDevice;
+        if (targetDevice == null || !targetDevice.exists().get()) {
+            oled.valueInfo("Device Window", "No Device");
+            return false;
+        }
+        final boolean wasOpen = targetDevice.isWindowOpen().get();
+        targetDevice.isWindowOpen().toggle();
+        oled.valueInfo("Device Window", wasOpen ? "Closed" : "Open");
+        return true;
+    }
+
     private Parameter getLastClickedParameter() {
         if (lastClickedParameter == null) {
             return null;

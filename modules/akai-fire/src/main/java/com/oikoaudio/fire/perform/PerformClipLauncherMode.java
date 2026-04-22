@@ -108,6 +108,7 @@ public class PerformClipLauncherMode extends Layer {
     private int totalSceneCount = MAX_SCENES;
     private int selectedTrackIndex = -1;
     private int selectedSceneIndex = -1;
+    private boolean mainEncoderPressConsumed = false;
     private boolean trackActionMode = false;
     private PerformLayout layout = PerformLayout.vertical();
 
@@ -149,6 +150,7 @@ public class PerformClipLauncherMode extends Layer {
 
         initGrid();
         initEncoderPages();
+        bindMainEncoder();
         initButtons();
     }
 
@@ -212,10 +214,20 @@ public class PerformClipLauncherMode extends Layer {
         modeMapping.put(EncoderMode.USER_1, user1Layer);
         modeMapping.put(EncoderMode.USER_2, user2Layer);
 
+        markRemotePageInterested(projectRemoteControls);
+        markRemotePageInterested(trackRemoteControls);
+        markRemotePageInterested(deviceRemoteControls);
+
         bindChannelPage(channelLayer, projectRemoteControls, "Global");
         bindMixerPage(mixerLayer);
         bindRemotePage(user1Layer, trackRemoteControls, "Track");
         bindRemotePage(user2Layer, deviceRemoteControls, "Device");
+    }
+
+    private void bindMainEncoder() {
+        final TouchEncoder mainEncoder = driver.getMainEncoder();
+        mainEncoder.bindEncoder(this, this::handleMainEncoder);
+        mainEncoder.bindTouched(this, this::handleMainEncoderPress);
     }
 
     private void showOverview() {
@@ -261,37 +273,46 @@ public class PerformClipLauncherMode extends Layer {
 
     private void bindChannelPage(final Layer layer, final CursorRemoteControlsPage page, final String fallbackPrefix) {
         final TouchEncoder[] encoders = driver.getEncoders();
+        markPageParametersInterested(page);
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
-            final Parameter parameter = page.getParameter(i);
-            markParameterInterested(parameter);
             encoders[i].bindContinuousEncoder(layer, this::isShiftHeld, inc -> {
                 if (isSettingsHeld()) {
                     adjustOverviewPitch(index, inc);
                     return;
                 }
-                adjustParameter(index, parameter, fallbackPrefix + " " + (index + 1), inc);
+                final int parameterIndex = remoteParameterIndex(index, isAltHeld());
+                final Parameter parameter = page.getParameter(parameterIndex);
+                adjustParameter(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), inc);
             });
             encoders[i].bindTouched(layer, touched -> {
                 if (isSettingsHeld()) {
                     handleOverviewTouch(index, touched);
                     return;
                 }
-                handleParameterTouch(index, parameter, fallbackPrefix + " " + (index + 1), touched);
+                final int parameterIndex = remoteParameterIndex(index, isAltHeld());
+                final Parameter parameter = page.getParameter(parameterIndex);
+                handleParameterTouch(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), touched);
             });
         }
     }
 
     private void bindRemotePage(final Layer layer, final CursorRemoteControlsPage page, final String fallbackPrefix) {
         final TouchEncoder[] encoders = driver.getEncoders();
+        markPageParametersInterested(page);
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
-            final Parameter parameter = page.getParameter(i);
-            markParameterInterested(parameter);
             encoders[i].bindContinuousEncoder(layer, this::isShiftHeld,
-                    inc -> adjustParameter(index, parameter, fallbackPrefix + " " + (index + 1), inc));
-            encoders[i].bindTouched(layer, touched -> handleParameterTouch(index, parameter,
-                    fallbackPrefix + " " + (index + 1), touched));
+                    inc -> {
+                        final int parameterIndex = remoteParameterIndex(index, isAltHeld());
+                        final Parameter parameter = page.getParameter(parameterIndex);
+                        adjustParameter(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), inc);
+                    });
+            encoders[i].bindTouched(layer, touched -> {
+                final int parameterIndex = remoteParameterIndex(index, isAltHeld());
+                final Parameter parameter = page.getParameter(parameterIndex);
+                handleParameterTouch(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), touched);
+            });
         }
     }
 
@@ -621,6 +642,146 @@ public class PerformClipLauncherMode extends Layer {
         switchMode(nextMode());
     }
 
+    private void handleMainEncoder(final int inc) {
+        if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoder(inc);
+            return;
+        }
+        driver.markMainEncoderTurned();
+        if (isAltHeld()) {
+            handleRemotePageNavigation(inc);
+            return;
+        }
+
+        final boolean fine = isShiftHeld();
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            driver.adjustTempo(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+            driver.adjustGrooveShuffleAmount(inc, fine);
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            oled.valueInfo("Note Repeat", "Unavailable");
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            oled.valueInfo("Drum Grid", "Drum only");
+        } else {
+            driver.adjustMainCursorParameter(inc, fine);
+        }
+    }
+
+    private void handleMainEncoderPress(final boolean pressed) {
+        if (driver.isPopupBrowserActive()) {
+            driver.routeBrowserMainEncoderPress(pressed);
+            return;
+        }
+        driver.setMainEncoderPressed(pressed);
+        if (pressed && isAltHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.toggleCurrentDeviceWindow();
+            return;
+        }
+        if (pressed && isShiftHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.cycleMainEncoderRolePreference();
+            return;
+        }
+        if (!pressed && mainEncoderPressConsumed) {
+            mainEncoderPressConsumed = false;
+            return;
+        }
+
+        final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
+            driver.toggleMainEncoderRolePreference();
+            return;
+        }
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showTempoInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showGrooveShuffleInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Note Repeat", "Unavailable");
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Drum Grid", "Drum only");
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (pressed) {
+            driver.showMainCursorParameterInfo();
+        }
+    }
+
+    private void handleRemotePageNavigation(final int inc) {
+        final CursorRemoteControlsPage page = remotePageForCurrentEncoderMode();
+        final String label = remotePageLabelForCurrentEncoderMode();
+        if (page == null || inc == 0) {
+            oled.valueInfo("Remote Page", "No page");
+            return;
+        }
+
+        final int pageCount = page.pageCount().getAsInt();
+        if (pageCount <= 0) {
+            oled.valueInfo(label + " Page", "No Pages");
+            return;
+        }
+        final int currentPage = page.selectedPageIndex().get();
+        final int nextPage = remotePageIndexAfterTurn(currentPage, pageCount, inc);
+        if (nextPage != currentPage) {
+            page.selectedPageIndex().set(nextPage);
+        }
+        oled.valueInfo(label + " Page", remotePageName(page, nextPage));
+    }
+
+    private CursorRemoteControlsPage remotePageForCurrentEncoderMode() {
+        return switch (encoderMode) {
+            case CHANNEL -> projectRemoteControls;
+            case USER_1 -> trackRemoteControls;
+            case USER_2 -> deviceRemoteControls;
+            case MIXER -> null;
+        };
+    }
+
+    private String remotePageLabelForCurrentEncoderMode() {
+        return switch (encoderMode) {
+            case CHANNEL -> "Project";
+            case USER_1 -> "Track";
+            case USER_2 -> "Device";
+            case MIXER -> "Mixer";
+        };
+    }
+
+    private String remotePageName(final CursorRemoteControlsPage page, final int pageIndex) {
+        final String pageName = page.pageNames().get(pageIndex);
+        if (pageName != null && !pageName.isBlank()) {
+            return pageName;
+        }
+        final String currentName = page.getName().get();
+        if (currentName != null && !currentName.isBlank()) {
+            return currentName;
+        }
+        return "Page " + (pageIndex + 1);
+    }
+
     private void switchMode(final EncoderMode newMode) {
         encoderMode = newMode;
         currentEncoderLayer.deactivate();
@@ -664,7 +825,7 @@ public class PerformClipLauncherMode extends Layer {
             case CHANNEL -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
             case USER_1 -> "1: Track Remote 1\n2: Track Remote 2\n3: Track Remote 3\n4: Track Remote 4";
-            case USER_2 -> "1: Master Vol\n2: Master Pan\n3: Cue Vol\n4: Cue Mix";
+            case USER_2 -> "1: Device Remote 1\n2: Device Remote 2\n3: Device Remote 3\n4: Device Remote 4";
         };
     }
 
@@ -676,7 +837,7 @@ public class PerformClipLauncherMode extends Layer {
             case CHANNEL -> "Global Remotes";
             case MIXER -> "Mixer";
             case USER_1 -> "Track Remotes";
-            case USER_2 -> "Master/Cue";
+            case USER_2 -> "Device Remotes";
         };
     }
 
@@ -738,6 +899,19 @@ public class PerformClipLauncherMode extends Layer {
         parameter.value().markInterested();
     }
 
+    private void markPageParametersInterested(final CursorRemoteControlsPage page) {
+        for (int i = 0; i < page.getParameterCount(); i++) {
+            markParameterInterested(page.getParameter(i));
+        }
+    }
+
+    private void markRemotePageInterested(final CursorRemoteControlsPage page) {
+        page.selectedPageIndex().markInterested();
+        page.pageCount().markInterested();
+        page.pageNames().markInterested();
+        page.getName().markInterested();
+    }
+
     private boolean isMapped(final Parameter parameter) {
         return parameter != null && parameter.exists().get();
     }
@@ -753,6 +927,21 @@ public class PerformClipLauncherMode extends Layer {
 
     private int sceneScrollAmount() {
         return layout.sceneScrollAmount(isShiftHeld());
+    }
+
+    private boolean isAltHeld() {
+        return driver.isGlobalAltHeld();
+    }
+
+    static int remoteParameterIndex(final int encoderIndex, final boolean altHeld) {
+        return (altHeld ? 4 : 0) + encoderIndex;
+    }
+
+    static int remotePageIndexAfterTurn(final int currentPage, final int pageCount, final int inc) {
+        if (pageCount <= 0) {
+            return currentPage;
+        }
+        return clamp(currentPage + inc, 0, pageCount - 1);
     }
 
     private boolean canScrollTracks(final int direction) {
@@ -974,7 +1163,7 @@ public class PerformClipLauncherMode extends Layer {
         return sceneIndex * MAX_TRACKS + trackIndex;
     }
 
-    private int clamp(final int value, final int min, final int max) {
+    private static int clamp(final int value, final int min, final int max) {
         return Math.max(min, Math.min(max, value));
     }
 }

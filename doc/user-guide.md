@@ -141,6 +141,7 @@ When the popup browser is open, `SELECT` turn moves through results, `SELECT` pr
 ### Main SELECT encoder
 
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
+Press `ALT + SELECT` to open or close the selected device window.
 
 | Role | Turn | Press / hold behavior |
 | --- | --- | --- |
@@ -365,6 +366,8 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + PERFORM` | Toggle latched track-action page |
 
 Track-action page rows are stop, solo, mute, and arm for the 16 visible tracks.
+
+On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page. Hold `ALT` and turn `SELECT` to change the remote page for the active remote encoder page: project remotes on `Channel`, track remotes on `User 1`, and device remotes on `User 2`. This applies in both vertical and horizontal perform layouts.
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
