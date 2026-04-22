@@ -6,6 +6,7 @@ import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
 import com.oikoaudio.fire.display.OledDisplay;
+import com.oikoaudio.fire.fugue.FugueStepMode;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
@@ -151,6 +152,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private NotePlayMode notePlayMode;
     private ChordStepMode chordStepMode;
     private MelodicStepMode melodicStepMode;
+    private FugueStepMode fugueStepMode;
     private NestedRhythmMode nestedRhythmMode;
     private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
@@ -241,6 +243,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
         chordStepMode = new ChordStepMode(this, noteRepeatHandler);
         melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
+        fugueStepMode = new FugueStepMode(this);
         nestedRhythmMode = new NestedRhythmMode(this);
         performMode = new PerformClipLauncherMode(this);
         initGlobalSettingsOverlay();
@@ -264,6 +267,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode.notifyBlink(blinkTicks);
         chordStepMode.notifyBlink(blinkTicks);
         melodicStepMode.notifyBlink(blinkTicks);
+        fugueStepMode.notifyBlink(blinkTicks);
         nestedRhythmMode.notifyBlink(blinkTicks);
         performMode.notifyBlink(blinkTicks);
         host.scheduleTask(this::handlePing, 100);
@@ -607,6 +611,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.MELODIC_STEP && melodicStepMode != null) {
             return melodicStepMode.getModeButtonLightState();
         }
+        if (modeState.activeMode() == Mode.FUGUE_STEP && fugueStepMode != null) {
+            return fugueStepMode.getModeButtonLightState();
+        }
         if (modeState.activeMode() == Mode.NESTED_RHYTHM && nestedRhythmMode != null) {
             return nestedRhythmMode.getModeButtonLightState();
         }
@@ -772,6 +779,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (modeState.activeMode() == Mode.CHORD_STEP) {
+            if (!pressed || isGlobalAltHeld()) {
+                return;
+            }
+            modeState.activateFugueStep();
+            switchActiveMode();
+            notifyAction("Mode", "Fugue");
+            return;
+        }
+        if (modeState.activeMode() == Mode.FUGUE_STEP) {
             if (!pressed || isGlobalAltHeld()) {
                 return;
             }
@@ -1009,6 +1025,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode.deactivate();
         chordStepMode.deactivate();
         melodicStepMode.deactivate();
+        fugueStepMode.deactivate();
         nestedRhythmMode.deactivate();
         performMode.deactivate();
         if (modeState.activeMode() == Mode.DRUM) {
@@ -1027,6 +1044,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             chordStepMode.activate();
         } else if (modeState.activeMode() == Mode.MELODIC_STEP) {
             melodicStepMode.activate();
+        } else if (modeState.activeMode() == Mode.FUGUE_STEP) {
+            fugueStepMode.activate();
         } else if (modeState.activeMode() == Mode.NESTED_RHYTHM) {
             nestedRhythmMode.activate();
         } else {
@@ -1170,6 +1189,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         modeState.enterMelodicStepMode();
         switchActiveMode();
         notifyAction("Mode", "Step");
+    }
+
+    public void enterFugueStepMode() {
+        modeState.activateFugueStep();
+        switchActiveMode();
+        notifyAction("Mode", "Fugue");
     }
 
     public void enterNestedRhythmMode() {
@@ -1324,6 +1349,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case NOTE_PLAY -> "Note";
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melodic Step";
+            case FUGUE_STEP -> "Fugue";
             case NESTED_RHYTHM -> "Nested Rhythm";
             case PERFORM -> "Perform";
         };
@@ -1395,6 +1421,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         notePlayMode.deactivate();
         chordStepMode.deactivate();
         melodicStepMode.deactivate();
+        fugueStepMode.deactivate();
         nestedRhythmMode.deactivate();
         performMode.deactivate();
         globalSettingsLayer.activate();

@@ -172,14 +172,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         refreshSelectedClipState();
         patternButtons.setUpCallback(pressed -> {
             if (pressed) {
-                generatePattern("Generate", summaryLabel());
-            }
-        }, () -> BiColorLightState.GREEN_HALF);
-        patternButtons.setDownCallback(pressed -> {
-            if (pressed) {
                 clearPulseEdits();
             }
         }, () -> BiColorLightState.AMBER_HALF);
+        patternButtons.setDownCallback(pressed -> {
+            if (pressed) {
+                generatePattern("Generate", summaryLabel());
+            }
+        }, () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
         maybeGenerateOnEmptySelectedClip();
     }
