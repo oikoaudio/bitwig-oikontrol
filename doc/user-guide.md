@@ -113,7 +113,7 @@ The Akai Fire extension is organized around four top-level workflows.
 | --- | --- | --- |
 | `DRUM` | Drum sequencing | XOX-style drum sequencing; press again for `Nested Rhythm` |
 | `NOTE` | Live note input | 16x4 note surface; press again for harmonic note layout |
-| `STEP SEQ` | Step sequencing | Enters `Melodic Step`; press again for `Chord Step` |
+| `STEP` | Step sequencing | Enters `Melodic Step`; press again for `Chord Step`, then `Fugue` |
 | `PERFORM` | Clip launching | 16x4 clip grid and track actions |
 
 Shared pitch context is global across `NOTE`, `Melodic Step`, `Chord Step`, and the settings overlay. `Root Key`, `Scale`, and `Octave` changes in one of those places update the others.
@@ -163,9 +163,9 @@ Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate 
 
 | Control | Action |
 | --- | --- |
-| `STEP SEQ` | Enter `Melodic Step` |
-| `SHIFT + STEP SEQ` | Accent entry and editing |
-| `ALT + STEP SEQ` | Fill |
+| `STEP` | Enter `Melodic Step` |
+| `SHIFT + STEP` | Accent entry and editing |
+| `ALT + STEP` | Fill |
 | `BANK LEFT/RIGHT` | Move or rotate pattern |
 | `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
@@ -199,11 +199,11 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 
 | Control | Action |
 | --- | --- |
-| `DRUM` while in standard `DRUM` | Enter `Nested Rhythm` |
-| `DRUM` while in `Nested Rhythm` | Return to standard `DRUM` |
-| `STEP SEQ` | Enter `Melodic Step` |
-| `PATTERN UP` | Generate current nested rhythm into the selected clip |
-| `PATTERN DOWN` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
+| `DRUM` while in `XOX Drum mode` | Enter `Nested Rhythm mode` |
+| `DRUM` while in `Nested Rhythm` | Return to `XOX Drum mode` |
+| `STEP` | Enter `Melodic Step mode` |
+| `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
+| `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
 | Hold `MUTE_2` + projected rhythm pad | Set last step within the 32-step edit view |
 | Hold projected rhythm pad | Target nearest generated hit |
 | Tap bottom-row hit pad | Toggle that hit |
@@ -331,6 +331,20 @@ Press `STEP SEQ` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to retu
 Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch bank, page, or slot; it only changes how the selected slot is rendered. `As Is` transposes the stored chord shape from the current root. `In Scale` rebuilds that slot from the current shared scale and root.
 
 Coarse nudge is intentionally disabled in `Chord Step`; micro-timing is currently temperamental and should be treated as experimental.
+
+### Fugue mode
+
+Press `STEP` from `Chord Step` to enter `Fugue`. `Fugue` treats MIDI channel 1 as the source line and generates related lines on channels 2-4.
+
+| Control | Action |
+| --- | --- |
+| `PATTERN DOWN` | Reread channel 1 from the clip and rebuild derived lines |
+| Encoder turn on a derived-line page | Immediately rebuild that line with the new parameter |
+| Channel 1 pads and encoders | Edit the source/template line |
+
+If you change channel 1 notes or expression directly in Bitwig, press `PATTERN DOWN` to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.
+
+For immediate derived-line feedback, change source expression from the controller instead. Controller-owned edits update the clip and regenerate from the controller's current source state.
 
 ### PERFORM mode
 
