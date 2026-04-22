@@ -97,6 +97,7 @@ public class PerformClipLauncherMode extends Layer {
     private final RgbLigthState[] slotColors = new RgbLigthState[MAX_TRACKS * MAX_SCENES];
     private final String[] trackNames = new String[MAX_TRACKS];
     private final String[] sceneNames = new String[MAX_SCENES];
+    private final boolean[] selectedVisibleTracks = new boolean[MAX_TRACKS];
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
@@ -177,6 +178,18 @@ public class PerformClipLauncherMode extends Layer {
             final int column = trackIndex;
             track.name().addValueObserver(name -> trackNames[column] = name);
             trackNames[column] = track.name().get();
+            track.addIsSelectedInMixerObserver(selected -> {
+                selectedVisibleTracks[column] = selected;
+                if (selected) {
+                    selectedTrackIndex = trackBank.scrollPosition().get() + column;
+                }
+            });
+            track.addIsSelectedInEditorObserver(selected -> {
+                if (selected) {
+                    selectedVisibleTracks[column] = true;
+                    selectedTrackIndex = trackBank.scrollPosition().get() + column;
+                }
+            });
 
             for (int sceneIndex = 0; sceneIndex < MAX_SCENES; sceneIndex++) {
                 final int slotIndex = toSlotIndex(trackIndex, sceneIndex);
@@ -789,9 +802,7 @@ public class PerformClipLauncherMode extends Layer {
         currentEncoderLayer = modeMapping.get(newMode);
         applyEncoderStepSizes();
         currentEncoderLayer.activate();
-        if (trackActionMode) {
-            showTrackActionInfo();
-        } else if (isSettingsHeld()) {
+        if (isSettingsHeld()) {
             showOverview();
         } else {
             showCurrentModeInfo();
@@ -1007,8 +1018,6 @@ public class PerformClipLauncherMode extends Layer {
         currentEncoderLayer.activate();
         if (isSettingsHeld()) {
             showOverview();
-        } else if (trackActionMode) {
-            showTrackActionInfo();
         } else {
             showCurrentModeInfo();
         }
@@ -1089,12 +1098,14 @@ public class PerformClipLauncherMode extends Layer {
             }
             case SOLO -> track.solo().get() ? baseColor.getBrightest() : baseColor.getDimmed();
             case MUTE -> track.mute().get() ? baseColor.getBrightest() : baseColor.getDimmed();
-            case ARM -> track.arm().get() ? baseColor.getBrightest() : baseColor.getDimmed();
+            case ARM -> track.arm().get() ? baseColor : baseColor.getDimmed();
         };
     }
 
     private boolean isVisibleTrackSelected(final int visibleTrackIndex) {
-        return selectedTrackIndex == trackBank.scrollPosition().get() + visibleTrackIndex;
+        return visibleTrackIndex >= 0
+                && visibleTrackIndex < selectedVisibleTracks.length
+                && selectedVisibleTracks[visibleTrackIndex];
     }
 
     private RgbLigthState settingsLogoState(final int padIndex) {
