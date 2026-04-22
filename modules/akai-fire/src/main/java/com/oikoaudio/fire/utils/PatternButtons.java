@@ -31,13 +31,13 @@ public class PatternButtons {
             if (pressed) {
                 upCallback.accept(true);
             }
-        }, upLightSupplier);
+        }, () -> upLightSupplier.get());
 
         downButton.bindPressed(layer, pressed -> {
             if (pressed) {
                 downCallback.accept(true);
             }
-        }, downLightSupplier);
+        }, () -> downLightSupplier.get());
     }
 
     // Methods to register callbacks:
