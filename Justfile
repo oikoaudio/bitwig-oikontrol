@@ -1,6 +1,6 @@
 set shell := ["bash", "-cu"]
 
-gradle_user_home := env_var_or_default("GRADLE_USER_HOME", "/tmp/gradle-home")
+gradle_user_home := env_var_or_default("GRADLE_USER_HOME", env_var("HOME") + "/.gradle")
 gradle_java_home := env_var_or_default("GRADLE_JAVA_HOME", "")
 java_home_cmd := if gradle_java_home != "" {
     "JAVA_HOME='" + gradle_java_home + "'"

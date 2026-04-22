@@ -32,18 +32,19 @@ public final class FugueClipAdapter {
             if (notesAtStep == null || notesAtStep.isEmpty()) {
                 continue;
             }
-            final List<NoteStep> notes = notesAtStep.values().stream()
-                    .filter(step -> step.state() == NoteStep.State.NoteOn)
-                    .sorted(Comparator.comparingInt(NoteStep::y))
+            final List<ObservedNote> notes = notesAtStep.values().stream()
+                    .map(FugueClipAdapter::snapshot)
+                    .filter(ObservedNote::active)
+                    .sorted(Comparator.comparingInt(ObservedNote::pitch))
                     .toList();
             if (notes.isEmpty()) {
                 continue;
             }
             int tiedSteps = 0;
-            for (final NoteStep note : notes) {
+            for (final ObservedNote note : notes) {
                 final double duration = Math.max(stepLength * 0.25, note.duration());
                 tiedSteps = Math.max(tiedSteps, (int) Math.floor((duration - stepLength * 0.98) / stepLength));
-                steps.get(i).add(new MelodicPattern.Step(i, true, false, note.y(),
+                steps.get(i).add(new MelodicPattern.Step(i, true, false, note.pitch(),
                         (int) Math.round(note.velocity() * 127.0),
                         Math.max(0.1, duration / stepLength), note.chance(), note.velocity() >= 0.87,
                         duration > stepLength * 1.05, note.recurrenceLength(), note.recurrenceMask()));
@@ -70,14 +71,22 @@ public final class FugueClipAdapter {
                 }
                 final double duration = stepLength * Math.max(step.gate(), 0.02);
                 clip.setStep(channel, i, step.pitch(), step.velocity(), duration);
-                applyGeneratedNoteExpression(clip.getStep(channel, i, step.pitch()), step);
+                final NoteStep generatedStep = clip.getStep(channel, i, step.pitch());
+                applyGeneratedNoteExpression(generatedStep, step);
             }
         }
     }
 
     private static void applyGeneratedNoteExpression(final NoteStep noteStep, final MelodicPattern.Step step) {
-        noteStep.setChance(Math.min(0.999, step.chance()));
-        noteStep.setIsChanceEnabled(step.chance() < 0.999);
+        try {
+            if (noteStep == null || noteStep.state() != NoteStep.State.NoteOn) {
+                return;
+            }
+            noteStep.setChance(Math.min(0.999, step.chance()));
+            noteStep.setIsChanceEnabled(step.chance() < 0.999);
+        } catch (final RuntimeException ignored) {
+            // Host-owned note objects can disappear while Bitwig is applying DAW-side note edits.
+        }
     }
 
     public static void duplicateChannelRange(final PinnableCursorClip clip,
@@ -94,11 +103,12 @@ public final class FugueClipAdapter {
             }
             final int targetX = targetStartStep + sourceX - sourceStartStep;
             for (final NoteStep note : stepEntry.getValue().values()) {
-                if (note.state() != NoteStep.State.NoteOn) {
+                final ObservedNote snapshot = snapshot(note);
+                if (!snapshot.active()) {
                     continue;
                 }
-                clip.setStep(channel, targetX, note.y(), (int) Math.round(note.velocity() * 127.0),
-                        note.duration());
+                clip.setStep(channel, targetX, snapshot.pitch(), (int) Math.round(snapshot.velocity() * 127.0),
+                        snapshot.duration());
             }
         }
     }
@@ -108,6 +118,25 @@ public final class FugueClipAdapter {
                                     final int channel) {
         for (int x = 0; x < FuguePattern.MAX_STEPS; x++) {
             clip.clearStepsAtX(channel, x);
+        }
+    }
+
+    private static ObservedNote snapshot(final NoteStep note) {
+        try {
+            if (note == null || note.state() != NoteStep.State.NoteOn) {
+                return ObservedNote.empty();
+            }
+            return new ObservedNote(true, note.y(), note.velocity(), note.chance(), note.duration(),
+                    note.recurrenceLength(), note.recurrenceMask());
+        } catch (final RuntimeException ignored) {
+            return ObservedNote.empty();
+        }
+    }
+
+    private record ObservedNote(boolean active, int pitch, double velocity, double chance, double duration,
+                                int recurrenceLength, int recurrenceMask) {
+        private static ObservedNote empty() {
+            return new ObservedNote(false, 0, 0.0, 1.0, 0.0, 0, 0);
         }
     }
 }

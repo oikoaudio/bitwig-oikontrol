@@ -70,7 +70,7 @@ class FugueClipAdapterTest {
         final double[] generatedChance = {1.0};
         final boolean[] chanceEnabled = {false};
         final int[] writtenNotes = {0};
-        final PinnableCursorClip clip = writableClip(generatedChance, chanceEnabled, writtenNotes);
+        final PinnableCursorClip clip = writableClip(generatedChance, chanceEnabled, writtenNotes, true);
         final List<MelodicPattern.Step> steps = new ArrayList<>();
         for (int i = 0; i < FuguePattern.MAX_STEPS; i++) {
             steps.add(MelodicPattern.Step.rest(i));
@@ -82,6 +82,25 @@ class FugueClipAdapterTest {
         assertEquals(1, writtenNotes[0]);
         assertEquals(0.5, generatedChance[0]);
         assertTrue(chanceEnabled[0]);
+    }
+
+    @Test
+    void writeDerivedLineToleratesMissingGeneratedStepObject() {
+        final double[] generatedChance = {1.0};
+        final boolean[] chanceEnabled = {false};
+        final int[] writtenNotes = {0};
+        final PinnableCursorClip clip = writableClip(generatedChance, chanceEnabled, writtenNotes, false);
+        final List<MelodicPattern.Step> steps = new ArrayList<>();
+        for (int i = 0; i < FuguePattern.MAX_STEPS; i++) {
+            steps.add(MelodicPattern.Step.rest(i));
+        }
+        steps.set(0, new MelodicPattern.Step(0, true, false, 60, 96, 1.0, 0.5, false, false, 0, 0));
+
+        FugueClipAdapter.writeDerivedLine(clip, Map.of(), 1, new FuguePattern(steps, 16), 0.125);
+
+        assertEquals(1, writtenNotes[0]);
+        assertEquals(1.0, generatedChance[0]);
+        assertFalse(chanceEnabled[0]);
     }
 
     private static void put(final Map<Integer, Map<Integer, Map<Integer, NoteStep>>> steps, final NoteStep note) {
@@ -113,11 +132,13 @@ class FugueClipAdapterTest {
 
     private static PinnableCursorClip writableClip(final double[] generatedChance,
                                                    final boolean[] chanceEnabled,
-                                                   final int[] writtenNotes) {
+                                                   final int[] writtenNotes,
+                                                   final boolean returnGeneratedStep) {
         final NoteStep generatedStep = (NoteStep) Proxy.newProxyInstance(
                 NoteStep.class.getClassLoader(),
                 new Class[]{NoteStep.class},
                 (proxy, method, args) -> switch (method.getName()) {
+                    case "state" -> NoteStep.State.NoteOn;
                     case "setChance" -> {
                         generatedChance[0] = (double) args[0];
                         yield null;
@@ -137,7 +158,7 @@ class FugueClipAdapterTest {
                         writtenNotes[0]++;
                         yield null;
                     }
-                    case "getStep" -> generatedStep;
+                    case "getStep" -> returnGeneratedStep ? generatedStep : null;
                     case "toString" -> "WritableClipStub";
                     default -> defaultValue(method.getReturnType());
                 });

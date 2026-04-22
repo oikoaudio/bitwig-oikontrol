@@ -30,7 +30,6 @@ public final class FugueStepMode extends Layer {
     private static final int ENCODER_THRESHOLD = 5;
     private static final int ENCODER_FINE_THRESHOLD = 10;
     private static final int SOURCE_CHANGE_REBUILD_DELAY_MS = 20;
-    private static final int SOURCE_EDIT_REBUILD_DELAY_MS = 250;
     private static final int BAR_STEPS = 32;
     private static final int MAX_LOOP_STEPS = STEP_COUNT;
     private static final int MIN_LOOP_STEPS = 1;
@@ -67,7 +66,6 @@ public final class FugueStepMode extends Layer {
     private EncoderMode activeEncoderMode = EncoderMode.CHANNEL;
     private int loopSteps = DEFAULT_LOOP_STEPS;
     private int playingStep = -1;
-    private int sourceRebuildToken = 0;
     private boolean mainEncoderPressConsumed = false;
     private boolean active = false;
     private TemplatePadEdit templatePadEdit = null;
@@ -127,7 +125,6 @@ public final class FugueStepMode extends Layer {
     @Override
     protected void onDeactivate() {
         active = false;
-        sourceRebuildToken++;
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
     }
@@ -441,7 +438,7 @@ public final class FugueStepMode extends Layer {
         if (!edit.changed && edit.existed) {
             cursorClip.clearStep(FugueClipAdapter.SOURCE_CHANNEL, edit.step, edit.pitch);
             removeCachedSourceNote(edit.step, edit.pitch);
-            scheduleSourceRebuild(SOURCE_EDIT_REBUILD_DELAY_MS);
+            regenerateAllEnabledDerivedLinesSilently();
             oled.valueInfo("Template", "Removed");
             oled.clearScreenDelayed();
             return;
@@ -925,6 +922,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private void showTemplateInfo() {
+        refreshSourceCacheFromClip();
         oled.detailInfo("Template",
                 "Root %s\nScale %s\nLen %s\nNotes %d".formatted(
                         NoteGridLayout.noteName(driver.getSharedRootNote()),
@@ -959,6 +957,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private void regenerateAllDerivedLines() {
+        refreshSourceCacheFromClip();
         if (!hasSourceNotes()) {
             oled.valueInfo("Fugue", "No Ch1 notes");
             oled.clearScreenDelayed();
@@ -1000,7 +999,10 @@ public final class FugueStepMode extends Layer {
     }
 
     private void hostRebuildAfterClipLengthChange(final String title, final String value) {
-        driver.getHost().scheduleTask(this::regenerateAllEnabledDerivedLinesSilently, SOURCE_CHANGE_REBUILD_DELAY_MS);
+        driver.getHost().scheduleTask(() -> {
+            refreshSourceCacheFromClip();
+            regenerateAllEnabledDerivedLinesSilently();
+        }, SOURCE_CHANGE_REBUILD_DELAY_MS);
         oled.valueInfo(title, value);
         oled.clearScreenDelayed();
     }
@@ -1054,15 +1056,9 @@ public final class FugueStepMode extends Layer {
             if (channelSteps.isEmpty()) {
                 noteStepsByChannel.remove(channel);
             }
-            if (channel == FugueClipAdapter.SOURCE_CHANNEL) {
-                scheduleSourceRebuild(SOURCE_EDIT_REBUILD_DELAY_MS);
-            }
             return;
         }
         notesAtStep.put(y, noteStep);
-        if (channel == FugueClipAdapter.SOURCE_CHANNEL) {
-            scheduleSourceRebuild(SOURCE_EDIT_REBUILD_DELAY_MS);
-        }
     }
 
     private void refreshSourceCacheFromClip() {
@@ -1080,15 +1076,6 @@ public final class FugueStepMode extends Layer {
         if (sourceSteps.isEmpty()) {
             noteStepsByChannel.remove(FugueClipAdapter.SOURCE_CHANNEL);
         }
-    }
-
-    private void scheduleSourceRebuild(final int delayMs) {
-        final int token = ++sourceRebuildToken;
-        driver.getHost().scheduleTask(() -> {
-            if (token == sourceRebuildToken) {
-                regenerateAllEnabledDerivedLinesSilently();
-            }
-        }, delayMs);
     }
 
     private void handlePlayingStep(final int clipPlayingStep) {
