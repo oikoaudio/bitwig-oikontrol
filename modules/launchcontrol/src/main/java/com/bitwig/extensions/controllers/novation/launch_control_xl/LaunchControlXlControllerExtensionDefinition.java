@@ -7,6 +7,7 @@ import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.oikoaudio.common.OikontrolVersion;
 
 public class LaunchControlXlControllerExtensionDefinition extends ControllerExtensionDefinition
 {
@@ -73,7 +74,7 @@ public class LaunchControlXlControllerExtensionDefinition extends ControllerExte
    @Override
    public String getVersion()
    {
-      return "2.0.0";
+      return OikontrolVersion.VERSION;
    }
 
    @Override

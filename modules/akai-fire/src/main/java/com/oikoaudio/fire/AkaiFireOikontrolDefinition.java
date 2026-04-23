@@ -4,6 +4,7 @@ import com.bitwig.extension.api.PlatformType;
 import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.oikoaudio.common.OikontrolVersion;
 
 import java.util.UUID;
 
@@ -25,7 +26,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getVersion() {
-        return "2.9.0";
+        return OikontrolVersion.VERSION;
     }
 
     @Override

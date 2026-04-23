@@ -1,0 +1,34 @@
+version = '2.9.0'
+
+jar {
+    archiveBaseName.set('Oikontrol')
+    archiveVersion.set('')
+    archiveExtension.set('bwextension')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(project(':modules:common').sourceSets.main.output)
+    from(project(':modules:akai-fire').sourceSets.main.output) {
+        exclude 'META-INF/services/com.bitwig.extension.ExtensionDefinition'
+    }
+    from(project(':modules:akai-fire').sourceSets.main.resources) {
+        exclude 'META-INF/services/com.bitwig.extension.ExtensionDefinition'
+    }
+    from(project(':modules:launchcontrol').sourceSets.main.output) {
+        exclude 'META-INF/services/com.bitwig.extension.ExtensionDefinition'
+        exclude 'Documentation/index.html'
+    }
+    from(project(':modules:launchcontrol').sourceSets.main.resources) {
+        exclude 'META-INF/services/com.bitwig.extension.ExtensionDefinition'
+        exclude 'Documentation/index.html'
+    }
+    from('src/main/resources')
+}
+
+dependencies {
+    implementation project(':modules:common')
+    implementation project(':modules:akai-fire')
+    implementation project(':modules:launchcontrol')
+    implementation 'com.bitwig:extension-api:24'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+}

@@ -1,0 +1,35 @@
+name: Controller CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  controllers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Compile controllers
+        run: just fire-compile
+
+      - name: Test Akai Fire
+        run: just fire-test
+
+      - name: Test Launch Control
+        run: just launchcontrol-test
+
+      - name: Package combined extension
+        run: just oikontrol-package

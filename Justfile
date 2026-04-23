@@ -64,5 +64,27 @@ launchcontrol-extension:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:launchcontrol:jar
     @find modules/launchcontrol/build/libs -maxdepth 1 -type f -name '*.bwextension' | sort
 
+oikontrol-build:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:build
+
+oikontrol-package:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:jar
+
+oikontrol-extension:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:jar
+    @find modules/oikontrol/build/libs -maxdepth 1 -type f -name '*.bwextension' | sort
+
+oikontrol-install:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:jar
+    mkdir -p "{{bitwig_extensions_dir}}"
+    cp "$(find modules/oikontrol/build/libs -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
+    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+
+oikontrol-build-install:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:build
+    mkdir -p "{{bitwig_extensions_dir}}"
+    cp "$(find modules/oikontrol/build/libs -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
+    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+
 artifacts:
     @find modules -type f \( -name '*.bwextension' -o -name '*.jar' \) | sort
