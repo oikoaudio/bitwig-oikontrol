@@ -141,6 +141,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
     private int transportTimeSignatureDenominator = 4;
+    private boolean performRecordPadGestureConsumed = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
@@ -459,6 +460,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         transport.isClipLauncherAutomationWriteEnabled().markInterested();
         transport.isFillModeActive().markInterested();
         transport.defaultLaunchQuantization().markInterested();
+        transport.clipLauncherPostRecordingAction().markInterested();
+        transport.getClipLauncherPostRecordingTimeOffset().markInterested();
         final BiColorButton playButton = addButton(NoteAssign.PLAY);
         playButton.bindPressed(mainLayer, this::togglePlay, this::getPlayState);
         final BiColorButton recButton = addButton(NoteAssign.REC);
@@ -572,6 +575,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.DRUM) {
             return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
         }
+        if (isPerformRecordTargetingHeld()) {
+            return BiColorLightState.RED_HALF;
+        }
         return transport.isArrangerRecordEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
     }
 
@@ -643,16 +649,35 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void toggleRec(final boolean pressed) {
-        if (!pressed) {
-            return;
-        }
         if (isGlobalShiftHeld()) {
             return;
         }
         if (isGlobalAltHeld()) {
+            if (!pressed) {
+                return;
+            }
             final boolean nextState = !transport.isArrangerAutomationWriteEnabled().get();
             transport.isArrangerAutomationWriteEnabled().toggle();
             notifyAction("Arranger Write", nextState ? "On" : "Off");
+            return;
+        }
+        if (modeState.activeMode() == Mode.PERFORM) {
+            if (pressed) {
+                performRecordPadGestureConsumed = false;
+                notifyAction("Clip Record", "Pad target");
+                return;
+            }
+            if (performRecordPadGestureConsumed) {
+                performRecordPadGestureConsumed = false;
+                oled.clearScreenDelayed();
+                return;
+            }
+            final boolean nextState = !transport.isArrangerRecordEnabled().get();
+            transport.isArrangerRecordEnabled().toggle();
+            notifyAction("Record", nextState ? "On" : "Off");
+            return;
+        }
+        if (!pressed) {
             return;
         }
         if (modeState.activeMode() == Mode.DRUM) {
@@ -1091,6 +1116,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return (int) Math.round(defaultClipLengthPref == null
                 ? FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_2_BARS)
                 : FireControlPreferences.toClipLengthBeats(defaultClipLengthPref.get()));
+    }
+
+    public boolean isPerformRecordTargetingHeld() {
+        final BiColorButton recButton = getButton(NoteAssign.REC);
+        return modeState.activeMode() == Mode.PERFORM
+                && recButton != null
+                && recButton.isPressed()
+                && !isGlobalShiftHeld()
+                && !isGlobalAltHeld();
+    }
+
+    public void consumePerformRecordPadGesture() {
+        performRecordPadGestureConsumed = true;
+    }
+
+    public void prepareFixedLengthLauncherRecording() {
+        transport.clipLauncherPostRecordingAction().set("play_recorded");
+        transport.getClipLauncherPostRecordingTimeOffset().set(getDefaultClipLengthBeats());
     }
 
     public String getMainEncoderRolePreference() {

@@ -126,7 +126,7 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | --- | --- |
 | `PLAY` | Toggle transport, with retrigger-on-start behavior |
 | `ALT + PLAY` | Retrigger current clip |
-| `REC` | Clip record in `DRUM`; arranger record in `NOTE` and `PERFORM` |
+| `REC` | Clip record in `DRUM`; arranger record in `NOTE`; tap for arranger record in `PERFORM` |
 | `ALT + REC` | Arranger automation write |
 | `PATTERN` | Clip launcher automation write |
 | `SHIFT + PATTERN` | Metronome |
@@ -353,6 +353,7 @@ For immediate derived-line feedback, change source expression from the controlle
 
 | Control | Action |
 | --- | --- |
+| `REC` + pad | Record into the targeted launcher slot using `Default Clip Length` |
 | `MUTE_1` + pad | Select without launching |
 | `MUTE_2` | Double selected visible clip length |
 | `SHIFT + MUTE_2` | Halve selected visible clip length |
@@ -366,6 +367,8 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + PERFORM` | Toggle latched track-control pad page |
 
 Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
+
+Hold `REC` and press a pad to target recording directly into that visible slot. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
 On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page. Hold `ALT` and turn `SELECT` to change the remote page for the active remote encoder page: project remotes on `Channel`, track remotes on `User 1`, and device remotes on `User 2`. This applies in both vertical and horizontal perform layouts.
 

@@ -522,6 +522,11 @@ public class PerformClipLauncherMode extends Layer {
         final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
         final boolean hasContent = slot.hasContent().get();
 
+        if (driver.isPerformRecordTargetingHeld()) {
+            recordIntoSlot(track, slot, absoluteTrackIndex, absoluteSceneIndex);
+            return;
+        }
+
         if (deleteHeld.get()) {
             if (hasContent) {
                 slot.deleteObject();
@@ -561,6 +566,16 @@ public class PerformClipLauncherMode extends Layer {
         slot.createEmptyClip(driver.getDefaultClipLengthBeats());
         slot.launch();
         oled.valueInfo("Create Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+    }
+
+    private void recordIntoSlot(final Track track, final ClipLauncherSlot slot, final int absoluteTrackIndex,
+                                final int absoluteSceneIndex) {
+        driver.consumePerformRecordPadGesture();
+        track.selectInMixer();
+        slot.select();
+        driver.prepareFixedLengthLauncherRecording();
+        slot.record();
+        oled.valueInfo("Record Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
     }
 
     private void handleDuplicatePressed(final boolean pressed) {

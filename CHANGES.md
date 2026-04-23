@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## 2.8.0 - Fugue mode and generative workflow polish
 - Added Akai Fire `Fugue` step mode. It uses MIDI channel 1 as a template melodic line and generates derived new lines to channels 2-4 in the same clip, using Bach-type operations (transpose/reverse/move etc).
+- Added `REC + pad` in Akai Fire `PERFORM` mode to target recording directly into a visible launcher slot using the configured default clip length.
 - Swapped Nested Rhythm pattern gestures so `PATTERN DOWN` generates the current nested rhythm and `PATTERN UP` resets hit edits, to better match related gestures in other modes.
 - Updated the user guide and bundled help with notes on the new Fugue workflow.
 
