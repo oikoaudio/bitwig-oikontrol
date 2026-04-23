@@ -1,4 +1,5 @@
 {
+  "bootstrap-sha": "54b21ea0b0489747eedaa2542bff9b2749a77f39",
   "include-component-in-tag": true,
   "release-type": "simple",
   "packages": {
