@@ -45,12 +45,12 @@ High-level controller summary:
 
 ## Quick install
 
-1. Download a prebuilt `.bwextension` artifact from the releases section
+1. Download the prebuilt `Oikontrol.bwextension` artifact from the releases section
 2. Copy the resulting file into Bitwig’s user extensions folder:
    - Linux: `~/Bitwig Studio/Extensions/`
    - macOS: `~/Documents/Bitwig Studio/Extensions/`
    - Windows: `~/Documents/Bitwig Studio/Extensions/`
-3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Oikontrol Fire` or `OikontrolLCXL`.
+3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Fire Oikontrol` or `Oikontrol LCXL`.
 
 ## For developers
 
@@ -97,11 +97,13 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 ```
 
 Current artifact names:
+- `modules/oikontrol/build/libs/Oikontrol.bwextension` contains both controller extensions
 - `modules/akai-fire/build/libs/OikontrolFire.bwextension`
 - `modules/launchcontrol/build/libs/OikontrolLCXL.bwextension`
 
 ### Developer documentation
 
+- `CONTRIBUTING.md`: contribution workflow and Conventional Commit guidance
 - Architectural Decision Records under `doc/adr/`, for example `0000-use-adrs.md` and `0001-architecture-summary.md`
 - `vscode-debug.md`: how to attach VS Code’s debugger to Bitwig (JDWP) for inspection while running the extension
 

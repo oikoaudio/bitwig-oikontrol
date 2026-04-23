@@ -1,0 +1,63 @@
+name: Oikontrol Build
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "oikontrol-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Build combined Oikontrol extension
+        run: just oikontrol-build
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Oikontrol
+          path: modules/oikontrol/build/libs/Oikontrol.bwextension
+
+      - name: Attach artifact to published release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            modules/oikontrol/build/libs/Oikontrol.bwextension \
+            --clobber
+
+      - name: Create or update tag release artifact
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" \
+              modules/oikontrol/build/libs/Oikontrol.bwextension \
+              --clobber
+          else
+            gh release create "$TAG_NAME" \
+              modules/oikontrol/build/libs/Oikontrol.bwextension \
+              --title "$TAG_NAME" \
+              --generate-notes
+          fi
