@@ -15,7 +15,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getName() {
-        return "Oikontrol Fire";
+        return "Fire Oikontrol";
     }
 
     @Override
@@ -25,7 +25,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public String getVersion() {
-        return "2.8.0";
+        return "2.9.0";
     }
 
     @Override
