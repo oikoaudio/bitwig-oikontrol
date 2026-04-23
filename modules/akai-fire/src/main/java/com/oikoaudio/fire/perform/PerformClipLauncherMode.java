@@ -96,6 +96,7 @@ public class PerformClipLauncherMode extends Layer {
     private final Map<EncoderMode, Layer> modeMapping = new HashMap<>();
 
     private final RgbLigthState[] slotColors = new RgbLigthState[MAX_TRACKS * MAX_SCENES];
+    private final RgbLigthState[] sceneColors = new RgbLigthState[MAX_SCENES];
     private final String[] trackNames = new String[MAX_TRACKS];
     private final String[] sceneNames = new String[MAX_SCENES];
     private final boolean[] selectedVisibleTracks = new boolean[MAX_TRACKS];
@@ -165,9 +166,12 @@ public class PerformClipLauncherMode extends Layer {
             final Scene scene = trackBank.sceneBank().getScene(sceneIndex);
             scene.exists().markInterested();
             scene.name().markInterested();
+            scene.color().markInterested();
             final int row = sceneIndex;
             scene.name().addValueObserver(name -> sceneNames[row] = name);
+            scene.color().addValueObserver((r, g, b) -> sceneColors[row] = ColorLookup.getColor(r, g, b));
             sceneNames[row] = scene.name().get();
+            sceneColors[row] = ColorLookup.getColor(scene.color().get());
         }
 
         for (int trackIndex = 0; trackIndex < MAX_TRACKS; trackIndex++) {
@@ -1224,19 +1228,20 @@ public class PerformClipLauncherMode extends Layer {
         if (scene == null || !scene.exists().get()) {
             return RgbLigthState.OFF;
         }
+        final RgbLigthState baseColor = sceneColor(visibleSceneIndex);
         if (absoluteSceneIndex == pendingSceneLaunchIndex) {
-            return blinkFast(RgbLigthState.WHITE.getBrightest(), RgbLigthState.PURPLE.getDimmed());
+            return blinkFast(baseColor.getBrightest(), baseColor.getDimmed());
         }
         if (absoluteSceneIndex == selectedSceneActionIndex) {
-            return RgbLigthState.WHITE.getBrightend();
+            return baseColor.getBrightest();
         }
         if (sceneHasRecordingClip(visibleSceneIndex)) {
-            return blinkFast(RgbLigthState.WHITE.getBrightest(), RgbLigthState.PURPLE);
+            return blinkFast(baseColor.getBrightest(), baseColor);
         }
         if (sceneHasPlayingClip(visibleSceneIndex)) {
-            return blinkSlow(RgbLigthState.WHITE, RgbLigthState.PURPLE.getDimmed());
+            return blinkSlow(baseColor, baseColor.getDimmed());
         }
-        return RgbLigthState.PURPLE.getSoftDimmed();
+        return baseColor.getSoftDimmed();
     }
 
     private RgbLigthState getSlotState(final ClipLauncherSlot slot, final int visibleTrackIndex, final int visibleSceneIndex) {
@@ -1267,6 +1272,13 @@ public class PerformClipLauncherMode extends Layer {
                     : blinkSlow(baseColor, baseColor.getDimmed());
         }
         return slot.isSelected().get() ? baseColor.getBrightend() : baseColor.getSoftDimmed();
+    }
+
+    private RgbLigthState sceneColor(final int visibleSceneIndex) {
+        final RgbLigthState color = visibleSceneIndex >= 0 && visibleSceneIndex < sceneColors.length
+                ? sceneColors[visibleSceneIndex]
+                : null;
+        return color == null || RgbLigthState.OFF.equals(color) ? RgbLigthState.PURPLE : color;
     }
 
     private RgbLigthState getTrackActionPadState(final int padIndex) {
