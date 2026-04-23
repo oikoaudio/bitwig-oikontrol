@@ -41,6 +41,7 @@ Project-specific instructions for coding agents working in this repository.
 - Before implementing large or interaction-heavy changes, check for a relevant plan in `doc/dev/`.
 - If a plan conflicts with current code, trust current code for behaviour and use the plan to understand intent.
 - Keep behaviour-preserving refactors separate from feature work unless the user explicitly asks to combine them.
+- Use Conventional Commits for commit messages so release-please can classify changes reliably, for example `feat: add melodic arp mode`, `fix: correct encoder reset`, or `docs: update user guide`.
 
 ## Controller Architecture Rules
 
