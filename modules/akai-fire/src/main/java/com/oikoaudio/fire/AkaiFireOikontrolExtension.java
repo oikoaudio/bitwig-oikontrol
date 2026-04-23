@@ -255,7 +255,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         mainLayer.activate();
         switchActiveMode();
         host.scheduleTask(this::handlePing, 100);
-        notifyPopup("Oikontrol Fire", "Active");
+        notifyPopup("Fire Oikontrol", "Active");
 
     }
 

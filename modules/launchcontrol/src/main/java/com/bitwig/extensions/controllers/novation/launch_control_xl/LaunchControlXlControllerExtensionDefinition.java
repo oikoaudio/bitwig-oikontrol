@@ -62,7 +62,7 @@ public class LaunchControlXlControllerExtensionDefinition extends ControllerExte
    @Override
    public String getName()
    {
-      return "Oikontrol LCXL";
+      return "LCXL Oikontrol";
    }
 
    @Override

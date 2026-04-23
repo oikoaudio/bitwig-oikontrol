@@ -32,9 +32,9 @@ High-level controller summary:
 
 `NOTE` - two live note input modes with isomorphic and harmonic layouts
 
-`STEP SEQ` - `Melodic Step` and `Chord Step` workflows for generated melodic sequencing and chord-based step entry
+`STEP` - `Melodic Step`, `Chord Step` and `Fugue` workflows for generated melodic sequencing and chord-based step entry
 
-`PERFORM` - clip launching, clip management, and a `SHIFT + PERFORM` track-action page
+`PERFORM` - vertical/horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` track-action page
 
 `SHIFT + BROWSER` - a held global settings overlay for shared `Root Key`, `Scale`, and `Octave`
 
@@ -50,7 +50,7 @@ High-level controller summary:
    - Linux: `~/Bitwig Studio/Extensions/`
    - macOS: `~/Documents/Bitwig Studio/Extensions/`
    - Windows: `~/Documents/Bitwig Studio/Extensions/`
-3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Fire Oikontrol` or `Oikontrol LCXL`.
+3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Fire Oikontrol` or `LCXL Oikontrol`.
 
 ## For developers
 
@@ -98,8 +98,8 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 
 Current artifact names:
 - `modules/oikontrol/build/libs/Oikontrol.bwextension` contains both controller extensions
-- `modules/akai-fire/build/libs/OikontrolFire.bwextension`
-- `modules/launchcontrol/build/libs/OikontrolLCXL.bwextension`
+- `modules/akai-fire/build/libs/FireOikontrol.bwextension`
+- `modules/launchcontrol/build/libs/LCXLOikontrol.bwextension`
 
 ### Developer documentation
 
