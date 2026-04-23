@@ -633,6 +633,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (performMode != null && performMode.isTrackActionMode()) {
             return BiColorLightState.RED_FULL;
         }
+        if (performMode != null && performMode.isSceneActionMode()) {
+            return BiColorLightState.AMBER_FULL;
+        }
         return BiColorLightState.GREEN_FULL;
     }
 
@@ -842,13 +845,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             notifyAction("Mode", performMode.activePageLabel());
             return;
         }
+        if (isGlobalAltHeld()) {
+            performMode.toggleOrientation();
+            notifyAction("Mode", performMode.activePageLabel());
+            return;
+        }
         if (!enteringPerform) {
             if (performMode.isTrackActionMode()) {
                 performMode.toggleTrackActionMode();
                 notifyAction("Mode", performMode.activePageLabel());
                 return;
             }
-            performMode.toggleOrientation();
+            performMode.toggleSceneActionMode();
         }
         notifyAction("Mode", performMode.activePageLabel());
     }

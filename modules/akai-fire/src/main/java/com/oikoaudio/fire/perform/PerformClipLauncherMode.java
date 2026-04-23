@@ -66,6 +66,7 @@ public class PerformClipLauncherMode extends Layer {
     private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int MAX_TRACKS = 16;
     private static final int MAX_SCENES = 16;
+    private static final int SCENE_ROW = 0;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
@@ -109,8 +110,11 @@ public class PerformClipLauncherMode extends Layer {
     private int totalSceneCount = MAX_SCENES;
     private int selectedTrackIndex = -1;
     private int selectedSceneIndex = -1;
+    private int selectedSceneActionIndex = -1;
+    private int pendingSceneLaunchIndex = -1;
     private boolean mainEncoderPressConsumed = false;
     private boolean trackActionMode = false;
+    private boolean sceneActionMode = false;
     private PerformLayout layout = PerformLayout.vertical();
 
     public PerformClipLauncherMode(final AkaiFireOikontrolExtension driver) {
@@ -263,10 +267,26 @@ public class PerformClipLauncherMode extends Layer {
     public void toggleTrackActionMode() {
         trackActionMode = !trackActionMode;
         if (trackActionMode) {
+            sceneActionMode = false;
+        }
+        if (trackActionMode) {
             showTrackActionInfo();
         } else {
             showCurrentModeInfo();
         }
+        oled.clearScreenDelayed();
+    }
+
+    public boolean isSceneActionMode() {
+        return sceneActionMode;
+    }
+
+    public void toggleSceneActionMode() {
+        sceneActionMode = !sceneActionMode;
+        if (sceneActionMode) {
+            trackActionMode = false;
+        }
+        showCurrentModeInfo();
         oled.clearScreenDelayed();
     }
 
@@ -281,7 +301,13 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public String activePageLabel() {
-        return trackActionMode ? "Tracks" : layout.label();
+        if (trackActionMode) {
+            return "Tracks";
+        }
+        if (sceneActionMode) {
+            return "Scene Launch";
+        }
+        return layout.label();
     }
 
     private void bindChannelPage(final Layer layer, final CursorRemoteControlsPage page, final String fallbackPrefix) {
@@ -455,6 +481,10 @@ public class PerformClipLauncherMode extends Layer {
             handleTrackActionPadPressed(padIndex, pressed);
             return;
         }
+        if (sceneActionMode) {
+            handleSceneActionPadPressed(padIndex, pressed);
+            return;
+        }
         final int visibleTrackIndex = visibleTrackIndexForPad(padIndex);
         final int visibleSceneIndex = visibleSceneIndexForPad(padIndex);
         if (visibleTrackIndex < 0 || visibleSceneIndex < 0
@@ -506,6 +536,53 @@ public class PerformClipLauncherMode extends Layer {
                 oled.valueInfo(track.arm().get() ? "Track Arm" : "Track Disarm", trackLabel);
             }
         }
+    }
+
+    private void handleSceneActionPadPressed(final int padIndex, final boolean pressed) {
+        if (!pressed || padIndex / PerformLayout.PAD_COLUMNS != SCENE_ROW) {
+            return;
+        }
+        final int visibleSceneIndex = padIndex % PerformLayout.PAD_COLUMNS;
+        final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
+        if (visibleSceneIndex >= MAX_SCENES || absoluteSceneIndex >= totalSceneCount) {
+            return;
+        }
+        final Scene scene = trackBank.sceneBank().getScene(visibleSceneIndex);
+        if (scene == null || !scene.exists().get()) {
+            return;
+        }
+
+        if (deleteHeld.get()) {
+            scene.deleteObject();
+            oled.valueInfo("Delete Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
+            return;
+        }
+
+        if (copyHeld.get()) {
+            final int sourceVisibleSceneIndex = resolveSceneCopySource();
+            if (sourceVisibleSceneIndex >= 0 && sourceVisibleSceneIndex != visibleSceneIndex) {
+                final Scene source = trackBank.sceneBank().getScene(sourceVisibleSceneIndex);
+                scene.replaceInsertionPoint().copySlotsOrScenes(source);
+                final String sourceLabel = sceneLabel(trackBank.sceneBank().scrollPosition().get() + sourceVisibleSceneIndex,
+                        sourceVisibleSceneIndex);
+                final String destinationLabel = sceneLabel(absoluteSceneIndex, visibleSceneIndex);
+                oled.valueInfo("Copy Scene", "Select target");
+                driver.notifyPopup("Copy Scene", sourceLabel + " -> " + destinationLabel);
+            } else {
+                oled.valueInfo("Copy Scene", "Select source first");
+            }
+            return;
+        }
+
+        if (selectHeld.get()) {
+            selectedSceneActionIndex = absoluteSceneIndex;
+            oled.valueInfo("Select Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
+            return;
+        }
+
+        scene.launch();
+        pendingSceneLaunchIndex = absoluteSceneIndex;
+        oled.valueInfo("Launch Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
     }
 
     private void handleSlotPressed(final Track track, final ClipLauncherSlot slot, final int visibleTrackIndex,
@@ -581,6 +658,10 @@ public class PerformClipLauncherMode extends Layer {
     private void handleDuplicatePressed(final boolean pressed) {
         if (!pressed) {
             oled.clearScreenDelayed();
+            return;
+        }
+        if (sceneActionMode) {
+            oled.valueInfo("Scene Launch", "MUTE_2 unused");
             return;
         }
         final ClipLauncherSlot slot = getSelectedVisibleSlot();
@@ -869,6 +950,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showCurrentModeInfo() {
+        if (sceneActionMode) {
+            oled.detailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete");
+            return;
+        }
         oled.detailInfo(modeTitle(encoderMode), modeInfo(encoderMode));
     }
 
@@ -1023,8 +1108,62 @@ public class PerformClipLauncherMode extends Layer {
         return trackBank.getItemAt(visibleTrackIndex).clipLauncherSlotBank().getItemAt(visibleSceneIndex);
     }
 
+    private int resolveSceneCopySource() {
+        final int sceneOffset = trackBank.sceneBank().scrollPosition().get();
+        final int selectedVisibleSceneIndex = selectedSceneActionIndex - sceneOffset;
+        if (selectedVisibleSceneIndex >= 0 && selectedVisibleSceneIndex < MAX_SCENES) {
+            return selectedVisibleSceneIndex;
+        }
+        for (int sceneIndex = 0; sceneIndex < MAX_SCENES; sceneIndex++) {
+            if (sceneHasPlayingClip(sceneIndex)) {
+                return sceneIndex;
+            }
+        }
+        for (int sceneIndex = 0; sceneIndex < MAX_SCENES; sceneIndex++) {
+            if (sceneHasRecordingClip(sceneIndex)) {
+                return sceneIndex;
+            }
+        }
+        return -1;
+    }
+
+    private boolean sceneHasPlayingClip(final int visibleSceneIndex) {
+        for (int trackIndex = 0; trackIndex < MAX_TRACKS; trackIndex++) {
+            final Track track = trackBank.getItemAt(trackIndex);
+            if (track.exists().get() && track.clipLauncherSlotBank().getItemAt(visibleSceneIndex).isPlaying().get()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean sceneHasRecordingClip(final int visibleSceneIndex) {
+        for (int trackIndex = 0; trackIndex < MAX_TRACKS; trackIndex++) {
+            final Track track = trackBank.getItemAt(trackIndex);
+            if (track.exists().get() && track.clipLauncherSlotBank().getItemAt(visibleSceneIndex).isRecording().get()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void notifyBlink(final int blinkState) {
         this.blinkState = blinkState;
+        clearPendingSceneLaunchIfPlaying();
+    }
+
+    private void clearPendingSceneLaunchIfPlaying() {
+        if (pendingSceneLaunchIndex < 0) {
+            return;
+        }
+        final int visibleSceneIndex = pendingSceneLaunchIndex - trackBank.sceneBank().scrollPosition().get();
+        if (visibleSceneIndex < 0 || visibleSceneIndex >= MAX_SCENES) {
+            pendingSceneLaunchIndex = -1;
+            return;
+        }
+        if (sceneHasPlayingClip(visibleSceneIndex)) {
+            pendingSceneLaunchIndex = -1;
+        }
     }
 
     @Override
@@ -1050,6 +1189,9 @@ public class PerformClipLauncherMode extends Layer {
         if (trackActionMode) {
             return getTrackActionPadState(padIndex);
         }
+        if (sceneActionMode) {
+            return getSceneActionPadState(padIndex);
+        }
         final int visibleTrackIndex = visibleTrackIndexForPad(padIndex);
         final int visibleSceneIndex = visibleSceneIndexForPad(padIndex);
         if (visibleTrackIndex < 0 || visibleSceneIndex < 0
@@ -1059,6 +1201,34 @@ public class PerformClipLauncherMode extends Layer {
         }
         final ClipLauncherSlot slot = trackBank.getItemAt(visibleTrackIndex).clipLauncherSlotBank().getItemAt(visibleSceneIndex);
         return getSlotState(slot, visibleTrackIndex, visibleSceneIndex);
+    }
+
+    private RgbLigthState getSceneActionPadState(final int padIndex) {
+        if (padIndex / PerformLayout.PAD_COLUMNS != SCENE_ROW) {
+            return RgbLigthState.OFF;
+        }
+        final int visibleSceneIndex = padIndex % PerformLayout.PAD_COLUMNS;
+        final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
+        if (visibleSceneIndex >= MAX_SCENES || absoluteSceneIndex >= totalSceneCount) {
+            return RgbLigthState.OFF;
+        }
+        final Scene scene = trackBank.sceneBank().getScene(visibleSceneIndex);
+        if (scene == null || !scene.exists().get()) {
+            return RgbLigthState.OFF;
+        }
+        if (absoluteSceneIndex == pendingSceneLaunchIndex) {
+            return blinkFast(RgbLigthState.WHITE.getBrightest(), RgbLigthState.PURPLE.getDimmed());
+        }
+        if (absoluteSceneIndex == selectedSceneActionIndex) {
+            return RgbLigthState.WHITE.getBrightend();
+        }
+        if (sceneHasRecordingClip(visibleSceneIndex)) {
+            return blinkFast(RgbLigthState.WHITE.getBrightest(), RgbLigthState.PURPLE);
+        }
+        if (sceneHasPlayingClip(visibleSceneIndex)) {
+            return blinkSlow(RgbLigthState.WHITE, RgbLigthState.PURPLE.getDimmed());
+        }
+        return RgbLigthState.PURPLE.getSoftDimmed();
     }
 
     private RgbLigthState getSlotState(final ClipLauncherSlot slot, final int visibleTrackIndex, final int visibleSceneIndex) {
@@ -1150,6 +1320,12 @@ public class PerformClipLauncherMode extends Layer {
                 ? nameOrFallback(sceneNames[visibleSceneIndex], "Scene " + (absoluteSceneIndex + 1))
                 : "Scene " + (absoluteSceneIndex + 1);
         return trackName + " / " + sceneName;
+    }
+
+    private String sceneLabel(final int absoluteSceneIndex, final int visibleSceneIndex) {
+        return visibleSceneIndex >= 0 && visibleSceneIndex < MAX_SCENES
+                ? nameOrFallback(sceneNames[visibleSceneIndex], "Scene " + (absoluteSceneIndex + 1))
+                : "Scene " + (absoluteSceneIndex + 1);
     }
 
     private String selectedSlotLabel() {

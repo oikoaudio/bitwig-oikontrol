@@ -364,11 +364,15 @@ For immediate derived-line feedback, change source expression from the controlle
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Perform encoder pages |
+| `PERFORM` while in Perform | Toggle clip launcher / Scene Launch pad page |
+| `ALT + PERFORM` | Toggle vertical/horizontal launcher layout |
 | `SHIFT + PERFORM` | Toggle latched track-control pad page |
 
 Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
 
 Hold `REC` and press a pad to target recording directly into that visible slot. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+
+The `Scene Launch` page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 
 On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page. Hold `ALT` and turn `SELECT` to change the remote page for the active remote encoder page: project remotes on `Channel`, track remotes on `User 1`, and device remotes on `User 2`. This applies in both vertical and horizontal perform layouts.
 
