@@ -32,9 +32,9 @@ High-level controller summary:
 
 `NOTE` - two live note input modes with isomorphic and harmonic layouts
 
-`STEP SEQ` - `Melodic Step` and `Chord Step` workflows for generated melodic sequencing and chord-based step entry
+`STEP` - `Melodic Step`, `Chord Step` and `Fugue` workflows for generated melodic sequencing and chord-based step entry
 
-`PERFORM` - clip launching, clip management, and a `SHIFT + PERFORM` track-action page
+`PERFORM` - vertical/horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` track-action page
 
 `SHIFT + BROWSER` - a held global settings overlay for shared `Root Key`, `Scale`, and `Octave`
 
