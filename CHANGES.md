@@ -2,6 +2,26 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.10.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.9.0...oikontrol-v2.10.0) (2026-04-23)
+
+
+### Features
+
+* add Akai Fire extension and release bitwig-oikontrol 2.0 ([af5d46a](https://github.com/oikoaudio/bitwig-oikontrol/commit/af5d46abe11a47c4059e5dea7db0db43eeb6d92b))
+* add drum user template mode with optional auto-attach ([19708d3](https://github.com/oikoaudio/bitwig-oikontrol/commit/19708d30a79ca3289e7d97a7906cacd54b207514))
+* **akai-fire:** add harmonic note input and rework step routing ([6970316](https://github.com/oikoaudio/bitwig-oikontrol/commit/69703160eaf9bb2fd91b355b38a7731f875af87f))
+* **akai-fire:** add perform scene launch and targeted recording ([126db3b](https://github.com/oikoaudio/bitwig-oikontrol/commit/126db3ba2355e6822c69502f3fb732c84924c471))
+* **fire:** add chord edit mode to chord step and refine step editing ([ac1ce71](https://github.com/oikoaudio/bitwig-oikontrol/commit/ac1ce71b32832db99c421f0e65e74a2082355d58))
+* **fire:** add chord step length gesture and pads follow track-color ([a953ced](https://github.com/oikoaudio/bitwig-oikontrol/commit/a953ced1bcb9cc0f09c7bd938d11c02b5b81c2b9))
+* **fire:** toggle main encoder between last touched and alternate roles ([5e8ef3f](https://github.com/oikoaudio/bitwig-oikontrol/commit/5e8ef3f809c939f65c2a8465812454fd2ef9d7a7))
+* initial 1.0.0 release for Bitwig Launch Control XL by Oiko Audio ([9b940a3](https://github.com/oikoaudio/bitwig-oikontrol/commit/9b940a361b5c53f1a6781046717865c3ff6d16fa))
+
+
+### Bug Fixes
+
+* **controllers:** correct bundled help file paths for Bitwig docs button ([718cfc4](https://github.com/oikoaudio/bitwig-oikontrol/commit/718cfc4e0fee2f9c6c511cc979fffccfa7fad91d))
+* **extensions:** add Fire pad brightness/saturation controls and standardize extension names ([7360ec5](https://github.com/oikoaudio/bitwig-oikontrol/commit/7360ec55c99c5c533418cb5df66b38ab9806afee))
+
 ## 2.8.0 - Fugue mode and generative workflow polish
 - Added Akai Fire `Fugue` step mode. It uses MIDI channel 1 as a template melodic line and generates derived new lines to channels 2-4 in the same clip, using Bach-type operations (transpose/reverse/move etc).
 - Added `REC + pad` in Akai Fire `PERFORM` mode to target recording directly into a visible launcher slot using the configured default clip length.
