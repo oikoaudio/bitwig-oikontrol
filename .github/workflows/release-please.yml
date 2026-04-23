@@ -1,0 +1,51 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Checkout repository
+        if: steps.release.outputs.release_created == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        if: steps.release.outputs.release_created == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install just
+        if: steps.release.outputs.release_created == 'true'
+        uses: extractions/setup-just@v2
+
+      - name: Build combined Oikontrol extension
+        if: steps.release.outputs.release_created == 'true'
+        run: just oikontrol-build
+
+      - name: Upload release artifact
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        run: |
+          gh release upload "$TAG_NAME" \
+            modules/oikontrol/build/libs/Oikontrol.bwextension \
+            --clobber

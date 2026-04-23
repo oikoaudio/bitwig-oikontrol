@@ -1,0 +1,33 @@
+{
+  "include-component-in-tag": true,
+  "release-type": "simple",
+  "packages": {
+    ".": {
+      "component": "oikontrol",
+      "package-name": "oikontrol",
+      "changelog-path": "CHANGES.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "modules/common/src/main/java/com/oikoaudio/common/OikontrolVersion.java"
+        },
+        {
+          "type": "generic",
+          "path": "modules/oikontrol/build.gradle"
+        },
+        {
+          "type": "generic",
+          "path": "modules/akai-fire/build.gradle"
+        },
+        {
+          "type": "generic",
+          "path": "modules/launchcontrol/build.gradle"
+        },
+        {
+          "type": "generic",
+          "path": "modules/common/build.gradle"
+        }
+      ]
+    }
+  }
+}
