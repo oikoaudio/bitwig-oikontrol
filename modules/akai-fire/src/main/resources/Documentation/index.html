@@ -204,7 +204,7 @@
         <tbody>
           <tr><td><code>PLAY</code></td><td>Toggle transport, with retrigger-on-start behavior</td></tr>
           <tr><td><code>ALT + PLAY</code></td><td>Retrigger current clip</td></tr>
-          <tr><td><code>REC</code></td><td>Clip record in <code>DRUM</code>; arranger record in <code>NOTE</code> and <code>PERFORM</code></td></tr>
+          <tr><td><code>REC</code></td><td>Clip record in <code>DRUM</code>; arranger record in <code>NOTE</code>; tap for arranger record in <code>PERFORM</code></td></tr>
           <tr><td><code>ALT + REC</code></td><td>Arranger automation write</td></tr>
           <tr><td><code>PATTERN</code></td><td>Clip launcher automation write</td></tr>
           <tr><td><code>SHIFT + PATTERN</code></td><td>Metronome</td></tr>
@@ -217,7 +217,7 @@
       </table>
       <p>When the popup browser is open, <code>SELECT</code> turn moves through results, <code>SELECT</code> press commits the selected result, and <code>BROWSER</code> closes the browser.</p>
       <h3>Main SELECT encoder</h3>
-      <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role.</p>
+      <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
       <table>
         <thead><tr><th>Role</th><th>Turn</th><th>Press / hold behavior</th></tr></thead>
         <tbody>
@@ -439,6 +439,7 @@
       <table>
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
+          <tr><td><code>REC</code> + pad</td><td>Record into the targeted launcher slot using <code>Default Clip Length</code></td></tr>
           <tr><td><code>MUTE_1</code> + pad</td><td>Select without launching</td></tr>
           <tr><td><code>MUTE_2</code></td><td>Double selected visible clip length</td></tr>
           <tr><td><code>SHIFT + MUTE_2</code></td><td>Halve selected visible clip length</td></tr>
@@ -449,10 +450,16 @@
           <tr><td><code>PATTERN UP/DOWN</code></td><td>Scroll scenes by visible page</td></tr>
           <tr><td><code>SHIFT + PATTERN UP/DOWN</code></td><td>Scroll scenes by one</td></tr>
           <tr><td><code>KNOB MODE</code></td><td>Cycle Perform encoder pages</td></tr>
-          <tr><td><code>SHIFT + PERFORM</code></td><td>Toggle latched track-action page</td></tr>
+          <tr><td><code>PERFORM</code> while in Perform</td><td>Toggle clip launcher / Scene Launch pad page</td></tr>
+          <tr><td><code>ALT + PERFORM</code></td><td>Toggle vertical/horizontal launcher layout</td></tr>
+          <tr><td><code>SHIFT + PERFORM</code></td><td>Toggle latched track-control pad page</td></tr>
       </tbody>
       </table>
-      <p>Track-action page rows are stop, solo, mute, and arm for the 16 visible tracks.</p>
+      <p>Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold <code>ALT</code> and press a pad to stop that track. <code>KNOB MODE</code> still cycles the Perform encoder pages while the track-control pad page is active.</p>
+      <p>Hold <code>REC</code> and press a pad to target recording directly into that visible slot. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.</p>
+      <p>The <code>Scene Launch</code> page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold <code>MUTE_1</code> and press a scene pad to select it as the scene copy source, hold <code>MUTE_3</code> and press a scene pad to copy the selected scene to that target, and hold <code>MUTE_4</code> and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. <code>MUTE_2</code> is unused on this page.</p>
+      <p>On <code>Scene Launch</code>, <code>BANK LEFT/RIGHT</code> also scrolls the visible scene window, with <code>SHIFT + BANK LEFT/RIGHT</code> scrolling by one scene.</p>
+      <p>On remote encoder pages, hold <code>ALT</code> while turning an encoder to control remotes 5-8 on the same page. Hold <code>ALT</code> and turn <code>SELECT</code> to change the remote page for the active remote encoder page: project remotes on <code>Channel</code>, track remotes on <code>User 1</code>, and device remotes on <code>User 2</code>. This applies in both vertical and horizontal perform layouts.</p>
       <table>
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>

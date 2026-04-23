@@ -141,6 +141,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
     private int transportTimeSignatureDenominator = 4;
+    private boolean performRecordPadGestureConsumed = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
@@ -459,6 +460,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         transport.isClipLauncherAutomationWriteEnabled().markInterested();
         transport.isFillModeActive().markInterested();
         transport.defaultLaunchQuantization().markInterested();
+        transport.clipLauncherPostRecordingAction().markInterested();
+        transport.getClipLauncherPostRecordingTimeOffset().markInterested();
         final BiColorButton playButton = addButton(NoteAssign.PLAY);
         playButton.bindPressed(mainLayer, this::togglePlay, this::getPlayState);
         final BiColorButton recButton = addButton(NoteAssign.REC);
@@ -572,6 +575,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.DRUM) {
             return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
         }
+        if (isPerformRecordTargetingHeld()) {
+            return BiColorLightState.RED_HALF;
+        }
         return transport.isArrangerRecordEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
     }
 
@@ -627,6 +633,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (performMode != null && performMode.isTrackActionMode()) {
             return BiColorLightState.RED_FULL;
         }
+        if (performMode != null && performMode.isSceneActionMode()) {
+            return BiColorLightState.AMBER_FULL;
+        }
         return BiColorLightState.GREEN_FULL;
     }
 
@@ -643,16 +652,35 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void toggleRec(final boolean pressed) {
-        if (!pressed) {
-            return;
-        }
         if (isGlobalShiftHeld()) {
             return;
         }
         if (isGlobalAltHeld()) {
+            if (!pressed) {
+                return;
+            }
             final boolean nextState = !transport.isArrangerAutomationWriteEnabled().get();
             transport.isArrangerAutomationWriteEnabled().toggle();
             notifyAction("Arranger Write", nextState ? "On" : "Off");
+            return;
+        }
+        if (modeState.activeMode() == Mode.PERFORM) {
+            if (pressed) {
+                performRecordPadGestureConsumed = false;
+                notifyAction("Clip Record", "Pad target");
+                return;
+            }
+            if (performRecordPadGestureConsumed) {
+                performRecordPadGestureConsumed = false;
+                oled.clearScreenDelayed();
+                return;
+            }
+            final boolean nextState = !transport.isArrangerRecordEnabled().get();
+            transport.isArrangerRecordEnabled().toggle();
+            notifyAction("Record", nextState ? "On" : "Off");
+            return;
+        }
+        if (!pressed) {
             return;
         }
         if (modeState.activeMode() == Mode.DRUM) {
@@ -817,13 +845,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             notifyAction("Mode", performMode.activePageLabel());
             return;
         }
+        if (isGlobalAltHeld()) {
+            performMode.toggleOrientation();
+            notifyAction("Mode", performMode.activePageLabel());
+            return;
+        }
         if (!enteringPerform) {
             if (performMode.isTrackActionMode()) {
                 performMode.toggleTrackActionMode();
                 notifyAction("Mode", performMode.activePageLabel());
                 return;
             }
-            performMode.toggleOrientation();
+            performMode.toggleSceneActionMode();
         }
         notifyAction("Mode", performMode.activePageLabel());
     }
@@ -1091,6 +1124,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return (int) Math.round(defaultClipLengthPref == null
                 ? FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_2_BARS)
                 : FireControlPreferences.toClipLengthBeats(defaultClipLengthPref.get()));
+    }
+
+    public boolean isPerformRecordTargetingHeld() {
+        final BiColorButton recButton = getButton(NoteAssign.REC);
+        return modeState.activeMode() == Mode.PERFORM
+                && recButton != null
+                && recButton.isPressed()
+                && !isGlobalShiftHeld()
+                && !isGlobalAltHeld();
+    }
+
+    public void consumePerformRecordPadGesture() {
+        performRecordPadGestureConsumed = true;
+    }
+
+    public void prepareFixedLengthLauncherRecording() {
+        transport.clipLauncherPostRecordingAction().set("play_recorded");
+        transport.getClipLauncherPostRecordingTimeOffset().set(getDefaultClipLengthBeats());
     }
 
     public String getMainEncoderRolePreference() {
@@ -1363,6 +1414,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         parameter.reset();
         oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+    }
+
+    public boolean toggleCurrentDeviceWindow() {
+        final PinnableCursorDevice selectedDevice = viewControl.getSelectedDevice();
+        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        final PinnableCursorDevice targetDevice = selectedDevice != null && selectedDevice.exists().get()
+                ? selectedDevice
+                : primaryDevice;
+        if (targetDevice == null || !targetDevice.exists().get()) {
+            oled.valueInfo("Device Window", "No Device");
+            return false;
+        }
+        final boolean wasOpen = targetDevice.isWindowOpen().get();
+        targetDevice.isWindowOpen().toggle();
+        oled.valueInfo("Device Window", wasOpen ? "Closed" : "Open");
+        return true;
     }
 
     private Parameter getLastClickedParameter() {

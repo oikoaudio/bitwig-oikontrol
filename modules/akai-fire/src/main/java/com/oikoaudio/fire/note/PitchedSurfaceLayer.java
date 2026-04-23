@@ -2452,6 +2452,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         driver.setMainEncoderPressed(pressed);
+        if (pressed && driver.isGlobalAltHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.toggleCurrentDeviceWindow();
+            return;
+        }
+        if (!pressed && mainEncoderPressConsumed) {
+            mainEncoderPressConsumed = false;
+            return;
+        }
         if (!noteStepActive && noteRepeatHandler.getNoteRepeatActive().get()) {
             noteRepeatHandler.handlePressed(pressed);
             return;
@@ -2459,10 +2468,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (pressed && driver.isGlobalShiftHeld()) {
             mainEncoderPressConsumed = true;
             driver.cycleMainEncoderRolePreference();
-            return;
-        }
-        if (!pressed && mainEncoderPressConsumed) {
-            mainEncoderPressConsumed = false;
             return;
         }
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
