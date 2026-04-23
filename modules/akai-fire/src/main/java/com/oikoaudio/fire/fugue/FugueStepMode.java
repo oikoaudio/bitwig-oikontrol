@@ -253,6 +253,11 @@ public final class FugueStepMode extends Layer {
             return;
         }
         driver.setMainEncoderPressed(pressed);
+        if (pressed && driver.isGlobalAltHeld()) {
+            mainEncoderPressConsumed = true;
+            driver.toggleCurrentDeviceWindow();
+            return;
+        }
         if (pressed && driver.isGlobalShiftHeld()) {
             mainEncoderPressConsumed = true;
             driver.cycleMainEncoderRolePreference();

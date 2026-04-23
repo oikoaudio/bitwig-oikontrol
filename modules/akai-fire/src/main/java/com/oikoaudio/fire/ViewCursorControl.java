@@ -15,6 +15,7 @@ public class ViewCursorControl {
 	private final CursorTrack cursorTrack;
 	private final DeviceBank deviceBank;
 	private final PinnableCursorDevice primaryDevice;
+	private final PinnableCursorDevice selectedDevice;
 	private final DeviceBank drumBank;
 	private final DrumPadBank drumPadBank;
 	private final TrackBank trackBank;
@@ -62,6 +63,11 @@ public class ViewCursorControl {
 		primaryDevice.hasDrumPads().markInterested();
 		primaryDevice.exists().markInterested();
 		primaryDevice.isPinned().markInterested();
+		primaryDevice.isWindowOpen().markInterested();
+		selectedDevice = cursorTrack.createCursorDevice("selecteddevice", "Selected Device", 8,
+				CursorDeviceFollowMode.FOLLOW_SELECTION);
+		selectedDevice.exists().markInterested();
+		selectedDevice.isWindowOpen().markInterested();
 		final DeviceMatcher drumMatcher = host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
 		drumBank = cursorTrack.createDeviceBank(1);
 		drumBank.setDeviceMatcher(drumMatcher);
@@ -98,6 +104,10 @@ public class ViewCursorControl {
 
 	public PinnableCursorDevice getPrimaryDevice() {
 		return primaryDevice;
+	}
+
+	public PinnableCursorDevice getSelectedDevice() {
+		return selectedDevice;
 	}
 
 	public DeviceBank getDrumBank() {
