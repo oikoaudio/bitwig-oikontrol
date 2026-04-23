@@ -1,7 +1,7 @@
 version = '2.9.0' // x-release-please-version
 
 jar {
-    archiveBaseName.set('OikontrolLCXL')
+    archiveBaseName.set('LCXLOikontrol')
     archiveVersion.set('')
     archiveExtension.set('bwextension')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

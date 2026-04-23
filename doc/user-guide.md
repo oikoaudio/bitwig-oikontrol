@@ -12,8 +12,8 @@ This guide is the user-facing reference for setup, modes, preferences, and commo
 1. Build or install the `.bwextension` for the controller you want to use.
 2. In Bitwig Studio, open **Settings > Controllers**.
 3. Add the Oiko controller entry for your hardware:
-   - `Oikontrol LCXL`
-   - `Oikontrol Fire`
+   - `LCXL Oikontrol`
+   - `Fire Oikontrol`
 4. Use the extension preferences if you want to change launch, pinning, or controller-specific behavior.
 
 ## Launch Control XL

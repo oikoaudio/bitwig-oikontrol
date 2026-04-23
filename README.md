@@ -50,7 +50,7 @@ High-level controller summary:
    - Linux: `~/Bitwig Studio/Extensions/`
    - macOS: `~/Documents/Bitwig Studio/Extensions/`
    - Windows: `~/Documents/Bitwig Studio/Extensions/`
-3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Fire Oikontrol` or `Oikontrol LCXL`.
+3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Fire Oikontrol` or `LCXL Oikontrol`.
 
 ## For developers
 
@@ -98,8 +98,8 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 
 Current artifact names:
 - `modules/oikontrol/build/libs/Oikontrol.bwextension` contains both controller extensions
-- `modules/akai-fire/build/libs/OikontrolFire.bwextension`
-- `modules/launchcontrol/build/libs/OikontrolLCXL.bwextension`
+- `modules/akai-fire/build/libs/FireOikontrol.bwextension`
+- `modules/launchcontrol/build/libs/LCXLOikontrol.bwextension`
 
 ### Developer documentation
 
