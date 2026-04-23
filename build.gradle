@@ -282,12 +282,13 @@ tasks.register('generateBundledDocumentation') {
     def sourceFile = layout.projectDirectory.file('doc/user-guide.md')
     def akaiFireOutput = project(':modules:akai-fire').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
     def launchControlOutput = project(':modules:launchcontrol').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
+    def oikontrolOutput = project(':modules:oikontrol').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
     inputs.file(sourceFile)
-    outputs.files(akaiFireOutput, launchControlOutput)
+    outputs.files(akaiFireOutput, launchControlOutput, oikontrolOutput)
 
     doLast {
         def rendered = renderUserGuideDocument(sourceFile.asFile.getText('UTF-8'))
-        [akaiFireOutput, launchControlOutput].each {
+        [akaiFireOutput, launchControlOutput, oikontrolOutput].each {
             def outputFile = it.asFile
             outputFile.parentFile.mkdirs()
             outputFile.text = rendered
@@ -295,7 +296,7 @@ tasks.register('generateBundledDocumentation') {
     }
 }
 
-configure([project(':modules:akai-fire'), project(':modules:launchcontrol')]) {
+configure([project(':modules:akai-fire'), project(':modules:launchcontrol'), project(':modules:oikontrol')]) {
     tasks.named('processResources') {
         dependsOn(rootProject.tasks.named('generateBundledDocumentation'))
     }
