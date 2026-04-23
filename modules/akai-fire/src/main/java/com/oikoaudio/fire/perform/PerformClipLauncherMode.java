@@ -423,11 +423,11 @@ public class PerformClipLauncherMode extends Layer {
 
         final BiColorButton bankLeft = driver.getButton(NoteAssign.BANK_L);
         bankLeft.bindPressed(this, pressed -> handleTrackScroll(pressed, -1),
-                () -> canScrollTracks(-1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+                () -> canScrollBankLeftRight(-1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
 
         final BiColorButton bankRight = driver.getButton(NoteAssign.BANK_R);
         bankRight.bindPressed(this, pressed -> handleTrackScroll(pressed, 1),
-                () -> canScrollTracks(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+                () -> canScrollBankLeftRight(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
 
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
         patternUp.bindPressed(this, pressed -> handleSceneScroll(pressed, -1),
@@ -711,6 +711,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handleTrackScroll(final boolean pressed, final int direction) {
+        if (sceneActionMode) {
+            handleSceneScroll(pressed, direction);
+            return;
+        }
         if (!pressed || !canScrollTracks(direction)) {
             return;
         }
@@ -1075,6 +1079,10 @@ public class PerformClipLauncherMode extends Layer {
     private boolean canScrollScenes(final int direction) {
         final int current = trackBank.sceneBank().scrollPosition().get();
         return direction < 0 ? current > 0 : current < maxSceneOffset();
+    }
+
+    private boolean canScrollBankLeftRight(final int direction) {
+        return sceneActionMode ? canScrollScenes(direction) : canScrollTracks(direction);
     }
 
     private int maxTrackOffset() {
