@@ -16,6 +16,7 @@ import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -127,6 +128,9 @@ public class PerformClipLauncherMode extends Layer {
         super(driver.getLayers(), "PERFORM_CLIP_LAUNCHER");
         this.driver = driver;
         this.sharedMusicalContext = driver.getSharedMusicalContext();
+        this.layout = FireControlPreferences.PERFORM_LAYOUT_HORIZONTAL.equals(driver.getPerformClipLauncherLayoutPreference())
+                ? PerformLayout.horizontal()
+                : PerformLayout.vertical();
         final ControllerHost host = driver.getHost();
         this.oled = driver.getOled();
         this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES);

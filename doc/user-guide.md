@@ -373,6 +373,8 @@ For immediate derived-line feedback, change source expression from the controlle
 
 `PERFORM` is the 16x4 clip-launch and performance surface. Filled slots select and launch. Empty slots create a new clip using `Default Clip Length`, then launch.
 
+`Perform Clip Launcher Layout` chooses whether the mode starts as `PerformV` or `PerformH`. `ALT + PERFORM` still toggles the layout for the current session.
+
 | Control | Action |
 | --- | --- |
 | `REC` + pad | Record into the targeted launcher slot using `Default Clip Length` |
@@ -419,6 +421,7 @@ On remote encoder pages, hold `ALT` while turning an encoder to control remotes 
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
+- `Perform Clip Launcher Layout`
 - `Default Clip Length`
 - `SELECT Encoder Startup`
 - `Default Root Key`

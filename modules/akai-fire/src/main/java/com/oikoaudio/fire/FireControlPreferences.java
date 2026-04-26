@@ -55,6 +55,12 @@ public final class FireControlPreferences {
     public static final String CLIP_LENGTH_OFF = "Off";
     public static final String CLIP_LENGTH_ROUND_NEAREST_BAR = "Round";
     private static final String CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY = "Round to nearest bar";
+    public static final String PERFORM_LAYOUT_VERTICAL = "Vertical";
+    public static final String PERFORM_LAYOUT_HORIZONTAL = "Horizontal";
+    public static final String[] PERFORM_LAYOUTS = {
+            PERFORM_LAYOUT_VERTICAL,
+            PERFORM_LAYOUT_HORIZONTAL
+    };
     public static final String[] DEFAULT_CLIP_LENGTHS = {
             CLIP_LENGTH_OFF,
             CLIP_LENGTH_1_BAR,
@@ -336,6 +342,15 @@ public final class FireControlPreferences {
             }
         }
         return CLIP_LENGTH_2_BARS;
+    }
+
+    public static String normalizePerformLayout(final String preferenceValue) {
+        for (final String value : PERFORM_LAYOUTS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return PERFORM_LAYOUT_VERTICAL;
     }
 
     public static double toClipLengthBeats(final String preferenceValue) {

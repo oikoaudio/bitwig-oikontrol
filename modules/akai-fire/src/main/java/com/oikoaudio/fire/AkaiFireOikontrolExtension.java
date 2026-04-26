@@ -117,6 +117,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private Preferences preferences;
     private SettableEnumValue clipLaunchModePref;
     private SettableEnumValue clipLaunchQuantizationPref;
+    private SettableEnumValue performClipLauncherLayoutPref;
     private SettableEnumValue defaultClipLengthPref;
     private SettableEnumValue mainEncoderStartupPref;
     private SettableEnumValue euclidScopePref;
@@ -316,6 +317,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         clipLaunchQuantizationPref.markInterested();
         clipLaunchQuantizationPref.addValueObserver(this::applyLaunchQuantizationPreference);
         applyLaunchQuantizationPreference(clipLaunchQuantizationPref.get());
+
+        performClipLauncherLayoutPref = preferences.getEnumSetting("Perform Clip Launcher Layout",
+                FireControlPreferences.CATEGORY_CLIP_LAUNCH,
+                FireControlPreferences.PERFORM_LAYOUTS,
+                FireControlPreferences.PERFORM_LAYOUT_VERTICAL);
+        performClipLauncherLayoutPref.markInterested();
 
         defaultClipLengthPref = preferences.getEnumSetting("Default Clip Length",
                 FireControlPreferences.CATEGORY_CLIP_LAUNCH,
@@ -1151,6 +1158,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return clipLaunchModePref == null
                 ? FireControlPreferences.CLIP_LAUNCH_MODE_SYNCED
                 : clipLaunchModePref.get();
+    }
+
+    public String getPerformClipLauncherLayoutPreference() {
+        return FireControlPreferences.normalizePerformLayout(performClipLauncherLayoutPref == null
+                ? FireControlPreferences.PERFORM_LAYOUT_VERTICAL
+                : performClipLauncherLayoutPref.get());
     }
 
     public int getDefaultClipLengthBeats() {

@@ -103,6 +103,16 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesPerformClipLauncherLayoutPreferenceValues() {
+        assertEquals(FireControlPreferences.PERFORM_LAYOUT_VERTICAL,
+                FireControlPreferences.normalizePerformLayout(FireControlPreferences.PERFORM_LAYOUT_VERTICAL));
+        assertEquals(FireControlPreferences.PERFORM_LAYOUT_HORIZONTAL,
+                FireControlPreferences.normalizePerformLayout(FireControlPreferences.PERFORM_LAYOUT_HORIZONTAL));
+        assertEquals(FireControlPreferences.PERFORM_LAYOUT_VERTICAL,
+                FireControlPreferences.normalizePerformLayout("unexpected"));
+    }
+
+    @Test
     void normalizesDefaultClipLengthPreferenceValues() {
         assertEquals(FireControlPreferences.CLIP_LENGTH_OFF,
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_OFF));
