@@ -26,6 +26,7 @@ import com.bitwig.extension.controller.api.RemoteControl;
 import com.bitwig.extension.controller.api.RemoteControlsPage;
 import com.bitwig.extension.controller.api.SendBank;
 import com.bitwig.extension.controller.api.SettableBooleanValue;
+import com.bitwig.extension.controller.api.SettableRangedValue;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumLedRenderer;
@@ -65,6 +66,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    static final int[] TRACK_CONTROL_NOTES = {73, 74, 75, 76, 89, 90, 91, 92};
    static final int[] KNOB_CC_OFFSETS = {13, 29, 49};
    static final int SLIDER_CC_BASE = 77;
+   private static final int STRIP_COUNT = 8;
+   private static final int TRACK_BANK_WIDTH = 32;
    private static final int SEND_UP_CC = 104;
    private static final int SEND_DOWN_CC = 105;
    private static final int TRACK_LEFT_CC = 106;
@@ -126,6 +129,19 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       RecordArm
    }
 
+   enum TrackBooleanTarget
+   {
+      MUTE,
+      SOLO,
+      ARM
+   }
+
+   enum TrackValueTarget
+   {
+      VOLUME,
+      PAN
+   }
+
    public LaunchControlXlControllerExtension(
       final LaunchControlXlControllerExtensionDefinition definition,
       final ControllerHost host)
@@ -182,14 +198,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          markParameterInterested(mProjectRemoteControlsCursor.getParameter(i));
       }
 
-      mTrackBank = mHost.createMainTrackBank(8, 3, 0);
-      setTrackBankFlatteningMode(mTrackBank, "FLATTEN");
+      mTrackBank = mHost.createMainTrackBank(TRACK_BANK_WIDTH, 3, 0);
       mTrackBank.followCursorTrack(mCursorTrack);
       mTrackBank.canScrollBackwards().markInterested();
       mTrackBank.canScrollForwards().markInterested();
 
       mTrackBank.cursorIndex().markInterested();
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < TRACK_BANK_WIDTH; ++i)
       {
          final Track track = mTrackBank.getItemAt(i);
          track.solo().markInterested();
@@ -197,6 +212,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          track.mute().markInterested();
          track.volume().markInterested();
          track.exists().markInterested();
+         track.isActivated().markInterested();
 
          final SendBank sendBank = track.sendBank();
          sendBank.canScrollBackwards().markInterested();
@@ -461,20 +477,20 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       final Layers layers = new Layers(this);
       mMainLayer = new Layer(layers, "Main");
 
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final Track track = mTrackBank.getItemAt(i);
-         mMainLayer.bind(mHardwareSliders[i], track.volume());
-         mMainLayer.bindPressed(mBtTrackFocus[i], () -> mCursorTrack.selectChannel(track));
+         final int stripIndex = i;
+         mMainLayer.bind(mHardwareSliders[i], value -> setTrackValue(stripIndex, TrackValueTarget.VOLUME, value));
+         mMainLayer.bindPressed(mBtTrackFocus[i], () -> selectTrackStrip(stripIndex));
       }
 
       mMainLayer.bindPressed(mBtSendUp, () -> {
-         for (int i = 0; i < 8; ++i)
-            mTrackBank.getItemAt(i).sendBank().scrollBackwards();
+         for (int i = 0; i < STRIP_COUNT; ++i)
+            scrollSendBank(i, -1);
       });
       mMainLayer.bindPressed(mBtSendDown, () -> {
-         for (int i = 0; i < 8; ++i)
-            mTrackBank.getItemAt(i).sendBank().scrollForwards();
+         for (int i = 0; i < STRIP_COUNT; ++i)
+            scrollSendBank(i, 1);
       });
       mMainLayer.bindPressed(mBtTrackLeft, mTrackBank.scrollBackwardsAction());
       mMainLayer.bindPressed(mBtTrackRight, mTrackBank.scrollForwardsAction());
@@ -588,105 +604,107 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private void createModeLayers(final Layers layers)
    {
       mSend2FullDeviceLayer = new Layer(layers, "2 Sends Full Device");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final SendBank sendBank = mTrackBank.getItemAt(i).sendBank();
-         mSend2FullDeviceLayer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend2FullDeviceLayer.bind(mHardwareKnobs[8 + i], sendBank.getItemAt(1));
+         final int stripIndex = i;
+         mSend2FullDeviceLayer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
+         mSend2FullDeviceLayer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
          mSend2FullDeviceLayer.bind(mHardwareKnobs[16 + i], mRemoteControls.getParameter(i));
       }
 
       mSend2ProjectLayer = new Layer(layers, "2 Sends and Project Remotes");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final SendBank sendBank = mTrackBank.getItemAt(i).sendBank();
-         mSend2ProjectLayer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend2ProjectLayer.bind(mHardwareKnobs[8 + i], sendBank.getItemAt(1));
+         final int stripIndex = i;
+         mSend2ProjectLayer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
+         mSend2ProjectLayer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
          mSend2ProjectLayer.bind(mHardwareKnobs[16 + i], mProjectRemoteControlsCursor.getParameter(i));
       }
 
       mSend2Device1Layer = new Layer(layers, "2 Sends 1 Device");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final SendBank sendBank = mTrackBank.getItemAt(i).sendBank();
-         mSend2Device1Layer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend2Device1Layer.bind(mHardwareKnobs[8 + i], sendBank.getItemAt(1));
-         mSend2Device1Layer.bind(mHardwareKnobs[16 + i], deviceParam(i, 0));
+         final int stripIndex = i;
+         mSend2Device1Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
+         mSend2Device1Layer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
+         mSend2Device1Layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 0), value));
       }
 
       mSend1Device2Layer = new Layer(layers, "1 Sends 2 Device");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final SendBank sendBank = mTrackBank.getItemAt(i).sendBank();
-         mSend1Device2Layer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend1Device2Layer.bind(mHardwareKnobs[8 + i], deviceParam(i, 0));
-         mSend1Device2Layer.bind(mHardwareKnobs[16 + i], deviceParam(i, 1));
+         final int stripIndex = i;
+         mSend1Device2Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
+         mSend1Device2Layer.bind(mHardwareKnobs[8 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 0), value));
+         mSend1Device2Layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 1), value));
       }
 
       mDevice3Layer = new Layer(layers, "3 Device");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         mDevice3Layer.bind(mHardwareKnobs[i], deviceParam(i, 0));
-         mDevice3Layer.bind(mHardwareKnobs[8 + i], deviceParam(i, 1));
-         mDevice3Layer.bind(mHardwareKnobs[16 + i], deviceParam(i, 2));
+         final int stripIndex = i;
+         mDevice3Layer.bind(mHardwareKnobs[i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 0), value));
+         mDevice3Layer.bind(mHardwareKnobs[8 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 1), value));
+         mDevice3Layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 2), value));
       }
 
       mSend2Pan1Layer = new Layer(layers, "2 Sends 1 Pan");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final Track track = mTrackBank.getItemAt(i);
-         final SendBank sendBank = track.sendBank();
-         mSend2Pan1Layer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend2Pan1Layer.bind(mHardwareKnobs[8 + i], sendBank.getItemAt(1));
-         mSend2Pan1Layer.bind(mHardwareKnobs[16 + i], track.pan());
+         final int stripIndex = i;
+         mSend2Pan1Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
+         mSend2Pan1Layer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
+         mSend2Pan1Layer.bind(mHardwareKnobs[16 + i], value -> setTrackValue(stripIndex, TrackValueTarget.PAN, value));
       }
 
       mSend3Layer = new Layer(layers, "3 Sends");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final Track track = mTrackBank.getItemAt(i);
-         final SendBank sendBank = track.sendBank();
-         mSend3Layer.bind(mHardwareKnobs[i], sendBank.getItemAt(0));
-         mSend3Layer.bind(mHardwareKnobs[8 + i], sendBank.getItemAt(1));
-         mSend3Layer.bind(mHardwareKnobs[16 + i], sendBank.getItemAt(2));
+         final int stripIndex = i;
+         mSend3Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
+         mSend3Layer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
+         mSend3Layer.bind(mHardwareKnobs[16 + i], value -> setSendValue(stripIndex, 2, value));
       }
 
       mTrack3layer = new Layer(layers, "3 Track Remotes");
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final CursorRemoteControlsPage remoteControlPage = mTrackRemoteControls[i];
-         mTrack3layer.bind(mHardwareKnobs[i], remoteControlPage.getParameter(0));
-         mTrack3layer.bind(mHardwareKnobs[8 + i], remoteControlPage.getParameter(1));
-         mTrack3layer.bind(mHardwareKnobs[16 + i], remoteControlPage.getParameter(2));
+         final int stripIndex = i;
+         mTrack3layer.bind(mHardwareKnobs[i], value -> setRemoteValue(trackParamForStrip(stripIndex, 0), value));
+         mTrack3layer.bind(mHardwareKnobs[8 + i], value -> setRemoteValue(trackParamForStrip(stripIndex, 1), value));
+         mTrack3layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(trackParamForStrip(stripIndex, 2), value));
       }
    }
 
    private void createTrackControlsLayers(final Layers layers)
    {
       mMuteLayer = new Layer(layers, "Mute");
-      for (int i = 0; i < 8; ++i)
-         mMuteLayer.bindToggle(mBtTrackControl[i], mTrackBank.getItemAt(i).mute());
+      for (int i = 0; i < STRIP_COUNT; ++i)
+      {
+         final int stripIndex = i;
+         mMuteLayer.bindPressed(mBtTrackControl[i], () -> toggleTrackBoolean(stripIndex, TrackBooleanTarget.MUTE));
+      }
 
       mSoloLayer = new Layer(layers, "Solo");
-      for (int i = 0; i < 8; ++i)
-         mSoloLayer.bindToggle(mBtTrackControl[i], mTrackBank.getItemAt(i).solo());
+      for (int i = 0; i < STRIP_COUNT; ++i)
+      {
+         final int stripIndex = i;
+         mSoloLayer.bindPressed(mBtTrackControl[i], () -> toggleTrackBoolean(stripIndex, TrackBooleanTarget.SOLO));
+      }
 
       mRecordArmLayer = new Layer(layers, "Record Arm");
-      for (int i = 0; i < 8; ++i)
-         mRecordArmLayer.bindToggle(mBtTrackControl[i], mTrackBank.getItemAt(i).arm());
+      for (int i = 0; i < STRIP_COUNT; ++i)
+      {
+         final int stripIndex = i;
+         mRecordArmLayer.bindPressed(mBtTrackControl[i], () -> toggleTrackBoolean(stripIndex, TrackBooleanTarget.ARM));
+      }
 
       mTrackRemoteButtonLayer = new Layer(layers, "Track Remote Button");
       for (int i = 0; i < 8; ++i)
       {
-         final int I = i;
+         final int stripIndex = i;
          mTrackRemoteButtonLayer.bindPressed(mBtTrackControl[i], () -> {
-            final CursorRemoteControlsPage remotePage = mTrackRemoteControls[I];
-            if (remotePage != null)
-            {
-               final RemoteControl param = remotePage.getParameter(3);
-               final double current = param.value().get();
-               param.value().set(current > 0 ? 0 : 127, 127);
-            }
+            toggleRemoteParameter(trackParamForStrip(stripIndex, 3));
          });
       }
    }
@@ -959,7 +977,129 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       {
          return;
       }
-      param.value().set(value, 127);
+      param.value().set(value);
+   }
+
+   private void setTrackValue(final int stripIndex, final TrackValueTarget target, final double value)
+   {
+      final Track track = trackForStrip(stripIndex);
+      if (track == null)
+      {
+         return;
+      }
+      switch (target)
+      {
+         case VOLUME -> track.volume().set(value);
+         case PAN -> track.pan().set(value);
+      }
+   }
+
+   private void setSendValue(final int stripIndex, final int sendIndex, final double value)
+   {
+      final SendBank sendBank = sendBankForStrip(stripIndex);
+      if (sendBank == null)
+      {
+         return;
+      }
+      final SettableRangedValue send = sendBank.getItemAt(sendIndex).value();
+      if (sendBank.getItemAt(sendIndex).exists().get())
+      {
+         send.set(value);
+      }
+   }
+
+   private void scrollSendBank(final int stripIndex, final int direction)
+   {
+      final SendBank sendBank = sendBankForStrip(stripIndex);
+      if (sendBank == null)
+      {
+         return;
+      }
+      if (direction < 0)
+      {
+         sendBank.scrollBackwards();
+      }
+      else if (direction > 0)
+      {
+         sendBank.scrollForwards();
+      }
+   }
+
+   private void selectTrackStrip(final int stripIndex)
+   {
+      final Track track = trackForStrip(stripIndex);
+      if (track != null)
+      {
+         mCursorTrack.selectChannel(track);
+      }
+   }
+
+   private void toggleTrackBoolean(final int stripIndex, final TrackBooleanTarget target)
+   {
+      final Track track = trackForStrip(stripIndex);
+      if (track == null)
+      {
+         return;
+      }
+      switch (target)
+      {
+         case MUTE -> track.mute().toggle();
+         case SOLO -> track.solo().toggle(false);
+         case ARM -> track.arm().toggle();
+      }
+   }
+
+   private RemoteControl deviceParamForStrip(final int stripIndex, final int paramIndex)
+   {
+      final int sourceTrackIndex = sourceTrackIndexForStrip(stripIndex);
+      return sourceTrackIndex >= 0 ? deviceParam(sourceTrackIndex, paramIndex) : null;
+   }
+
+   private RemoteControl trackParamForStrip(final int stripIndex, final int paramIndex)
+   {
+      final int sourceTrackIndex = sourceTrackIndexForStrip(stripIndex);
+      return sourceTrackIndex >= 0 ? mTrackRemoteControls[sourceTrackIndex].getParameter(paramIndex) : null;
+   }
+
+   private SendBank sendBankForStrip(final int stripIndex)
+   {
+      final Track track = trackForStrip(stripIndex);
+      return track != null ? track.sendBank() : null;
+   }
+
+   private Track trackForStrip(final int stripIndex)
+   {
+      final int sourceTrackIndex = sourceTrackIndexForStrip(stripIndex);
+      return sourceTrackIndex >= 0 ? mTrackBank.getItemAt(sourceTrackIndex) : null;
+   }
+
+   private int sourceTrackIndexForStrip(final int stripIndex)
+   {
+      if (stripIndex < 0 || stripIndex >= STRIP_COUNT)
+      {
+         return -1;
+      }
+      int visible = 0;
+      for (int sourceTrackIndex = 0; sourceTrackIndex < TRACK_BANK_WIDTH; sourceTrackIndex++)
+      {
+         final Track track = mTrackBank.getItemAt(sourceTrackIndex);
+         if (isControllableTrack(track))
+         {
+            if (visible == stripIndex)
+            {
+               return sourceTrackIndex;
+            }
+            visible++;
+         }
+      }
+      return -1;
+   }
+
+   private boolean isControllableTrack(final Track track)
+   {
+      return track != null
+         && track.exists().get()
+         && (mDrumSettings != null && mDrumSettings.showDeactivatedTracksEnabled() || track.isActivated().get());
    }
 
    /**
@@ -1184,7 +1324,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
    private void setSizeOfSendBank(final int size)
    {
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < TRACK_BANK_WIDTH; ++i)
       {
          final Track track = mTrackBank.getItemAt(i);
          final SendBank sendBank = track.sendBank();
@@ -1311,12 +1451,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
       final int selectedTrack = mTrackBank.cursorIndex().get();
 
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final Track track = mTrackBank.getItemAt(i);
-         final boolean trackExists = track.exists().get();
+         final int sourceTrackIndex = sourceTrackIndexForStrip(i);
+         final Track track = sourceTrackIndex >= 0 ? mTrackBank.getItemAt(sourceTrackIndex) : null;
+         final boolean trackExists = track != null;
          final int defaultFocusColor = trackExists
-            ? (selectedTrack == i ? SimpleLedColor.Amber.value() : SimpleLedColor.AmberLow.value())
+            ? (selectedTrack == sourceTrackIndex ? SimpleLedColor.Amber.value() : SimpleLedColor.AmberLow.value())
             : SimpleLedColor.Off.value();
          final int focusColor = mArpLayerController != null
             ? mArpLayerController.applyFocusColor(i, defaultFocusColor)
@@ -1353,8 +1494,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
                   : SimpleLedColor.RedLow.value();
                case None ->
                {
-                  final RemoteControl param = mTrackRemoteControls[i].getParameter(3);
-                  final boolean exists = param.exists().get();
+                  final RemoteControl param = trackParamForStrip(i, 3);
+                  final boolean exists = param != null && param.exists().get();
                   final double value = exists ? param.value().get() : 0;
                   controlColor = exists ? levelColor(value, off, amberLow, amber) : off;
                }
@@ -1458,10 +1599,10 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      for (int i = 0; i < 8; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final Track track = mTrackBank.getItemAt(i);
-         final SendBank sendBank = track.sendBank();
+         final Track track = trackForStrip(i);
+         final SendBank sendBank = track != null ? track.sendBank() : null;
 
          final int green = SimpleLedColor.Green.value();
          final int greenLow = SimpleLedColor.GreenLow.value();
@@ -1470,20 +1611,28 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          final int amberLow = SimpleLedColor.AmberLow.value();
          final int red = SimpleLedColor.Red.value();
 
+         if (sendBank == null)
+         {
+            mKnobsLed[i].setColor(off);
+            mKnobsLed[8 + i].setColor(off);
+            mKnobsLed[16 + i].setColor(off);
+            continue;
+         }
+
          switch (mMode)
          {
             case Send2Device1 ->
             {
                mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
                mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               final RemoteControl deviceParam0 = deviceParam(i, 0);
+               final RemoteControl deviceParam0 = deviceParamForStrip(i, 0);
                mKnobsLed[16 + i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
             }
             case Send2Pan1 ->
             {
                mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
                mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               mKnobsLed[16 + i].setColor(track.exists().get() ? red : off);
+               mKnobsLed[16 + i].setColor(track != null ? red : off);
             }
             case Send3 ->
             {
@@ -1494,25 +1643,28 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
             case Send1Device2 ->
             {
                mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               final RemoteControl deviceParam0 = deviceParam(i, 0);
-               final RemoteControl deviceParam1 = deviceParam(i, 1);
+               final RemoteControl deviceParam0 = deviceParamForStrip(i, 0);
+               final RemoteControl deviceParam1 = deviceParamForStrip(i, 1);
                mKnobsLed[8 + i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
                mKnobsLed[16 + i].setColor(levelColor(deviceParam1 != null && deviceParam1.exists().get() ? deviceParam1.value().get() : 0, off, amberLow, amber));
             }
             case Device3 ->
             {
-               final RemoteControl deviceParam0 = deviceParam(i, 0);
-               final RemoteControl deviceParam1 = deviceParam(i, 1);
-               final RemoteControl deviceParam2 = deviceParam(i, 2);
+               final RemoteControl deviceParam0 = deviceParamForStrip(i, 0);
+               final RemoteControl deviceParam1 = deviceParamForStrip(i, 1);
+               final RemoteControl deviceParam2 = deviceParamForStrip(i, 2);
                mKnobsLed[i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
                mKnobsLed[8 + i].setColor(levelColor(deviceParam1 != null && deviceParam1.exists().get() ? deviceParam1.value().get() : 0, off, amberLow, amber));
                mKnobsLed[16 + i].setColor(levelColor(deviceParam2 != null && deviceParam2.exists().get() ? deviceParam2.value().get() : 0, off, amberLow, amber));
             }
             case Track3 ->
             {
-               mKnobsLed[i].setColor(levelColor(mTrackRemoteControls[i].getParameter(0).exists().get() ? mTrackRemoteControls[i].getParameter(0).value().get() : 0, off, amberLow, amber));
-               mKnobsLed[8 + i].setColor(levelColor(mTrackRemoteControls[i].getParameter(1).exists().get() ? mTrackRemoteControls[i].getParameter(1).value().get() : 0, off, amberLow, amber));
-               mKnobsLed[16 + i].setColor(levelColor(mTrackRemoteControls[i].getParameter(2).exists().get() ? mTrackRemoteControls[i].getParameter(2).value().get() : 0, off, amberLow, amber));
+               final RemoteControl trackParam0 = trackParamForStrip(i, 0);
+               final RemoteControl trackParam1 = trackParamForStrip(i, 1);
+               final RemoteControl trackParam2 = trackParamForStrip(i, 2);
+               mKnobsLed[i].setColor(levelColor(trackParam0 != null && trackParam0.exists().get() ? trackParam0.value().get() : 0, off, amberLow, amber));
+               mKnobsLed[8 + i].setColor(levelColor(trackParam1 != null && trackParam1.exists().get() ? trackParam1.value().get() : 0, off, amberLow, amber));
+               mKnobsLed[16 + i].setColor(levelColor(trackParam2 != null && trackParam2.exists().get() ? trackParam2.value().get() : 0, off, amberLow, amber));
             }
             case Send2FullDevice ->
             {
@@ -1616,9 +1768,9 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       mSoloLed.setColor(mTrackControl == TrackControl.Solo ? yellow : off);
       mRecordArmLed.setColor(mTrackControl == TrackControl.RecordArm ? yellow : off);
 
-      final SendBank sendBank = mTrackBank.getItemAt(0).sendBank();
-      mUpButtonLed.setColor(sendBank.canScrollBackwards().get() ? yellow : off);
-      mDownButtonLed.setColor(sendBank.canScrollForwards().get() ? yellow : off);
+      final SendBank sendBank = sendBankForStrip(0);
+      mUpButtonLed.setColor(sendBank != null && sendBank.canScrollBackwards().get() ? yellow : off);
+      mDownButtonLed.setColor(sendBank != null && sendBank.canScrollForwards().get() ? yellow : off);
 
       if (mIsDeviceOn)
       {
@@ -1643,9 +1795,9 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private PinnableCursorDevice mCursorDevice;
    private CursorRemoteControlsPage mRemoteControls;
    private final CursorRemoteControlsPage[] mDeviceRemotePages = new CursorRemoteControlsPage[7];
-   private final CursorDevice[] mTrackDeviceCursors = new CursorDevice[8];
-   private final CursorRemoteControlsPage[] mTrackCursorDeviceRemoteControls = new CursorRemoteControlsPage[8];
-   private final CursorRemoteControlsPage[] mTrackRemoteControls = new CursorRemoteControlsPage[8];
+   private final CursorDevice[] mTrackDeviceCursors = new CursorDevice[TRACK_BANK_WIDTH];
+   private final CursorRemoteControlsPage[] mTrackCursorDeviceRemoteControls = new CursorRemoteControlsPage[TRACK_BANK_WIDTH];
+   private final CursorRemoteControlsPage[] mTrackRemoteControls = new CursorRemoteControlsPage[TRACK_BANK_WIDTH];
    private boolean mDevicePerTrackSupported;
    private CursorRemoteControlsPage mProjectRemoteControlsCursor;
    private RhArpLayerController mArpLayerController;
@@ -1771,21 +1923,4 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
    }
 
-   private void setTrackBankFlatteningMode(final TrackBank trackBank, final String modeName)
-   {
-      if (mHost.getHostApiVersion() < 25)
-         return;
-
-      try
-      {
-         final Class<?> modeClass = Class.forName("com.bitwig.extension.controller.api.TrackBankFlatteningMode");
-         @SuppressWarnings({"unchecked", "rawtypes"})
-         final Object mode = Enum.valueOf((Class<Enum>) modeClass.asSubclass(Enum.class), modeName);
-         trackBank.getClass().getMethod("setFlatteningMode", modeClass).invoke(trackBank, mode);
-      }
-      catch (final ReflectiveOperationException | IllegalArgumentException e)
-      {
-         mHost.errorln("Unable to set Launch Control XL track-bank flattening mode: " + e.getMessage());
-      }
-   }
 }

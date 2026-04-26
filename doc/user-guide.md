@@ -149,6 +149,8 @@ Hold `SHIFT + BROWSER` to edit shared settings from the four encoders.
 | `User 1` | Shared octave |
 | `User 2` | `ClipRecLen`: launcher recording length |
 
+The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad while holding `SHIFT + BROWSER` to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
+
 ### Main SELECT encoder
 
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.

@@ -42,11 +42,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final int BROWSER_OPEN_DEFER_MS = 40;
     private static final int SETTINGS_PAD_COLUMNS = 16;
     private static final int SETTINGS_PAD_ROWS = 4;
+    private static final int SETTINGS_SHOW_DEACTIVATED_TRACKS_PAD = 63;
     private static final int GLOBAL_ROOT_ENCODER_THRESHOLD = 16;
     private static final int GLOBAL_SCALE_ENCODER_THRESHOLD = 8;
     private static final int GLOBAL_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
     private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
+    private static final RgbLigthState SETTINGS_TOGGLE_ON = new RgbLigthState(0, 96, 96, true);
+    private static final RgbLigthState SETTINGS_TOGGLE_OFF = new RgbLigthState(0, 32, 32, true);
     private static final boolean[][] SETTINGS_LOGO = {
             {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
             {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
@@ -125,6 +128,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue melodicSeedModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableBooleanValue encoderTouchResetPref;
+    private SettableBooleanValue showDeactivatedTracksPref;
     private SettableRangedValue padBrightnessPref;
     private SettableRangedValue padSaturationPref;
     private SettableRangedValue melodicFixedSeedPref;
@@ -422,6 +426,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         encoderTouchResetEnabled = encoderTouchResetPref.get();
         encoderTouchResetPref.addValueObserver(value -> encoderTouchResetEnabled = value);
 
+        showDeactivatedTracksPref = preferences.getBooleanSetting("Show deactivated tracks",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.SHOW_DEACTIVATED_TRACKS_DEFAULT);
+        showDeactivatedTracksPref.markInterested();
+
         // Deferred for now: the current live NOTE implementation still relies on
         // Bitwig key-translation updates, so "New Notes Only" does not preserve
         // already-held notes correctly when the pitch offset changes. Keep the
@@ -533,6 +542,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         for (int padIndex = 0; padIndex < rgbButtons.length; padIndex++) {
             final int currentPad = padIndex;
             rgbButtons[padIndex].bindPressed(globalSettingsLayer, pressed -> {
+                handleGlobalSettingsPad(currentPad, pressed);
             }, () -> globalSettingsPadState(currentPad));
         }
     }
@@ -1572,11 +1582,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void showGlobalSettingsOverview() {
         oled.detailInfo("Global Settings",
-                "1: Root %s\n2: Scale %s\n3: Oct %d\n4: ClipRecLen %s".formatted(
+                "1: Root %s\n2: Scale %s\n3: Oct %d\n4: ClipRecLen %s\nTracks: %s".formatted(
                         com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
                         sharedPitchContext.getScaleDisplayName(),
                         sharedPitchContext.getOctave(),
-                        defaultClipLengthLabel()));
+                        defaultClipLengthLabel(),
+                        showDeactivatedTracks() ? "All" : "Active"));
     }
 
     private void adjustGlobalSettings(final int encoderIndex, final int inc) {
@@ -1631,6 +1642,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         showGlobalSettingsOverview();
     }
 
+    private void handleGlobalSettingsPad(final int padIndex, final boolean pressed) {
+        if (!pressed || padIndex != SETTINGS_SHOW_DEACTIVATED_TRACKS_PAD || showDeactivatedTracksPref == null) {
+            return;
+        }
+        showDeactivatedTracksPref.set(!showDeactivatedTracks());
+        oled.valueInfo("Tracks", showDeactivatedTracks() ? "All" : "Active");
+        refreshSurfaceLights();
+    }
+
     private void adjustDefaultClipLength(final int inc) {
         if (defaultClipLengthPref == null || inc == 0) {
             return;
@@ -1656,6 +1676,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private RgbLigthState globalSettingsPadState(final int padIndex) {
+        if (padIndex == SETTINGS_SHOW_DEACTIVATED_TRACKS_PAD) {
+            return showDeactivatedTracks() ? SETTINGS_TOGGLE_ON : SETTINGS_TOGGLE_OFF;
+        }
         final int row = padIndex / SETTINGS_PAD_COLUMNS;
         final int column = padIndex % SETTINGS_PAD_COLUMNS;
         if (row < 0 || row >= SETTINGS_PAD_ROWS || column < 0 || column >= SETTINGS_PAD_COLUMNS) {
@@ -1677,6 +1700,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isGlobalSettingsOverlayActive() {
         return globalSettingsOverlayActive;
+    }
+
+    public boolean showDeactivatedTracks() {
+        return showDeactivatedTracksPref != null
+                ? showDeactivatedTracksPref.get()
+                : FireControlPreferences.SHOW_DEACTIVATED_TRACKS_DEFAULT;
     }
 
     public boolean isGlobalAltHeld() {
