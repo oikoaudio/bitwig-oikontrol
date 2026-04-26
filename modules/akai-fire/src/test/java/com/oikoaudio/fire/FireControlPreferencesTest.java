@@ -110,6 +110,8 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
         assertEquals(FireControlPreferences.CLIP_LENGTH_4_BARS,
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_8_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_8_BARS));
         assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
                 FireControlPreferences.normalizeDefaultClipLength("unexpected"));
     }
@@ -122,6 +124,8 @@ class FireControlPreferencesTest {
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_2_BARS));
         assertEquals(16.0,
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(32.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_8_BARS));
         assertEquals(8.0, FireControlPreferences.toClipLengthBeats("unexpected"));
     }
 

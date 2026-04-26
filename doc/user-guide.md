@@ -132,11 +132,22 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub |
 | `BROWSER` | Open or close Bitwig popup browser |
-| `SHIFT + BROWSER` | Hold global pitch settings overlay |
+| `SHIFT + BROWSER` | Hold global settings overlay |
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
 When the popup browser is open, `SELECT` turn moves through results, `SELECT` press commits the selected result, and `BROWSER` closes the browser.
+
+### Global settings overlay
+
+Hold `SHIFT + BROWSER` to edit shared settings from the four encoders.
+
+| Encoder | Setting |
+| --- | --- |
+| `Channel` | Shared root key |
+| `Mixer` | Shared scale |
+| `User 1` | Shared octave |
+| `User 2` | Default launcher recording length |
 
 ### Main SELECT encoder
 
@@ -379,7 +390,7 @@ For immediate derived-line feedback, change source expression from the controlle
 
 Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
 
-Hold `REC` and press a pad to target recording directly into that visible slot. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+Hold `REC` and press a pad to target recording directly into that visible slot. The script sets Bitwig's clip launcher post-record action to play the recorded clip after `Default Clip Length`, which can also be adjusted from the global settings overlay. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 

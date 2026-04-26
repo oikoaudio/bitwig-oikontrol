@@ -50,10 +50,12 @@ public final class FireControlPreferences {
     public static final String CLIP_LENGTH_1_BAR = "1 bar";
     public static final String CLIP_LENGTH_2_BARS = "2 bars";
     public static final String CLIP_LENGTH_4_BARS = "4 bars";
+    public static final String CLIP_LENGTH_8_BARS = "8 bars";
     public static final String[] DEFAULT_CLIP_LENGTHS = {
             CLIP_LENGTH_1_BAR,
             CLIP_LENGTH_2_BARS,
-            CLIP_LENGTH_4_BARS
+            CLIP_LENGTH_4_BARS,
+            CLIP_LENGTH_8_BARS
     };
 
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
@@ -331,6 +333,7 @@ public final class FireControlPreferences {
         return switch (normalizeDefaultClipLength(preferenceValue)) {
             case CLIP_LENGTH_1_BAR -> 4.0;
             case CLIP_LENGTH_4_BARS -> 16.0;
+            case CLIP_LENGTH_8_BARS -> 32.0;
             default -> 8.0;
         };
     }

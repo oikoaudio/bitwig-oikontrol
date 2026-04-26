@@ -1554,10 +1554,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void showGlobalSettingsOverview() {
         oled.detailInfo("Global Settings",
-                "1: Root %s\n2: Scale %s\n3: Oct %d".formatted(
+                "1: Root %s\n2: Scale %s\n3: Oct %d\n4: Rec %s".formatted(
                         com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
                         sharedPitchContext.getScaleDisplayName(),
-                        sharedPitchContext.getOctave()));
+                        sharedPitchContext.getOctave(),
+                        defaultClipLengthLabel()));
     }
 
     private void adjustGlobalSettings(final int encoderIndex, final int inc) {
@@ -1578,6 +1579,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (encoderIndex == 2) {
             sharedPitchContext.adjustOctave(inc);
             oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
+            return;
+        }
+        if (encoderIndex == 3) {
+            adjustDefaultClipLength(inc);
             return;
         }
         showGlobalSettingsOverview();
@@ -1601,7 +1606,35 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
             return;
         }
+        if (encoderIndex == 3) {
+            oled.valueInfo("Launcher Rec", defaultClipLengthLabel());
+            return;
+        }
         showGlobalSettingsOverview();
+    }
+
+    private void adjustDefaultClipLength(final int inc) {
+        if (defaultClipLengthPref == null || inc == 0) {
+            return;
+        }
+        final String current = FireControlPreferences.normalizeDefaultClipLength(defaultClipLengthPref.get());
+        int currentIndex = 0;
+        for (int i = 0; i < FireControlPreferences.DEFAULT_CLIP_LENGTHS.length; i++) {
+            if (FireControlPreferences.DEFAULT_CLIP_LENGTHS[i].equals(current)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        final int nextIndex = Math.max(0,
+                Math.min(FireControlPreferences.DEFAULT_CLIP_LENGTHS.length - 1, currentIndex + inc));
+        defaultClipLengthPref.set(FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
+        oled.valueInfo("Launcher Rec", FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
+    }
+
+    private String defaultClipLengthLabel() {
+        return FireControlPreferences.normalizeDefaultClipLength(defaultClipLengthPref == null
+                ? FireControlPreferences.CLIP_LENGTH_2_BARS
+                : defaultClipLengthPref.get());
     }
 
     private RgbLigthState globalSettingsPadState(final int padIndex) {
@@ -1793,7 +1826,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (browserButton == null || !browserButton.isPressed()) {
             return;
         }
-        if (isGlobalShiftHeld() || isGlobalAltHeld() || globalSettingsOverlayActive || isPopupBrowserActive()) {
+        if (globalSettingsOverlayActive || isPopupBrowserActive()) {
             return;
         }
         openPopupBrowser();
