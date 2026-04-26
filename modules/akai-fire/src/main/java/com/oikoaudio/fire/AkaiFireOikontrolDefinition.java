@@ -56,7 +56,7 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
 
     @Override
     public int getRequiredAPIVersion() {
-        return 24;
+        return 25;
     }
 
     @Override

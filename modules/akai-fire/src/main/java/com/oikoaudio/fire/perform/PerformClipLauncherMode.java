@@ -130,6 +130,7 @@ public class PerformClipLauncherMode extends Layer {
         final ControllerHost host = driver.getHost();
         this.oled = driver.getOled();
         this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES);
+        setTrackBankFlatteningMode(host, trackBank, "FLATTEN");
         this.cursorTrack = driver.getViewControl().getCursorTrack();
         this.project = host.getProject();
         this.projectRemoteControls = project.getRootTrackGroup().createCursorRemoteControlsPage(8);
@@ -1507,6 +1508,22 @@ public class PerformClipLauncherMode extends Layer {
 
     private int toSlotIndex(final int trackIndex, final int sceneIndex) {
         return sceneIndex * MAX_TRACKS + trackIndex;
+    }
+
+    private static void setTrackBankFlatteningMode(final ControllerHost host, final TrackBank trackBank,
+                                                   final String modeName) {
+        if (host.getHostApiVersion() < 25) {
+            return;
+        }
+
+        try {
+            final Class<?> modeClass = Class.forName("com.bitwig.extension.controller.api.TrackBankFlatteningMode");
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            final Object mode = Enum.valueOf((Class<Enum>) modeClass.asSubclass(Enum.class), modeName);
+            trackBank.getClass().getMethod("setFlatteningMode", modeClass).invoke(trackBank, mode);
+        } catch (final ReflectiveOperationException | IllegalArgumentException e) {
+            host.errorln("Unable to set Akai Fire Perform track-bank flattening mode: " + e.getMessage());
+        }
     }
 
     private static int clamp(final int value, final int min, final int max) {
