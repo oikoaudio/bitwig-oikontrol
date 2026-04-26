@@ -14,6 +14,10 @@ final class PerformLayout {
         return new PerformLayout(Orientation.VERTICAL);
     }
 
+    static PerformLayout horizontal() {
+        return new PerformLayout(Orientation.HORIZONTAL);
+    }
+
     PerformLayout toggle() {
         return new PerformLayout(orientation == Orientation.VERTICAL ? Orientation.HORIZONTAL : Orientation.VERTICAL);
     }

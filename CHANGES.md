@@ -2,6 +2,13 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## 2.9.0 - Perform scene launch page and Rec+pad recordin
+- New Perform scene launch page (toggle on Perform)
+- REC + pad recording
+- ALT + PERFORM toggles horizontal/vertical clip launch pad view
+- Renamed the controller display name (Fire Oikontrol) to fit in better with other controllers
+- Distribute a single bwextension built from the two modules. If you want the individual controller extension those can still be built from source using the just-commands
+
 ## 2.8.0 - Fugue mode and generative workflow polish
 - Added Akai Fire `Fugue` step mode. It uses MIDI channel 1 as a template melodic line and generates derived new lines to channels 2-4 in the same clip, using Bach-type operations (transpose/reverse/move etc).
 - Added `REC + pad` in Akai Fire `PERFORM` mode to target recording directly into a visible launcher slot using the configured default clip length.
