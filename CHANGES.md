@@ -2,6 +2,13 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.10.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.9.0...oikontrol-v2.10.0) (2026-04-26)
+
+
+### Features
+
+* add controller navigation and clip recording controls ([#31](https://github.com/oikoaudio/bitwig-oikontrol/issues/31)) ([b15ffc6](https://github.com/oikoaudio/bitwig-oikontrol/commit/b15ffc6f19c39195d537c0c7fb5ef4495a8f888e))
+
 ## 2.9.0 - Perform scene launch page and Rec+pad recordin
 - New Perform scene launch page (toggle on Perform)
 - REC + pad recording
