@@ -183,6 +183,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
 
       mTrackBank = mHost.createMainTrackBank(8, 3, 0);
+      setTrackBankFlatteningMode(mTrackBank, "FLATTEN");
       mTrackBank.followCursorTrack(mCursorTrack);
       mTrackBank.canScrollBackwards().markInterested();
       mTrackBank.canScrollForwards().markInterested();
@@ -1767,6 +1768,24 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       if (DEBUG_TELEMETRY && sHostActions != null)
       {
          sHostActions.debug(message);
+      }
+   }
+
+   private void setTrackBankFlatteningMode(final TrackBank trackBank, final String modeName)
+   {
+      if (mHost.getHostApiVersion() < 25)
+         return;
+
+      try
+      {
+         final Class<?> modeClass = Class.forName("com.bitwig.extension.controller.api.TrackBankFlatteningMode");
+         @SuppressWarnings({"unchecked", "rawtypes"})
+         final Object mode = Enum.valueOf((Class<Enum>) modeClass.asSubclass(Enum.class), modeName);
+         trackBank.getClass().getMethod("setFlatteningMode", modeClass).invoke(trackBank, mode);
+      }
+      catch (final ReflectiveOperationException | IllegalArgumentException e)
+      {
+         mHost.errorln("Unable to set Launch Control XL track-bank flattening mode: " + e.getMessage());
       }
    }
 }
