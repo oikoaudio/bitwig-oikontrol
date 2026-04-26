@@ -62,7 +62,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
+    private Application application;
     private Transport transport;
+    private Arranger arranger;
+    private DetailEditor detailEditor;
     private MidiIn midiIn;
     private MidiOut midiOut;
     private Layers layers;
@@ -135,6 +138,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int drumTrackIndexBeforeAutoPin = -1;
     private boolean mainEncoderPressed = false;
     private boolean mainEncoderTurnedWhilePressed = false;
+    private boolean patternPressed = false;
+    private boolean patternGestureConsumed = false;
+    private boolean patternPressShiftHeld = false;
+    private boolean patternPressAltHeld = false;
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private boolean globalSettingsOverlayActive = false;
@@ -198,6 +205,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         focusedParameter.name().markInterested();
         focusedParameter.displayedValue().markInterested();
         focusedParameter.value().markInterested();
+        application = host.createApplication();
+        arranger = host.createArranger();
+        detailEditor = host.createDetailEditor();
         groove = host.createGroove();
         groove.getEnabled().name().markInterested();
         groove.getEnabled().displayedValue().markInterested();
@@ -436,6 +446,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void setUpTransportControl() {
         transport.isPlaying().markInterested();
+        transport.getPosition().markInterested();
         transport.timeSignature().markInterested();
         transport.timeSignature().numerator().markInterested();
         transport.timeSignature().denominator().markInterested();
@@ -703,16 +714,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void handlePatternPressed(final boolean pressed) {
-        if (!pressed) {
+        patternPressed = pressed;
+        if (pressed) {
+            patternGestureConsumed = false;
+            patternPressShiftHeld = getButton(NoteAssign.SHIFT).isPressed();
+            patternPressAltHeld = isGlobalAltHeld();
             return;
         }
-        if (getButton(NoteAssign.SHIFT).isPressed()) {
+        if (patternGestureConsumed) {
+            patternGestureConsumed = false;
+            return;
+        }
+        if (patternPressShiftHeld) {
             final boolean nextState = !transport.isMetronomeEnabled().get();
             transport.isMetronomeEnabled().toggle();
             notifyAction("Metronome", nextState ? "On" : "Off");
             return;
         }
-        if (isGlobalAltHeld()) {
+        if (patternPressAltHeld) {
             final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
             transport.isClipLauncherOverdubEnabled().toggle();
             notifyAction("Launcher Overdub", nextState ? "On" : "Off");
@@ -1145,7 +1164,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public String getMainEncoderRolePreference() {
-        return FireControlPreferences.normalizeMainEncoderRole(currentMainEncoderRole);
+        return resolveMainEncoderRoleForActiveMode(currentMainEncoderRole);
     }
 
     private void applyMainEncoderStartupPreference(final String preferenceValue) {
@@ -1159,7 +1178,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final String cycleSource = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(getMainEncoderRolePreference())
                 ? alternateMainEncoderRole
                 : getMainEncoderRolePreference();
-        final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(cycleSource);
+        final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(cycleSource, isDrumGridRoleAvailable());
         currentMainEncoderRole = nextRole;
         alternateMainEncoderRole = nextRole;
         notifyAction("Encoder Role", nextRole);
@@ -1168,7 +1187,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public String toggleMainEncoderRolePreference() {
         final String normalizedCurrentRole = getMainEncoderRolePreference();
-        final String normalizedAlternateRole = FireControlPreferences.normalizeMainEncoderRole(alternateMainEncoderRole);
+        final String normalizedAlternateRole = resolveMainEncoderRoleForActiveMode(alternateMainEncoderRole);
         final String nextRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(normalizedCurrentRole)
                 ? (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(normalizedAlternateRole)
                 ? FireControlPreferences.MAIN_ENCODER_TRACK_SELECT
@@ -1177,6 +1196,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         currentMainEncoderRole = nextRole;
         notifyAction("Encoder Role", nextRole);
         return nextRole;
+    }
+
+    private boolean isDrumGridRoleAvailable() {
+        return modeState.activeMode() == Mode.DRUM;
+    }
+
+    private String resolveMainEncoderRoleForActiveMode(final String role) {
+        final String normalizedRole = FireControlPreferences.normalizeMainEncoderRole(role);
+        if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(normalizedRole) && !isDrumGridRoleAvailable()) {
+            return FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
+        }
+        return normalizedRole;
     }
 
     public boolean isStepSeqPadAuditionEnabled() {
@@ -1630,6 +1661,65 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean wasMainEncoderTurnedWhilePressed() {
         return mainEncoderTurnedWhilePressed;
+    }
+
+    public boolean handleMainEncoderGlobalChord(final int inc) {
+        if (inc == 0 || isPopupBrowserActive()) {
+            return false;
+        }
+        if (patternPressed) {
+            patternGestureConsumed = true;
+            adjustTransportPositionByGrid(inc, isGlobalShiftHeld());
+            return true;
+        }
+        if (isGlobalAltHeld()) {
+            if (isGlobalShiftHeld()) {
+                zoomTimelineVertically(inc);
+            } else {
+                zoomTimelineHorizontally(inc);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void adjustTransportPositionByGrid(final int inc, final boolean fine) {
+        if (transport == null) {
+            return;
+        }
+        final double beatStep = fine ? 0.25 : Math.max(0.125, 4.0 / Math.max(1, transportTimeSignatureDenominator));
+        transport.getPosition().inc(inc * beatStep);
+        oled.valueInfo("Play Position", transport.getPosition().getFormatted());
+    }
+
+    private void zoomTimelineHorizontally(final int inc) {
+        if (application == null) {
+            return;
+        }
+        for (int i = 0; i < Math.abs(inc); i++) {
+            if (inc > 0) {
+                application.zoomIn();
+            } else {
+                application.zoomOut();
+            }
+        }
+        oled.valueInfo("Timeline Zoom", inc > 0 ? "In" : "Out");
+    }
+
+    private void zoomTimelineVertically(final int inc) {
+        if (arranger == null || detailEditor == null) {
+            return;
+        }
+        for (int i = 0; i < Math.abs(inc); i++) {
+            if (inc > 0) {
+                arranger.zoomInLaneHeightsSelected();
+                detailEditor.zoomInLaneHeights();
+            } else {
+                arranger.zoomOutLaneHeightsSelected();
+                detailEditor.zoomOutLaneHeights();
+            }
+        }
+        oled.valueInfo("Lane Zoom", inc > 0 ? "In" : "Out");
     }
 
     public void adjustSelectedTrack(final int inc, final boolean pageStep) {

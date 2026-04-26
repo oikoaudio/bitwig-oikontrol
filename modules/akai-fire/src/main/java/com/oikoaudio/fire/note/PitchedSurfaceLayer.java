@@ -2423,6 +2423,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         driver.markMainEncoderTurned();
+        if (driver.handleMainEncoderGlobalChord(inc)) {
+            return;
+        }
         if (!noteStepActive && noteRepeatHandler.getNoteRepeatActive().get()) {
             // While transient live note repeat is active, keep SELECT dedicated to repeat-rate edits.
             // Turning through the minimum rate should not drop straight into the underlying encoder role.

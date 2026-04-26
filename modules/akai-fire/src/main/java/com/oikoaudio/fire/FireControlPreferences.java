@@ -193,6 +193,10 @@ public final class FireControlPreferences {
     }
 
     public static String nextAlternateMainEncoderRole(final String currentRole) {
+        return nextAlternateMainEncoderRole(currentRole, true);
+    }
+
+    public static String nextAlternateMainEncoderRole(final String currentRole, final boolean includeDrumGrid) {
         final String normalizedRole = normalizeMainEncoderRole(currentRole);
         if (MAIN_ENCODER_SHUFFLE.equals(normalizedRole)) {
             return MAIN_ENCODER_TEMPO;
@@ -204,7 +208,7 @@ public final class FireControlPreferences {
             return MAIN_ENCODER_TRACK_SELECT;
         }
         if (MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)) {
-            return MAIN_ENCODER_DRUM_GRID;
+            return includeDrumGrid ? MAIN_ENCODER_DRUM_GRID : MAIN_ENCODER_SHUFFLE;
         }
         return MAIN_ENCODER_SHUFFLE;
     }

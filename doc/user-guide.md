@@ -143,6 +143,15 @@ When the popup browser is open, `SELECT` turn moves through results, `SELECT` pr
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
 Press `ALT + SELECT` to open or close the selected device window.
 
+Global `SELECT` turn chords:
+
+| Control | Action |
+| --- | --- |
+| Hold `PATTERN` + turn `SELECT` | Move the play position by the current meter's beat unit |
+| Hold `SHIFT + PATTERN` + turn `SELECT` | Move the play position by fine 1/16-beat steps |
+| Hold `ALT` + turn `SELECT` | Zoom the arranger/detail timeline horizontally |
+| Hold `SHIFT + ALT` + turn `SELECT` | Zoom arranger/detail lanes vertically |
+
 | Role | Turn | Press / hold behavior |
 | --- | --- | --- |
 | `Last Touched Parameter` | Adjust last touched Bitwig parameter | Reset parameter to default |
@@ -376,7 +385,7 @@ The `Scene Launch` page keeps the same encoder and navigation controls as Perfor
 
 On `Scene Launch`, `BANK LEFT/RIGHT` also scrolls the visible scene window, with `SHIFT + BANK LEFT/RIGHT` scrolling by one scene.
 
-On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page. Hold `ALT` and turn `SELECT` to change the remote page for the active remote encoder page: project remotes on `Channel`, track remotes on `User 1`, and device remotes on `User 2`. This applies in both vertical and horizontal perform layouts.
+On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page.
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |

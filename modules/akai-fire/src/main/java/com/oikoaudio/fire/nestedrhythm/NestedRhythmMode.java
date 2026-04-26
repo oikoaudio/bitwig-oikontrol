@@ -455,6 +455,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return;
         }
         driver.markMainEncoderTurned();
+        if (driver.handleMainEncoderGlobalChord(inc)) {
+            return;
+        }
         final boolean fine = driver.isGlobalShiftHeld();
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {

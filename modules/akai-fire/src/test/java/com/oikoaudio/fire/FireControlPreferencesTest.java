@@ -59,6 +59,16 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void skipsDrumGridWhenCyclingAlternateMainEncoderRolesOutsideDrumMode() {
+        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+                FireControlPreferences.nextAlternateMainEncoderRole(
+                        FireControlPreferences.MAIN_ENCODER_TRACK_SELECT, false));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+                FireControlPreferences.nextAlternateMainEncoderRole(
+                        FireControlPreferences.MAIN_ENCODER_DRUM_GRID, false));
+    }
+
+    @Test
     void normalizesMainEncoderStartupStatePreferenceValues() {
         assertEquals(FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED,
                 FireControlPreferences.normalizeMainEncoderStartupState(

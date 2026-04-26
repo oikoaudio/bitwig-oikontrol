@@ -599,6 +599,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         driver.markMainEncoderTurned();
+        if (driver.handleMainEncoderGlobalChord(inc)) {
+            return;
+        }
         final String mainEncoderRole = getEffectiveMainEncoderRole();
         final boolean fine = isShiftHeld();
         if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {

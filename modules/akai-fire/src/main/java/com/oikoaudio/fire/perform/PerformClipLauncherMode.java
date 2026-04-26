@@ -766,6 +766,9 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         driver.markMainEncoderTurned();
+        if (driver.handleMainEncoderGlobalChord(inc)) {
+            return;
+        }
         if (isAltHeld()) {
             handleRemotePageNavigation(inc);
             return;
