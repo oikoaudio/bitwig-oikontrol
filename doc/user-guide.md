@@ -132,16 +132,38 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub |
 | `BROWSER` | Open or close Bitwig popup browser |
-| `SHIFT + BROWSER` | Hold global pitch settings overlay |
+| `SHIFT + BROWSER` | Hold global settings overlay |
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
 When the popup browser is open, `SELECT` turn moves through results, `SELECT` press commits the selected result, and `BROWSER` closes the browser.
 
+### Global settings overlay
+
+Hold `SHIFT + BROWSER` to edit shared settings from the four encoders.
+
+| Encoder | Setting |
+| --- | --- |
+| `Channel` | Shared root key |
+| `Mixer` | Shared scale |
+| `User 1` | Shared octave |
+| `User 2` | `ClipRecLen`: launcher recording length |
+
+The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad while holding `SHIFT + BROWSER` to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
+
 ### Main SELECT encoder
 
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
 Press `ALT + SELECT` to open or close the selected device window.
+
+Global `SELECT` turn chords:
+
+| Control | Action |
+| --- | --- |
+| Hold `PATTERN` + turn `SELECT` | Move the play position by the current meter's beat unit |
+| Hold `SHIFT + PATTERN` + turn `SELECT` | Move the play position by fine 1/16-beat steps |
+| Hold `ALT` + turn `SELECT` | Zoom the arranger/detail timeline horizontally |
+| Hold `SHIFT + ALT` + turn `SELECT` | Zoom arranger/detail lanes vertically |
 
 | Role | Turn | Press / hold behavior |
 | --- | --- | --- |
@@ -351,6 +373,8 @@ For immediate derived-line feedback, change source expression from the controlle
 
 `PERFORM` is the 16x4 clip-launch and performance surface. Filled slots select and launch. Empty slots create a new clip using `Default Clip Length`, then launch.
 
+`Perform Clip Launcher Layout` chooses whether the mode starts as `PerformV` or `PerformH`. `ALT + PERFORM` still toggles the layout for the current session.
+
 | Control | Action |
 | --- | --- |
 | `REC` + pad | Record into the targeted launcher slot using `Default Clip Length` |
@@ -370,13 +394,13 @@ For immediate derived-line feedback, change source expression from the controlle
 
 Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
 
-Hold `REC` and press a pad to target recording directly into that visible slot. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+Hold `REC` and press a pad to target recording directly into that visible slot. For fixed `Default Clip Length` values, the script sets Bitwig's clip launcher post-record action to play the recorded clip after that length. If `Default Clip Length` is set to `Off`, recording continues until manually stopped without post-processing. If it is set to `Round`, recording continues until manually stopped, then the recorded clip loop length is rounded to the nearest whole bar. Press `REC` again to end an `Off` or `Round` launcher recording and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 
 On `Scene Launch`, `BANK LEFT/RIGHT` also scrolls the visible scene window, with `SHIFT + BANK LEFT/RIGHT` scrolling by one scene.
 
-On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page. Hold `ALT` and turn `SELECT` to change the remote page for the active remote encoder page: project remotes on `Channel`, track remotes on `User 1`, and device remotes on `User 2`. This applies in both vertical and horizontal perform layouts.
+On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page.
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
@@ -397,6 +421,7 @@ On remote encoder pages, hold `ALT` while turning an encoder to control remotes 
 
 - `Clip Launch Mode`
 - `Clip Launch Quantization`
+- `Perform Clip Launcher Layout`
 - `Default Clip Length`
 - `SELECT Encoder Startup`
 - `Default Root Key`

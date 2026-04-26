@@ -10,12 +10,15 @@ public final class DrumSettings
 {
    private final SettableBooleanValue auditionOnSelect;
    private final SettableBooleanValue accentMomentary;
+   private final SettableBooleanValue showDeactivatedTracks;
 
    private DrumSettings(final SettableBooleanValue auditionOnSelect,
-                        final SettableBooleanValue accentMomentary)
+                        final SettableBooleanValue accentMomentary,
+                        final SettableBooleanValue showDeactivatedTracks)
    {
       this.auditionOnSelect = auditionOnSelect;
       this.accentMomentary = accentMomentary;
+      this.showDeactivatedTracks = showDeactivatedTracks;
    }
 
    public static DrumSettings from(final ControllerHost host)
@@ -29,7 +32,12 @@ public final class DrumSettings
          "Drum accent buttons momentary",
          category,
          true);
-      return new DrumSettings(auditionOnSelect, accentMomentary);
+      final SettableBooleanValue showDeactivatedTracks = host.getPreferences().getBooleanSetting(
+         "Show deactivated tracks",
+         category,
+         false);
+      showDeactivatedTracks.markInterested();
+      return new DrumSettings(auditionOnSelect, accentMomentary, showDeactivatedTracks);
    }
 
    public SettableBooleanValue auditionOnSelect()
@@ -42,6 +50,11 @@ public final class DrumSettings
       return accentMomentary;
    }
 
+   public SettableBooleanValue showDeactivatedTracks()
+   {
+      return showDeactivatedTracks;
+   }
+
    public boolean auditionOnSelectEnabled()
    {
       return auditionOnSelect.get();
@@ -50,5 +63,10 @@ public final class DrumSettings
    public boolean accentMomentaryEnabled()
    {
       return accentMomentary.get();
+   }
+
+   public boolean showDeactivatedTracksEnabled()
+   {
+      return showDeactivatedTracks.get();
    }
 }

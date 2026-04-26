@@ -16,6 +16,7 @@ import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -113,7 +114,12 @@ public class PerformClipLauncherMode extends Layer {
     private int selectedSceneIndex = -1;
     private int selectedSceneActionIndex = -1;
     private int pendingSceneLaunchIndex = -1;
+    private int manualRecordingTrackIndex = -1;
+    private int manualRecordingSceneIndex = -1;
     private boolean mainEncoderPressConsumed = false;
+    private boolean manualRecordingPending = false;
+    private boolean manualRecordingWasRecording = false;
+    private boolean manualRecordingShouldRound = false;
     private boolean trackActionMode = false;
     private boolean sceneActionMode = false;
     private PerformLayout layout = PerformLayout.vertical();
@@ -122,6 +128,9 @@ public class PerformClipLauncherMode extends Layer {
         super(driver.getLayers(), "PERFORM_CLIP_LAUNCHER");
         this.driver = driver;
         this.sharedMusicalContext = driver.getSharedMusicalContext();
+        this.layout = FireControlPreferences.PERFORM_LAYOUT_HORIZONTAL.equals(driver.getPerformClipLauncherLayoutPreference())
+                ? PerformLayout.horizontal()
+                : PerformLayout.vertical();
         final ControllerHost host = driver.getHost();
         this.oled = driver.getOled();
         this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES);
@@ -181,6 +190,7 @@ public class PerformClipLauncherMode extends Layer {
             track.arm().markInterested();
             track.mute().markInterested();
             track.solo().markInterested();
+            track.isActivated().markInterested();
             track.isStopped().markInterested();
             track.isQueuedForStop().markInterested();
             final int column = trackIndex;
@@ -219,6 +229,7 @@ public class PerformClipLauncherMode extends Layer {
                         selectedSceneIndex = trackBank.sceneBank().scrollPosition().get() + row;
                     }
                 });
+                slot.isRecording().addValueObserver(recording -> handleSlotRecordingChanged(column, row, recording));
                 slotColors[slotIndex] = ColorLookup.getColor(slot.color().get());
             }
         }
@@ -496,7 +507,10 @@ public class PerformClipLauncherMode extends Layer {
                 || visibleSceneIndex >= visibleSceneCount()) {
             return;
         }
-        final Track track = trackBank.getItemAt(visibleTrackIndex);
+        final Track track = trackForVisibleTrack(visibleTrackIndex);
+        if (track == null) {
+            return;
+        }
         final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
         handleSlotPressed(track, slot, visibleTrackIndex, visibleSceneIndex, pressed);
     }
@@ -510,11 +524,12 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
-        final Track track = trackBank.getItemAt(visibleTrackIndex);
-        if (track == null || !track.exists().get()) {
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        final Track track = sourceTrackIndex >= 0 ? trackBank.getItemAt(sourceTrackIndex) : null;
+        if (track == null) {
             return;
         }
-        final int absoluteTrackIndex = trackBank.scrollPosition().get() + visibleTrackIndex;
+        final int absoluteTrackIndex = trackBank.scrollPosition().get() + sourceTrackIndex;
         final String trackLabel = trackLabel(absoluteTrackIndex, visibleTrackIndex);
         track.selectInMixer();
         switch (actionRow) {
@@ -599,7 +614,11 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        final int absoluteTrackIndex = trackBank.scrollPosition().get() + visibleTrackIndex;
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        if (sourceTrackIndex < 0) {
+            return;
+        }
+        final int absoluteTrackIndex = trackBank.scrollPosition().get() + sourceTrackIndex;
         final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
         final boolean hasContent = slot.hasContent().get();
 
@@ -638,6 +657,12 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
+        if (slot.isRecording().get()) {
+            slot.launch();
+            oled.valueInfo("Clip Record", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+            return;
+        }
+
         if (hasContent) {
             slot.launch();
             oled.valueInfo("Launch Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
@@ -654,9 +679,98 @@ public class PerformClipLauncherMode extends Layer {
         driver.consumePerformRecordPadGesture();
         track.selectInMixer();
         slot.select();
-        driver.prepareFixedLengthLauncherRecording();
+        if (driver.shouldDisableLauncherPostRecordingAction() || driver.shouldRoundLauncherRecordingToNearestBar()) {
+            armManualRecording(absoluteTrackIndex, absoluteSceneIndex, driver.shouldRoundLauncherRecordingToNearestBar());
+        }
+        driver.prepareLauncherRecording();
         slot.record();
         oled.valueInfo("Record Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+    }
+
+    private void armManualRecording(final int absoluteTrackIndex, final int absoluteSceneIndex, final boolean shouldRound) {
+        manualRecordingPending = true;
+        manualRecordingWasRecording = false;
+        manualRecordingShouldRound = shouldRound;
+        manualRecordingTrackIndex = absoluteTrackIndex;
+        manualRecordingSceneIndex = absoluteSceneIndex;
+    }
+
+    public boolean stopManualLauncherRecordingIfAny() {
+        if (!manualRecordingPending) {
+            return false;
+        }
+        final int visibleTrackIndex = visibleTrackIndexForSourceTrack(manualRecordingTrackIndex - trackBank.scrollPosition().get());
+        final int visibleSceneIndex = manualRecordingSceneIndex - trackBank.sceneBank().scrollPosition().get();
+        if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()
+                || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
+            oled.valueInfo("Clip Record", "Target off page");
+            return true;
+        }
+        final Track track = trackForVisibleTrack(visibleTrackIndex);
+        if (track == null) {
+            oled.valueInfo("Clip Record", "Target off page");
+            return true;
+        }
+        final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
+        track.selectInMixer();
+        slot.select();
+        slot.launch();
+        oled.valueInfo("Clip Record", slotLabel(manualRecordingTrackIndex, manualRecordingSceneIndex));
+        return true;
+    }
+
+    private void handleSlotRecordingChanged(final int visibleTrackIndex, final int visibleSceneIndex,
+                                            final boolean recording) {
+        if (!manualRecordingPending) {
+            return;
+        }
+        final int absoluteTrackIndex = trackBank.scrollPosition().get() + visibleTrackIndex;
+        final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
+        if (absoluteTrackIndex != manualRecordingTrackIndex || absoluteSceneIndex != manualRecordingSceneIndex) {
+            return;
+        }
+        if (recording) {
+            manualRecordingWasRecording = true;
+            return;
+        }
+        if (!manualRecordingWasRecording) {
+            return;
+        }
+
+        manualRecordingPending = false;
+        manualRecordingWasRecording = false;
+        if (manualRecordingShouldRound) {
+            roundRecordedClipLength(absoluteTrackIndex, absoluteSceneIndex);
+        }
+    }
+
+    private void roundRecordedClipLength(final int absoluteTrackIndex, final int absoluteSceneIndex) {
+        driver.getHost().scheduleTask(() -> {
+            final int visibleTrackIndex = visibleTrackIndexForSourceTrack(absoluteTrackIndex - trackBank.scrollPosition().get());
+            final int visibleSceneIndex = absoluteSceneIndex - trackBank.sceneBank().scrollPosition().get();
+            if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()
+                    || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
+                oled.valueInfo("Round Clip", "Target off page");
+                return;
+            }
+            final Track track = trackForVisibleTrack(visibleTrackIndex);
+            if (track == null) {
+                oled.valueInfo("Round Clip", "Target off page");
+                return;
+            }
+            final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
+            track.selectInMixer();
+            slot.select();
+            driver.getHost().scheduleTask(() -> {
+                final double currentLength = performCursorClip.getLoopLength().get();
+                final double roundedLength = roundToNearestBar(
+                        currentLength,
+                        driver.getTransportTimeSignatureNumerator(),
+                        driver.getTransportTimeSignatureDenominator());
+                performCursorClip.getLoopLength().set(roundedLength);
+                oled.valueInfo("Round Clip", formatBars(roundedLength));
+            }, 1);
+        }, 50);
     }
 
     private void handleDuplicatePressed(final boolean pressed) {
@@ -674,7 +788,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        final int visibleTrackIndex = selectedTrackIndex - trackBank.scrollPosition().get();
+        final int visibleTrackIndex = visibleTrackIndexForSourceTrack(selectedTrackIndex - trackBank.scrollPosition().get());
         final int visibleSceneIndex = selectedSceneIndex - trackBank.sceneBank().scrollPosition().get();
         if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()
                 || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
@@ -682,7 +796,11 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        final Track track = trackBank.getItemAt(visibleTrackIndex);
+        final Track track = trackForVisibleTrack(visibleTrackIndex);
+        if (track == null) {
+            oled.valueInfo("Duplicate Clip", "Selected clip off page");
+            return;
+        }
         track.selectInMixer();
         slot.select();
         driver.getHost().scheduleTask(() -> {
@@ -766,6 +884,9 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         driver.markMainEncoderTurned();
+        if (driver.handleMainEncoderGlobalChord(inc)) {
+            return;
+        }
         if (isAltHeld()) {
             handleRemotePageNavigation(inc);
             return;
@@ -1057,6 +1178,16 @@ public class PerformClipLauncherMode extends Layer {
         return (altHeld ? 4 : 0) + encoderIndex;
     }
 
+    static double roundToNearestBar(final double beatLength, final int meterNumerator, final int meterDenominator) {
+        final int numerator = Math.max(1, meterNumerator);
+        final int denominator = Math.max(1, meterDenominator);
+        final double barLength = numerator * (4.0 / denominator);
+        if (Double.isNaN(beatLength) || Double.isInfinite(beatLength) || beatLength <= 0) {
+            return barLength;
+        }
+        return Math.max(barLength, Math.round(beatLength / barLength) * barLength);
+    }
+
     static int remotePageIndexAfterTurn(final int currentPage, final int pageCount, final int inc) {
         if (pageCount <= 0) {
             return currentPage;
@@ -1111,13 +1242,14 @@ public class PerformClipLauncherMode extends Layer {
         }
         final int trackOffset = trackBank.scrollPosition().get();
         final int sceneOffset = trackBank.sceneBank().scrollPosition().get();
-        final int visibleTrackIndex = selectedTrackIndex - trackOffset;
+        final int visibleTrackIndex = visibleTrackIndexForSourceTrack(selectedTrackIndex - trackOffset);
         final int visibleSceneIndex = selectedSceneIndex - sceneOffset;
         if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()
                 || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
             return null;
         }
-        return trackBank.getItemAt(visibleTrackIndex).clipLauncherSlotBank().getItemAt(visibleSceneIndex);
+        final Track track = trackForVisibleTrack(visibleTrackIndex);
+        return track != null ? track.clipLauncherSlotBank().getItemAt(visibleSceneIndex) : null;
     }
 
     private int resolveSceneCopySource() {
@@ -1142,7 +1274,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean sceneHasPlayingClip(final int visibleSceneIndex) {
         for (int trackIndex = 0; trackIndex < MAX_TRACKS; trackIndex++) {
             final Track track = trackBank.getItemAt(trackIndex);
-            if (track.exists().get() && track.clipLauncherSlotBank().getItemAt(visibleSceneIndex).isPlaying().get()) {
+            if (isControllableTrack(track) && track.clipLauncherSlotBank().getItemAt(visibleSceneIndex).isPlaying().get()) {
                 return true;
             }
         }
@@ -1152,7 +1284,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean sceneHasRecordingClip(final int visibleSceneIndex) {
         for (int trackIndex = 0; trackIndex < MAX_TRACKS; trackIndex++) {
             final Track track = trackBank.getItemAt(trackIndex);
-            if (track.exists().get() && track.clipLauncherSlotBank().getItemAt(visibleSceneIndex).isRecording().get()) {
+            if (isControllableTrack(track) && track.clipLauncherSlotBank().getItemAt(visibleSceneIndex).isRecording().get()) {
                 return true;
             }
         }
@@ -1211,7 +1343,11 @@ public class PerformClipLauncherMode extends Layer {
                 || visibleSceneIndex >= visibleSceneCount()) {
             return RgbLigthState.OFF;
         }
-        final ClipLauncherSlot slot = trackBank.getItemAt(visibleTrackIndex).clipLauncherSlotBank().getItemAt(visibleSceneIndex);
+        final Track track = trackForVisibleTrack(visibleTrackIndex);
+        if (track == null) {
+            return RgbLigthState.OFF;
+        }
+        final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
         return getSlotState(slot, visibleTrackIndex, visibleSceneIndex);
     }
 
@@ -1255,9 +1391,11 @@ public class PerformClipLauncherMode extends Layer {
             return slot.isSelected().get() ? RgbLigthState.GRAY_2 : RgbLigthState.GRAY_1;
         }
 
-        final RgbLigthState baseColor = slotColors[toSlotIndex(visibleTrackIndex, visibleSceneIndex)] == null
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        final int slotColorIndex = sourceTrackIndex >= 0 ? toSlotIndex(sourceTrackIndex, visibleSceneIndex) : -1;
+        final RgbLigthState baseColor = slotColorIndex < 0 || slotColors[slotColorIndex] == null
                 ? RgbLigthState.WHITE
-                : slotColors[toSlotIndex(visibleTrackIndex, visibleSceneIndex)];
+                : slotColors[slotColorIndex];
         if (slot.isRecording().get()) {
             return blinkFast(baseColor.getBrightest(), baseColor);
         }
@@ -1287,8 +1425,8 @@ public class PerformClipLauncherMode extends Layer {
             return RgbLigthState.OFF;
         }
         final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
-        final Track track = trackBank.getItemAt(visibleTrackIndex);
-        if (track == null || !track.exists().get()) {
+        final Track track = trackForVisibleTrack(visibleTrackIndex);
+        if (track == null) {
             return RgbLigthState.OFF;
         }
         final RgbLigthState baseColor = actionRow.color;
@@ -1308,9 +1446,8 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean isVisibleTrackSelected(final int visibleTrackIndex) {
-        return visibleTrackIndex >= 0
-                && visibleTrackIndex < selectedVisibleTracks.length
-                && selectedVisibleTracks[visibleTrackIndex];
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        return sourceTrackIndex >= 0 && selectedVisibleTracks[sourceTrackIndex];
     }
 
     private RgbLigthState settingsLogoState(final int padIndex) {
@@ -1331,10 +1468,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private String slotLabel(final int absoluteTrackIndex, final int absoluteSceneIndex) {
-        final int visibleTrackIndex = absoluteTrackIndex - trackBank.scrollPosition().get();
+        final int visibleTrackIndex = visibleTrackIndexForSourceTrack(absoluteTrackIndex - trackBank.scrollPosition().get());
         final int visibleSceneIndex = absoluteSceneIndex - trackBank.sceneBank().scrollPosition().get();
-        final String trackName = visibleTrackIndex >= 0 && visibleTrackIndex < MAX_TRACKS
-                ? nameOrFallback(trackNames[visibleTrackIndex], "Track " + (absoluteTrackIndex + 1))
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        final String trackName = sourceTrackIndex >= 0
+                ? nameOrFallback(trackNames[sourceTrackIndex], "Track " + (absoluteTrackIndex + 1))
                 : "Track " + (absoluteTrackIndex + 1);
         final String sceneName = visibleSceneIndex >= 0 && visibleSceneIndex < MAX_SCENES
                 ? nameOrFallback(sceneNames[visibleSceneIndex], "Scene " + (absoluteSceneIndex + 1))
@@ -1356,8 +1494,9 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private String trackLabel(final int absoluteTrackIndex, final int visibleTrackIndex) {
-        return visibleTrackIndex >= 0 && visibleTrackIndex < MAX_TRACKS
-                ? nameOrFallback(trackNames[visibleTrackIndex], "Track " + (absoluteTrackIndex + 1))
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        return sourceTrackIndex >= 0
+                ? nameOrFallback(trackNames[sourceTrackIndex], "Track " + (absoluteTrackIndex + 1))
                 : "Track " + (absoluteTrackIndex + 1);
     }
 
@@ -1401,6 +1540,49 @@ public class PerformClipLauncherMode extends Layer {
 
     private int toSlotIndex(final int trackIndex, final int sceneIndex) {
         return sceneIndex * MAX_TRACKS + trackIndex;
+    }
+
+    private Track trackForVisibleTrack(final int visibleTrackIndex) {
+        final int sourceTrackIndex = sourceTrackIndexForVisibleTrack(visibleTrackIndex);
+        return sourceTrackIndex >= 0 ? trackBank.getItemAt(sourceTrackIndex) : null;
+    }
+
+    private int sourceTrackIndexForVisibleTrack(final int visibleTrackIndex) {
+        if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()) {
+            return -1;
+        }
+        int visible = 0;
+        for (int sourceTrackIndex = 0; sourceTrackIndex < MAX_TRACKS; sourceTrackIndex++) {
+            final Track track = trackBank.getItemAt(sourceTrackIndex);
+            if (isControllableTrack(track)) {
+                if (visible == visibleTrackIndex) {
+                    return sourceTrackIndex;
+                }
+                visible++;
+            }
+        }
+        return -1;
+    }
+
+    private int visibleTrackIndexForSourceTrack(final int sourceTrackIndex) {
+        if (sourceTrackIndex < 0 || sourceTrackIndex >= MAX_TRACKS) {
+            return -1;
+        }
+        int visible = 0;
+        for (int candidate = 0; candidate < MAX_TRACKS; candidate++) {
+            final Track track = trackBank.getItemAt(candidate);
+            if (isControllableTrack(track)) {
+                if (candidate == sourceTrackIndex) {
+                    return visible;
+                }
+                visible++;
+            }
+        }
+        return -1;
+    }
+
+    private boolean isControllableTrack(final Track track) {
+        return track != null && track.exists().get() && (driver.showDeactivatedTracks() || track.isActivated().get());
     }
 
     private static int clamp(final int value, final int min, final int max) {

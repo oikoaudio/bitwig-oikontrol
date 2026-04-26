@@ -202,7 +202,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private void observingNotes(int x, int y, int state) {
 
 
-        host.println("Observing note: x=" + x + ", y=" + y + ", stat=" + state);
         // Get or create the inner map for step x.
         Map<Integer, Integer> stepNotes = currentNotesInClip.get(x);
         if (stepNotes == null) {
@@ -211,10 +210,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         }
         if (state == State.Empty.ordinal()) {
             stepNotes.remove(y);
-            host.println("Removed note at x=" + x + ", y=" + y);
         } else {
             stepNotes.put(y, state);
-            host.println("Stored note at x=" + x + ", y=" + y + ", stat=" + state);
         }
     }
 
@@ -599,6 +596,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         driver.markMainEncoderTurned();
+        if (driver.handleMainEncoderGlobalChord(inc)) {
+            return;
+        }
         final String mainEncoderRole = getEffectiveMainEncoderRole();
         final boolean fine = isShiftHeld();
         if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {

@@ -6,6 +6,7 @@ public final class FireControlPreferences {
     public static final String CATEGORY_PINNING = "Pinning";
     public static final String CATEGORY_HARDWARE = "Hardware";
     public static final String CATEGORY_GENERATIVE_CONTROL = "Generative control";
+    public static final boolean SHOW_DEACTIVATED_TRACKS_DEFAULT = false;
 
     public static final double PAD_BRIGHTNESS_MIN = 20.0;
     public static final double PAD_BRIGHTNESS_MAX = 100.0;
@@ -50,10 +51,23 @@ public final class FireControlPreferences {
     public static final String CLIP_LENGTH_1_BAR = "1 bar";
     public static final String CLIP_LENGTH_2_BARS = "2 bars";
     public static final String CLIP_LENGTH_4_BARS = "4 bars";
+    public static final String CLIP_LENGTH_8_BARS = "8 bars";
+    public static final String CLIP_LENGTH_OFF = "Off";
+    public static final String CLIP_LENGTH_ROUND_NEAREST_BAR = "Round";
+    private static final String CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY = "Round to nearest bar";
+    public static final String PERFORM_LAYOUT_VERTICAL = "Vertical";
+    public static final String PERFORM_LAYOUT_HORIZONTAL = "Horizontal";
+    public static final String[] PERFORM_LAYOUTS = {
+            PERFORM_LAYOUT_VERTICAL,
+            PERFORM_LAYOUT_HORIZONTAL
+    };
     public static final String[] DEFAULT_CLIP_LENGTHS = {
+            CLIP_LENGTH_OFF,
             CLIP_LENGTH_1_BAR,
             CLIP_LENGTH_2_BARS,
-            CLIP_LENGTH_4_BARS
+            CLIP_LENGTH_4_BARS,
+            CLIP_LENGTH_8_BARS,
+            CLIP_LENGTH_ROUND_NEAREST_BAR
     };
 
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
@@ -193,6 +207,10 @@ public final class FireControlPreferences {
     }
 
     public static String nextAlternateMainEncoderRole(final String currentRole) {
+        return nextAlternateMainEncoderRole(currentRole, true);
+    }
+
+    public static String nextAlternateMainEncoderRole(final String currentRole, final boolean includeDrumGrid) {
         final String normalizedRole = normalizeMainEncoderRole(currentRole);
         if (MAIN_ENCODER_SHUFFLE.equals(normalizedRole)) {
             return MAIN_ENCODER_TEMPO;
@@ -204,7 +222,7 @@ public final class FireControlPreferences {
             return MAIN_ENCODER_TRACK_SELECT;
         }
         if (MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)) {
-            return MAIN_ENCODER_DRUM_GRID;
+            return includeDrumGrid ? MAIN_ENCODER_DRUM_GRID : MAIN_ENCODER_SHUFFLE;
         }
         return MAIN_ENCODER_SHUFFLE;
     }
@@ -315,6 +333,9 @@ public final class FireControlPreferences {
     }
 
     public static String normalizeDefaultClipLength(final String preferenceValue) {
+        if (CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY.equals(preferenceValue)) {
+            return CLIP_LENGTH_ROUND_NEAREST_BAR;
+        }
         for (final String value : DEFAULT_CLIP_LENGTHS) {
             if (value.equals(preferenceValue)) {
                 return value;
@@ -323,12 +344,30 @@ public final class FireControlPreferences {
         return CLIP_LENGTH_2_BARS;
     }
 
+    public static String normalizePerformLayout(final String preferenceValue) {
+        for (final String value : PERFORM_LAYOUTS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return PERFORM_LAYOUT_VERTICAL;
+    }
+
     public static double toClipLengthBeats(final String preferenceValue) {
         return switch (normalizeDefaultClipLength(preferenceValue)) {
             case CLIP_LENGTH_1_BAR -> 4.0;
             case CLIP_LENGTH_4_BARS -> 16.0;
+            case CLIP_LENGTH_8_BARS -> 32.0;
             default -> 8.0;
         };
+    }
+
+    public static boolean isRoundToNearestBarClipLength(final String preferenceValue) {
+        return CLIP_LENGTH_ROUND_NEAREST_BAR.equals(normalizeDefaultClipLength(preferenceValue));
+    }
+
+    public static boolean isOffClipLength(final String preferenceValue) {
+        return CLIP_LENGTH_OFF.equals(normalizeDefaultClipLength(preferenceValue));
     }
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {
