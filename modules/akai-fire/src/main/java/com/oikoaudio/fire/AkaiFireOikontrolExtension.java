@@ -1831,9 +1831,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         final int currentIndex = viewControl.getSelectedTrackIndex();
         final int delta = inc * (pageStep ? 8 : 1);
-        final int targetIndex = Math.max(0, Math.min(trackBank.getSizeOfBank() - 1, currentIndex + delta));
+        final int targetIndex = nextSelectableTrackIndex(trackBank, currentIndex, delta);
+        if (targetIndex < 0) {
+            return;
+        }
         final Track targetTrack = trackBank.getItemAt(targetIndex);
-        if (targetTrack == null || !targetTrack.exists().get()) {
+        if (!isSelectableTrack(targetTrack)) {
             return;
         }
         targetTrack.selectInMixer();
@@ -1841,6 +1844,31 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         cursorTrack.selectChannel(targetTrack);
         final String trackName = targetTrack.name().get();
         showSelectedTrackInfo(pageStep, trackName);
+    }
+
+    private int nextSelectableTrackIndex(final TrackBank trackBank, final int currentIndex, final int delta) {
+        if (delta == 0) {
+            return currentIndex;
+        }
+        final int direction = delta > 0 ? 1 : -1;
+        int remaining = Math.abs(delta);
+        int candidate = currentIndex;
+        while (remaining > 0) {
+            candidate += direction;
+            if (candidate < 0 || candidate >= trackBank.getSizeOfBank()) {
+                return -1;
+            }
+            if (isSelectableTrack(trackBank.getItemAt(candidate))) {
+                remaining--;
+            }
+        }
+        return candidate;
+    }
+
+    private boolean isSelectableTrack(final Track track) {
+        return track != null
+                && track.exists().get()
+                && (showDeactivatedTracks() || track.isActivated().get());
     }
 
     public void showSelectedTrackInfo(final boolean pageStep) {
