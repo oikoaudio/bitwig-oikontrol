@@ -113,7 +113,12 @@ public class PerformClipLauncherMode extends Layer {
     private int selectedSceneIndex = -1;
     private int selectedSceneActionIndex = -1;
     private int pendingSceneLaunchIndex = -1;
+    private int manualRecordingTrackIndex = -1;
+    private int manualRecordingSceneIndex = -1;
     private boolean mainEncoderPressConsumed = false;
+    private boolean manualRecordingPending = false;
+    private boolean manualRecordingWasRecording = false;
+    private boolean manualRecordingShouldRound = false;
     private boolean trackActionMode = false;
     private boolean sceneActionMode = false;
     private PerformLayout layout = PerformLayout.vertical();
@@ -219,6 +224,7 @@ public class PerformClipLauncherMode extends Layer {
                         selectedSceneIndex = trackBank.sceneBank().scrollPosition().get() + row;
                     }
                 });
+                slot.isRecording().addValueObserver(recording -> handleSlotRecordingChanged(column, row, recording));
                 slotColors[slotIndex] = ColorLookup.getColor(slot.color().get());
             }
         }
@@ -638,6 +644,12 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
+        if (slot.isRecording().get()) {
+            slot.launch();
+            oled.valueInfo("Clip Record", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+            return;
+        }
+
         if (hasContent) {
             slot.launch();
             oled.valueInfo("Launch Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
@@ -654,9 +666,90 @@ public class PerformClipLauncherMode extends Layer {
         driver.consumePerformRecordPadGesture();
         track.selectInMixer();
         slot.select();
-        driver.prepareFixedLengthLauncherRecording();
+        if (driver.shouldDisableLauncherPostRecordingAction() || driver.shouldRoundLauncherRecordingToNearestBar()) {
+            armManualRecording(absoluteTrackIndex, absoluteSceneIndex, driver.shouldRoundLauncherRecordingToNearestBar());
+        }
+        driver.prepareLauncherRecording();
         slot.record();
         oled.valueInfo("Record Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+    }
+
+    private void armManualRecording(final int absoluteTrackIndex, final int absoluteSceneIndex, final boolean shouldRound) {
+        manualRecordingPending = true;
+        manualRecordingWasRecording = false;
+        manualRecordingShouldRound = shouldRound;
+        manualRecordingTrackIndex = absoluteTrackIndex;
+        manualRecordingSceneIndex = absoluteSceneIndex;
+    }
+
+    public boolean stopManualLauncherRecordingIfAny() {
+        if (!manualRecordingPending) {
+            return false;
+        }
+        final int visibleTrackIndex = manualRecordingTrackIndex - trackBank.scrollPosition().get();
+        final int visibleSceneIndex = manualRecordingSceneIndex - trackBank.sceneBank().scrollPosition().get();
+        if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()
+                || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
+            oled.valueInfo("Clip Record", "Target off page");
+            return true;
+        }
+        final Track track = trackBank.getItemAt(visibleTrackIndex);
+        final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
+        track.selectInMixer();
+        slot.select();
+        slot.launch();
+        oled.valueInfo("Clip Record", slotLabel(manualRecordingTrackIndex, manualRecordingSceneIndex));
+        return true;
+    }
+
+    private void handleSlotRecordingChanged(final int visibleTrackIndex, final int visibleSceneIndex,
+                                            final boolean recording) {
+        if (!manualRecordingPending) {
+            return;
+        }
+        final int absoluteTrackIndex = trackBank.scrollPosition().get() + visibleTrackIndex;
+        final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
+        if (absoluteTrackIndex != manualRecordingTrackIndex || absoluteSceneIndex != manualRecordingSceneIndex) {
+            return;
+        }
+        if (recording) {
+            manualRecordingWasRecording = true;
+            return;
+        }
+        if (!manualRecordingWasRecording) {
+            return;
+        }
+
+        manualRecordingPending = false;
+        manualRecordingWasRecording = false;
+        if (manualRecordingShouldRound) {
+            roundRecordedClipLength(absoluteTrackIndex, absoluteSceneIndex);
+        }
+    }
+
+    private void roundRecordedClipLength(final int absoluteTrackIndex, final int absoluteSceneIndex) {
+        driver.getHost().scheduleTask(() -> {
+            final int visibleTrackIndex = absoluteTrackIndex - trackBank.scrollPosition().get();
+            final int visibleSceneIndex = absoluteSceneIndex - trackBank.sceneBank().scrollPosition().get();
+            if (visibleTrackIndex < 0 || visibleTrackIndex >= visibleTrackCount()
+                    || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
+                oled.valueInfo("Round Clip", "Target off page");
+                return;
+            }
+            final Track track = trackBank.getItemAt(visibleTrackIndex);
+            final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
+            track.selectInMixer();
+            slot.select();
+            driver.getHost().scheduleTask(() -> {
+                final double currentLength = performCursorClip.getLoopLength().get();
+                final double roundedLength = roundToNearestBar(
+                        currentLength,
+                        driver.getTransportTimeSignatureNumerator(),
+                        driver.getTransportTimeSignatureDenominator());
+                performCursorClip.getLoopLength().set(roundedLength);
+                oled.valueInfo("Round Clip", formatBars(roundedLength));
+            }, 1);
+        }, 50);
     }
 
     private void handleDuplicatePressed(final boolean pressed) {
@@ -1058,6 +1151,16 @@ public class PerformClipLauncherMode extends Layer {
 
     static int remoteParameterIndex(final int encoderIndex, final boolean altHeld) {
         return (altHeld ? 4 : 0) + encoderIndex;
+    }
+
+    static double roundToNearestBar(final double beatLength, final int meterNumerator, final int meterDenominator) {
+        final int numerator = Math.max(1, meterNumerator);
+        final int denominator = Math.max(1, meterDenominator);
+        final double barLength = numerator * (4.0 / denominator);
+        if (Double.isNaN(beatLength) || Double.isInfinite(beatLength) || beatLength <= 0) {
+            return barLength;
+        }
+        return Math.max(barLength, Math.round(beatLength / barLength) * barLength);
     }
 
     static int remotePageIndexAfterTurn(final int currentPage, final int pageCount, final int inc) {

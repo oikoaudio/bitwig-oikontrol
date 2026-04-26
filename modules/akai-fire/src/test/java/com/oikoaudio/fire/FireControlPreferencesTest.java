@@ -104,6 +104,8 @@ class FireControlPreferencesTest {
 
     @Test
     void normalizesDefaultClipLengthPreferenceValues() {
+        assertEquals(FireControlPreferences.CLIP_LENGTH_OFF,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_OFF));
         assertEquals(FireControlPreferences.CLIP_LENGTH_1_BAR,
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_1_BAR));
         assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
@@ -112,12 +114,19 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_4_BARS));
         assertEquals(FireControlPreferences.CLIP_LENGTH_8_BARS,
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_8_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR,
+                FireControlPreferences.normalizeDefaultClipLength(
+                        FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR,
+                FireControlPreferences.normalizeDefaultClipLength("Round to nearest bar"));
         assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
                 FireControlPreferences.normalizeDefaultClipLength("unexpected"));
     }
 
     @Test
     void mapsDefaultClipLengthPreferenceToBeats() {
+        assertEquals(8.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_OFF));
         assertEquals(4.0,
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_1_BAR));
         assertEquals(8.0,
@@ -126,7 +135,30 @@ class FireControlPreferencesTest {
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_4_BARS));
         assertEquals(32.0,
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_8_BARS));
+        assertEquals(8.0,
+                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
         assertEquals(8.0, FireControlPreferences.toClipLengthBeats("unexpected"));
+    }
+
+    @Test
+    void detectsRoundToNearestBarClipLengthPreference() {
+        assertEquals(true,
+                FireControlPreferences.isRoundToNearestBarClipLength(
+                        FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
+        assertEquals(true,
+                FireControlPreferences.isRoundToNearestBarClipLength("Round to nearest bar"));
+        assertEquals(false,
+                FireControlPreferences.isRoundToNearestBarClipLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(false, FireControlPreferences.isRoundToNearestBarClipLength("unexpected"));
+    }
+
+    @Test
+    void detectsOffClipLengthPreference() {
+        assertEquals(true,
+                FireControlPreferences.isOffClipLength(FireControlPreferences.CLIP_LENGTH_OFF));
+        assertEquals(false,
+                FireControlPreferences.isOffClipLength(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
+        assertEquals(false, FireControlPreferences.isOffClipLength("unexpected"));
     }
 
     @Test

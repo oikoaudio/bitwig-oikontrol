@@ -51,11 +51,16 @@ public final class FireControlPreferences {
     public static final String CLIP_LENGTH_2_BARS = "2 bars";
     public static final String CLIP_LENGTH_4_BARS = "4 bars";
     public static final String CLIP_LENGTH_8_BARS = "8 bars";
+    public static final String CLIP_LENGTH_OFF = "Off";
+    public static final String CLIP_LENGTH_ROUND_NEAREST_BAR = "Round";
+    private static final String CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY = "Round to nearest bar";
     public static final String[] DEFAULT_CLIP_LENGTHS = {
+            CLIP_LENGTH_OFF,
             CLIP_LENGTH_1_BAR,
             CLIP_LENGTH_2_BARS,
             CLIP_LENGTH_4_BARS,
-            CLIP_LENGTH_8_BARS
+            CLIP_LENGTH_8_BARS,
+            CLIP_LENGTH_ROUND_NEAREST_BAR
     };
 
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
@@ -321,6 +326,9 @@ public final class FireControlPreferences {
     }
 
     public static String normalizeDefaultClipLength(final String preferenceValue) {
+        if (CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY.equals(preferenceValue)) {
+            return CLIP_LENGTH_ROUND_NEAREST_BAR;
+        }
         for (final String value : DEFAULT_CLIP_LENGTHS) {
             if (value.equals(preferenceValue)) {
                 return value;
@@ -336,6 +344,14 @@ public final class FireControlPreferences {
             case CLIP_LENGTH_8_BARS -> 32.0;
             default -> 8.0;
         };
+    }
+
+    public static boolean isRoundToNearestBarClipLength(final String preferenceValue) {
+        return CLIP_LENGTH_ROUND_NEAREST_BAR.equals(normalizeDefaultClipLength(preferenceValue));
+    }
+
+    public static boolean isOffClipLength(final String preferenceValue) {
+        return CLIP_LENGTH_OFF.equals(normalizeDefaultClipLength(preferenceValue));
     }
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {

@@ -147,7 +147,7 @@ Hold `SHIFT + BROWSER` to edit shared settings from the four encoders.
 | `Channel` | Shared root key |
 | `Mixer` | Shared scale |
 | `User 1` | Shared octave |
-| `User 2` | Default launcher recording length |
+| `User 2` | `ClipRecLen`: launcher recording length |
 
 ### Main SELECT encoder
 
@@ -390,7 +390,7 @@ For immediate derived-line feedback, change source expression from the controlle
 
 Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
 
-Hold `REC` and press a pad to target recording directly into that visible slot. The script sets Bitwig's clip launcher post-record action to play the recorded clip after `Default Clip Length`, which can also be adjusted from the global settings overlay. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+Hold `REC` and press a pad to target recording directly into that visible slot. For fixed `Default Clip Length` values, the script sets Bitwig's clip launcher post-record action to play the recorded clip after that length. If `Default Clip Length` is set to `Off`, recording continues until manually stopped without post-processing. If it is set to `Round`, recording continues until manually stopped, then the recorded clip loop length is rounded to the nearest whole bar. Press `REC` again to end an `Off` or `Round` launcher recording and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 

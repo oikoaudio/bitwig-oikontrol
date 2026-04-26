@@ -675,6 +675,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             notifyAction("Arranger Write", nextState ? "On" : "Off");
             return;
         }
+        if (pressed && performMode != null && performMode.stopManualLauncherRecordingIfAny()) {
+            performRecordPadGestureConsumed = true;
+            return;
+        }
         if (modeState.activeMode() == Mode.PERFORM) {
             if (pressed) {
                 performRecordPadGestureConsumed = false;
@@ -1145,6 +1149,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 : FireControlPreferences.toClipLengthBeats(defaultClipLengthPref.get()));
     }
 
+    public boolean shouldRoundLauncherRecordingToNearestBar() {
+        return defaultClipLengthPref != null
+                && FireControlPreferences.isRoundToNearestBarClipLength(defaultClipLengthPref.get());
+    }
+
+    public boolean shouldDisableLauncherPostRecordingAction() {
+        return defaultClipLengthPref != null
+                && FireControlPreferences.isOffClipLength(defaultClipLengthPref.get());
+    }
+
     public boolean isPerformRecordTargetingHeld() {
         final BiColorButton recButton = getButton(NoteAssign.REC);
         return modeState.activeMode() == Mode.PERFORM
@@ -1158,7 +1172,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         performRecordPadGestureConsumed = true;
     }
 
-    public void prepareFixedLengthLauncherRecording() {
+    public void prepareLauncherRecording() {
+        if (shouldDisableLauncherPostRecordingAction() || shouldRoundLauncherRecordingToNearestBar()) {
+            transport.clipLauncherPostRecordingAction().set("off");
+            return;
+        }
         transport.clipLauncherPostRecordingAction().set("play_recorded");
         transport.getClipLauncherPostRecordingTimeOffset().set(getDefaultClipLengthBeats());
     }
@@ -1554,7 +1572,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void showGlobalSettingsOverview() {
         oled.detailInfo("Global Settings",
-                "1: Root %s\n2: Scale %s\n3: Oct %d\n4: Rec %s".formatted(
+                "1: Root %s\n2: Scale %s\n3: Oct %d\n4: ClipRecLen %s".formatted(
                         com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
                         sharedPitchContext.getScaleDisplayName(),
                         sharedPitchContext.getOctave(),
@@ -1607,7 +1625,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (encoderIndex == 3) {
-            oled.valueInfo("Launcher Rec", defaultClipLengthLabel());
+            oled.valueInfo("ClipRecLen", defaultClipLengthLabel());
             return;
         }
         showGlobalSettingsOverview();
@@ -1628,7 +1646,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final int nextIndex = Math.max(0,
                 Math.min(FireControlPreferences.DEFAULT_CLIP_LENGTHS.length - 1, currentIndex + inc));
         defaultClipLengthPref.set(FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
-        oled.valueInfo("Launcher Rec", FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
+        oled.valueInfo("ClipRecLen", FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
     }
 
     private String defaultClipLengthLabel() {
