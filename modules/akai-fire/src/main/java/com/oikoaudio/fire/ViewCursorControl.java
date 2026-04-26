@@ -29,6 +29,7 @@ public class ViewCursorControl {
 		this.trackBank = host.createMainTrackBank(TRACK_RESTORE_WIDTH, 8, sends);
 		for (int index = 0; index < TRACK_RESTORE_WIDTH; index++) {
 			this.trackBank.getItemAt(index).exists().markInterested();
+			this.trackBank.getItemAt(index).isActivated().markInterested();
 			this.trackBank.getItemAt(index).name().markInterested();
 			final int trackIndex = index;
 			this.trackBank.getItemAt(index).addIsSelectedInMixerObserver(selected -> {
