@@ -111,7 +111,7 @@ The Akai Fire extension is organized around four top-level workflows.
 
 | Button | Workflow | Role |
 | --- | --- | --- |
-| `DRUM` | Drum workflows | XOX-style drum sequencing; press again for `Nested Rhythm`, then `Drum Pads` |
+| `DRUM` | Drum workflows | `Drum XOX`; press again for `Nested Rhythm`, then `Drum Pads` |
 | `NOTE` | Live note input | 16x4 note surface; press again for harmonic layout |
 | `STEP` | Step sequencing | Enters `Melodic Step`; press again for `Chord Step`, then `Fugue` |
 | `PERFORM` | Clip launching | 16x4 clip grid and track actions |
@@ -174,9 +174,9 @@ Global `SELECT` turn chords:
 | `Track Select` | Previous / next track | Hold while turning to jump by visible pages |
 | `Drum Grid` | Drum-step grid resolution | `DRUM` mode only |
 
-### DRUM mode
+### DRUM Mode
 
-`DRUM` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
+`Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
 
 | Pad row | Role |
 | --- | --- |

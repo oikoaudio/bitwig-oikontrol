@@ -197,7 +197,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
         public String displayName() {
             return switch (this) {
-                case STANDARD -> "Drum";
+                case STANDARD -> "Drum XOX";
                 case NESTED_RHYTHM -> "Nested Rhythm";
                 case DRUM_PADS -> "Drum Pads";
             };
@@ -1316,7 +1316,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final Mode activeMode = modeState.exitMelodicStepMode();
         switchActiveMode();
         notifyAction("Mode", switch (activeMode) {
-            case DRUM -> "Drum";
+            case DRUM -> activeDrumSubMode.displayName();
             case CHORD_STEP -> "Chord Step";
             case PERFORM -> "Perform";
             default -> "Note";
