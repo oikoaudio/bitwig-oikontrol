@@ -191,7 +191,7 @@
         <thead><tr><th>Button</th><th>Workflow</th><th>Role</th></tr></thead>
         <tbody>
           <tr><td><code>DRUM</code></td><td>Drum sequencing</td><td>XOX-style drum sequencing; press again for <code>Nested Rhythm</code></td></tr>
-          <tr><td><code>NOTE</code></td><td>Live note input</td><td>16x4 note surface; press again for harmonic note layout</td></tr>
+          <tr><td><code>NOTE</code></td><td>Live note input</td><td>16x4 note surface; press again for harmonic and Drum Machine pad layouts</td></tr>
           <tr><td><code>STEP</code></td><td>Step sequencing</td><td>Enters <code>Melodic Step</code>; press again for <code>Chord Step</code>, then <code>Fugue</code></td></tr>
           <tr><td><code>PERFORM</code></td><td>Clip launching</td><td>16x4 clip grid and track actions</td></tr>
       </tbody>
@@ -325,16 +325,16 @@
       <p>Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.</p>
       <p>Tuplet is a half-bar transform: <code>Cover</code> sets how many consecutive half-bars are claimed, and <code>Tuplet Phase</code> rotates that span. Ratchet is a beat-burst transform: <code>Ratchet Width</code> chooses phrase beats in deterministic priority order, and <code>Ratchet Phase</code> rotates those beats. Tuplet counts are meter-aware; in <code>4/4</code> they include <code>3 / 5 / 7</code>, while <code>5/4</code> can expose counts such as <code>3 / 4 / 6 / 7</code>. Ratchet supports <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code>.</p>
       <h3>NOTE mode</h3>
-      <p><code>NOTE</code> is a 16x4 isomorphic playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from <code>Default Note Input Octave</code>.</p>
+      <p><code>NOTE</code> is a 16x4 playing surface with chromatic, in-key, harmonic, and Bitwig Drum Machine pad layouts. The shared note octave is initialized from <code>Default Note Input Octave</code>.</p>
       <table>
         <thead><tr><th>Area / Control</th><th>Role</th></tr></thead>
         <tbody>
-          <tr><td>Pad matrix</td><td>16x4 note grid</td></tr>
-          <tr><td>Pad LEDs</td><td>Root, in-scale, and out-of-scale feedback</td></tr>
+          <tr><td>Pad matrix</td><td>16x4 note grid; in Drum Pads mode the matrix plays the visible Bitwig Drum Machine pad window, left-to-right from the bottom row</td></tr>
+          <tr><td>Pad LEDs</td><td>Root, in-scale, and out-of-scale feedback; in Drum Pads mode LEDs follow Bitwig Drum Machine pad colors</td></tr>
           <tr><td><code>NOTE</code></td><td>Cycle note layout family</td></tr>
-          <tr><td><code>ALT + NOTE</code></td><td>Toggle live-note layout shortcut</td></tr>
+          <tr><td><code>ALT + NOTE</code></td><td>Toggle live-note layout shortcut; in Drum Pads mode shows the current pad window</td></tr>
           <tr><td><code>STEP SEQ</code></td><td>Enter <code>Melodic Step</code>; press again for <code>Chord Step</code></td></tr>
-          <tr><td><code>BANK LEFT/RIGHT</code> or <code>PATTERN UP/DOWN</code></td><td>Shared octave down / up</td></tr>
+          <tr><td><code>BANK LEFT/RIGHT</code> or <code>PATTERN UP/DOWN</code></td><td>Shared octave down / up; in Drum Pads mode, scroll the Drum Machine pad window by 16 pads</td></tr>
           <tr><td><code>SHIFT + PATTERN UP/DOWN</code></td><td>Shared root down / up</td></tr>
           <tr><td><code>MUTE_1</code></td><td>Sustain</td></tr>
           <tr><td><code>MUTE_2</code></td><td>Sostenuto</td></tr>
@@ -346,6 +346,7 @@
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
           <tr><td><code>Channel</code></td><td>Mod</td><td>Pitch Gliss</td><td>Velocity sensitivity / <code>SHIFT</code>: Default velocity</td><td>Shared scale / <code>ALT</code>: Shared root key / <code>SHIFT</code>: local layout</td></tr>
+          <tr><td><code>Channel</code> in Drum Pads mode</td><td>Hihat CC 4</td><td>Drum Machine pad window</td><td>Velocity sensitivity / <code>SHIFT</code>: Default velocity</td><td>Pad window readout</td></tr>
           <tr><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr><td><code>User 1</code></td><td>Aftertouch</td><td>Pressure</td><td>Timbre</td><td>Pitch expression</td></tr>
           <tr><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
