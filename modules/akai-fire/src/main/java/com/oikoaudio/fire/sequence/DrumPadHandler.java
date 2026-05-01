@@ -3,7 +3,6 @@ package com.oikoaudio.fire.sequence;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.ViewCursorControl;
-import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.DisplayTarget;
@@ -222,7 +221,7 @@ public class DrumPadHandler {
     }
 
     public void executePadSelection(final PadContainer pad) {
-        currentPadColor = pad.getBitwigPadColor();
+        currentPadColor = pad.effectivePadColor();
         selectedPad = pad;
         focusOnSelectedPad();
         selectedPadIndex = pad.getIndex();
@@ -374,24 +373,16 @@ public class DrumPadHandler {
         noteRepeatHandler.handleMainEncoder(inc, parent.isAltHeld());
     }
 
-    private BiColorLightState canScrollUp(final BiColorButton button) {
-        if (padBank.scrollPosition().get() + (parent.isShiftHeld() ? 16 : 4) < 128) {
-            if (button.isPressed()) {
-                return BiColorLightState.FULL;
-            }
-            return BiColorLightState.HALF;
-        }
-        return BiColorLightState.OFF;
+    BiColorLightState canScrollForwardLight() {
+        return padBank.scrollPosition().get() + (parent.isShiftHeld() ? 16 : 4) < 128
+                ? BiColorLightState.HALF
+                : BiColorLightState.OFF;
     }
 
-    private BiColorLightState canScrollDown(final BiColorButton button) {
-        if (padBank.scrollPosition().get() - (parent.isShiftHeld() ? 16 : 4) >= 0) {
-            if (button.isPressed()) {
-                return BiColorLightState.FULL;
-            }
-            return BiColorLightState.HALF;
-        }
-        return BiColorLightState.OFF;
+    BiColorLightState canScrollBackwardLight() {
+        return padBank.scrollPosition().get() - (parent.isShiftHeld() ? 16 : 4) >= 0
+                ? BiColorLightState.HALF
+                : BiColorLightState.OFF;
     }
 
     void scrollForward(final boolean pressed) {
@@ -519,17 +510,5 @@ public class DrumPadHandler {
 
     public NoteRepeatHandler getNoteRepeaterHandler() {
         return noteRepeatHandler;
-    }
-
-    private void handlePatternUpPressed(final boolean pressed) {
-        if (pressed && parent.isAltHeld()) {
-            scrollForward(true);
-        }
-    }
-
-    private void handlePatternDownPressed(final boolean pressed) {
-        if (pressed && parent.isAltHeld()) {
-            scrollBackward(true);
-        }
     }
 }

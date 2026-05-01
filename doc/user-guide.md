@@ -189,6 +189,8 @@ Global `SELECT` turn chords:
 | `STEP` | Enter `Melodic Step` |
 | `SHIFT + STEP` | Accent entry and editing |
 | `ALT + STEP` | Fill |
+| `PATTERN UP/DOWN` | Page visible steps |
+| `ALT + PATTERN UP/DOWN` | Scroll the visible Drum Machine pad window |
 | `BANK LEFT/RIGHT` | Move or rotate pattern |
 | `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
