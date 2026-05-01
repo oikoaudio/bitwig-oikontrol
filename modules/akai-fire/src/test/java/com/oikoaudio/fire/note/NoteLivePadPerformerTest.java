@@ -90,6 +90,21 @@ class NoteLivePadPerformerTest {
     }
 
     @Test
+    void handlePadPressCanSendPerNoteTimbreAfterNoteOn() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad},
+                (pad, configured, raw) -> raw,
+                pad -> 40 + pad);
+
+        performer.handlePadPress(2, true, 99, 100);
+        performer.handlePadPress(2, false, 0, 100);
+
+        assertEquals(List.of("on:62:99", "timbre:62:42", "off:62"), events);
+    }
+
+    @Test
     void sameMidiNoteIsExclusiveAcrossPads() {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer = new NoteLivePadPerformer(
@@ -114,6 +129,11 @@ class NoteLivePadPerformerTest {
         @Override
         public void noteOff(final int midiNote) {
             events.add("off:" + midiNote);
+        }
+
+        @Override
+        public void timbre(final int midiNote, final int value) {
+            events.add("timbre:" + midiNote + ":" + value);
         }
     }
 }

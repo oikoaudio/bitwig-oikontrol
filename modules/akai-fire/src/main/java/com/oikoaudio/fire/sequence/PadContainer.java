@@ -5,6 +5,7 @@ import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.display.ParameterDisplayBinding;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
@@ -27,7 +28,7 @@ class PadContainer {
     private final DrumPadHandler padHandler;
 
     private RgbLigthState padColor;
-    private RgbLigthState bitwigPadColor;
+    private RgbLigthState bitwigPadColor = RgbLigthState.OFF;
 
     private final RgbLigthState muteColor = ColorLookup.getColor(DawColor.LIGHT_BROWN);
     private final RgbLigthState soloColor = ColorLookup.getColor(DawColor.BLUISH_GREEN);
@@ -85,12 +86,12 @@ class PadContainer {
         padColor = fixedPadColorTable[index];
         pad.color().markInterested();
         pad.color().addValueObserver((r, g, b) -> {
-            bitwigPadColor = assignedPadColorOrNull(ColorLookup.getColor(r, g, b));
+            bitwigPadColor = explicitPadColorOrNull();
             if (selected) {
                 this.padHandler.currentPadColor = effectivePadColor();
             }
         });
-        bitwigPadColor = assignedPadColorOrNull(ColorLookup.getColor(pad.color().get()));
+        bitwigPadColor = explicitPadColorOrNull();
         volumeParameter = pad.volume();
         panParameter = pad.pan();
         volumeBinding = new ParameterDisplayBinding(0, index, volumeParameter, padHandler.getDisplayTarget(), false);
@@ -155,11 +156,16 @@ class PadContainer {
     }
 
     RgbLigthState effectivePadColor() {
-        return bitwigPadColor != null ? bitwigPadColor : padColor;
+        return bitwigPadColor != null ? bitwigPadColor : padHandler.trackColor();
     }
 
-    private static RgbLigthState assignedPadColorOrNull(final RgbLigthState color) {
-        return color == null || color.equals(RgbLigthState.OFF) ? null : color;
+    private RgbLigthState explicitPadColorOrNull() {
+        final Color color = pad.color().get();
+        if (color == null || color.getAlpha255() == 0) {
+            return null;
+        }
+        final RgbLigthState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
     }
 
     public int getIndex() {

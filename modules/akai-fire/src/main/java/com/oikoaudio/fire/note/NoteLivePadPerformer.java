@@ -15,6 +15,7 @@ final class NoteLivePadPerformer {
     private final MidiOut midiOut;
     private final java.util.function.IntFunction<int[]> midiNotesResolver;
     private final VelocityResolver velocityResolver;
+    private final ExpressionResolver timbreResolver;
     private final Set<Integer> heldPads = new HashSet<>();
     private final Map<Integer, LivePadNote> soundingNotesByPad = new HashMap<>();
 
@@ -28,9 +29,17 @@ final class NoteLivePadPerformer {
     NoteLivePadPerformer(final MidiOut midiOut,
                          final java.util.function.IntFunction<int[]> midiNotesResolver,
                          final VelocityResolver velocityResolver) {
+        this(midiOut, midiNotesResolver, velocityResolver, padIndex -> -1);
+    }
+
+    NoteLivePadPerformer(final MidiOut midiOut,
+                         final java.util.function.IntFunction<int[]> midiNotesResolver,
+                         final VelocityResolver velocityResolver,
+                         final ExpressionResolver timbreResolver) {
         this.midiOut = midiOut;
         this.midiNotesResolver = midiNotesResolver;
         this.velocityResolver = velocityResolver;
+        this.timbreResolver = timbreResolver;
     }
 
     void handlePadPress(final int padIndex, final boolean pressed, final int rawVelocity, final int configuredVelocity) {
@@ -81,12 +90,16 @@ final class NoteLivePadPerformer {
         }
         stopOtherPadsSoundingAny(padIndex, midiNotes);
         final int appliedVelocity = velocityResolver.resolve(padIndex, configuredVelocity, rawVelocity);
+        final int timbre = timbreResolver.resolve(padIndex);
         final List<Integer> sounding = new ArrayList<>();
         for (final int midiNote : midiNotes) {
             if (midiNote < 0) {
                 continue;
             }
             midiOut.noteOn(midiNote, appliedVelocity);
+            if (timbre >= 0) {
+                midiOut.timbre(midiNote, timbre);
+            }
             sounding.add(midiNote);
         }
         if (!sounding.isEmpty()) {
@@ -128,11 +141,19 @@ final class NoteLivePadPerformer {
 
         default void noteOff(final int midiNote) {
         }
+
+        default void timbre(final int midiNote, final int value) {
+        }
     }
 
     @FunctionalInterface
     interface VelocityResolver {
         int resolve(int padIndex, int configuredVelocity, int rawVelocity);
+    }
+
+    @FunctionalInterface
+    interface ExpressionResolver {
+        int resolve(int padIndex);
     }
 
     private record LivePadNote(List<Integer> midiNotes, int velocity) {

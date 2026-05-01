@@ -3,6 +3,7 @@ package com.oikoaudio.fire.note;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.Clip;
@@ -142,20 +143,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final RgbLigthState HARMONIC_TENSE_COLOR = new RgbLigthState(68, 48, 116, true);
     private static final RgbLigthState HARMONIC_EXOTIC_COLOR = new RgbLigthState(108, 28, 72, true);
     private static final RgbLigthState HARMONIC_SYMMETRIC_COLOR = new RgbLigthState(46, 92, 42, true);
-    private static final RgbLigthState DRUM_MACHINE_FALLBACK_RED = new RgbLigthState(70, 0, 0, true);
-    private static final RgbLigthState DRUM_MACHINE_FALLBACK_ORANGE = new RgbLigthState(90, 15, 0, true);
-    private static final RgbLigthState DRUM_MACHINE_FALLBACK_YELLOW = new RgbLigthState(110, 55, 0, true);
-    private static final RgbLigthState DRUM_MACHINE_FALLBACK_WHITE = new RgbLigthState(80, 80, 80, true);
-    private static final RgbLigthState[] DRUM_MACHINE_FALLBACK_COLORS = {
-            DRUM_MACHINE_FALLBACK_RED, DRUM_MACHINE_FALLBACK_RED,
-            DRUM_MACHINE_FALLBACK_RED, DRUM_MACHINE_FALLBACK_RED,
-            DRUM_MACHINE_FALLBACK_ORANGE, DRUM_MACHINE_FALLBACK_ORANGE,
-            DRUM_MACHINE_FALLBACK_ORANGE, DRUM_MACHINE_FALLBACK_ORANGE,
-            DRUM_MACHINE_FALLBACK_YELLOW, DRUM_MACHINE_FALLBACK_YELLOW,
-            DRUM_MACHINE_FALLBACK_YELLOW, DRUM_MACHINE_FALLBACK_YELLOW,
-            DRUM_MACHINE_FALLBACK_WHITE, DRUM_MACHINE_FALLBACK_WHITE,
-            DRUM_MACHINE_FALLBACK_WHITE, DRUM_MACHINE_FALLBACK_WHITE
-    };
     private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
     private static final RgbLigthState EMPTY_STEP_A = RgbLigthState.GRAY_1;
     private static final RgbLigthState EMPTY_STEP_B = RgbLigthState.GRAY_2;
@@ -469,9 +456,16 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                     public void noteOff(final int midiNote) {
                         noteInput.sendRawMidiEvent(Midi.NOTE_OFF, midiNote, 0);
                     }
+
+                    @Override
+                    public void timbre(final int midiNote, final int value) {
+                        noteInput.sendRawMidiEvent(Midi.POLY_AT, midiNote, value);
+                    }
                 },
                 this::getLivePadMidiNotes,
-                (padIndex, configuredVelocity, rawVelocity) -> resolveLivePadVelocity(padIndex, configuredVelocity, rawVelocity));
+                (padIndex, configuredVelocity, rawVelocity) -> resolveLivePadVelocity(padIndex, configuredVelocity, rawVelocity),
+                this::resolveLivePadTimbre);
+        noteInput.assignPolyphonicAftertouchToExpression(0, NoteInput.NoteExpression.TIMBRE_UP, 1);
         this.liveExpressionControls = new NoteLiveExpressionControls(new NoteLiveExpressionControls.MidiExpressionOut() {
             @Override
             public void channelAftertouch(final int value) {
@@ -542,13 +536,18 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             drumMachinePadNames[padIndex] = pad.name().get();
             pad.color().markInterested();
             pad.color().addValueObserver((r, g, b) ->
-                    drumMachinePadColors[padIndex] = drumMachinePadColorOrNull(ColorLookup.getColor(r, g, b)));
-            drumMachinePadColors[padIndex] = drumMachinePadColorOrNull(ColorLookup.getColor(pad.color().get()));
+                    drumMachinePadColors[padIndex] = explicitDrumMachinePadColorOrNull(pad));
+            drumMachinePadColors[padIndex] = explicitDrumMachinePadColorOrNull(pad);
         }
     }
 
-    private static RgbLigthState drumMachinePadColorOrNull(final RgbLigthState color) {
-        return color == null || color.equals(RgbLigthState.OFF) ? null : color;
+    private static RgbLigthState explicitDrumMachinePadColorOrNull(final DrumPad pad) {
+        final Color color = pad.color().get();
+        if (color == null || color.getAlpha255() == 0) {
+            return null;
+        }
+        final RgbLigthState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
     }
 
     private void applyDefaultLayoutPreference() {
@@ -2894,12 +2893,26 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private int resolveLivePadVelocity(final int padIndex, final int configuredVelocity, final int rawVelocity) {
-        if (isDrumMachineLiveMode()
-                && (drumMachineLayout == DrumMachinePadLayout.Layout.VELOCITY
-                || drumMachineLayout == DrumMachinePadLayout.Layout.BONGOS)) {
+        if (isDrumMachineLiveMode() && drumMachineLayout == DrumMachinePadLayout.Layout.VELOCITY) {
             return drumMachineFixedVelocityForPad(padIndex);
         }
         return LiveVelocityLogic.resolveVelocity(configuredVelocity, liveVelocitySensitivity, rawVelocity);
+    }
+
+    private int resolveLivePadTimbre(final int padIndex) {
+        if (!isDrumMachineLiveMode() || drumMachineLayout != DrumMachinePadLayout.Layout.BONGOS
+                || bongoZoneForPad(padIndex) < 0) {
+            return -1;
+        }
+        final int column = padIndex % NoteGridLayout.PAD_COLUMNS;
+        final int rowFromBottom = NoteGridLayout.PAD_ROWS - 1 - (padIndex / NoteGridLayout.PAD_COLUMNS);
+        final int surfaceStartColumn = column >= 11 ? 11 : 5;
+        final double x = column - surfaceStartColumn;
+        final double y = rowFromBottom;
+        final double dx = Math.abs(x - 2.0);
+        final double dy = Math.abs(y - 1.5);
+        final double distance = Math.sqrt(dx * dx + dy * dy);
+        return Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, (int) Math.round(distance / 2.5 * MAX_MIDI_VALUE)));
     }
 
     private int drumMachineFixedVelocityForPad(final int padIndex) {
@@ -2965,10 +2978,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return RgbLigthState.OFF;
         }
         final RgbLigthState color = drumMachinePadColors[bankIndex];
-        if (color == null && !hasNamedDrumMachinePad(bankIndex)) {
-            return RgbLigthState.OFF;
-        }
-        final RgbLigthState base = color != null ? color : fallbackDrumMachinePadColor(bankIndex);
+        final RgbLigthState base = color != null ? color : trackPadColor();
         if (layout.selectorOffsetForPad(padIndex) == selectedDrumPadOffset) {
             return base.getBrightest();
         }
@@ -2978,12 +2988,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         return base;
     }
 
-    private static RgbLigthState fallbackDrumMachinePadColor(final int bankIndex) {
-        return DRUM_MACHINE_FALLBACK_COLORS[Math.floorMod(bankIndex, DRUM_MACHINE_FALLBACK_COLORS.length)];
-    }
-
-    private boolean hasNamedDrumMachinePad(final int bankIndex) {
-        return drumMachinePadNames[bankIndex] != null && !drumMachinePadNames[bankIndex].isBlank();
+    private RgbLigthState trackPadColor() {
+        return chordStepBaseColor != null ? chordStepBaseColor : IN_SCALE_COLOR;
     }
 
     private RgbLigthState velocityRampColor(final RgbLigthState base, final int velocity) {
