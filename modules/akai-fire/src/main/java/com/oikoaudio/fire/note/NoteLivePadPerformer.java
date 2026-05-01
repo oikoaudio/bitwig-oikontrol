@@ -14,13 +14,20 @@ import java.util.function.BiFunction;
 final class NoteLivePadPerformer {
     private final MidiOut midiOut;
     private final java.util.function.IntFunction<int[]> midiNotesResolver;
-    private final BiFunction<Integer, Integer, Integer> velocityResolver;
+    private final VelocityResolver velocityResolver;
     private final Set<Integer> heldPads = new HashSet<>();
     private final Map<Integer, LivePadNote> soundingNotesByPad = new HashMap<>();
 
     NoteLivePadPerformer(final MidiOut midiOut,
                          final java.util.function.IntFunction<int[]> midiNotesResolver,
                          final BiFunction<Integer, Integer, Integer> velocityResolver) {
+        this(midiOut, midiNotesResolver, (padIndex, configuredVelocity, rawVelocity) ->
+                velocityResolver.apply(configuredVelocity, rawVelocity));
+    }
+
+    NoteLivePadPerformer(final MidiOut midiOut,
+                         final java.util.function.IntFunction<int[]> midiNotesResolver,
+                         final VelocityResolver velocityResolver) {
         this.midiOut = midiOut;
         this.midiNotesResolver = midiNotesResolver;
         this.velocityResolver = velocityResolver;
@@ -72,7 +79,8 @@ final class NoteLivePadPerformer {
         if (midiNotes == null || midiNotes.length == 0) {
             return;
         }
-        final int appliedVelocity = velocityResolver.apply(configuredVelocity, rawVelocity);
+        stopOtherPadsSoundingAny(padIndex, midiNotes);
+        final int appliedVelocity = velocityResolver.resolve(padIndex, configuredVelocity, rawVelocity);
         final List<Integer> sounding = new ArrayList<>();
         for (final int midiNote : midiNotes) {
             if (midiNote < 0) {
@@ -84,6 +92,24 @@ final class NoteLivePadPerformer {
         if (!sounding.isEmpty()) {
             soundingNotesByPad.put(padIndex, new LivePadNote(sounding, appliedVelocity));
         }
+    }
+
+    private void stopOtherPadsSoundingAny(final int padIndex, final int[] midiNotes) {
+        final Set<Integer> targetNotes = new HashSet<>();
+        for (final int midiNote : midiNotes) {
+            if (midiNote >= 0) {
+                targetNotes.add(midiNote);
+            }
+        }
+        if (targetNotes.isEmpty()) {
+            return;
+        }
+        final List<Integer> duplicatePads = soundingNotesByPad.entrySet().stream()
+                .filter(entry -> entry.getKey() != padIndex)
+                .filter(entry -> entry.getValue().midiNotes().stream().anyMatch(targetNotes::contains))
+                .map(Map.Entry::getKey)
+                .toList();
+        duplicatePads.forEach(this::noteOff);
     }
 
     private void noteOff(final int padIndex) {
@@ -102,6 +128,11 @@ final class NoteLivePadPerformer {
 
         default void noteOff(final int midiNote) {
         }
+    }
+
+    @FunctionalInterface
+    interface VelocityResolver {
+        int resolve(int padIndex, int configuredVelocity, int rawVelocity);
     }
 
     private record LivePadNote(List<Integer> midiNotes, int velocity) {

@@ -35,4 +35,29 @@ class DrumMachinePadLayoutTest {
         assertEquals(48, layout.noteForPad(48));
         assertEquals(96, layout.noteForPad(0));
     }
+
+    @Test
+    void velocityUsesLeftBlockAsSelectorsAndRemainderAsSelectedSound() {
+        final DrumMachinePadLayout layout = new DrumMachinePadLayout(36,
+                DrumMachinePadLayout.Layout.VELOCITY, 7);
+
+        assertEquals(0, layout.selectorOffsetForPad(48));
+        assertEquals(7, layout.selectorOffsetForPad(35));
+        assertEquals(36, layout.noteForPad(48));
+        assertEquals(43, layout.noteForPad(52));
+        assertEquals(7, layout.padBankIndexForPad(52));
+    }
+
+    @Test
+    void bongosSplitsPlayableAreaAcrossSelectedSounds() {
+        final DrumMachinePadLayout layout = new DrumMachinePadLayout(36,
+                DrumMachinePadLayout.Layout.BONGOS, 7, 12);
+
+        assertEquals(-1, layout.noteForPad(52));
+        assertEquals(-1, layout.noteForPad(58));
+        assertEquals(43, layout.noteForPad(53));
+        assertEquals(48, layout.noteForPad(59));
+        assertEquals(7, layout.padBankIndexForPad(53));
+        assertEquals(12, layout.padBankIndexForPad(59));
+    }
 }

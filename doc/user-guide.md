@@ -111,8 +111,8 @@ The Akai Fire extension is organized around four top-level workflows.
 
 | Button | Workflow | Role |
 | --- | --- | --- |
-| `DRUM` | Drum sequencing | XOX-style drum sequencing; press again for `Nested Rhythm` |
-| `NOTE` | Live note input | 16x4 note surface; press again for harmonic and Drum Machine pad layouts |
+| `DRUM` | Drum workflows | XOX-style drum sequencing; press again for `Nested Rhythm`, then `Drum Pads` |
+| `NOTE` | Live note input | 16x4 note surface; press again for harmonic layout |
 | `STEP` | Step sequencing | Enters `Melodic Step`; press again for `Chord Step`, then `Fugue` |
 | `PERFORM` | Clip launching | 16x4 clip grid and track actions |
 
@@ -176,7 +176,7 @@ Global `SELECT` turn chords:
 
 ### DRUM mode
 
-`DRUM` is the default sequencer-oriented workflow for a Drum Machine. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
+`DRUM` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
 
 | Pad row | Role |
 | --- | --- |
@@ -200,6 +200,8 @@ Global `SELECT` turn chords:
 Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
+
+In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs follow Drum Machine pad colors, and pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; the OLED shows the lower-left note as `Pad Low`, for example `C1`. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: default velocity. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces.
 
 | Encoder page | Encoders |
 | --- | --- |
@@ -246,16 +248,16 @@ Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are 
 
 ### NOTE mode
 
-`NOTE` is a 16x4 playing surface with chromatic, in-key, harmonic, and Bitwig Drum Machine pad layouts. The shared note octave is initialized from `Default Note Input Octave`.
+`NOTE` is a 16x4 playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from `Default Note Input Octave`.
 
 | Area / Control | Role |
 | --- | --- |
-| Pad matrix | 16x4 note grid; in Drum Pads mode the matrix plays the visible Bitwig Drum Machine pad window, left-to-right from the bottom row |
-| Pad LEDs | Root, in-scale, and out-of-scale feedback; in Drum Pads mode LEDs follow Bitwig Drum Machine pad colors |
+| Pad matrix | 16x4 note grid |
+| Pad LEDs | Root, in-scale, and out-of-scale feedback |
 | `NOTE` | Cycle note layout family |
-| `ALT + NOTE` | Toggle live-note layout shortcut; in Drum Pads mode shows the current pad window |
+| `ALT + NOTE` | Toggle live-note layout shortcut |
 | `STEP SEQ` | Enter `Melodic Step`; press again for `Chord Step` |
-| `BANK LEFT/RIGHT` or `PATTERN UP/DOWN` | Shared octave down / up; in Drum Pads mode, scroll the Drum Machine pad window by 16 pads |
+| `BANK LEFT/RIGHT` or `PATTERN UP/DOWN` | Shared octave down / up |
 | `SHIFT + PATTERN UP/DOWN` | Shared root down / up |
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
@@ -265,7 +267,6 @@ Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
 | `Channel` | Mod | Pitch Gliss | Velocity sensitivity / `SHIFT`: Default velocity | Shared scale / `ALT`: Shared root key / `SHIFT`: local layout |
-| `Channel` in Drum Pads mode | Hihat CC 4 | Drum Machine pad window | Velocity sensitivity / `SHIFT`: Default velocity | Pad window readout |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |

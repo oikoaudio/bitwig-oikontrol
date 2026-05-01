@@ -89,6 +89,22 @@ class NoteLivePadPerformerTest {
         assertEquals(List.of("on:60:100", "on:64:100", "on:67:100", "off:60", "off:64", "off:67"), events);
     }
 
+    @Test
+    void sameMidiNoteIsExclusiveAcrossPads() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60},
+                (configured, raw) -> raw);
+
+        performer.handlePadPress(0, true, 70, 100);
+        performer.handlePadPress(1, true, 90, 100);
+        performer.handlePadPress(0, false, 0, 100);
+        performer.handlePadPress(1, false, 0, 100);
+
+        assertEquals(List.of("on:60:70", "off:60", "on:60:90", "off:60"), events);
+    }
+
     private record TestMidiOut(List<String> events) implements NoteLivePadPerformer.MidiOut {
         @Override
         public void noteOn(final int midiNote, final int velocity) {

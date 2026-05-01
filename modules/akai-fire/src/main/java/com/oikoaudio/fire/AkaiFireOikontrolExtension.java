@@ -14,6 +14,7 @@ import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.TopLevelModeState.Mode;
 import com.bitwig.extensions.framework.MusicalScale;
+import com.oikoaudio.fire.note.DrumPadPlayMode;
 import com.oikoaudio.fire.note.NotePlayMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -163,6 +164,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private PatternButtons patternButtons;
     private NotePlayMode notePlayMode;
+    private DrumPadPlayMode drumPadPlayMode;
     private ChordStepMode chordStepMode;
     private MelodicStepMode melodicStepMode;
     private FugueStepMode fugueStepMode;
@@ -176,7 +178,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private enum DrumSubMode {
         STANDARD(BiColorLightState.GREEN_FULL),
-        NESTED_RHYTHM(BiColorLightState.AMBER_FULL);
+        NESTED_RHYTHM(BiColorLightState.AMBER_FULL),
+        DRUM_PADS(BiColorLightState.RED_FULL);
 
         private final BiColorLightState lightState;
 
@@ -189,7 +192,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
 
         public DrumSubMode next() {
-            return this == STANDARD ? NESTED_RHYTHM : STANDARD;
+            return values()[(ordinal() + 1) % values().length];
+        }
+
+        public String displayName() {
+            return switch (this) {
+                case STANDARD -> "Drum";
+                case NESTED_RHYTHM -> "Nested Rhythm";
+                case DRUM_PADS -> "Drum Pads";
+            };
         }
     }
 
@@ -257,6 +268,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
+        drumPadPlayMode = new DrumPadPlayMode(this, noteRepeatHandler);
         chordStepMode = new ChordStepMode(this, noteRepeatHandler);
         melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
         fugueStepMode = new FugueStepMode(this);
@@ -281,6 +293,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
         notePlayMode.notifyBlink(blinkTicks);
+        drumPadPlayMode.notifyBlink(blinkTicks);
         chordStepMode.notifyBlink(blinkTicks);
         melodicStepMode.notifyBlink(blinkTicks);
         fugueStepMode.notifyBlink(blinkTicks);
@@ -793,11 +806,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.DRUM) {
             activeDrumSubMode = activeDrumSubMode.next();
             switchActiveMode();
-            notifyAction("Mode", activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum");
+            notifyAction("Mode", activeDrumSubMode.displayName());
         } else {
             modeState.activateDrum();
             switchActiveMode();
-            notifyAction("Mode", activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum");
+            notifyAction("Mode", activeDrumSubMode.displayName());
         }
     }
 
@@ -1096,6 +1109,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         releaseAutoPinnedDrumContext(true);
         drumSequenceMode.deactivate();
         notePlayMode.deactivate();
+        drumPadPlayMode.deactivate();
         chordStepMode.deactivate();
         melodicStepMode.deactivate();
         fugueStepMode.deactivate();
@@ -1105,6 +1119,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             applyDrumPinningIfEnabled();
             if (activeDrumSubMode == DrumSubMode.NESTED_RHYTHM) {
                 nestedRhythmMode.activate();
+            } else if (activeDrumSubMode == DrumSubMode.DRUM_PADS) {
+                drumPadPlayMode.activate();
             } else {
                 drumSequenceMode.activate();
             }
@@ -1347,7 +1363,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private boolean shouldAutoPinStandardDrumMode() {
         return modeState.activeMode() == Mode.DRUM
-                && activeDrumSubMode == DrumSubMode.STANDARD
+                && (activeDrumSubMode == DrumSubMode.STANDARD || activeDrumSubMode == DrumSubMode.DRUM_PADS)
                 && shouldAutoPinFirstDrumMachine();
     }
 
@@ -1468,7 +1484,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         final String modeLabel = switch (modeState.activeMode()) {
-            case DRUM -> activeDrumSubMode == DrumSubMode.NESTED_RHYTHM ? "Nested Rhythm" : "Drum";
+            case DRUM -> activeDrumSubMode.displayName();
             case NOTE_PLAY -> "Note";
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melodic Step";
@@ -1558,6 +1574,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         globalSettingsOverlayActive = true;
         drumSequenceMode.deactivate();
         notePlayMode.deactivate();
+        drumPadPlayMode.deactivate();
         chordStepMode.deactivate();
         melodicStepMode.deactivate();
         fugueStepMode.deactivate();
