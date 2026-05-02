@@ -70,6 +70,14 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void ratchetTargetCountIncludesTupletParentCells() {
+        assertEquals(4, NestedRhythmGenerator.ratchetParentRegionCount(
+                4, 4, 1, 0, 0, 0, 0.0));
+        assertEquals(5, NestedRhythmGenerator.ratchetParentRegionCount(
+                4, 4, 1, 3, 1, 1, 0.0));
+    }
+
+    @Test
     void multiBarTupletCoverClaimsConsecutiveHalfBars() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 3, 2, 2, 0, 1, 0, 1.0, 100, 0, 0,
@@ -79,29 +87,27 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void multiBarRatchetWidthDistributesAcrossPhraseInsteadOfRepeatingPerBar() {
+    void multiBarRatchetWidthSelectsParentRegionsAcrossPhrasePriorityOrder() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 4, 2, 0, 1.0, 100, 0, 0,
                 4, 4, 2));
 
-        assertEquals(List.of(0, 105, 210, 315), startsInRange(pattern, 0, 420));
-        assertEquals(List.of(420, 840, 1260), startsInRange(pattern, 420, 1680));
-        assertEquals(List.of(1680, 1785, 1890, 1995), startsInRange(pattern, 1680, 2100));
-        assertEquals(List.of(2100, 2520, 2940), startsInRange(pattern, 2100, 3360));
+        assertEquals(4, startsInRange(pattern, 0, 420).size());
+        assertEquals(4, startsInRange(pattern, 420, 840).size());
+        assertEquals(List.of(840, 1260, 1680, 2100, 2520, 2940), startsInRange(pattern, 840, 3360));
     }
 
     @Test
-    void ratchetPhaseDefaultsToContiguousFirstHalfAcrossBars() {
+    void ratchetTargetPhaseDefaultsToPriorityOrderedParentRegions() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
                 4, 4, 2));
 
         assertEquals(4, startsInRange(pattern, 0, 420).size());
         assertEquals(4, startsInRange(pattern, 420, 840).size());
-        assertEquals(List.of(840, 1260), startsInRange(pattern, 840, 1680));
-        assertEquals(4, startsInRange(pattern, 1680, 2100).size());
-        assertEquals(4, startsInRange(pattern, 2100, 2520).size());
-        assertEquals(List.of(2520, 2940), startsInRange(pattern, 2520, 3360));
+        assertEquals(4, startsInRange(pattern, 840, 1260).size());
+        assertEquals(List.of(1260, 1680, 2100, 2520), startsInRange(pattern, 1260, 2940));
+        assertEquals(4, startsInRange(pattern, 2940, 3360).size());
     }
 
     @Test
@@ -119,7 +125,7 @@ class NestedRhythmGeneratorTest {
                 60, 0.0, 3, 1, 1, 4, 1, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(420), starts(pattern));
+        assertEquals(List.of(0), starts(pattern));
     }
 
     @Test
@@ -144,19 +150,20 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void ratchetOverridesTupletInsideClaimedBeatSpan() {
+    void ratchetSplitsTupletCellsAfterTupletPlacement() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 3, 1, 1, 4, 1, 2, 0.6, 100, 0, 0,
+                60, 1.0, 3, 1, 1, 4, 1, 3, 0.6, 100, 0, 0,
                 4, 4, 1));
 
         assertEquals(List.of(0), startsInRange(pattern, 0, 420));
         assertEquals(List.of(420), startsInRange(pattern, 420, 840));
-        assertEquals(List.of(840, 945, 1050, 1155), startsInRange(pattern, 840, 1260));
-        assertEquals(List.of(1400), startsInRange(pattern, 1260, 1680));
+        assertEquals(List.of(840, 910, 980, 1050), startsInRange(pattern, 840, 1120));
+        assertEquals(List.of(1120), startsInRange(pattern, 1120, 1400));
+        assertEquals(List.of(1400), startsInRange(pattern, 1400, 1680));
     }
 
     @Test
-    void ratchetWidthSelectsMultipleStructuralRegionsDeterministically() {
+    void ratchetTargetsSelectMultipleStructuralRegionsDeterministically() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 4, 2, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
@@ -168,7 +175,7 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void ratchetPhaseRotatesChosenRegionsWithoutChangingCount() {
+    void ratchetTargetPhaseRotatesChosenRegionsWithoutChangingCount() {
         final NestedRhythmPattern base = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 4, 1, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
@@ -176,16 +183,16 @@ class NestedRhythmGeneratorTest {
                 60, 1.0, 0, 0, 0, 4, 1, 1, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(4, startsInRange(base, 0, 420).size());
-        assertEquals(List.of(420, 840, 1260), startsOutsideRange(base, 0, 420));
-        assertEquals(4, startsInRange(rotated, 420, 840).size());
-        assertEquals(List.of(0, 840, 1260), startsOutsideRange(rotated, 420, 840));
+        assertEquals(4, startsInRange(base, 420, 840).size());
+        assertEquals(List.of(0, 840, 1260), startsOutsideRange(base, 420, 840));
+        assertEquals(4, startsInRange(rotated, 0, 420).size());
+        assertEquals(List.of(420, 840, 1260), startsOutsideRange(rotated, 0, 420));
     }
 
     @Test
-    void ratchetPhaseInFiveFourCanLandOnEvenBeats() {
+    void ratchetTargetPhaseInFiveFourCanLandOnEvenBeats() {
         final NestedRhythmPattern rotated = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 1.0, 0, 0, 0, 4, 1, 1, 0.6, 100, 0, 0,
+                60, 1.0, 0, 0, 0, 4, 1, 0, 0.6, 100, 0, 0,
                 5, 4, 1));
 
         assertEquals(4, startsInRange(rotated, 420, 840).size());
@@ -242,7 +249,7 @@ class NestedRhythmGeneratorTest {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.25, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
                 4, 4, 1));
-        final List<Integer> retainedRatchetStarts = startsInRange(pattern, 0, 420);
+        final List<Integer> retainedRatchetStarts = startsInRange(pattern, 420, 840);
 
         assertEquals(2, retainedRatchetStarts.size());
         assertTrue(retainedRatchetStarts.get(1) - retainedRatchetStarts.get(0) <= 60);
@@ -254,7 +261,7 @@ class NestedRhythmGeneratorTest {
                 60, 0.36, 7, 1, 1, 4, 1, 0, 1.0, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(0, 105, 420, 840, 960), starts(pattern));
+        assertEquals(List.of(0, 420, 525, 840, 960), starts(pattern));
     }
 
     @Test
@@ -271,7 +278,7 @@ class NestedRhythmGeneratorTest {
     @Test
     void clusterDoesNotWrapAroundToTheStartOfTheClip() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
-                60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 8,
+                60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
                 1.0, 4, 4, 1));
         final List<Integer> retainedStarts = starts(pattern);
 
@@ -455,15 +462,14 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void lowerRatchetCountsStillReceiveOuterContour() {
+    void lowerRatchetDivisionsStillReceiveOuterContour() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 2, 1, 0, 1.0, 100, 0, 0,
                 4, 4, 1));
-        final List<Integer> ratchet = velocitiesInRange(pattern, 0, 420);
+        final List<Integer> ratchet = velocitiesInRange(pattern, 420, 840);
 
         assertEquals(2, ratchet.size());
         assertTrue(ratchet.get(0) > ratchet.get(1));
-        assertTrue(ratchet.get(1) <= 70);
     }
 
     @Test
@@ -483,8 +489,8 @@ class NestedRhythmGeneratorTest {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
                 4, 4, 1));
-        final List<Integer> ratchet = velocitiesInRange(pattern, 0, 420);
-        final int nextAnchor = velocitiesInRange(pattern, 420, 840).get(0);
+        final List<Integer> ratchet = velocitiesInRange(pattern, 420, 840);
+        final int nextAnchor = velocitiesInRange(pattern, 840, 1260).get(0);
 
         assertEquals(8, ratchet.size());
         assertTrue(ratchet.get(0) > ratchet.get(7));

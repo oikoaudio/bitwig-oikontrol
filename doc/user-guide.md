@@ -231,6 +231,7 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 | `STEP` | Enter `Melodic Step mode` |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
+| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold `MUTE_2` + projected rhythm pad | Set last step within the 32-step edit view |
 | Hold projected rhythm pad | Target nearest generated hit |
 | Tap bottom-row hit pad | Toggle that hit |
@@ -239,21 +240,21 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Density / `ALT`: cluster / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Cluster |
+| `Channel` | Density / `ALT`: chance / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet / `ALT`: Rat.Div / `SHIFT`: target phase | Cluster / `ALT`: play start |
 | `Mixer` | Volume | Pan | Send 1 | Send 2 |
 | `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Chance / `ALT`: baseline / `SHIFT`: rotate |
 | `User 2` | Linear pitch | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate | Clip length / `ALT`: play start | Reset hit edits |
 
-Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. The `Clip length` encoder then adjusts that length from the current DAW value instead of always starting from the mode default.
+Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. The `Clip length` encoder then adjusts that length from the current DAW value instead of always starting from the mode default. `ALT + BANK LEFT/RIGHT` halves or doubles the current clip length from that same DAW-derived value.
 
 `Chance` is play probability. It starts at 100%; turn it down to make generated hits less likely to play, with weaker/interior hits reduced first. The displayed value is the lowest generated play chance in the current phrase when no hit is held. `ALT + Chance` sets the baseline that the generated chance contour works down from.
 
 Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.
 Generated velocities combine local hard/soft accents with broader ramps across ratchet and tuplet spans, so interior subdivisions can rise toward the next structural hit without overtaking it. The default velocity depth is `1.75x`; turn it down for flatter phrases or up slightly for more contrast.
 Lowering `Density` removes generated hits without stretching the retained notes, including when clustering is active; note lengths continue to follow the full-density rhythmic structure and are capped again after clustered timing compensation. Density thinning is monotonic, so hits drop out in a stable order instead of disappearing and reappearing as you keep turning in one direction.
-`ALT + Density` controls clustering, pushing retained hits toward a contiguous phrase region at the end of the clip. Clustered anchors are compensated onto the sixteenth-note grid; other clustered hits prefer the same coarser grid when the phrase has room, then fall back to a thirty-second-note approximation when crowded. When clustering is active, tuplets add material into the compressed phrase instead of clearing the covered span first. At `0%` cluster, anchors remain protected; as clustering rises, anchors join the density selection so the whole phrase can concentrate when there are other hits to trade against. It does not rotate note positions, and velocity contour positions stay attached to the full generated structure.
+`Cluster` pushes retained hits toward a contiguous phrase region; `ALT + Cluster` adjusts clip play start. Clustered anchors are compensated onto the sixteenth-note grid; other clustered hits prefer the same coarser grid when the phrase has room, then fall back to a thirty-second-note approximation when crowded. When clustering is active, tuplets add material into the compressed phrase instead of clearing the covered span first. At `0%` cluster, anchors remain protected; as clustering rises, anchors join the density selection so the whole phrase can concentrate when there are other hits to trade against. Velocity contour positions stay attached to the full generated structure.
 
-Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that span. Ratchet is a beat-burst transform: `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates those beats. Tuplet counts are meter-aware; in `4/4` they include `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`. Ratchet supports `2 / 3 / 4 / 5 / 6 / 7 / 8`.
+Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that span. Ratchet comes after tuplets: `Ratchet` sets how many parent regions are affected, while `Rat.Div` sets how many divisions each selected parent region is split into. Parent regions are the beat cells plus any tuplet cells created inside the covered span; target priority starts with the second parent region, then the first, then the last lead-in region, then the remaining interior regions. `Target Phase` rotates through that target order. Tuplet counts are meter-aware; in `4/4` they include `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`. Ratchet divisions support `2 / 3 / 4 / 5 / 6 / 7 / 8`.
 
 ### NOTE mode
 
