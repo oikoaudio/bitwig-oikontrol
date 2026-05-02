@@ -38,13 +38,17 @@ public final class NestedRhythmGenerator {
 
         final List<NestedRhythmPattern.PulseEvent> events = new ArrayList<>(retained.size());
         final List<Integer> rawVelocities = new ArrayList<>(events.size());
+        int lastClusteredStart = -1;
         for (int order = 0; order < retained.size(); order++) {
             final PulseSpec pulse = retained.get(order);
             final int structureOrder = durationStarts.indexOf(pulse.fineStart());
+            final int fineStart = clusteredFineStart(pulse.fineStart(), order, retained.size(),
+                    normalized.cluster(), totalFineSteps, lastClusteredStart);
+            lastClusteredStart = fineStart;
             rawVelocities.add(velocityFor(pulse, structureOrder));
             events.add(new NestedRhythmPattern.PulseEvent(
                     structureOrder,
-                    pulse.fineStart(),
+                    fineStart,
                     0,
                     normalized.midiNote(),
                     0,
@@ -65,7 +69,31 @@ public final class NestedRhythmGenerator {
                     event.role()));
         }
         events.sort(Comparator.comparingInt(NestedRhythmPattern.PulseEvent::fineStart));
-        return new NestedRhythmPattern(withDurations(events, durationStarts, totalFineSteps));
+        final List<Integer> durationReferenceStarts = normalized.cluster() > 0.0001
+                ? events.stream().map(NestedRhythmPattern.PulseEvent::fineStart).toList()
+                : durationStarts;
+        return new NestedRhythmPattern(withDurations(events, durationReferenceStarts, totalFineSteps));
+    }
+
+    private int clusteredFineStart(final int originalFineStart,
+                                   final int retainedIndex,
+                                   final int retainedCount,
+                                   final double cluster,
+                                   final int totalFineSteps,
+                                   final int previousStart) {
+        if (cluster <= 0.0001 || retainedCount <= 0 || totalFineSteps <= 1) {
+            return originalFineStart;
+        }
+        final int windowLength = clusterWindowLength(cluster, totalFineSteps);
+        final int windowStart = Math.max(0, totalFineSteps - windowLength);
+        final int target = retainedCount == 1
+                ? windowStart
+                : windowStart + (int) Math.round(retainedIndex * (windowLength - 1) / (double) (retainedCount - 1));
+        final int blended = (int) Math.round(originalFineStart * (1.0 - cluster) + target * cluster);
+        final int remaining = retainedCount - retainedIndex - 1;
+        final int minStart = previousStart + 1;
+        final int maxStart = Math.max(minStart, totalFineSteps - remaining - 1);
+        return Math.max(minStart, Math.min(maxStart, blended));
     }
 
     public static int fineStepsPerBeat(final int denominator) {
@@ -166,7 +194,7 @@ public final class NestedRhythmGenerator {
         clearWrappedSpan(structure, start, length, totalFineSteps);
         final List<Integer> starts = evenlyDividedWrappedStarts(start, length, settings.tupletCount(), totalFineSteps);
         addSubdivisionPulses(structure, starts, settings.tupletCount(),
-                NestedRhythmPattern.Role.TUPLET_LEAD, NestedRhythmPattern.Role.TUPLET_INTERIOR, 900);
+                NestedRhythmPattern.Role.TUPLET_LEAD, NestedRhythmPattern.Role.TUPLET_INTERIOR);
     }
 
     private void applyRatchet(final TreeMap<Integer, PulseSpec> structure,
@@ -182,7 +210,7 @@ public final class NestedRhythmGenerator {
             structure.subMap(start, true, Math.min(totalFineSteps - 1, start + beatFineSteps - 1), true).clear();
             final List<Integer> starts = evenlyDividedStarts(start, beatFineSteps, settings.ratchetCount());
             addSubdivisionPulses(structure, starts, settings.ratchetCount(),
-                    NestedRhythmPattern.Role.RATCHET_LEAD, NestedRhythmPattern.Role.RATCHET_INTERIOR, 950);
+                    NestedRhythmPattern.Role.RATCHET_LEAD, NestedRhythmPattern.Role.RATCHET_INTERIOR);
         }
     }
 
@@ -190,8 +218,7 @@ public final class NestedRhythmGenerator {
                                       final List<Integer> starts,
                                       final int count,
                                       final NestedRhythmPattern.Role leadRole,
-                                      final NestedRhythmPattern.Role interiorRole,
-                                      final int basePriority) {
+                                      final NestedRhythmPattern.Role interiorRole) {
         int inserted = 0;
         for (int index = 0; index < starts.size(); index++) {
             final int fineStart = starts.get(index);
@@ -203,7 +230,7 @@ public final class NestedRhythmGenerator {
                     fineStart,
                     role,
                     false,
-                    subdivisionPriority(index, count, basePriority),
+                    subdivisionPriority(role, index, count),
                     index,
                     count));
             inserted++;
@@ -223,11 +250,20 @@ public final class NestedRhythmGenerator {
                 optional.add(pulse);
             }
         }
-        final int keepCount = Math.max(0, Math.min(optional.size(), (int) Math.round(density * optional.size())));
+        final int keepCount = optionalKeepCount(optional, density);
+        if (cluster > 0.0001) {
+            final List<PulseSpec> candidates = new ArrayList<>(structure.values());
+            final int clusteredKeepCount = Math.max(0, Math.min(candidates.size(), required.size() + keepCount));
+            return selectOptionalPulses(candidates, clusteredKeepCount, cluster, totalFineSteps);
+        }
         final List<PulseSpec> retained = new ArrayList<>(required);
         retained.addAll(selectOptionalPulses(optional, keepCount, cluster, totalFineSteps));
         retained.sort(Comparator.comparingInt(PulseSpec::fineStart));
         return retained;
+    }
+
+    private int optionalKeepCount(final List<PulseSpec> optional, final double density) {
+        return Math.max(0, Math.min(optional.size(), (int) Math.round(density * optional.size())));
     }
 
     private List<PulseSpec> selectOptionalPulses(final List<PulseSpec> optional,
@@ -237,30 +273,40 @@ public final class NestedRhythmGenerator {
         if (keepCount <= 0 || optional.isEmpty()) {
             return List.of();
         }
+        final List<PulseSpec> ranked = rankedOptionalPulses(optional, cluster, totalFineSteps);
+        final List<PulseSpec> selected = new ArrayList<>(ranked.subList(0, Math.min(keepCount, ranked.size())));
+        selected.sort(Comparator.comparingInt(PulseSpec::fineStart));
+        return selected;
+    }
+
+    private List<PulseSpec> rankedOptionalPulses(final List<PulseSpec> optional,
+                                                 final double cluster,
+                                                 final int totalFineSteps) {
         final List<PulseSpec> timeOrdered = new ArrayList<>(optional);
         timeOrdered.sort(Comparator.comparingInt(PulseSpec::fineStart));
-        final List<PulseSpec> selected = new ArrayList<>(keepCount);
+        final List<PulseSpec> ranked = new ArrayList<>(optional.size());
         final Set<Integer> selectedStarts = new HashSet<>();
-        while (selected.size() + 1 < keepCount) {
+
+        while (ranked.size() + 1 < optional.size()) {
             final PulsePair pair = bestOptionalPair(timeOrdered, selectedStarts, cluster, totalFineSteps);
             if (pair == null) {
                 break;
             }
-            selected.add(pair.left());
-            selected.add(pair.right());
+            ranked.add(pair.left());
+            ranked.add(pair.right());
             selectedStarts.add(pair.left().fineStart());
             selectedStarts.add(pair.right().fineStart());
         }
-        while (selected.size() < keepCount) {
+
+        while (ranked.size() < optional.size()) {
             final PulseSpec pulse = bestOptionalSingle(timeOrdered, selectedStarts, cluster, totalFineSteps);
             if (pulse == null) {
                 break;
             }
-            selected.add(pulse);
+            ranked.add(pulse);
             selectedStarts.add(pulse.fineStart());
         }
-        selected.sort(Comparator.comparingInt(PulseSpec::fineStart));
-        return selected;
+        return ranked;
     }
 
     private PulsePair bestOptionalPair(final List<PulseSpec> optional,
@@ -275,6 +321,9 @@ public final class NestedRhythmGenerator {
             if (selectedStarts.contains(left.fineStart()) || selectedStarts.contains(right.fineStart())) {
                 continue;
             }
+            if (!samePriorityFamily(left.role(), right.role())) {
+                continue;
+            }
             final double score = optionalScore(left, cluster, totalFineSteps)
                     + optionalScore(right, cluster, totalFineSteps)
                     + 75.0;
@@ -284,6 +333,19 @@ public final class NestedRhythmGenerator {
             }
         }
         return best;
+    }
+
+    private boolean samePriorityFamily(final NestedRhythmPattern.Role left,
+                                       final NestedRhythmPattern.Role right) {
+        return priorityFamily(left) == priorityFamily(right);
+    }
+
+    private PriorityFamily priorityFamily(final NestedRhythmPattern.Role role) {
+        return switch (role) {
+            case RATCHET_LEAD, RATCHET_INTERIOR -> PriorityFamily.RATCHET;
+            case TUPLET_LEAD, TUPLET_INTERIOR -> PriorityFamily.TUPLET;
+            default -> PriorityFamily.OTHER;
+        };
     }
 
     private PulseSpec bestOptionalSingle(final List<PulseSpec> optional,
@@ -317,13 +379,17 @@ public final class NestedRhythmGenerator {
         if (cluster <= 0.0001 || totalFineSteps <= 1) {
             return 0.0;
         }
-        final double windowFraction = 1.0 - Math.min(1.0, cluster) * 0.75;
-        final int windowLength = Math.max(1, (int) Math.round(totalFineSteps * windowFraction));
+        final int windowLength = clusterWindowLength(cluster, totalFineSteps);
         final int start = Math.max(0, totalFineSteps - windowLength);
         if (fineStart >= start) {
             return 1.0;
         }
         return fineStart / (double) Math.max(1, start);
+    }
+
+    private int clusterWindowLength(final double cluster, final int totalFineSteps) {
+        final double windowFraction = 1.0 - Math.min(1.0, Math.max(0.0, cluster)) * 0.75;
+        return Math.max(1, (int) Math.round(totalFineSteps * windowFraction));
     }
 
     private List<Integer> ratchetedBeats(final Settings settings) {
@@ -349,13 +415,26 @@ public final class NestedRhythmGenerator {
         return barIndex * clampedBeatCount + ratchetRegionAt(clampedBeatCount, beatPriorityIndex);
     }
 
-    private int subdivisionPriority(final int index, final int count, final int base) {
+    private int subdivisionPriority(final NestedRhythmPattern.Role role, final int index, final int count) {
+        final int base = rolePriority(role);
         if (index == 0) {
             return base;
         }
         final int mirroredDistance = Math.min(index, count - 1 - index);
         final int edgeBias = index == count - 1 ? 24 : 0;
         return base - mirroredDistance * 10 + edgeBias - index;
+    }
+
+    private int rolePriority(final NestedRhythmPattern.Role role) {
+        return switch (role) {
+            case PRIMARY_ANCHOR -> 1000;
+            case RATCHET_LEAD -> 960;
+            case TUPLET_LEAD -> 955;
+            case SECONDARY_ANCHOR -> 940;
+            case RATCHET_INTERIOR -> 920;
+            case TUPLET_INTERIOR -> 915;
+            case PICKUP -> 910;
+        };
     }
 
     private List<Integer> evenlyDividedStarts(final int start, final int length, final int count) {
@@ -593,5 +672,11 @@ public final class NestedRhythmGenerator {
     }
 
     private record PulsePair(PulseSpec left, PulseSpec right) {
+    }
+
+    private enum PriorityFamily {
+        RATCHET,
+        TUPLET,
+        OTHER
     }
 }

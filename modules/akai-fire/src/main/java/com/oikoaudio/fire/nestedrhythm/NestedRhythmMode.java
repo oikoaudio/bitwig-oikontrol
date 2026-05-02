@@ -1394,11 +1394,22 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private String chancePrimaryLabel() {
         return hasHeldPulse()
                 ? percentLabel(editablePulses.get(activePulseIndex()).effectiveChance())
-                : chancePlayProbabilityLabel();
+                : generatedChanceMinimumLabel();
     }
 
     private String chancePlayProbabilityLabel() {
         return percentLabel(chancePlayProbability);
+    }
+
+    private String generatedChanceMinimumLabel() {
+        if (editablePulses.isEmpty()) {
+            return chancePlayProbabilityLabel();
+        }
+        double minimum = 1.0;
+        for (final EditablePulse pulse : editablePulses) {
+            minimum = Math.min(minimum, pulse.effectiveChance());
+        }
+        return percentLabel(minimum);
     }
 
     private String chanceRotationLabel() {

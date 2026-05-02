@@ -244,12 +244,12 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 | `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
 | `User 2` | Linear pitch | Clip length / `ALT`: play start | Reset hit edits | Meter readout |
 
-`Chance` is play probability. It starts at 100%; turn it down to make generated hits less likely to play, with weaker/interior hits reduced first. `ALT + Chance` sets the baseline that the generated chance contour works down from.
+`Chance` is play probability. It starts at 100%; turn it down to make generated hits less likely to play, with weaker/interior hits reduced first. The displayed value is the lowest generated play chance in the current phrase when no hit is held. `ALT + Chance` sets the baseline that the generated chance contour works down from.
 
 Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.
 Generated velocities combine local hard/soft accents with broader ramps across ratchet and tuplet spans, so interior subdivisions can rise toward the next structural hit without overtaking it. The default velocity depth is `1.75x`; turn it down for flatter phrases or up slightly for more contrast.
-Lowering `Density` removes generated hits without stretching the retained notes; note lengths continue to follow the full-density rhythmic structure.
-`ALT + Density` controls clustering, biasing thinned optional hits toward a contiguous phrase region at the end of the clip. It does not rotate note positions, and velocity contour positions stay attached to the full generated structure.
+Lowering `Density` removes generated hits without stretching the retained notes; note lengths continue to follow the full-density rhythmic structure. Density thinning is monotonic, so hits drop out in a stable order instead of disappearing and reappearing as you keep turning in one direction.
+`ALT + Density` controls clustering, pushing retained hits toward a contiguous phrase region at the end of the clip without changing the retained hit count. At `0%` cluster, anchors remain protected; as clustering rises, anchors join the density selection so the whole phrase can concentrate when there are other hits to trade against. It does not rotate note positions, and velocity contour positions stay attached to the full generated structure.
 
 Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that span. Ratchet is a beat-burst transform: `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates those beats. Tuplet counts are meter-aware; in `4/4` they include `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`. Ratchet supports `2 / 3 / 4 / 5 / 6 / 7 / 8`.
 
