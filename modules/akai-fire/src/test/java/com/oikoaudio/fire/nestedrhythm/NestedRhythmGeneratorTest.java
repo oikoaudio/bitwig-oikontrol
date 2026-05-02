@@ -265,6 +265,16 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void mediumDensityKeepsNestedTupletGestureAlongsideStraightRatchets() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.45, 3, 1, 0, 2, 4, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+
+        assertTrue(startsInRange(pattern, 0, 840).size() >= 2, starts(pattern).toString());
+        assertTrue(startsInRange(pattern, 840, 1120).size() >= 2, starts(pattern).toString());
+    }
+
+    @Test
     void clusterConcentratesSparseOptionalPairsTowardPhraseEnd() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
@@ -509,6 +519,26 @@ class NestedRhythmGeneratorTest {
         assertTrue(ratchet.get(1) < ratchet.get(3));
         assertTrue(ratchet.get(3) < ratchet.get(5));
         assertTrue(ratchet.get(5) < ratchet.get(7));
+    }
+
+    @Test
+    void ratchetTargetsShareOuterContourAcrossTheSelectedPhrase() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 2, 4, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+
+        assertTrue(velocityAt(pattern, 1470) > velocityAt(pattern, 210));
+    }
+
+    @Test
+    void repeatedRatchetLeadsInsideLongerPhraseArePulledIntoTheOuterContour() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 3, 2, 0, 2, 6, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+
+        assertTrue(velocityAt(pattern, 280) < velocityAt(pattern, 0));
+        assertTrue(velocityAt(pattern, 1400) > velocityAt(pattern, 280));
+        assertTrue(velocityAt(pattern, 1540) > velocityAt(pattern, 140));
     }
 
     @Test
