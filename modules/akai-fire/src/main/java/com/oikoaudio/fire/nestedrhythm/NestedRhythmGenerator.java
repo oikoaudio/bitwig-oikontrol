@@ -77,12 +77,7 @@ public final class NestedRhythmGenerator {
 
     public static int ratchetRegionAt(final int beatCount, final int orderedIndex) {
         final int clampedBeatCount = Math.max(1, beatCount);
-        final int normalizedIndex = Math.floorMod(orderedIndex, clampedBeatCount);
-        final int evenCount = (clampedBeatCount + 1) / 2;
-        if (normalizedIndex < evenCount) {
-            return normalizedIndex * 2;
-        }
-        return (normalizedIndex - evenCount) * 2 + 1;
+        return Math.floorMod(orderedIndex, clampedBeatCount);
     }
 
     public static int[] supportedTupletCounts(final int meterNumerator,

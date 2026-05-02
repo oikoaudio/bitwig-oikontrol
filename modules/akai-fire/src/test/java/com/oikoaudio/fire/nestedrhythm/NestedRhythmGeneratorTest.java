@@ -91,12 +91,26 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void ratchetPhaseDefaultsToContiguousFirstHalfAcrossBars() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
+                4, 4, 2));
+
+        assertEquals(4, startsInRange(pattern, 0, 420).size());
+        assertEquals(4, startsInRange(pattern, 420, 840).size());
+        assertEquals(List.of(840, 1260), startsInRange(pattern, 840, 1680));
+        assertEquals(4, startsInRange(pattern, 1680, 2100).size());
+        assertEquals(4, startsInRange(pattern, 2100, 2520).size());
+        assertEquals(List.of(2520, 2940), startsInRange(pattern, 2520, 3360));
+    }
+
+    @Test
     void densityMinimumKeepsOnlyVisibleAnchorsOutsideClaimedSpans() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.0, 7, 1, 1, 4, 2, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(420), starts(pattern));
+        assertEquals(List.of(), starts(pattern));
     }
 
     @Test
@@ -148,8 +162,8 @@ class NestedRhythmGeneratorTest {
                 4, 4, 1));
 
         assertEquals(4, startsInRange(pattern, 0, 420).size());
-        assertEquals(List.of(420), startsInRange(pattern, 420, 840));
-        assertEquals(4, startsInRange(pattern, 840, 1260).size());
+        assertEquals(4, startsInRange(pattern, 420, 840).size());
+        assertEquals(List.of(840), startsInRange(pattern, 840, 1260));
         assertEquals(List.of(1260), startsInRange(pattern, 1260, NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 

@@ -325,6 +325,7 @@
           <tr><td><code>User 2</code></td><td>Linear pitch</td><td>Clip length / <code>ALT</code>: play start</td><td>Reset hit edits</td><td>Meter readout</td></tr>
       </tbody>
       </table>
+      <p><code>Chance</code> is play probability. It starts at 100%; turn it down to make generated hits less likely to play, with weaker/interior hits reduced first. <code>ALT + Chance</code> sets the baseline that the generated chance contour works down from.</p>
       <p>Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.</p>
       <p>Tuplet is a half-bar transform: <code>Cover</code> sets how many consecutive half-bars are claimed, and <code>Tuplet Phase</code> rotates that span. Ratchet is a beat-burst transform: <code>Ratchet Width</code> chooses phrase beats in deterministic priority order, and <code>Ratchet Phase</code> rotates those beats. Tuplet counts are meter-aware; in <code>4/4</code> they include <code>3 / 5 / 7</code>, while <code>5/4</code> can expose counts such as <code>3 / 4 / 6 / 7</code>. Ratchet supports <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code>.</p>
       <h3>NOTE mode</h3>

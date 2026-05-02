@@ -106,7 +106,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private double pitchExpressionSpread = 0.0;
     private int pitchExpressionRotation = 0;
     private double chanceBaseline = 1.0;
-    private double chanceDepth = 0.0;
+    private double chancePlayProbability = 1.0;
     private int chanceRotation = 0;
     private int clipBarCount = 1;
     private int lastStepIndex = NestedRhythmLoopLength.STEP_COUNT - 1;
@@ -589,7 +589,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         step.setTranspose(pulse.pitchExpression());
         final double chance = Math.min(0.999, pulse.chance());
         step.setChance(chance);
-        step.setIsChanceEnabled(true);
+        step.setIsChanceEnabled(chance < 0.999);
         final RecurrencePattern recurrence = pulse.recurrence();
         step.setRecurrence(recurrence.bitwigLength(), recurrence.bitwigMask());
     }
@@ -1143,14 +1143,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             adjustSelectedHitChance(amount);
             return;
         }
-        adjustChanceDepth(amount);
+        adjustChancePlayProbability(amount);
     }
 
-    private void adjustChanceDepth(final int amount) {
+    private void adjustChancePlayProbability(final int amount) {
         if (amount == 0) {
             return;
         }
-        chanceDepth = clampUnit(chanceDepth + amount * 0.05);
+        chancePlayProbability = clampUnit(chancePlayProbability + amount * 0.05);
         applyEditablePattern("Chance", chancePrimaryLabel());
     }
 
@@ -1383,11 +1383,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private String chancePrimaryLabel() {
         return hasHeldPulse()
                 ? percentLabel(editablePulses.get(activePulseIndex()).effectiveChance())
-                : chanceDepthLabel();
+                : chancePlayProbabilityLabel();
     }
 
-    private String chanceDepthLabel() {
-        return percentLabel(chanceDepth);
+    private String chancePlayProbabilityLabel() {
+        return percentLabel(chancePlayProbability);
     }
 
     private String chanceRotationLabel() {
@@ -1820,7 +1820,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
         private double effectiveChance() {
             return clampUnit(NestedRhythmContourShaper.shapeChance(
-                    order, role, chanceBaseline, chanceDepth, chanceRotation) + chanceOffset);
+                    order, role, chanceBaseline, chancePlayProbability, chanceRotation) + chanceOffset);
         }
 
         private RecurrencePattern effectiveRecurrence() {
