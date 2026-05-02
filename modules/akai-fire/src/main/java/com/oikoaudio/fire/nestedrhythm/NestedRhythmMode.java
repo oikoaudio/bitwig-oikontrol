@@ -748,10 +748,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private String summaryLabel() {
         final String tuplet = tupletTargets == 0
                 ? "No Tuplet"
-                : "T%d D%d".formatted(tupletTargets, tupletDivisions);
+                : "T%d x%d".formatted(tupletTargets, tupletDivisions);
         final String ratchet = ratchetTargets == 0
                 ? "No Ratchet"
-                : "R%d D%d".formatted(ratchetTargets, ratchetDivisions);
+                : "R%d x%d".formatted(ratchetTargets, ratchetDivisions);
         return "%s / %s / %s x%d".formatted(tuplet, ratchet, meterLabel(), clipBarCount);
     }
 
@@ -766,11 +766,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Recurrence", this::recurrenceDepthLabel, this::adjustRecurrenceDepth)),
                         modifierChoiceSlot(
                                 view("Tuplet", this::tupletTargetLabel, this::adjustTupletTargets),
-                                view("Tup.Div", () -> Integer.toString(tupletDivisions), this::adjustTupletDivisions),
+                                view("Tup.Div", this::tupletDivisionLabel, this::adjustTupletDivisions),
                                 view("Target Phase", this::tupletTargetPhaseLabel, this::adjustTupletTargetPhase)),
                         modifierChoiceSlot(
                                 view("Ratchet", this::ratchetTargetLabel, this::adjustRatchetTargets),
-                                view("Rat.Div", () -> Integer.toString(ratchetDivisions), this::adjustRatchetDivisions),
+                                view("Rat.Div", this::ratchetDivisionLabel, this::adjustRatchetDivisions),
                                 view("Target Phase", this::ratchetTargetPhaseLabel, this::adjustRatchetTargetPhase)),
                         modifierContinuousWithSteppedModifiersSlot(
                                 view("Cluster", this::clusterLabel, this::adjustCluster),
@@ -1059,7 +1059,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private void adjustTupletDivisions(final int amount) {
         tupletDivisions = stepCount(normalizeTupletDivisions(tupletDivisions), amount, availableTupletDivisions());
-        generatePattern("Tup.Div", Integer.toString(tupletDivisions));
+        generatePattern("Tup.Div", tupletDivisionLabel());
     }
 
     private void adjustTupletTargetPhase(final int amount) {
@@ -1074,7 +1074,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private void adjustRatchetDivisions(final int amount) {
         ratchetDivisions = stepCount(ratchetDivisions, amount, RATCHET_DIVISION_VALUES);
-        generatePattern("Rat.Div", Integer.toString(ratchetDivisions));
+        generatePattern("Rat.Div", ratchetDivisionLabel());
     }
 
     private void adjustRatchetTargetPhase(final int amount) {
@@ -1541,7 +1541,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private String ratchetTargetLabel() {
-        return ratchetTargets == 0 ? "Off" : Integer.toString(ratchetTargets);
+        return ratchetTargets == 0 ? "Off" : ratchetTargets + " cells";
+    }
+
+    private String ratchetDivisionLabel() {
+        return "x" + ratchetDivisions;
     }
 
     private String clusterLabel() {
@@ -1580,7 +1584,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private String tupletTargetLabel() {
-        return tupletTargets == 0 ? "Off" : Integer.toString(tupletTargets);
+        return tupletTargets == 0 ? "Off" : tupletTargets + " spans";
+    }
+
+    private String tupletDivisionLabel() {
+        return "x" + tupletDivisions;
     }
 
     private String tupletTargetPhaseLabel() {

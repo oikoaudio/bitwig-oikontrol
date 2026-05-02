@@ -94,13 +94,15 @@ public final class NestedRhythmGenerator {
         }
         final int windowLength = clusterWindowLength(cluster, totalFineSteps);
         final int windowStart = Math.max(0, totalFineSteps - windowLength);
-        final int target = windowStart + (int) Math.round(retainedIndex * windowLength / (double) retainedCount);
+        final double originalPosition = originalFineStart / (double) totalFineSteps;
+        final int target = windowStart + (int) Math.round(originalPosition * Math.max(0, windowLength - 1));
         final int blended = (int) Math.round(originalFineStart * (1.0 - cluster) + target * cluster);
         final int constrained = Math.max(windowStart, blended);
         final int remaining = retainedCount - retainedIndex - 1;
         final int minStart = previousStart + 1;
         final int maxStart = Math.max(minStart, totalFineSteps - remaining - 1);
-        return snapClusteredFineStart(constrained, role, retainedCount, cluster, minStart, maxStart, totalFineSteps);
+        return snapClusteredFineStart(constrained, role, retainedCount, cluster, minStart, maxStart,
+                remaining, totalFineSteps);
     }
 
     private int snapClusteredFineStart(final int desiredFineStart,
@@ -109,9 +111,13 @@ public final class NestedRhythmGenerator {
                                        final double cluster,
                                        final int minStart,
                                        final int maxStart,
+                                       final int remaining,
                                        final int totalFineSteps) {
         final int divisions = clusterGridDivisions(role, retainedCount, cluster, totalFineSteps);
-        final int candidate = nearestGridStart(desiredFineStart, divisions, minStart, maxStart, totalFineSteps);
+        final int windowLength = clusterWindowLength(cluster, totalFineSteps);
+        final int windowStart = cluster <= 0.0001 ? 0 : Math.max(0, totalFineSteps - windowLength);
+        final int candidate = nearestGridStart(desiredFineStart, divisions, Math.max(minStart, windowStart),
+                remaining, totalFineSteps);
         if (candidate >= 0) {
             return candidate;
         }
@@ -121,28 +127,35 @@ public final class NestedRhythmGenerator {
     private int nearestGridStart(final int desiredFineStart,
                                  final int divisions,
                                  final int minStart,
-                                 final int maxStart,
+                                 final int remaining,
                                  final int totalFineSteps) {
         final int minIndex = Math.max(0, (int) Math.floor(
                 minStart * divisions / (double) FINE_STEPS_PER_WHOLE) - 2);
-        final int maxIndex = (int) Math.ceil(maxStart * divisions / (double) FINE_STEPS_PER_WHOLE) + 2;
-        int best = -1;
-        int bestDistance = Integer.MAX_VALUE;
+        final int maxIndex = (int) Math.ceil((totalFineSteps - 1) * divisions
+                / (double) FINE_STEPS_PER_WHOLE) + 2;
+        final List<Integer> candidates = new ArrayList<>();
         for (int index = minIndex; index <= maxIndex; index++) {
             final int candidate = (int) Math.round(index * FINE_STEPS_PER_WHOLE / (double) divisions);
-            if (candidate < minStart || candidate > maxStart || candidate >= totalFineSteps) {
+            if (candidate < minStart || candidate >= totalFineSteps) {
                 continue;
             }
-            final int distance = Math.abs(candidate - desiredFineStart);
+            candidates.add(candidate);
+        }
+        if (candidates.isEmpty() || candidates.size() <= remaining) {
+            return -1;
+        }
+        int bestIndex = 0;
+        int bestDistance = Integer.MAX_VALUE;
+        final int maxCandidateIndex = candidates.size() - remaining - 1;
+        for (int index = 0; index <= maxCandidateIndex; index++) {
+            final int distance = Math.abs(candidates.get(index) - desiredFineStart);
             if (distance < bestDistance) {
                 bestDistance = distance;
-                best = candidate;
+                bestIndex = index;
             }
         }
-        if (best >= 0) {
-            return best;
-        }
-        return -1;
+        final int candidate = candidates.get(bestIndex);
+        return candidate;
     }
 
     private int clusterGridDivisions(final NestedRhythmPattern.Role role,

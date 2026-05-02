@@ -232,6 +232,25 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void clusteredDensityIncreaseDoesNotRedistributeAlreadyRetainedHits() {
+        final NestedRhythmPattern lowerDensity = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.5875, 3, 2, 0, 6, 6, 0, 1.0, 100, 0, 0,
+                0.65, 4, 4, 2));
+        final NestedRhythmPattern higherDensity = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.6, 3, 2, 0, 6, 6, 0, 1.0, 100, 0, 0,
+                0.65, 4, 4, 2));
+
+        assertTrue(higherDensity.events().size() > lowerDensity.events().size(),
+                lowerDensity.events().size() + " -> " + higherDensity.events().size());
+        for (final NestedRhythmPattern.PulseEvent retained : lowerDensity.events()) {
+            final int shiftedStart = startForOrder(higherDensity, retained.order());
+            final int thirtySecondStep = (int) Math.ceil(NestedRhythmGenerator.FINE_STEPS_PER_WHOLE / 32.0);
+            assertTrue(Math.abs(retained.fineStart() - shiftedStart) <= thirtySecondStep,
+                    "order " + retained.order() + " jumped from " + retained.fineStart() + " to " + shiftedStart);
+        }
+    }
+
+    @Test
     void loweringDensityDoesNotStretchRetainedNoteDurations() {
         final NestedRhythmGenerator.Settings fullSettings = new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
@@ -623,6 +642,14 @@ class NestedRhythmGeneratorTest {
                 .findFirst()
                 .orElseThrow()
                 .duration();
+    }
+
+    private int startForOrder(final NestedRhythmPattern pattern, final int order) {
+        return pattern.events().stream()
+                .filter(event -> event.order() == order)
+                .findFirst()
+                .orElseThrow()
+                .fineStart();
     }
 
     private int velocityAt(final NestedRhythmPattern pattern, final int fineStart) {
