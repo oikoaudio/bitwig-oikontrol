@@ -128,7 +128,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         this.cursorClip.setStepSize(CLIP_STEP_SIZE);
         this.cursorClip.scrollToKey(0);
         this.cursorClip.scrollToStep(0);
+        this.cursorClip.getLoopLength().markInterested();
         this.cursorClip.getPlayStart().markInterested();
+        this.cursorClip.getLoopLength().addValueObserver(this::syncClipLengthFromBeats);
         this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
         final PinnableCursorDevice cursorDevice = cursorTrack.createCursorDevice("NESTED_RHYTHM_DEVICE",
@@ -171,6 +173,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     protected void onActivate() {
         refreshClipCursor();
         refreshSelectedClipState();
+        syncClipLengthFromDaw();
         patternButtons.setUpCallback(pressed -> {
             if (pressed) {
                 clearPulseEdits();
@@ -738,7 +741,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Density / Alt Cluster / Shift Rec\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Chance / Alt Base / Shift Rot",
+                "1: Density / Alt Cluster / Shift Rec\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Cluster",
                 new EncoderSlotBinding[]{
                         modifierContinuousSlot(
                                 view("Density", () -> "%.2f".formatted(density), this::adjustDensity),
@@ -752,10 +755,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Ratchet", () -> countLabel(ratchetCount), this::adjustRatchetCount),
                                 view("Width", () -> Integer.toString(ratchetWidth), this::adjustRatchetWidth),
                                 view("Ratchet Phase", this::ratchetPhaseLabel, this::adjustRatchetPhase)),
-                        modifierChoiceSlot(
-                                view("Chance", this::chancePrimaryLabel, this::adjustChancePrimary),
-                                view("Chance Base", this::chanceBaselineLabel, this::adjustChanceBaseline),
-                                view("Chance Rot", this::chanceRotationLabel, this::adjustChanceRotation))
+                        continuousSlot("Cluster", this::clusterLabel, this::adjustCluster)
                 }));
         banks.put(EncoderMode.MIXER, new EncoderBank(
                 "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
@@ -766,7 +766,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                         mixerSlot(3, "Send 2")
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
+                "1: Velocity\n2: Pressure\n3: Timbre\n4: Chance / Alt Base / Shift Rot",
                 new EncoderSlotBinding[]{
                         modifierChoiceSlot(
                                 view("Velocity", this::velocityPrimaryLabel, this::adjustVelocityPrimary),
@@ -781,20 +781,23 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                 view("Tmb Center", this::timbreCenterLabel, this::adjustTimbreCenter),
                                 view("Tmb Rotate", this::timbreRotationLabel, this::adjustTimbreRotation)),
                         modifierChoiceSlot(
-                                view("Pitch Expr", this::pitchExpressionPrimaryLabel, this::adjustPitchExpressionPrimary),
-                                view("Ptc Center", this::pitchExpressionCenterLabel, this::adjustPitchExpressionCenter),
-                                view("Ptc Rotate", this::pitchExpressionRotationLabel, this::adjustPitchExpressionRotation))
+                                view("Chance", this::chancePrimaryLabel, this::adjustChancePrimary),
+                                view("Chance Base", this::chanceBaselineLabel, this::adjustChanceBaseline),
+                                view("Chance Rot", this::chanceRotationLabel, this::adjustChanceRotation))
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Pitch\n2: Length / Alt Play Start\n3: Reset Hits\n4: Meter",
+                "1: Pitch\n2: Pitch Expr\n3: Length / Alt Play Start\n4: Reset Hits",
                 new EncoderSlotBinding[]{
                         choiceSlot("Pitch", this::pitchLabel, this::adjustPitch),
+                        modifierChoiceSlot(
+                                view("Pitch Expr", this::pitchExpressionPrimaryLabel, this::adjustPitchExpressionPrimary),
+                                view("Ptc Center", this::pitchExpressionCenterLabel, this::adjustPitchExpressionCenter),
+                                view("Ptc Rotate", this::pitchExpressionRotationLabel, this::adjustPitchExpressionRotation)),
                         modifierChoiceSlot(
                                 view("Length", this::clipLengthLabel, this::adjustClipBarCount),
                                 view("Play Start", this::playStartLabel, this::adjustPlayStart),
                                 null),
-                        choiceSlot("Reset", () -> editablePulses.isEmpty() ? "No Hits" : "Ready", this::resetHitsFromEncoder),
-                        choiceSlot("Meter", this::meterLabel, this::ignoreEncoder)
+                        choiceSlot("Reset", () -> editablePulses.isEmpty() ? "No Hits" : "Ready", this::resetHitsFromEncoder)
                 }));
         return new EncoderBankLayout(banks);
     }
@@ -1596,6 +1599,28 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         selectedClipSlotIndex = state.slotIndex();
         selectedClipHasContent = state.hasContent();
         selectedClipColor = state.color();
+        syncClipLengthFromDaw();
+        tupletCover = Math.max(0, Math.min(totalTupletHalfBars(), tupletCover));
+        tupletPhase = Math.floorMod(tupletPhase, totalTupletHalfBars());
+        tupletCount = normalizeTupletCount(tupletCount);
+        ratchetWidth = Math.max(1, Math.min(totalRatchetRegions(), ratchetWidth));
+        ratchetPhase = Math.floorMod(ratchetPhase, totalRatchetRegions());
+    }
+
+    private void syncClipLengthFromDaw() {
+        syncClipLengthFromBeats(cursorClip.getLoopLength().get());
+    }
+
+    private void syncClipLengthFromBeats(final double loopLength) {
+        if (loopLength <= 0.0001) {
+            return;
+        }
+        final NestedRhythmLoopLength.Settings settings = NestedRhythmLoopLength.settingsFromBeats(
+                loopLength,
+                NestedRhythmGenerator.beatsPerBar(meterNumerator(), meterDenominator()),
+                CLIP_BAR_COUNT_VALUES);
+        clipBarCount = settings.barCount();
+        lastStepIndex = settings.lastStepIndex();
         tupletCover = Math.max(0, Math.min(totalTupletHalfBars(), tupletCover));
         tupletPhase = Math.floorMod(tupletPhase, totalTupletHalfBars());
         tupletCount = normalizeTupletCount(tupletCount);

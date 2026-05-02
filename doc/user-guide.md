@@ -239,10 +239,12 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Density / `ALT`: cluster / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Chance / `ALT`: baseline / `SHIFT`: rotate |
+| `Channel` | Density / `ALT`: cluster / `SHIFT`: recurrence | Tuplet count / `ALT`: cover / `SHIFT`: phase | Ratchet count / `ALT`: width / `SHIFT`: phase | Cluster |
 | `Mixer` | Volume | Pan | Send 1 | Send 2 |
-| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate |
-| `User 2` | Linear pitch | Clip length / `ALT`: play start | Reset hit edits | Meter readout |
+| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Chance / `ALT`: baseline / `SHIFT`: rotate |
+| `User 2` | Linear pitch | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate | Clip length / `ALT`: play start | Reset hit edits |
+
+Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. The `Clip length` encoder then adjusts that length from the current DAW value instead of always starting from the mode default.
 
 `Chance` is play probability. It starts at 100%; turn it down to make generated hits less likely to play, with weaker/interior hits reduced first. The displayed value is the lowest generated play chance in the current phrase when no hit is held. `ALT + Chance` sets the baseline that the generated chance contour works down from.
 
