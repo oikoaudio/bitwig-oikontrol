@@ -21,13 +21,34 @@ class NestedRhythmContourShaperTest {
     }
 
     @Test
-    void chanceAttenuatesInteriorHitsMoreThanAnchors() {
+    void fullPlayChanceKeepsBaselineForAllRoles() {
         final double anchor = NestedRhythmContourShaper.shapeChance(
                 1, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 0.8, 1.0, 0);
         final double interior = NestedRhythmContourShaper.shapeChance(
                 1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 1.0, 0);
 
+        assertEquals(0.8, anchor);
+        assertEquals(0.8, interior);
+    }
+
+    @Test
+    void loweredPlayChanceAttenuatesInteriorHitsMoreThanAnchors() {
+        final double anchor = NestedRhythmContourShaper.shapeChance(
+                1, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 0.8, 0.0, 0);
+        final double interior = NestedRhythmContourShaper.shapeChance(
+                1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
+
         assertTrue(interior < anchor);
+    }
+
+    @Test
+    void loweredPlayChancePreservesContourPriorityWithinRole() {
+        final double strong = NestedRhythmContourShaper.shapeChance(
+                0, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
+        final double weak = NestedRhythmContourShaper.shapeChance(
+                1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
+
+        assertTrue(strong > weak);
     }
 
     @Test

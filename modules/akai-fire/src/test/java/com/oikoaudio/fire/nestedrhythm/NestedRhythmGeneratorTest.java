@@ -91,12 +91,26 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void ratchetPhaseDefaultsToContiguousFirstHalfAcrossBars() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
+                4, 4, 2));
+
+        assertEquals(4, startsInRange(pattern, 0, 420).size());
+        assertEquals(4, startsInRange(pattern, 420, 840).size());
+        assertEquals(List.of(840, 1260), startsInRange(pattern, 840, 1680));
+        assertEquals(4, startsInRange(pattern, 1680, 2100).size());
+        assertEquals(4, startsInRange(pattern, 2100, 2520).size());
+        assertEquals(List.of(2520, 2940), startsInRange(pattern, 2520, 3360));
+    }
+
+    @Test
     void densityMinimumKeepsOnlyVisibleAnchorsOutsideClaimedSpans() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.0, 7, 1, 1, 4, 2, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(420), starts(pattern));
+        assertEquals(List.of(), starts(pattern));
     }
 
     @Test
@@ -148,8 +162,8 @@ class NestedRhythmGeneratorTest {
                 4, 4, 1));
 
         assertEquals(4, startsInRange(pattern, 0, 420).size());
-        assertEquals(List.of(420), startsInRange(pattern, 420, 840));
-        assertEquals(4, startsInRange(pattern, 840, 1260).size());
+        assertEquals(4, startsInRange(pattern, 420, 840).size());
+        assertEquals(List.of(840), startsInRange(pattern, 840, 1260));
         assertEquals(List.of(1260), startsInRange(pattern, 1260, NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 
@@ -193,6 +207,228 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void densitySelectionIsMonotonicWhenClustered() {
+        Set<Integer> previousOrders = Set.of();
+        for (double density = 0.0; density <= 1.0001; density += 0.05) {
+            final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                    60, density, 7, 1, 1, 4, 2, 0, 1.0, 100, 0, 0,
+                    1.0, 4, 4, 1));
+            final Set<Integer> currentOrders = orders(pattern);
+
+            assertTrue(currentOrders.containsAll(previousOrders),
+                    "density " + density + " lost " + previousOrders + " from " + currentOrders);
+            previousOrders = currentOrders;
+        }
+    }
+
+    @Test
+    void loweringDensityDoesNotStretchRetainedNoteDurations() {
+        final NestedRhythmGenerator.Settings fullSettings = new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1);
+        final NestedRhythmGenerator.Settings sparseSettings = new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1);
+        final NestedRhythmPattern full = generator.generate(fullSettings);
+        final NestedRhythmPattern sparse = generator.generate(sparseSettings);
+
+        for (final NestedRhythmPattern.PulseEvent event : sparse.events()) {
+            assertEquals(durationAt(full, event.fineStart()), event.duration());
+        }
+    }
+
+    @Test
+    void densityThinningPrefersAdjacentOptionalPairs() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> retainedRatchetStarts = startsInRange(pattern, 0, 420);
+
+        assertEquals(2, retainedRatchetStarts.size());
+        assertTrue(retainedRatchetStarts.get(1) - retainedRatchetStarts.get(0) <= 60);
+    }
+
+    @Test
+    void densityPriorityInterleavesTupletLeadsWithRatchetDetails() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.36, 7, 1, 1, 4, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+
+        assertEquals(List.of(0, 105, 420, 840, 960), starts(pattern));
+    }
+
+    @Test
+    void clusterConcentratesSparseOptionalPairsTowardPhraseEnd() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+        final List<Integer> retainedStarts = starts(pattern);
+
+        assertEquals(4, retainedStarts.size());
+        assertTrue(retainedStarts.stream().allMatch(start -> start >= 1260));
+    }
+
+    @Test
+    void clusterDoesNotWrapAroundToTheStartOfTheClip() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 8,
+                1.0, 4, 4, 1));
+        final List<Integer> retainedStarts = starts(pattern);
+
+        assertEquals(4, retainedStarts.size());
+        assertTrue(retainedStarts.stream().allMatch(start -> start >= 1260));
+    }
+
+    @Test
+    void clusterDoesNotDropAnchorsWhenThereAreNoOptionalHitsToTrade() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.5, 0, 0, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        assertEquals(4, starts(pattern).size());
+        assertTrue(starts(pattern).stream().allMatch(start -> start >= 1260));
+    }
+
+    @Test
+    void clusterSnapsAnchorsToSixteenthGrid() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.5, 0, 0, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        assertTrue(pattern.events().stream()
+                .allMatch(event -> isWholeDivisionGridLine(event.fineStart(), 16)));
+    }
+
+    @Test
+    void clusterPrefersSixteenthGridForSubdivisionsWhenThereIsSpace() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        assertTrue(pattern.events().stream()
+                .filter(event -> !isAnchor(event.role()))
+                .allMatch(event -> isWholeDivisionGridLine(event.fineStart(), 16)),
+                pattern.events().toString());
+    }
+
+    @Test
+    void clusterFallsBackToThirtySecondGridForDenseSubdivisions() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.35, 7, 1, 1, 4, 2, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        assertTrue(pattern.events().stream()
+                .filter(event -> !isAnchor(event.role()))
+                .allMatch(event -> isWholeDivisionGridLine(event.fineStart(), 32)),
+                pattern.events().toString());
+        assertTrue(pattern.events().stream()
+                .filter(event -> !isAnchor(event.role()))
+                .anyMatch(event -> !isWholeDivisionGridLine(event.fineStart(), 16)),
+                pattern.events().toString());
+    }
+
+    @Test
+    void clusterShortensDurationsAfterGridSnapping() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.65, 7, 1, 1, 8, 2, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        for (int index = 0; index < pattern.events().size(); index++) {
+            final NestedRhythmPattern.PulseEvent current = pattern.events().get(index);
+            final NestedRhythmPattern.PulseEvent next = pattern.events().get((index + 1) % pattern.events().size());
+            final int gap = next.fineStart() > current.fineStart()
+                    ? next.fineStart() - current.fineStart()
+                    : NestedRhythmGenerator.fineStepsPerBar(4, 4) - current.fineStart() + next.fineStart();
+
+            assertTrue(current.duration() <= gap);
+        }
+    }
+
+    @Test
+    void clusteredThinningKeepsFullStructureDurationCaps() {
+        final NestedRhythmPattern fullClustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 7, 1, 1, 8, 2, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+        final NestedRhythmPattern sparseClustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 7, 1, 1, 8, 2, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        for (final NestedRhythmPattern.PulseEvent event : sparseClustered.events()) {
+            assertTrue(event.duration() <= durationAtOrder(fullClustered, event.order()),
+                    "order " + event.order() + " stretched from "
+                            + durationAtOrder(fullClustered, event.order()) + " to " + event.duration());
+        }
+    }
+
+    @Test
+    void partialClusterDoesNotStretchSparseWraparoundDuration() {
+        final NestedRhythmPattern unclustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 0, 0, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                0.0, 4, 4, 1));
+        final NestedRhythmPattern clustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 0, 0, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                0.5, 4, 4, 1));
+
+        for (final NestedRhythmPattern.PulseEvent event : clustered.events()) {
+            assertTrue(event.duration() <= durationAtOrder(unclustered, event.order()),
+                    "order " + event.order() + " stretched from "
+                            + durationAtOrder(unclustered, event.order()) + " to " + event.duration());
+        }
+    }
+
+    @Test
+    void clusterPreservesTheDensityRetainedHitCount() {
+        final NestedRhythmPattern unclustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 1, 0, 1.0, 100, 0, 0,
+                0.0, 4, 4, 1));
+        final NestedRhythmPattern clustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 1, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        assertEquals(starts(unclustered).size(), starts(clustered).size());
+    }
+
+    @Test
+    void clusteredTupletsAddDensityInsteadOfReplacingRatchetPhrase() {
+        final NestedRhythmPattern ratchetsOnly = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 2, 0, 1.0, 100, 0, 0,
+                0.65, 4, 4, 1));
+        final NestedRhythmPattern withTuplets = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 7, 1, 1, 4, 2, 0, 1.0, 100, 0, 0,
+                0.65, 4, 4, 1));
+
+        assertTrue(withTuplets.events().size() > ratchetsOnly.events().size());
+        assertTrue(withTuplets.events().stream().anyMatch(event -> isRatchet(event.role())));
+        assertTrue(withTuplets.events().stream().anyMatch(event -> isTuplet(event.role())));
+    }
+
+    @Test
+    void fullClusterKeepsMixedRatchetAndTupletMaterial() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.4, 7, 1, 1, 4, 2, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        assertTrue(starts(pattern).size() >= 6);
+        assertTrue(starts(pattern).stream().allMatch(start -> start >= 1260));
+        assertTrue(pattern.events().stream().anyMatch(event -> isRatchet(event.role())));
+        assertTrue(pattern.events().stream().anyMatch(event -> isTuplet(event.role())));
+    }
+
+    @Test
+    void clusteringKeepsVelocityContourAttachedToFullStructurePositions() {
+        final NestedRhythmPattern full = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
+                0.0, 4, 4, 1));
+        final NestedRhythmPattern clustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.25, 0, 0, 0, 4, 4, 0, 1.0, 100, 0, 0,
+                1.0, 4, 4, 1));
+
+        for (final NestedRhythmPattern.PulseEvent event : clustered.events()) {
+            assertEquals(velocityAtOrder(full, event.order()), event.velocity());
+        }
+    }
+
+    @Test
     void velocityRotationAdvancesOneHitAtATime() {
         final NestedRhythmPattern rotation0 = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.0, 0, 0, 0, 0, 1, 0, 0.6, 100, 0, 0,
@@ -218,6 +454,63 @@ class NestedRhythmGeneratorTest {
         assertNotEquals(startOfMaxVelocity(rotation0), startOfMaxVelocity(rotation1));
     }
 
+    @Test
+    void lowerRatchetCountsStillReceiveOuterContour() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 2, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> ratchet = velocitiesInRange(pattern, 0, 420);
+
+        assertEquals(2, ratchet.size());
+        assertTrue(ratchet.get(0) > ratchet.get(1));
+        assertTrue(ratchet.get(1) <= 70);
+    }
+
+    @Test
+    void threeTupletsReceiveOuterContourWithoutLosingTheirExistingLeadShape() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 3, 1, 1, 0, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> tuplet = velocitiesInRange(pattern, 840, 1680);
+
+        assertEquals(3, tuplet.size());
+        assertTrue(tuplet.get(0) > tuplet.get(2));
+        assertTrue(tuplet.get(1) < tuplet.get(2));
+    }
+
+    @Test
+    void highRatchetCountsKeepInnerAlternationWhileRisingIntoNextAnchor() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> ratchet = velocitiesInRange(pattern, 0, 420);
+        final int nextAnchor = velocitiesInRange(pattern, 420, 840).get(0);
+
+        assertEquals(8, ratchet.size());
+        assertTrue(ratchet.get(0) > ratchet.get(7));
+        assertTrue(ratchet.get(7) < nextAnchor);
+        assertTrue(ratchet.get(2) < ratchet.get(4));
+        assertTrue(ratchet.get(4) < ratchet.get(6));
+        assertTrue(ratchet.get(1) < ratchet.get(3));
+        assertTrue(ratchet.get(3) < ratchet.get(5));
+        assertTrue(ratchet.get(5) < ratchet.get(7));
+    }
+
+    @Test
+    void highTupletCountsKeepInnerAlternationWhileRisingThroughTheClaimedSpan() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 7, 1, 1, 0, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> tuplet = velocitiesInRange(pattern, 840, 1680);
+
+        assertEquals(7, tuplet.size());
+        assertTrue(tuplet.get(0) > tuplet.get(6));
+        assertTrue(tuplet.get(2) < tuplet.get(4));
+        assertTrue(tuplet.get(4) < tuplet.get(6));
+        assertTrue(tuplet.get(1) < tuplet.get(3));
+        assertTrue(tuplet.get(3) < tuplet.get(5));
+    }
+
     private NestedRhythmGenerator.Settings defaultSettings() {
         return new NestedRhythmGenerator.Settings(
                 60, 0.0, 0, 0, 0, 0, 1, 0, 0.6, 100, 0, 0,
@@ -235,8 +528,77 @@ class NestedRhythmGeneratorTest {
         return pattern.events().stream().map(NestedRhythmPattern.PulseEvent::fineStart).toList();
     }
 
+    private Set<Integer> orders(final NestedRhythmPattern pattern) {
+        return pattern.events().stream()
+                .map(NestedRhythmPattern.PulseEvent::order)
+                .collect(Collectors.toSet());
+    }
+
+    private boolean isAnchor(final NestedRhythmPattern.Role role) {
+        return role == NestedRhythmPattern.Role.PRIMARY_ANCHOR
+                || role == NestedRhythmPattern.Role.SECONDARY_ANCHOR;
+    }
+
+    private boolean isRatchet(final NestedRhythmPattern.Role role) {
+        return role == NestedRhythmPattern.Role.RATCHET_LEAD
+                || role == NestedRhythmPattern.Role.RATCHET_INTERIOR;
+    }
+
+    private boolean isTuplet(final NestedRhythmPattern.Role role) {
+        return role == NestedRhythmPattern.Role.TUPLET_LEAD
+                || role == NestedRhythmPattern.Role.TUPLET_INTERIOR;
+    }
+
+    private boolean isWholeDivisionGridLine(final int fineStart, final int divisions) {
+        final int nearestIndex = (int) Math.round(fineStart * divisions
+                / (double) NestedRhythmGenerator.FINE_STEPS_PER_WHOLE);
+        final int nearestGridLine = (int) Math.round(nearestIndex
+                * NestedRhythmGenerator.FINE_STEPS_PER_WHOLE / (double) divisions);
+        return fineStart == nearestGridLine;
+    }
+
     private List<Integer> velocities(final NestedRhythmPattern pattern) {
         return pattern.events().stream().map(NestedRhythmPattern.PulseEvent::velocity).toList();
+    }
+
+    private int durationAt(final NestedRhythmPattern pattern, final int fineStart) {
+        return pattern.events().stream()
+                .filter(event -> event.fineStart() == fineStart)
+                .findFirst()
+                .orElseThrow()
+                .duration();
+    }
+
+    private int durationAtOrder(final NestedRhythmPattern pattern, final int order) {
+        return pattern.events().stream()
+                .filter(event -> event.order() == order)
+                .findFirst()
+                .orElseThrow()
+                .duration();
+    }
+
+    private int velocityAt(final NestedRhythmPattern pattern, final int fineStart) {
+        return pattern.events().stream()
+                .filter(event -> event.fineStart() == fineStart)
+                .findFirst()
+                .orElseThrow()
+                .velocity();
+    }
+
+    private int velocityAtOrder(final NestedRhythmPattern pattern, final int order) {
+        return pattern.events().stream()
+                .filter(event -> event.order() == order)
+                .findFirst()
+                .orElseThrow()
+                .velocity();
+    }
+
+    private List<Integer> velocitiesInRange(final NestedRhythmPattern pattern, final int startInclusive,
+                                            final int endExclusive) {
+        return pattern.events().stream()
+                .filter(event -> event.fineStart() >= startInclusive && event.fineStart() < endExclusive)
+                .map(NestedRhythmPattern.PulseEvent::velocity)
+                .toList();
     }
 
     private List<Integer> startsInRange(final NestedRhythmPattern pattern, final int startInclusive,

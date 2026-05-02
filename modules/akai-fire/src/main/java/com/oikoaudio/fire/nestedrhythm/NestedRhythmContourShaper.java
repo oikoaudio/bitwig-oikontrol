@@ -30,10 +30,10 @@ final class NestedRhythmContourShaper {
     static double shapeChance(final int order,
                               final NestedRhythmPattern.Role role,
                               final double baseline,
-                              final double depth,
+                              final double playChance,
                               final int rotation) {
         final double contour = (1.0 - contourNormalized(order, rotation)) * 0.5;
-        final double attenuation = depth * chanceRoleWeight(role) * contour;
+        final double attenuation = (1.0 - playChance) * chanceRoleWeight(role) * contour;
         return clampUnit(baseline - attenuation);
     }
 
