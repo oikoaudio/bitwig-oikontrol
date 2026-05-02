@@ -3,6 +3,7 @@ package com.oikoaudio.fire.nestedrhythm;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public final class NestedRhythmGenerator {
     public static final int DEFAULT_BEATS_PER_BAR = 4;
@@ -471,20 +473,45 @@ public final class NestedRhythmGenerator {
                 optional.add(pulse);
             }
         }
-        final int keepCount = optionalKeepCount(optional, density);
-        if (cluster > 0.0001) {
-            final List<PulseSpec> candidates = new ArrayList<>(structure.values());
-            final int clusteredKeepCount = Math.max(0, Math.min(candidates.size(), required.size() + keepCount));
-            return selectOptionalPulses(candidates, clusteredKeepCount, cluster, totalFineSteps);
+        if (optional.isEmpty()) {
+            return required;
         }
-        final List<PulseSpec> retained = new ArrayList<>(required);
-        retained.addAll(selectOptionalPulses(optional, keepCount, cluster, totalFineSteps));
-        retained.sort(Comparator.comparingInt(PulseSpec::fineStart));
-        return retained;
+        if (optional.stream().allMatch(pulse -> pulse.gestureFamily() == GestureFamily.ANCHOR)) {
+            final int keepCount = optionalKeepCount(optional.size(), density);
+            final List<PulseSpec> retained = new ArrayList<>(required);
+            retained.addAll(selectOptionalPulses(optional, keepCount, cluster, totalFineSteps));
+            retained.sort(Comparator.comparingInt(PulseSpec::fineStart));
+            return retained;
+        }
+        final int keepCount = identityKeepCount(structure.values(), density);
+        final List<PulseSpec> candidates = new ArrayList<>(structure.values());
+        if (cluster > 0.0001) {
+            return selectOptionalPulses(candidates, keepCount, cluster, totalFineSteps);
+        }
+        return selectOptionalPulses(candidates, keepCount, cluster, totalFineSteps);
     }
 
-    private int optionalKeepCount(final List<PulseSpec> optional, final double density) {
-        return Math.max(0, Math.min(optional.size(), (int) Math.round(density * optional.size())));
+    private int optionalKeepCount(final int candidateCount,
+                                  final double density) {
+        return Math.max(0, Math.min(candidateCount, (int) Math.round(density * candidateCount)));
+    }
+
+    private int identityKeepCount(final Iterable<PulseSpec> candidates,
+                                  final double density) {
+        final EnumMap<GestureFamily, Boolean> generatedFamilies = new EnumMap<>(GestureFamily.class);
+        int candidateCount = 0;
+        for (final PulseSpec pulse : candidates) {
+            candidateCount++;
+            if (pulse.gestureFamily() != GestureFamily.ANCHOR) {
+                generatedFamilies.put(pulse.gestureFamily(), true);
+            }
+        }
+        if (candidateCount <= 0) {
+            return 0;
+        }
+        final int densityCount = optionalKeepCount(candidateCount, density);
+        final int phraseCellFloor = Math.max(2, generatedFamilies.size() * 2);
+        return Math.max(densityCount, Math.min(candidateCount, phraseCellFloor));
     }
 
     private List<PulseSpec> selectOptionalPulses(final List<PulseSpec> optional,
@@ -496,8 +523,54 @@ public final class NestedRhythmGenerator {
         }
         final List<PulseSpec> ranked = rankedOptionalPulses(optional, cluster, totalFineSteps);
         final List<PulseSpec> selected = new ArrayList<>(ranked.subList(0, Math.min(keepCount, ranked.size())));
+        ensureGeneratedFamilyCoverage(selected, ranked, keepCount);
         selected.sort(Comparator.comparingInt(PulseSpec::fineStart));
         return selected;
+    }
+
+    private void ensureGeneratedFamilyCoverage(final List<PulseSpec> selected,
+                                               final List<PulseSpec> ranked,
+                                               final int keepCount) {
+        final Set<GestureFamily> generatedFamilies = ranked.stream()
+                .map(PulseSpec::gestureFamily)
+                .filter(family -> family != GestureFamily.ANCHOR)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(GestureFamily.class)));
+        if (selected.size() < keepCount || keepCount < generatedFamilies.size() || generatedFamilies.size() <= 1) {
+            return;
+        }
+        for (final GestureFamily family : generatedFamilies) {
+            if (selected.stream().anyMatch(pulse -> pulse.gestureFamily() == family)) {
+                continue;
+            }
+            final PulseSpec replacement = ranked.stream()
+                    .filter(pulse -> pulse.gestureFamily() == family)
+                    .findFirst()
+                    .orElse(null);
+            final int replaceIndex = leastEssentialSelectedIndex(selected);
+            if (replacement != null && replaceIndex >= 0) {
+                selected.set(replaceIndex, replacement);
+            }
+        }
+    }
+
+    private int leastEssentialSelectedIndex(final List<PulseSpec> selected) {
+        final Map<GestureFamily, Long> counts = selected.stream()
+                .collect(Collectors.groupingBy(PulseSpec::gestureFamily, () -> new EnumMap<>(GestureFamily.class),
+                        Collectors.counting()));
+        int bestIndex = -1;
+        double bestScore = Double.POSITIVE_INFINITY;
+        for (int index = 0; index < selected.size(); index++) {
+            final PulseSpec pulse = selected.get(index);
+            final long familyCount = counts.getOrDefault(pulse.gestureFamily(), 0L);
+            final double score = (pulse.gestureFamily() == GestureFamily.ANCHOR ? 0.0 : 1000.0)
+                    + (familyCount > 1 ? 0.0 : 500.0)
+                    + pulse.priority();
+            if (score < bestScore) {
+                bestScore = score;
+                bestIndex = index;
+            }
+        }
+        return bestIndex;
     }
 
     private List<PulseSpec> rankedOptionalPulses(final List<PulseSpec> optional,
@@ -598,9 +671,16 @@ public final class NestedRhythmGenerator {
     private double optionalScore(final PulseSpec pulse,
                                  final double cluster,
                                  final int totalFineSteps) {
-        return pulse.priority()
+        return selectionPriority(pulse)
                 + phrasePositionScore(pulse.fineStart(), totalFineSteps) * 90.0
                 + cluster * clusterMembership(pulse.fineStart(), cluster, totalFineSteps) * 900.0;
+    }
+
+    private double selectionPriority(final PulseSpec pulse) {
+        if (pulse.gestureFamily() == GestureFamily.ANCHOR) {
+            return pulse.required() ? 48.0 : 36.0;
+        }
+        return pulse.priority();
     }
 
     private double phraseGroupScore(final GestureFamily family,

@@ -178,21 +178,49 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void densityMinimumKeepsOnlyVisibleAnchorsOutsideClaimedSpans() {
+    void densityMinimumKeepsSignatureCellWhenTransformsClaimAnchors() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.0, 7, 1, 0, 4, 2, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(), starts(pattern));
+        assertTrue(pattern.events().size() >= 2);
+        assertTrue(pattern.events().stream().anyMatch(event -> isRatchet(event.role())));
+        assertTrue(pattern.events().stream().anyMatch(event -> isTuplet(event.role())));
+        assertTrue(starts(pattern).stream().allMatch(start -> start >= 0
+                && start < NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 
     @Test
-    void thinningDoesNotReintroduceBasePulseInsideOwnedSpan() {
+    void densityMinimumPreservesGeneratedIdentityOverBeatAnchors() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 0.0, 3, 1, 0, 4, 1, 0, 0.6, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(0), starts(pattern));
+        assertTrue(pattern.events().stream().anyMatch(event -> isTuplet(event.role())));
+    }
+
+    @Test
+    void densityMinimumStillKeepsNotesWhenTupletsAndRatchetsClaimAllAnchors() {
+        final NestedRhythmPattern unclustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 3, 4, 0, 2, 3, 0, 1.0, 100, 0, 0,
+                0.0, 4, 4, 2));
+        final NestedRhythmPattern lightlyClustered = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 3, 4, 0, 2, 3, 0, 1.0, 100, 0, 0,
+                0.05, 4, 4, 2));
+
+        assertTrue(unclustered.events().size() >= 2);
+        assertTrue(lightlyClustered.events().size() >= 2);
+        assertTrue(unclustered.events().stream().allMatch(event -> event.fineStart() >= 0
+                && event.fineStart() < NestedRhythmGenerator.fineStepsPerBar(4, 4) * 2));
+    }
+
+    @Test
+    void densityMinimumKeepsGeneratedTupletGestureInsteadOfOnlyAnchors() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 0.0, 3, 1, 0, 4, 1, 0, 0.6, 100, 0, 0,
+                4, 4, 1));
+
+        assertTrue(pattern.events().stream().anyMatch(event -> isTuplet(event.role())));
     }
 
     @Test
@@ -337,8 +365,8 @@ class NestedRhythmGeneratorTest {
                 4, 4, 1));
         final List<Integer> retainedRatchetStarts = startsInRange(pattern, 420, 840);
 
-        assertEquals(2, retainedRatchetStarts.size());
-        assertTrue(retainedRatchetStarts.get(1) - retainedRatchetStarts.get(0) <= 60);
+        assertTrue(retainedRatchetStarts.size() >= 2);
+        assertTrue(hasAdjacentPairWithin(retainedRatchetStarts, 60));
     }
 
     @Test
@@ -347,7 +375,7 @@ class NestedRhythmGeneratorTest {
                 60, 0.36, 7, 1, 0, 4, 1, 0, 1.0, 100, 0, 0,
                 4, 4, 1));
 
-        assertEquals(List.of(0, 420, 525, 840, 960), starts(pattern));
+        assertEquals(List.of(420, 525, 840, 960), starts(pattern));
     }
 
     @Test
@@ -357,7 +385,9 @@ class NestedRhythmGeneratorTest {
                 4, 4, 1));
 
         assertTrue(startsInRange(pattern, 0, 840).size() >= 2, starts(pattern).toString());
-        assertTrue(startsInRange(pattern, 840, 1120).size() >= 2, starts(pattern).toString());
+        assertTrue(startsInRange(pattern, 840, 1400).size() >= 2, starts(pattern).toString());
+        assertTrue(pattern.events().stream().anyMatch(event -> isRatchet(event.role())));
+        assertTrue(pattern.events().stream().anyMatch(event -> isTuplet(event.role())));
     }
 
     @Test
@@ -673,6 +703,16 @@ class NestedRhythmGeneratorTest {
 
     private List<Integer> starts(final NestedRhythmPattern pattern) {
         return pattern.events().stream().map(NestedRhythmPattern.PulseEvent::fineStart).toList();
+    }
+
+    private boolean hasAdjacentPairWithin(final List<Integer> starts,
+                                          final int maximumDistance) {
+        for (int index = 0; index + 1 < starts.size(); index++) {
+            if (starts.get(index + 1) - starts.get(index) <= maximumDistance) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<Integer> startsWithRoles(final NestedRhythmPattern pattern,
