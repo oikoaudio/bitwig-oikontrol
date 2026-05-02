@@ -2,6 +2,18 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.11.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.10.0...oikontrol-v2.11.0) (2026-05-02)
+
+
+### Features
+
+* **fire:** add Akai Fire DRUM Grid64, Velocity, and Bongos layouts ([#35](https://github.com/oikoaudio/bitwig-oikontrol/issues/35)) ([7481a8f](https://github.com/oikoaudio/bitwig-oikontrol/commit/7481a8f3f16509bc03c54b76a81ab60a5c180ab4))
+
+
+### Bug Fixes
+
+* **fire:** track selection got stuck on hidden tracks ([#33](https://github.com/oikoaudio/bitwig-oikontrol/issues/33)) ([93fcaa1](https://github.com/oikoaudio/bitwig-oikontrol/commit/93fcaa1fe3164d38c853ac243ba0b0e00a030025))
+
 ## [2.10.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.9.0...oikontrol-v2.10.0) (2026-04-26)
 
 
