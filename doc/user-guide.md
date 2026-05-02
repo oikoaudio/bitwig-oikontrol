@@ -227,7 +227,7 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 | Control | Action |
 | --- | --- |
 | `DRUM` while in `XOX Drum mode` | Enter `Nested Rhythm mode` |
-| `DRUM` while in `Nested Rhythm` | Return to `XOX Drum mode` |
+| `DRUM` while in `Nested Rhythm` | Enter `Drum Pads` |
 | `STEP` | Enter `Melodic Step mode` |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
