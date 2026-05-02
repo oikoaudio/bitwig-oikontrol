@@ -5,6 +5,7 @@ import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.display.ParameterDisplayBinding;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
@@ -83,12 +84,14 @@ class PadContainer {
         pad.addIsSelectedInEditorObserver(selected -> handlePadSelection(index, selected));
         pad.exists().addValueObserver(exists -> this.exists = exists);
         padColor = fixedPadColorTable[index];
+        pad.color().markInterested();
         pad.color().addValueObserver((r, g, b) -> {
-            bitwigPadColor = ColorLookup.getColor(r, g, b);
+            bitwigPadColor = explicitPadColorOrNull();
             if (selected) {
-                this.padHandler.currentPadColor = bitwigPadColor;
+                this.padHandler.currentPadColor = effectivePadColor();
             }
         });
+        bitwigPadColor = explicitPadColorOrNull();
         volumeParameter = pad.volume();
         panParameter = pad.pan();
         volumeBinding = new ParameterDisplayBinding(0, index, volumeParameter, padHandler.getDisplayTarget(), false);
@@ -152,6 +155,19 @@ class PadContainer {
         return bitwigPadColor;
     }
 
+    RgbLigthState effectivePadColor() {
+        return bitwigPadColor != null ? bitwigPadColor : padHandler.trackColor();
+    }
+
+    private RgbLigthState explicitPadColorOrNull() {
+        final Color color = pad.color().get();
+        if (color == null || color.getAlpha255() == 0) {
+            return null;
+        }
+        final RgbLigthState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
+    }
+
     public int getIndex() {
         return index;
     }
@@ -168,24 +184,26 @@ class PadContainer {
         if (!exists) {
             return RgbLigthState.OFF;
         }
+        final RgbLigthState base = effectivePadColor();
         if (pad.mute().get()) {
 //            return playing.returnTrueFalse(muteColor.getDimmed(), muteColor.getVeryDimmed());
-            return playing.returnTrueFalse(padColor.getDimmed(), padColor.getVeryDimmed());
+            return playing.returnTrueFalse(base.getDimmed(), base.getVeryDimmed());
         }
 //        return playing.returnTrueFalse(muteColor.getBrightest(), muteColor);
-        return playing.returnTrueFalse(padColor.getBrightest(), padColor);
+        return playing.returnTrueFalse(base.getBrightest(), base);
     }
 
     public RgbLigthState soloingColors() {
         if (!exists) {
             return RgbLigthState.OFF;
         }
+        final RgbLigthState base = effectivePadColor();
         if (pad.solo().get()) {
 //            return playing.returnTrueFalse(soloColor.getBrightest(), soloColor);
-            return playing.returnTrueFalse(padColor.getBrightest(), padColor);
+            return playing.returnTrueFalse(base.getBrightest(), base);
         }
 //        return playing.returnTrueFalse(soloColor.getDimmed(), soloColor.getVeryDimmed());
-        return playing.returnTrueFalse(padColor.getDimmed(), padColor.getVeryDimmed());
+        return playing.returnTrueFalse(base.getDimmed(), base.getVeryDimmed());
     }
 
     public String getName() {
@@ -194,12 +212,13 @@ class PadContainer {
 
     public RgbLigthState getColor() {
         if (!exists) {
-            return padColor.getVeryDimmed();
+            return RgbLigthState.OFF;
         }
+        final RgbLigthState base = effectivePadColor();
         if (selected) {
-            return playing.returnTrueFalse(padColor.getBrightest(), padColor.getBrightend());
+            return playing.returnTrueFalse(base.getBrightest(), base.getBrightend());
         }
-        return playing.returnTrueFalse(padColor, padColor.getSoftDimmed());
+        return playing.returnTrueFalse(base, base.getSoftDimmed());
     }
 
     public void select() {

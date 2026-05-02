@@ -190,8 +190,8 @@
       <table>
         <thead><tr><th>Button</th><th>Workflow</th><th>Role</th></tr></thead>
         <tbody>
-          <tr><td><code>DRUM</code></td><td>Drum sequencing</td><td>XOX-style drum sequencing; press again for <code>Nested Rhythm</code></td></tr>
-          <tr><td><code>NOTE</code></td><td>Live note input</td><td>16x4 note surface; press again for harmonic note layout</td></tr>
+          <tr><td><code>DRUM</code></td><td>Drum workflows</td><td><code>Drum XOX</code>; press again for <code>Nested Rhythm</code>, then <code>Drum Pads</code></td></tr>
+          <tr><td><code>NOTE</code></td><td>Live note input</td><td>16x4 note surface; press again for harmonic layout</td></tr>
           <tr><td><code>STEP</code></td><td>Step sequencing</td><td>Enters <code>Melodic Step</code>; press again for <code>Chord Step</code>, then <code>Fugue</code></td></tr>
           <tr><td><code>PERFORM</code></td><td>Clip launching</td><td>16x4 clip grid and track actions</td></tr>
       </tbody>
@@ -251,8 +251,8 @@
           <tr><td><code>Drum Grid</code></td><td>Drum-step grid resolution</td><td><code>DRUM</code> mode only</td></tr>
       </tbody>
       </table>
-      <h3>DRUM mode</h3>
-      <p><code>DRUM</code> is the default sequencer-oriented workflow for a Drum Machine. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, the script focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, the sequencer follows the selected drum context.</p>
+      <h3>DRUM Mode</h3>
+      <p><code>Drum XOX</code> is the default sequencer-oriented workflow for a Drum Machine. Press <code>DRUM</code> again to cycle through <code>Nested Rhythm</code> and <code>Drum Pads</code>. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, the script focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, the sequencer follows the selected drum context.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -267,6 +267,8 @@
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code></td></tr>
           <tr><td><code>SHIFT + STEP</code></td><td>Accent entry and editing</td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
+          <tr><td><code>PATTERN UP/DOWN</code></td><td>Page visible steps</td></tr>
+          <tr><td><code>ALT + PATTERN UP/DOWN</code></td><td>Scroll the visible Drum Machine pad window</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Move or rotate pattern</td></tr>
           <tr><td><code>SHIFT + BANK LEFT/RIGHT</code></td><td>Fine nudge</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
@@ -278,6 +280,7 @@
       </table>
       <p>Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.</p>
       <p>Hold <code>MUTE_3</code> and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.</p>
+      <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; the OLED shows the lower-left note as <code>Pad Low</code>, for example <code>C1</code>. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: default velocity. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
       <table>
         <thead><tr><th>Encoder page</th><th>Encoders</th></tr></thead>
         <tbody>
@@ -302,7 +305,7 @@
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>DRUM</code> while in <code>XOX Drum mode</code></td><td>Enter <code>Nested Rhythm mode</code></td></tr>
-          <tr><td><code>DRUM</code> while in <code>Nested Rhythm</code></td><td>Return to <code>XOX Drum mode</code></td></tr>
+          <tr><td><code>DRUM</code> while in <code>Nested Rhythm</code></td><td>Enter <code>Drum Pads</code></td></tr>
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step mode</code></td></tr>
           <tr><td><code>PATTERN UP</code> or <code>ALT + MUTE_4</code></td><td>Reset hit edits for the selected clip</td></tr>
           <tr><td><code>PATTERN DOWN</code></td><td>Generate current nested rhythm into the selected clip</td></tr>
@@ -325,7 +328,7 @@
       <p>Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.</p>
       <p>Tuplet is a half-bar transform: <code>Cover</code> sets how many consecutive half-bars are claimed, and <code>Tuplet Phase</code> rotates that span. Ratchet is a beat-burst transform: <code>Ratchet Width</code> chooses phrase beats in deterministic priority order, and <code>Ratchet Phase</code> rotates those beats. Tuplet counts are meter-aware; in <code>4/4</code> they include <code>3 / 5 / 7</code>, while <code>5/4</code> can expose counts such as <code>3 / 4 / 6 / 7</code>. Ratchet supports <code>2 / 3 / 4 / 5 / 6 / 7 / 8</code>.</p>
       <h3>NOTE mode</h3>
-      <p><code>NOTE</code> is a 16x4 isomorphic playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from <code>Default Note Input Octave</code>.</p>
+      <p><code>NOTE</code> is a 16x4 playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from <code>Default Note Input Octave</code>.</p>
       <table>
         <thead><tr><th>Area / Control</th><th>Role</th></tr></thead>
         <tbody>

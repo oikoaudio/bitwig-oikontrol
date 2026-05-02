@@ -111,8 +111,8 @@ The Akai Fire extension is organized around four top-level workflows.
 
 | Button | Workflow | Role |
 | --- | --- | --- |
-| `DRUM` | Drum sequencing | XOX-style drum sequencing; press again for `Nested Rhythm` |
-| `NOTE` | Live note input | 16x4 note surface; press again for harmonic note layout |
+| `DRUM` | Drum workflows | `Drum XOX`; press again for `Nested Rhythm`, then `Drum Pads` |
+| `NOTE` | Live note input | 16x4 note surface; press again for harmonic layout |
 | `STEP` | Step sequencing | Enters `Melodic Step`; press again for `Chord Step`, then `Fugue` |
 | `PERFORM` | Clip launching | 16x4 clip grid and track actions |
 
@@ -174,9 +174,9 @@ Global `SELECT` turn chords:
 | `Track Select` | Previous / next track | Hold while turning to jump by visible pages |
 | `Drum Grid` | Drum-step grid resolution | `DRUM` mode only |
 
-### DRUM mode
+### DRUM Mode
 
-`DRUM` is the default sequencer-oriented workflow for a Drum Machine. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
+`Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
 
 | Pad row | Role |
 | --- | --- |
@@ -189,6 +189,8 @@ Global `SELECT` turn chords:
 | `STEP` | Enter `Melodic Step` |
 | `SHIFT + STEP` | Accent entry and editing |
 | `ALT + STEP` | Fill |
+| `PATTERN UP/DOWN` | Page visible steps |
+| `ALT + PATTERN UP/DOWN` | Scroll the visible Drum Machine pad window |
 | `BANK LEFT/RIGHT` | Move or rotate pattern |
 | `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
@@ -200,6 +202,8 @@ Global `SELECT` turn chords:
 Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
+
+In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; the OLED shows the lower-left note as `Pad Low`, for example `C1`. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: default velocity. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
 | Encoder page | Encoders |
 | --- | --- |
@@ -223,7 +227,7 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 | Control | Action |
 | --- | --- |
 | `DRUM` while in `XOX Drum mode` | Enter `Nested Rhythm mode` |
-| `DRUM` while in `Nested Rhythm` | Return to `XOX Drum mode` |
+| `DRUM` while in `Nested Rhythm` | Enter `Drum Pads` |
 | `STEP` | Enter `Melodic Step mode` |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
@@ -246,7 +250,7 @@ Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are 
 
 ### NOTE mode
 
-`NOTE` is a 16x4 isomorphic playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from `Default Note Input Octave`.
+`NOTE` is a 16x4 playing surface with chromatic, in-key, and harmonic layouts. The shared note octave is initialized from `Default Note Input Octave`.
 
 | Area / Control | Role |
 | --- | --- |

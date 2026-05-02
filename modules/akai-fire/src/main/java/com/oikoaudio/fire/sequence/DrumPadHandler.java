@@ -1,9 +1,9 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
+import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.ViewCursorControl;
-import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.DisplayTarget;
@@ -35,6 +35,7 @@ public class DrumPadHandler {
     private final PinnableCursorClip cursorClip;
     private final NoteInput noteInput;
     private final DrumPadBank padBank;
+    private RgbLigthState trackColor = RgbLigthState.PURPLE;
 
     private final NoteRepeatHandler noteRepeatHandler;
 
@@ -70,6 +71,9 @@ public class DrumPadHandler {
             padNotes[i] = PAD_NOTE_BASE + DRUM_PAD_BUTTON_OFFSET + i;
         }
         final ViewCursorControl control = driver.getViewControl();
+        control.getCursorTrack().color().markInterested();
+        control.getCursorTrack().color().addValueObserver((r, g, b) -> trackColor = ColorLookup.getColor(r, g, b));
+        trackColor = ColorLookup.getColor(control.getCursorTrack().color().get());
 
         padBank = control.getDrumPadBank();
         padBank.canScrollBackwards().markInterested();
@@ -118,6 +122,10 @@ public class DrumPadHandler {
     private void bindMain(final RgbButton button, final Layer mainLayer, final PadContainer pad) {
         pads.add(pad);
         button.bindPressed(mainLayer, p -> handlePadSelection(pad, p), pad::getColor);
+    }
+
+    RgbLigthState trackColor() {
+        return trackColor;
     }
 
     private void initButtons(final Layer mainLayer, final AkaiFireOikontrolExtension driver) {
@@ -222,7 +230,7 @@ public class DrumPadHandler {
     }
 
     public void executePadSelection(final PadContainer pad) {
-        currentPadColor = pad.getBitwigPadColor();
+        currentPadColor = pad.effectivePadColor();
         selectedPad = pad;
         focusOnSelectedPad();
         selectedPadIndex = pad.getIndex();
@@ -374,24 +382,16 @@ public class DrumPadHandler {
         noteRepeatHandler.handleMainEncoder(inc, parent.isAltHeld());
     }
 
-    private BiColorLightState canScrollUp(final BiColorButton button) {
-        if (padBank.scrollPosition().get() + (parent.isShiftHeld() ? 16 : 4) < 128) {
-            if (button.isPressed()) {
-                return BiColorLightState.FULL;
-            }
-            return BiColorLightState.HALF;
-        }
-        return BiColorLightState.OFF;
+    BiColorLightState canScrollForwardLight() {
+        return padBank.scrollPosition().get() + (parent.isShiftHeld() ? 16 : 4) < 128
+                ? BiColorLightState.HALF
+                : BiColorLightState.OFF;
     }
 
-    private BiColorLightState canScrollDown(final BiColorButton button) {
-        if (padBank.scrollPosition().get() - (parent.isShiftHeld() ? 16 : 4) >= 0) {
-            if (button.isPressed()) {
-                return BiColorLightState.FULL;
-            }
-            return BiColorLightState.HALF;
-        }
-        return BiColorLightState.OFF;
+    BiColorLightState canScrollBackwardLight() {
+        return padBank.scrollPosition().get() - (parent.isShiftHeld() ? 16 : 4) >= 0
+                ? BiColorLightState.HALF
+                : BiColorLightState.OFF;
     }
 
     void scrollForward(final boolean pressed) {
@@ -519,17 +519,5 @@ public class DrumPadHandler {
 
     public NoteRepeatHandler getNoteRepeaterHandler() {
         return noteRepeatHandler;
-    }
-
-    private void handlePatternUpPressed(final boolean pressed) {
-        if (pressed && parent.isAltHeld()) {
-            scrollForward(true);
-        }
-    }
-
-    private void handlePatternDownPressed(final boolean pressed) {
-        if (pressed && parent.isAltHeld()) {
-            scrollBackward(true);
-        }
     }
 }

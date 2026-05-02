@@ -1602,16 +1602,30 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         patternButtons.setUpCallback(pressed -> {
-            if (pressed && !altActive.get()) {
+            if (!pressed) {
+                return;
+            }
+            if (altActive.get()) {
+                padHandler.scrollForward(true);
+            } else {
                 pageStepView(-1);
             }
-        }, () -> positionHandler.canScrollLeft().get() ? BiColorLightState.HALF : BiColorLightState.OFF);
+        }, () -> altActive.get()
+                ? padHandler.canScrollForwardLight()
+                : positionHandler.canScrollLeft().get() ? BiColorLightState.HALF : BiColorLightState.OFF);
 
         patternButtons.setDownCallback(pressed -> {
-            if (pressed && !altActive.get()) {
+            if (!pressed) {
+                return;
+            }
+            if (altActive.get()) {
+                padHandler.scrollBackward(true);
+            } else {
                 pageStepView(1);
             }
-        }, () -> positionHandler.canScrollRight().get() ? BiColorLightState.HALF : BiColorLightState.OFF);
+        }, () -> altActive.get()
+                ? padHandler.canScrollBackwardLight()
+                : positionHandler.canScrollRight().get() ? BiColorLightState.HALF : BiColorLightState.OFF);
     }
 
     private void pageStepView(final int direction) {

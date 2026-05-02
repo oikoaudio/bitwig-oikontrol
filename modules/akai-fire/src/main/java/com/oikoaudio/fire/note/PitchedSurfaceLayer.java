@@ -3,10 +3,13 @@ package com.oikoaudio.fire.note;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.Clip;
 import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.DrumPad;
+import com.bitwig.extension.controller.api.DrumPadBank;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
@@ -61,6 +64,7 @@ import com.oikoaudio.fire.utils.PatternButtons;
 import com.oikoaudio.fire.values.StepViewPosition;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -113,6 +117,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_CHORD_STANDARD_VELOCITY = 100;
     private static final int DEFAULT_CHORD_ACCENTED_VELOCITY = 127;
+    private static final int DEFAULT_DRUM_MACHINE_LOW_NOTE = 36;
+    private static final int MAX_DRUM_MACHINE_SCROLL_POSITION = MAX_MIDI_VALUE - DrumMachinePadLayout.PAD_WINDOW_SIZE + 1;
     private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
@@ -127,6 +133,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final int MIDI_CC_TIMBRE = 74;
     private static final int[] LIVE_PITCH_OFFSETS = {-24, -19, -12, -7, 0, 7, 12, 19, 24};
     private static final int DEFAULT_LIVE_PITCH_OFFSET_INDEX = 4;
+    private static final int DRUM_MACHINE_SCROLL_COARSE_STEPS = 16;
     private static final int MIN_SCALE_DEGREE_GLISS = -14;
     private static final int MAX_SCALE_DEGREE_GLISS = 14;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
@@ -185,6 +192,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final StepViewPosition chordStepPosition;
     private final ClipLauncherSlotBank noteClipSlotBank;
     private final PinnableCursorDevice liveCursorDevice;
+    private final PinnableCursorDevice liveDrumMachineDevice;
+    private final DrumPadBank liveDrumPadBank;
     private final CursorRemoteControlsPage liveRemoteControlsPage;
     private final Layer liveModeControlLayer;
     private final Layer liveChannelLayer;
@@ -201,7 +210,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private enum LiveNoteSubMode {
         MELODIC("Note"),
-        HARMONIC("Harmonic");
+        HARMONIC("Harmonic"),
+        DRUM_PADS("Drum Pads");
 
         private final String displayName;
 
@@ -238,6 +248,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final AccentLatchState chordAccentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
     private boolean builderInKey = true;
+    private final boolean drumPadsOnly;
     private LiveNoteSubMode liveNoteSubMode = LiveNoteSubMode.MELODIC;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.CHORD_STEP;
     private ChordInterpretation chordInterpretation = ChordInterpretation.AS_IS;
@@ -259,6 +270,16 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private int harmonicNoteCountIndex = 2;
     private int harmonicOctaveSpan = 1;
     private boolean harmonicBassColumns = true;
+    private int drumMachineScrollPosition = 0;
+    private DrumMachinePadLayout.Layout drumMachineLayout = DrumMachinePadLayout.Layout.GRID64;
+    private int selectedDrumPadOffset = 0;
+    private int secondaryDrumPadOffset = 1;
+    private boolean drumMachineDefaultPageApplied = false;
+    private final boolean[][] heldBongoPads = new boolean[2][NoteGridLayout.PAD_COUNT];
+    private final int[] heldBongoPadCounts = new int[2];
+    private final RgbLigthState[] drumMachinePadColors = new RgbLigthState[DrumMachinePadLayout.PAD_WINDOW_SIZE];
+    private final String[] drumMachinePadNames = new String[DrumMachinePadLayout.PAD_WINDOW_SIZE];
+    private final boolean[] drumMachinePadExists = new boolean[DrumMachinePadLayout.PAD_WINDOW_SIZE];
     private int livePitchBend = DEFAULT_LIVE_PITCH_BEND;
     private boolean livePitchBendTouched = false;
     private int livePitchBendReturnGeneration = 0;
@@ -334,9 +355,19 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                                   final NoteRepeatHandler noteRepeatHandler,
                                   final String layerName,
                                   final SurfaceRole surfaceRole) {
+        this(driver, noteRepeatHandler, layerName, surfaceRole, false);
+    }
+
+    protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
+                                  final NoteRepeatHandler noteRepeatHandler,
+                                  final String layerName,
+                                  final SurfaceRole surfaceRole,
+                                  final boolean drumPadsOnly) {
         super(driver.getLayers(), layerName);
         this.driver = driver;
         this.surfaceRole = surfaceRole;
+        this.drumPadsOnly = drumPadsOnly;
+        this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
@@ -369,6 +400,13 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         chordStepBaseColor = ColorLookup.getColor(this.cursorTrack.color().get());
         this.liveCursorDevice = cursorTrack.createCursorDevice("NOTE_LIVE_DEVICE", "Note Live Device", 8,
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
+        this.liveDrumMachineDevice = drumPadsOnly
+                ? driver.getViewControl().getPrimaryDevice()
+                : cursorTrack.createCursorDevice("NOTE_DRUM_MACHINE", "Note Drum Machine", 8,
+                CursorDeviceFollowMode.FIRST_INSTRUMENT);
+        this.liveDrumMachineDevice.hasDrumPads().markInterested();
+        this.liveDrumPadBank = liveDrumMachineDevice.createDrumPadBank(DrumMachinePadLayout.PAD_WINDOW_SIZE);
+        observeLiveDrumPads();
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
         this.noteStepClip = cursorTrack.createLauncherCursorClip("NOTE_STEP", "NOTE_STEP", STEP_COUNT, 128);
         this.observedNoteClip = host.createLauncherCursorClip(OBSERVED_FINE_STEP_CAPACITY, 128);
@@ -418,9 +456,16 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                     public void noteOff(final int midiNote) {
                         noteInput.sendRawMidiEvent(Midi.NOTE_OFF, midiNote, 0);
                     }
+
+                    @Override
+                    public void timbre(final int midiNote, final int value) {
+                        noteInput.sendRawMidiEvent(Midi.POLY_AT, midiNote, value);
+                    }
                 },
                 this::getLivePadMidiNotes,
-                (configuredVelocity, rawVelocity) -> resolveLivePadVelocity(configuredVelocity, rawVelocity));
+                (padIndex, configuredVelocity, rawVelocity) -> resolveLivePadVelocity(padIndex, configuredVelocity, rawVelocity),
+                this::resolveLivePadTimbre);
+        noteInput.assignPolyphonicAftertouchToExpression(0, NoteInput.NoteExpression.TIMBRE_UP, 1);
         this.liveExpressionControls = new NoteLiveExpressionControls(new NoteLiveExpressionControls.MidiExpressionOut() {
             @Override
             public void channelAftertouch(final int value) {
@@ -465,6 +510,44 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         bindEncoders();
         applyDefaultLayoutPreference();
         applyDefaultVelocitySensitivityPreference();
+    }
+
+    private void observeLiveDrumPads() {
+        liveDrumPadBank.canScrollBackwards().markInterested();
+        liveDrumPadBank.canScrollForwards().markInterested();
+        liveDrumPadBank.scrollPosition().markInterested();
+        liveDrumPadBank.scrollPosition().addValueObserver(position -> {
+            drumMachineScrollPosition = position;
+            if (isDrumMachineLiveMode()) {
+                retuneLivePads(() -> { });
+            }
+        });
+        drumMachineScrollPosition = liveDrumPadBank.scrollPosition().get();
+        for (int index = 0; index < DrumMachinePadLayout.PAD_WINDOW_SIZE; index++) {
+            final DrumPad pad = liveDrumPadBank.getItemAt(index);
+            final int padIndex = index;
+            drumMachinePadColors[padIndex] = null;
+            drumMachinePadNames[padIndex] = "";
+            pad.exists().markInterested();
+            pad.exists().addValueObserver(exists -> drumMachinePadExists[padIndex] = exists);
+            drumMachinePadExists[padIndex] = pad.exists().get();
+            pad.name().markInterested();
+            pad.name().addValueObserver(name -> drumMachinePadNames[padIndex] = name);
+            drumMachinePadNames[padIndex] = pad.name().get();
+            pad.color().markInterested();
+            pad.color().addValueObserver((r, g, b) ->
+                    drumMachinePadColors[padIndex] = explicitDrumMachinePadColorOrNull(pad));
+            drumMachinePadColors[padIndex] = explicitDrumMachinePadColorOrNull(pad);
+        }
+    }
+
+    private static RgbLigthState explicitDrumMachinePadColorOrNull(final DrumPad pad) {
+        final Color color = pad.color().get();
+        if (color == null || color.getAlpha255() == 0) {
+            return null;
+        }
+        final RgbLigthState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
     }
 
     private void applyDefaultLayoutPreference() {
@@ -535,37 +618,75 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                     if (inc == 0) {
                         return;
                     }
+                    if (isDrumMachineLiveMode()) {
+                        handleDrumMachineLayoutEncoder(0, inc);
+                        return;
+                    }
                     liveControls.markEncoderAdjusted(0);
                     adjustLiveModulation(inc);
                 });
         encoders[0].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(0, touched,
-                () -> oled.valueInfo("Mod", Integer.toString(liveExpressionControls.modulation())),
-                this::resetLiveModulation));
+                () -> {
+                    if (isDrumMachineLiveMode()) {
+                        showDrumMachineLayoutInfo();
+                    } else {
+                        oled.valueInfo("Mod", Integer.toString(liveExpressionControls.modulation()));
+                    }
+                },
+                () -> {
+                    if (!isDrumMachineLiveMode()) {
+                        resetLiveModulation();
+                    }
+                }));
 
         encoders[1].bindContinuousEncoder(liveChannelLayer, driver::isGlobalShiftHeld,
                 com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT, inc -> {
                     if (inc == 0) {
                         return;
                     }
+                    if (isDrumMachineLiveMode()) {
+                        handleLiveVelocityEncoder(1, inc);
+                        return;
+                    }
                     liveControls.markEncoderAdjusted(1);
                     cancelLivePitchBendReturn();
                     adjustLivePitchBend(inc);
                 });
-        encoders[1].bindTouched(liveChannelLayer, this::handleLivePitchBendTouch);
+        encoders[1].bindTouched(liveChannelLayer, touched -> {
+            if (isDrumMachineLiveMode()) {
+                liveControls.handleResettableTouch(1, touched,
+                        this::showLiveVelocityInfo,
+                        liveVelocityEncoder::reset);
+                return;
+            }
+            handleLivePitchBendTouch(touched);
+        });
 
         encoders[2].bindEncoder(liveChannelLayer, this::handleLivePitchGlissEncoder);
         encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
-                () -> oled.valueInfo(driver.isGlobalAltHeld() ? "Gliss Mode" : "Pitch Gliss",
-                        driver.isGlobalAltHeld() ? livePitchGlissMode.displayName() : formatLivePitchOffsetDisplay()),
                 () -> {
-                    if (!driver.isGlobalAltHeld()) {
+                    if (isDrumMachineLiveMode()) {
+                        oled.valueInfo("Drum Pads", "--");
+                        return;
+                    }
+                    oled.valueInfo(driver.isGlobalAltHeld() ? "Gliss Mode" : "Pitch Gliss",
+                            driver.isGlobalAltHeld() ? livePitchGlissMode.displayName() : formatLivePitchOffsetDisplay());
+                },
+                () -> {
+                    if (!isDrumMachineLiveMode() && !driver.isGlobalAltHeld()) {
                         livePitchOffsetEncoder.reset();
                     }
                 }));
 
         encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
         encoders[3].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(3, touched,
-                () -> showState(driver.isGlobalShiftHeld() ? "Layout" : driver.isGlobalAltHeld() ? "Root" : "Scale"),
+                () -> {
+                    if (isDrumMachineLiveMode()) {
+                        oled.valueInfo("Drum Pads", "--");
+                        return;
+                    }
+                    showState(driver.isGlobalShiftHeld() ? "Layout" : driver.isGlobalAltHeld() ? "Root" : "Scale");
+                },
                 liveScaleEncoder::reset));
     }
 
@@ -734,7 +855,19 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         oled.paramInfo("Velocity Sens", liveVelocitySensitivity, "Live Note", 0, 100);
     }
 
+    private void handleDrumMachineLayoutEncoder(final int encoderIndex, final int inc) {
+        final int steps = liveScaleEncoder.consume(inc);
+        if (steps == 0) {
+            return;
+        }
+        liveControls.markEncoderAdjusted(encoderIndex);
+        adjustDrumMachineLayout(steps);
+    }
+
     private void handleEncoder1(final int inc) {
+        if (isDrumMachineLiveMode()) {
+            return;
+        }
         final int steps = liveScaleEncoder.consume(inc);
         if (steps != 0) {
             liveControls.markEncoderAdjusted(3);
@@ -800,6 +933,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void handleLivePitchGlissEncoder(final int inc) {
+        if (isDrumMachineLiveMode()) {
+            return;
+        }
         if (driver.isGlobalAltHeld()) {
             toggleLivePitchGlissMode(inc);
             return;
@@ -917,6 +1053,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private String liveEncoderModeInfo(final EncoderMode mode) {
+        if (isDrumMachineLiveMode() && mode == EncoderMode.CHANNEL) {
+            return "1: Layout\n2: Velocity\n3: --\n4: --";
+        }
         if (isHarmonicLiveMode() && mode == EncoderMode.MIXER) {
             return "1: Notes\n2: Octaves\n3: Bass Grid\n4: Pitch Gliss";
         }
@@ -940,6 +1079,14 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void handleLivePitchBendTouch(final boolean touched) {
+        if (isDrumMachineLiveMode()) {
+            if (touched) {
+                showDrumMachineLayoutInfo();
+            } else {
+                oled.clearScreenDelayed();
+            }
+            return;
+        }
         livePitchBendTouched = touched;
         cancelLivePitchBendReturn();
         if (touched) {
@@ -1087,6 +1234,13 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
         if (!noteStepActive) {
+            if (isDrumMachineLiveMode() && drumMachineLayout == DrumMachinePadLayout.Layout.BONGOS
+                    && handleBongoSurfaceGate(padIndex, pressed)) {
+                return;
+            }
+            if (pressed && isDrumMachineLiveMode() && handleDrumMachinePadPress(padIndex)) {
+                return;
+            }
             notePlayController.handlePadPress(padIndex, pressed, velocity, liveVelocity);
             return;
         }
@@ -1095,6 +1249,92 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         handleClipStepRecordPadPress(padIndex, pressed);
+    }
+
+    private boolean handleBongoSurfaceGate(final int padIndex, final boolean pressed) {
+        final int zone = bongoZoneForPad(padIndex);
+        if (zone < 0) {
+            return false;
+        }
+        if (pressed) {
+            final boolean zoneAlreadyHeld = heldBongoPadCounts[zone] > 0;
+            if (!heldBongoPads[zone][padIndex]) {
+                heldBongoPads[zone][padIndex] = true;
+                heldBongoPadCounts[zone]++;
+            }
+            if (zoneAlreadyHeld) {
+                return true;
+            }
+            return false;
+        }
+        if (heldBongoPads[zone][padIndex]) {
+            heldBongoPads[zone][padIndex] = false;
+            heldBongoPadCounts[zone] = Math.max(0, heldBongoPadCounts[zone] - 1);
+        }
+        return false;
+    }
+
+    private int bongoZoneForPad(final int padIndex) {
+        final LiveNoteLayout layout = createLayout();
+        if (!(layout instanceof DrumMachinePadLayout drumMachinePadLayout)
+                || drumMachinePadLayout.selectorOffsetForPad(padIndex) >= 0) {
+            return -1;
+        }
+        final int column = padIndex % NoteGridLayout.PAD_COLUMNS;
+        if (column < 5 || column == 10) {
+            return -1;
+        }
+        return column >= 11 ? 1 : 0;
+    }
+
+    private boolean handleDrumMachinePadPress(final int padIndex) {
+        final LiveNoteLayout layout = createLayout();
+        if (!(layout instanceof DrumMachinePadLayout drumMachinePadLayout)) {
+            return false;
+        }
+        final int selectorOffset = drumMachinePadLayout.selectorOffsetForPad(padIndex);
+        if (selectorOffset >= 0) {
+            assignDrumMachineSelector(selectorOffset);
+            showDrumMachinePadInfo(padIndex);
+            return false;
+        }
+        showDrumMachinePadInfo(padIndex);
+        return false;
+    }
+
+    private void assignDrumMachineSelector(final int selectorOffset) {
+        if (drumMachineLayout == DrumMachinePadLayout.Layout.BONGOS) {
+            final int heldZone = heldBongoPadCounts[1] > 0 ? 1 : heldBongoPadCounts[0] > 0 ? 0 : -1;
+            if (heldZone == 1) {
+                secondaryDrumPadOffset = selectorOffset;
+                return;
+            }
+            if (heldZone == 0) {
+                selectedDrumPadOffset = selectorOffset;
+                return;
+            }
+        }
+        selectedDrumPadOffset = selectorOffset;
+        if (drumMachineLayout == DrumMachinePadLayout.Layout.BONGOS
+                && secondaryDrumPadOffset == selectedDrumPadOffset) {
+            secondaryDrumPadOffset = Math.min(DrumMachinePadLayout.PAD_WINDOW_SIZE - 1, selectorOffset + 1);
+        }
+    }
+
+    private void showDrumMachinePadInfo(final int padIndex) {
+        final LiveNoteLayout layout = createLayout();
+        if (!(layout instanceof DrumMachinePadLayout drumMachinePadLayout)) {
+            return;
+        }
+        final int bankIndex = drumMachinePadLayout.padBankIndexForPad(padIndex);
+        if (bankIndex < 0 || bankIndex >= drumMachinePadNames.length) {
+            return;
+        }
+        final int midiNote = drumMachineScrollPosition + bankIndex;
+        final String name = drumMachinePadNames[bankIndex] == null || drumMachinePadNames[bankIndex].isBlank()
+                ? "MIDI " + midiNote
+                : drumMachinePadNames[bankIndex];
+        oled.valueInfo("Drum Pad", name);
     }
 
     private void handleChordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
@@ -2126,6 +2366,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (!pressed) {
             return;
         }
+        if (isDrumMachineLiveMode()) {
+            oled.valueInfo("Pad Window", "Use Pattern");
+            return;
+        }
         adjustOctave(amount);
     }
 
@@ -2289,7 +2533,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         return !noteStepActive && surfaceRole == SurfaceRole.NOTE_PLAY && liveNoteSubMode == LiveNoteSubMode.HARMONIC;
     }
 
+    private boolean isDrumMachineLiveMode() {
+        return !noteStepActive && surfaceRole == SurfaceRole.NOTE_PLAY
+                && liveNoteSubMode == LiveNoteSubMode.DRUM_PADS;
+    }
+
     public String currentNoteSubModeLabel() {
+        if (liveNoteSubMode == LiveNoteSubMode.DRUM_PADS) {
+            return "Drum Pads";
+        }
         return liveNoteSubMode.displayName();
     }
 
@@ -2298,7 +2550,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     public void resetNoteSubMode() {
-        if (isChordStepSurface() || liveNoteSubMode == LiveNoteSubMode.MELODIC) {
+        if (drumPadsOnly || isChordStepSurface() || liveNoteSubMode == LiveNoteSubMode.MELODIC) {
             return;
         }
         applyLayoutChange(() -> liveNoteSubMode = LiveNoteSubMode.MELODIC);
@@ -2309,7 +2561,13 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             toggleSurfaceVariant();
             return;
         }
-        final LiveNoteSubMode next = liveNoteSubMode.next();
+        if (drumPadsOnly) {
+            showDrumMachineLayoutInfo();
+            return;
+        }
+        final LiveNoteSubMode next = liveNoteSubMode == LiveNoteSubMode.MELODIC
+                ? LiveNoteSubMode.HARMONIC
+                : LiveNoteSubMode.MELODIC;
         applyLayoutChange(() -> {
             liveNoteSubMode = next;
         });
@@ -2320,6 +2578,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             harmonicBassColumns = !harmonicBassColumns;
             retuneLivePads(() -> { });
             showState("Layout");
+            return;
+        }
+        if (isDrumMachineLiveMode()) {
+            showDrumMachineLayoutInfo();
             return;
         }
         applyLayoutChange(() -> {
@@ -2338,6 +2600,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             }
             return;
         }
+        if (isDrumMachineLiveMode()) {
+            adjustDrumMachineLayout(amount);
+            return;
+        }
         if (amount > 0 && !inKey) {
             toggleLayout();
             return;
@@ -2345,6 +2611,20 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (amount < 0 && inKey) {
             toggleLayout();
         }
+    }
+
+    private void adjustDrumMachineLayout(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        final DrumMachinePadLayout.Layout[] layouts = DrumMachinePadLayout.Layout.values();
+        final int nextIndex = Math.max(0, Math.min(layouts.length - 1, drumMachineLayout.ordinal() + amount));
+        if (nextIndex == drumMachineLayout.ordinal()) {
+            showDrumMachineLayoutInfo();
+            return;
+        }
+        retuneLivePads(() -> drumMachineLayout = layouts[nextIndex]);
+        showDrumMachineLayoutInfo();
     }
 
     public void toggleSurfaceVariant() {
@@ -2401,12 +2681,53 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (amount == 0) {
             return;
         }
+        if (isDrumMachineLiveMode()) {
+            scrollDrumMachineWindow(amount * DRUM_MACHINE_SCROLL_COARSE_STEPS);
+            return;
+        }
         final int nextOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE, getOctave() + amount));
         if (nextOctave == getOctave()) {
             return;
         }
         applyLayoutChange(() -> driver.setSharedOctave(nextOctave));
         showState("Octave");
+    }
+
+    private void scrollDrumMachineWindow(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        final int nextPosition = Math.max(0,
+                Math.min(MAX_DRUM_MACHINE_SCROLL_POSITION, drumMachineScrollPosition + amount));
+        if (nextPosition == drumMachineScrollPosition) {
+            showDrumMachineWindowInfo();
+            return;
+        }
+        drumMachineScrollPosition = nextPosition;
+        liveDrumPadBank.scrollPosition().set(nextPosition);
+        showDrumMachineWindowInfo();
+    }
+
+    private void showDrumMachineWindowInfo() {
+        oled.valueInfo("Pad Low", formatDrumMachinePadWindowLowNote());
+    }
+
+    private String formatDrumMachinePadWindowLowNote() {
+        return "P%d %s".formatted(relativeDrumMachinePadPage(), formatMidiNoteName(drumMachineScrollPosition));
+    }
+
+    private int relativeDrumMachinePadPage() {
+        return Math.floorDiv(drumMachineScrollPosition - DEFAULT_DRUM_MACHINE_LOW_NOTE,
+                DRUM_MACHINE_SCROLL_COARSE_STEPS) + 1;
+    }
+
+    private static String formatMidiNoteName(final int midiNote) {
+        final int octave = midiNote / 12 - 2;
+        return NoteGridLayout.noteName(midiNote) + octave;
+    }
+
+    private void showDrumMachineLayoutInfo() {
+        oled.valueInfo("Drum Layout", drumMachineLayout.displayName());
     }
 
     private void adjustTransposeSemitone(final int amount) {
@@ -2526,6 +2847,14 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private void releaseHeldLiveNotes() {
         livePadPerformer.releaseHeldNotes();
         stopAuditionNotes();
+        clearHeldBongoPads();
+    }
+
+    private void clearHeldBongoPads() {
+        for (int zone = 0; zone < heldBongoPads.length; zone++) {
+            Arrays.fill(heldBongoPads[zone], false);
+            heldBongoPadCounts[zone] = 0;
+        }
     }
 
     private void retuneLivePads(final Runnable stateChange) {
@@ -2536,7 +2865,17 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private int[] getLivePadMidiNotes(final int padIndex) {
-        final int[] layoutNotes = createLayout().notesForPad(padIndex);
+        final LiveNoteLayout layout = createLayout();
+        if (layout instanceof DrumMachinePadLayout drumMachinePadLayout) {
+            if (!liveDrumMachineDevice.hasDrumPads().get()) {
+                return new int[0];
+            }
+            final int bankIndex = drumMachinePadLayout.padBankIndexForPad(padIndex);
+            if (bankIndex < 0 || bankIndex >= drumMachinePadExists.length || !drumMachinePadExists[bankIndex]) {
+                return new int[0];
+            }
+        }
+        final int[] layoutNotes = layout.notesForPad(padIndex);
         final int[] shifted = new int[layoutNotes.length];
         int count = 0;
         for (final int layoutNote : layoutNotes) {
@@ -2553,8 +2892,38 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         return compact;
     }
 
-    private int resolveLivePadVelocity(final int configuredVelocity, final int rawVelocity) {
+    private int resolveLivePadVelocity(final int padIndex, final int configuredVelocity, final int rawVelocity) {
+        if (isDrumMachineLiveMode() && drumMachineLayout == DrumMachinePadLayout.Layout.VELOCITY) {
+            return drumMachineFixedVelocityForPad(padIndex);
+        }
         return LiveVelocityLogic.resolveVelocity(configuredVelocity, liveVelocitySensitivity, rawVelocity);
+    }
+
+    private int resolveLivePadTimbre(final int padIndex) {
+        if (!isDrumMachineLiveMode() || drumMachineLayout != DrumMachinePadLayout.Layout.BONGOS
+                || bongoZoneForPad(padIndex) < 0) {
+            return -1;
+        }
+        final int column = padIndex % NoteGridLayout.PAD_COLUMNS;
+        final int rowFromBottom = NoteGridLayout.PAD_ROWS - 1 - (padIndex / NoteGridLayout.PAD_COLUMNS);
+        final int surfaceStartColumn = column >= 11 ? 11 : 5;
+        final double x = column - surfaceStartColumn;
+        final double y = rowFromBottom;
+        final double dx = Math.abs(x - 2.0);
+        final double dy = Math.abs(y - 1.5);
+        final double distance = Math.sqrt(dx * dx + dy * dy);
+        return Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, (int) Math.round(distance / 2.5 * MAX_MIDI_VALUE)));
+    }
+
+    private int drumMachineFixedVelocityForPad(final int padIndex) {
+        final int column = padIndex % NoteGridLayout.PAD_COLUMNS;
+        final int rowFromTop = padIndex / NoteGridLayout.PAD_COLUMNS;
+        final int rowFromBottom = NoteGridLayout.PAD_ROWS - 1 - rowFromTop;
+        if (column < 4) {
+            return liveVelocity;
+        }
+        final int columnTier = Math.min(3, (column - 4) / 3);
+        return Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, 36 + rowFromBottom * 22 + columnTier * 8));
     }
 
     private void showLiveVelocityInfo() {
@@ -2577,6 +2946,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private RgbLigthState getLivePadLight(final int padIndex) {
         final LiveNoteLayout layout = createLayout();
+        if (isDrumMachineLiveMode() && layout instanceof DrumMachinePadLayout drumMachinePadLayout) {
+            final RgbLigthState base = getDrumMachinePadBaseLight(padIndex, drumMachinePadLayout);
+            return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
+        }
         final int midiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
         final RgbLigthState base;
         if (midiNote < 0) {
@@ -2594,6 +2967,45 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             };
         }
         return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
+    }
+
+    private RgbLigthState getDrumMachinePadBaseLight(final int padIndex, final DrumMachinePadLayout layout) {
+        if (!liveDrumMachineDevice.hasDrumPads().get()) {
+            return RgbLigthState.OFF;
+        }
+        final int bankIndex = layout.padBankIndexForPad(padIndex);
+        if (bankIndex < 0 || bankIndex >= drumMachinePadColors.length || !drumMachinePadExists[bankIndex]) {
+            return RgbLigthState.OFF;
+        }
+        final RgbLigthState color = drumMachinePadColors[bankIndex];
+        final RgbLigthState base = color != null ? color : trackPadColor();
+        if (layout.selectorOffsetForPad(padIndex) == selectedDrumPadOffset) {
+            return base.getBrightest();
+        }
+        if (drumMachineLayout == DrumMachinePadLayout.Layout.VELOCITY && layout.selectorOffsetForPad(padIndex) < 0) {
+            return velocityRampColor(base, drumMachineFixedVelocityForPad(padIndex));
+        }
+        return base;
+    }
+
+    private RgbLigthState trackPadColor() {
+        return chordStepBaseColor != null ? chordStepBaseColor : IN_SCALE_COLOR;
+    }
+
+    private RgbLigthState velocityRampColor(final RgbLigthState base, final int velocity) {
+        if (velocity >= 112) {
+            return base.getBrightest();
+        }
+        if (velocity >= 88) {
+            return base.getBrightend();
+        }
+        if (velocity >= 64) {
+            return base;
+        }
+        if (velocity >= 40) {
+            return base.getSoftDimmed();
+        }
+        return base.getDimmed();
     }
 
     private RgbLigthState getHarmonicLivePadBaseLight(final int padIndex, final LiveNoteLayout layout) {
@@ -2791,12 +3203,18 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if ("Octave".equals(focus)) {
+            if (isDrumMachineLiveMode()) {
+                showDrumMachineWindowInfo();
+                return;
+            }
             oled.valueInfo("Octave", Integer.toString(getOctave()));
             return;
         }
         if ("Layout".equals(focus)) {
             if (isHarmonicLiveMode()) {
                 oled.valueInfo("Layout", harmonicBassColumns ? "Bass Columns" : "Full Field");
+            } else if (isDrumMachineLiveMode()) {
+                showDrumMachineLayoutInfo();
             } else {
                 oled.valueInfo("Layout", inKey ? "In Key" : "Chromatic");
             }
@@ -2806,14 +3224,19 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             oled.valueInfo("Chord Step Mode", chordInterpretation.displayName());
             return;
         }
+        final String liveModeDetail;
+        if (isHarmonicLiveMode()) {
+            liveModeDetail = "Harmonic %s".formatted(harmonicBassColumns ? "Bass" : "Full");
+        } else if (isDrumMachineLiveMode()) {
+            liveModeDetail = drumMachineLayout.displayName();
+        } else {
+            liveModeDetail = inKey ? "In Key" : "Chromatic";
+        }
         oled.lineInfo("Root %s%d".formatted(NoteGridLayout.noteName(getRootNote()), getOctave()),
                 noteStepActive
                         ? "Step: %s\n%s".formatted(currentStepSubMode.displayName(),
                         currentStepSubMode == NoteStepSubMode.CHORD_STEP ? currentChordDisplay() : "Deferred")
-                        : "Scale: %s\n%s".formatted(getScaleDisplayName(),
-                        isHarmonicLiveMode()
-                                ? "Harmonic %s".formatted(harmonicBassColumns ? "Bass" : "Full")
-                                : inKey ? "In Key" : "Chromatic"));
+                        : "Scale: %s\n%s".formatted(getScaleDisplayName(), liveModeDetail));
     }
 
     private void showContextInfo() {
@@ -3219,6 +3642,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                     harmonicOctaveSpan,
                     harmonicBassColumns, getHarmonicGlissStepOffset());
         }
+        if (isDrumMachineLiveMode()) {
+            return new DrumMachinePadLayout(drumMachineScrollPosition, drumMachineLayout,
+                    selectedDrumPadOffset, secondaryDrumPadOffset);
+        }
         return new NoteGridLayout(getScale(), getRootNote(), getOctave(), inKey);
     }
 
@@ -3242,7 +3669,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (midiNote < 0) {
             return -1;
         }
-        if (isHarmonicLiveMode()) {
+        if (isHarmonicLiveMode() || isDrumMachineLiveMode()) {
             return midiNote;
         }
         if (livePitchGlissMode == LivePitchGlissMode.SCALE_DEGREE) {
@@ -3971,6 +4398,13 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             notePlayController.activate();
             liveModeControlLayer.activate();
             stepEncoderLayer.deactivate();
+            if (drumPadsOnly && !drumMachineDefaultPageApplied) {
+                drumMachineDefaultPageApplied = true;
+                if (drumMachineScrollPosition == 0) {
+                    drumMachineScrollPosition = DEFAULT_DRUM_MACHINE_LOW_NOTE;
+                    liveDrumPadBank.scrollPosition().set(DEFAULT_DRUM_MACHINE_LOW_NOTE);
+                }
+            }
             applyLiveVelocity();
             applyLayout();
             showState("Mode");
@@ -3982,6 +4416,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
         noteStepActive = false;
+        clearHeldBongoPads();
         notePlayController.deactivate(this::releaseHeldLiveNotes);
         builderSelectedNotes.clear();
         heldStepPads.clear();
