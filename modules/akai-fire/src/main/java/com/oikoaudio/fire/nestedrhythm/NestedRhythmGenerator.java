@@ -32,7 +32,7 @@ public final class NestedRhythmGenerator {
         final List<Integer> rawVelocities = new ArrayList<>(events.size());
         for (int order = 0; order < retained.size(); order++) {
             final PulseSpec pulse = retained.get(order);
-            rawVelocities.add(velocityFor(pulse.role(), order));
+            rawVelocities.add(velocityFor(pulse, order));
             events.add(new NestedRhythmPattern.PulseEvent(
                     order,
                     pulse.fineStart(),
@@ -133,7 +133,9 @@ public final class NestedRhythmGenerator {
                         fineStart,
                         NestedRhythmPattern.Role.PRIMARY_ANCHOR,
                         true,
-                        1000));
+                        1000,
+                        0,
+                        1));
             }
         }
     }
@@ -192,7 +194,9 @@ public final class NestedRhythmGenerator {
                     fineStart,
                     role,
                     false,
-                    subdivisionPriority(index, count, basePriority)));
+                    subdivisionPriority(index, count, basePriority),
+                    index,
+                    count));
             inserted++;
         }
     }
@@ -335,7 +339,13 @@ public final class NestedRhythmGenerator {
         return shaped;
     }
 
-    private int velocityFor(final NestedRhythmPattern.Role role, final int order) {
+    private int velocityFor(final PulseSpec pulse, final int order) {
+        final int base = baseVelocityFor(pulse.role(), order);
+        final double shaped = base * outerVelocityContour(pulse);
+        return Math.max(1, Math.min(127, (int) Math.round(shaped)));
+    }
+
+    private int baseVelocityFor(final NestedRhythmPattern.Role role, final int order) {
         final int contour = contourAt(order);
         final int peak = switch (role) {
             case PRIMARY_ANCHOR -> 118;
@@ -347,6 +357,37 @@ public final class NestedRhythmGenerator {
             case PICKUP -> 104;
         };
         return Math.max(1, Math.min(127, peak + contour));
+    }
+
+    private double outerVelocityContour(final PulseSpec pulse) {
+        final int count = Math.max(1, pulse.subdivisionCount());
+        if (count <= 3) {
+            return 1.0;
+        }
+        final double densityInfluence = Math.min(1.0, (count - 3) / 5.0);
+        final double roleInfluence = outerVelocityRoleInfluence(pulse.role());
+        if (densityInfluence <= 0.0 || roleInfluence <= 0.0) {
+            return 1.0;
+        }
+        if (pulse.subdivisionIndex() <= 0) {
+            return 1.0 - densityInfluence * roleInfluence * 0.03;
+        }
+        final double progress = pulse.subdivisionIndex() / (double) Math.max(1, count - 1);
+        final double ramp = Math.pow(progress, 1.8);
+        final double target = 0.58 + ramp * 0.40;
+        return 1.0 - densityInfluence * roleInfluence * (1.0 - target);
+    }
+
+    private double outerVelocityRoleInfluence(final NestedRhythmPattern.Role role) {
+        return switch (role) {
+            case PRIMARY_ANCHOR -> 0.10;
+            case SECONDARY_ANCHOR -> 0.18;
+            case TUPLET_LEAD -> 0.22;
+            case TUPLET_INTERIOR -> 0.86;
+            case RATCHET_LEAD -> 0.18;
+            case RATCHET_INTERIOR -> 1.0;
+            case PICKUP -> 0.70;
+        };
     }
 
     public record Settings(int midiNote, double density, int tupletCount, int tupletCover,
@@ -423,6 +464,7 @@ public final class NestedRhythmGenerator {
         return Math.max(1, a);
     }
 
-    private record PulseSpec(int fineStart, NestedRhythmPattern.Role role, boolean required, int priority) {
+    private record PulseSpec(int fineStart, NestedRhythmPattern.Role role, boolean required, int priority,
+                             int subdivisionIndex, int subdivisionCount) {
     }
 }

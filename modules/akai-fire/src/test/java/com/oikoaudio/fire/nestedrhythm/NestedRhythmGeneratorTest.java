@@ -232,6 +232,39 @@ class NestedRhythmGeneratorTest {
         assertNotEquals(startOfMaxVelocity(rotation0), startOfMaxVelocity(rotation1));
     }
 
+    @Test
+    void highRatchetCountsKeepInnerAlternationWhileRisingIntoNextAnchor() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 8, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> ratchet = velocitiesInRange(pattern, 0, 420);
+        final int nextAnchor = velocitiesInRange(pattern, 420, 840).get(0);
+
+        assertEquals(8, ratchet.size());
+        assertTrue(ratchet.get(0) > ratchet.get(7));
+        assertTrue(ratchet.get(7) < nextAnchor);
+        assertTrue(ratchet.get(2) < ratchet.get(4));
+        assertTrue(ratchet.get(4) < ratchet.get(6));
+        assertTrue(ratchet.get(1) < ratchet.get(3));
+        assertTrue(ratchet.get(3) < ratchet.get(5));
+        assertTrue(ratchet.get(5) < ratchet.get(7));
+    }
+
+    @Test
+    void highTupletCountsKeepInnerAlternationWhileRisingThroughTheClaimedSpan() {
+        final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
+                60, 1.0, 7, 1, 1, 0, 1, 0, 1.0, 100, 0, 0,
+                4, 4, 1));
+        final List<Integer> tuplet = velocitiesInRange(pattern, 840, 1680);
+
+        assertEquals(7, tuplet.size());
+        assertTrue(tuplet.get(0) > tuplet.get(6));
+        assertTrue(tuplet.get(2) < tuplet.get(4));
+        assertTrue(tuplet.get(4) < tuplet.get(6));
+        assertTrue(tuplet.get(1) < tuplet.get(3));
+        assertTrue(tuplet.get(3) < tuplet.get(5));
+    }
+
     private NestedRhythmGenerator.Settings defaultSettings() {
         return new NestedRhythmGenerator.Settings(
                 60, 0.0, 0, 0, 0, 0, 1, 0, 0.6, 100, 0, 0,
@@ -251,6 +284,14 @@ class NestedRhythmGeneratorTest {
 
     private List<Integer> velocities(final NestedRhythmPattern pattern) {
         return pattern.events().stream().map(NestedRhythmPattern.PulseEvent::velocity).toList();
+    }
+
+    private List<Integer> velocitiesInRange(final NestedRhythmPattern pattern, final int startInclusive,
+                                            final int endExclusive) {
+        return pattern.events().stream()
+                .filter(event -> event.fineStart() >= startInclusive && event.fineStart() < endExclusive)
+                .map(NestedRhythmPattern.PulseEvent::velocity)
+                .toList();
     }
 
     private List<Integer> startsInRange(final NestedRhythmPattern pattern, final int startInclusive,

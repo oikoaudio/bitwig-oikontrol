@@ -247,6 +247,7 @@ If the selected clip slot is empty when you enter the mode, Nested Rhythm genera
 `Chance` is play probability. It starts at 100%; turn it down to make generated hits less likely to play, with weaker/interior hits reduced first. `ALT + Chance` sets the baseline that the generated chance contour works down from.
 
 Timing is not directly editable from the Fire in this mode. The Fire pads are a projection of the generated rhythm, not the literal Bitwig note grid.
+Generated velocities combine local hard/soft accents with broader ramps across dense ratchet and tuplet spans, so interior subdivisions can rise toward the next structural hit without overtaking it.
 
 Tuplet is a half-bar transform: `Cover` sets how many consecutive half-bars are claimed, and `Tuplet Phase` rotates that span. Ratchet is a beat-burst transform: `Ratchet Width` chooses phrase beats in deterministic priority order, and `Ratchet Phase` rotates those beats. Tuplet counts are meter-aware; in `4/4` they include `3 / 5 / 7`, while `5/4` can expose counts such as `3 / 4 / 6 / 7`. Ratchet supports `2 / 3 / 4 / 5 / 6 / 7 / 8`.
 
