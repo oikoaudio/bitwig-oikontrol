@@ -86,6 +86,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private RgbLigthState selectedClipColor = BASE_COLOR;
     private int playingFineStep = -1;
     private double density = 1.0;
+    private double cluster = 0.0;
     private double recurrenceDepth = 0.0;
     private int tupletCount = 0;
     private int tupletCover = 1;
@@ -692,6 +693,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 velocityCenter,
                 velocityRotation,
                 0,
+                cluster,
                 meterNumerator(),
                 meterDenominator(),
                 clipBarCount);
@@ -736,11 +738,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private EncoderBankLayout createEncoderBankLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Density / Shift Rec\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Chance / Alt Base / Shift Rot",
+                "1: Density / Alt Cluster / Shift Rec\n2: Tuplet / Alt Cover / Shift Phase\n3: Ratchet / Alt Width / Shift Phase\n4: Chance / Alt Base / Shift Rot",
                 new EncoderSlotBinding[]{
                         modifierContinuousSlot(
                                 view("Density", () -> "%.2f".formatted(density), this::adjustDensity),
-                                null,
+                                view("Cluster", this::clusterLabel, this::adjustCluster),
                                 view("Recurrence", this::recurrenceDepthLabel, this::adjustRecurrenceDepth)),
                         modifierChoiceSlot(
                                 view("Tuplet", () -> countLabel(tupletCount), this::adjustTupletCount),
@@ -959,6 +961,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         density = clampUnit(density + amount * 0.05);
         generatePattern("Density", "%.2f".formatted(density));
+    }
+
+    private void adjustCluster(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        cluster = clampUnit(cluster + amount * 0.05);
+        generatePattern("Cluster", clusterLabel());
     }
 
     private void adjustRecurrenceDepth(final int amount) {
@@ -1397,6 +1407,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String recurrenceDepthLabel() {
         return percentLabel(recurrenceDepth);
+    }
+
+    private String clusterLabel() {
+        return percentLabel(cluster);
     }
 
     private String pitchLabel() {
