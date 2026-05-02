@@ -1023,9 +1023,10 @@ public final class NestedRhythmGenerator {
                                                                final int totalFineSteps) {
         final List<NestedRhythmPattern.PulseEvent> events = new ArrayList<>(startsOnly.size());
         for (final NestedRhythmPattern.PulseEvent current : startsOnly) {
-            final int duration = Math.min(
+            final int loopEndCap = Math.max(1, totalFineSteps - current.fineStart());
+            final int duration = Math.min(loopEndCap, Math.min(
                     durationFor(current.fineStart(), current.role(), durationStarts, totalFineSteps),
-                    Math.max(1, current.duration()));
+                    Math.max(1, current.duration())));
             events.add(new NestedRhythmPattern.PulseEvent(current.order(), current.fineStart(),
                     duration, current.midiNote(), current.velocity(), current.role()));
         }

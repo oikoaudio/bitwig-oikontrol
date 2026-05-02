@@ -457,6 +457,20 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
+    void lastEventDurationDoesNotOverrunClipEnd() {
+        final NestedRhythmGenerator.Settings settings = new NestedRhythmGenerator.Settings(
+                60, 1.0, 0, 0, 0, 0, 1, 0, 1.0, 100, 0, 0,
+                0.0, 4, 4, 1);
+        final NestedRhythmPattern pattern = generator.generate(settings);
+        final int clipEnd = NestedRhythmGenerator.fineStepsPerBar(4, 4);
+
+        for (final NestedRhythmPattern.PulseEvent event : pattern.events()) {
+            assertTrue(event.fineStart() + event.duration() <= clipEnd,
+                    event.fineStart() + " + " + event.duration() + " overran " + clipEnd);
+        }
+    }
+
+    @Test
     void clusteredThinningKeepsFullStructureDurationCaps() {
         final NestedRhythmPattern fullClustered = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 7, 1, 0, 8, 2, 0, 1.0, 100, 0, 0,
@@ -466,9 +480,11 @@ class NestedRhythmGeneratorTest {
                 1.0, 4, 4, 1));
 
         for (final NestedRhythmPattern.PulseEvent event : sparseClustered.events()) {
-            assertTrue(event.duration() <= durationAtOrder(fullClustered, event.order()),
-                    "order " + event.order() + " stretched from "
-                            + durationAtOrder(fullClustered, event.order()) + " to " + event.duration());
+            final int fullDuration = durationAtOrder(fullClustered, event.order());
+            final int clipEndCap = NestedRhythmGenerator.fineStepsPerBar(4, 4) - event.fineStart();
+            assertTrue(event.duration() <= Math.max(fullDuration, clipEndCap),
+                    "order " + event.order() + " stretched from " + fullDuration + " to " + event.duration());
+            assertTrue(event.fineStart() + event.duration() <= NestedRhythmGenerator.fineStepsPerBar(4, 4));
         }
     }
 
