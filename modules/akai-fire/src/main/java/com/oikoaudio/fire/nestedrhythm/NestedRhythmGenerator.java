@@ -27,6 +27,7 @@ public final class NestedRhythmGenerator {
 
     private static final int MAX_BARS = 4;
     private static final int MAX_NUMERATOR = 16;
+    private static final double GENERATED_DENSITY_FLOOR = 0.20;
     private static final int[] SUPPORTED_DENOMINATORS = {2, 4, 8, 16};
     private static final int[] TUPLET_COUNT_CANDIDATES = {0, 3, 4, 5, 6, 7};
     private static final int[] SUPPORTED_RATCHET_DIVISIONS = {0, 2, 3, 4, 5, 6, 7, 8};
@@ -355,7 +356,7 @@ public final class NestedRhythmGenerator {
         }
         final int spanFineSteps = tupletSpanFineSteps(barFineSteps, settings.rate());
         final int totalSpans = totalTupletSpans(totalFineSteps, spanFineSteps);
-        final List<Integer> selectedSpans = selectedTargetIndices(
+        final List<Integer> selectedSpans = selectedTupletTargetIndices(
                 totalSpans, settings.tupletTargets(), settings.tupletTargetPhase());
         final int contourCount = Math.max(1, selectedSpans.size() * settings.tupletDivisions());
         int contourOffset = 0;
@@ -509,7 +510,8 @@ public final class NestedRhythmGenerator {
         if (candidateCount <= 0) {
             return 0;
         }
-        final int densityCount = optionalKeepCount(candidateCount, density);
+        final double phraseDensity = GENERATED_DENSITY_FLOOR + density * (1.0 - GENERATED_DENSITY_FLOOR);
+        final int densityCount = optionalKeepCount(candidateCount, phraseDensity);
         final int phraseCellFloor = Math.max(2, generatedFamilies.size() * 2);
         return Math.max(densityCount, Math.min(candidateCount, phraseCellFloor));
     }
@@ -847,6 +849,13 @@ public final class NestedRhythmGenerator {
     private List<RatchetTargetRegion> ratchetTargetPriorityOrder(final List<RatchetTargetRegion> regions,
                                                                  final int barCount,
                                                                  final double rate) {
+        if (regions.stream().anyMatch(region -> region.gestureFamily() == GestureFamily.NESTED_RATCHET)) {
+            final List<RatchetTargetRegion> ordered = new ArrayList<>(regions.size());
+            for (final int index : complementaryRatchetTargetPriorityOrder(regions)) {
+                ordered.add(regions.get(index));
+            }
+            return ordered;
+        }
         if (barCount <= 1) {
             return Math.abs(rate - 1.0) <= 0.0001
                     ? regionPriorityOrder(regions, false)
@@ -889,16 +898,78 @@ public final class NestedRhythmGenerator {
         return ordered;
     }
 
+    static List<Integer> tupletTargetPriorityOrder(final int targetCount) {
+        return scoredTargetPriorityOrder(targetCount, TargetOrderProfile.TUPLET);
+    }
+
     private static List<Integer> structuralTargetPriorityOrder(final int targetCount) {
-        return scoredTargetPriorityOrder(targetCount, true);
+        return scoredTargetPriorityOrder(targetCount, TargetOrderProfile.STRUCTURAL);
     }
 
     private static List<Integer> phraseTargetPriorityOrder(final int targetCount) {
-        return scoredTargetPriorityOrder(targetCount, false);
+        return scoredTargetPriorityOrder(targetCount, TargetOrderProfile.RATCHET);
+    }
+
+    private static List<Integer> complementaryRatchetTargetPriorityOrder(final List<RatchetTargetRegion> regions) {
+        final int targetCount = regions.size();
+        if (targetCount <= 0) {
+            return List.of();
+        }
+        final List<Integer> ordered = new ArrayList<>(targetCount);
+        addComplementaryRatchetSeedTargets(ordered, regions);
+        final List<Integer> indices = new ArrayList<>(targetCount);
+        for (int index = 0; index < targetCount; index++) {
+            if (!ordered.contains(index)) {
+                indices.add(index);
+            }
+        }
+        final List<Integer> stableTieBreak = targetPriorityOrder(targetCount);
+        indices.sort(Comparator
+                .comparingDouble((Integer index) -> complementaryRatchetTargetScore(index, regions))
+                .reversed()
+                .thenComparingInt(stableTieBreak::indexOf));
+        ordered.addAll(indices);
+        return ordered;
+    }
+
+    private static void addComplementaryRatchetSeedTargets(final List<Integer> ordered,
+                                                           final List<RatchetTargetRegion> regions) {
+        addTargetIndex(ordered, regions.size(), 0);
+        final int firstNested = firstRegionWithFamily(regions, GestureFamily.NESTED_RATCHET);
+        addTargetIndex(ordered, regions.size(), firstNested);
+        final int lastNested = lastRegionWithFamily(regions, GestureFamily.NESTED_RATCHET);
+        addTargetIndex(ordered, regions.size(), lastNested);
+    }
+
+    private static double complementaryRatchetTargetScore(final int index,
+                                                          final List<RatchetTargetRegion> regions) {
+        final RatchetTargetRegion region = regions.get(index);
+        final double familyBias = region.gestureFamily() == GestureFamily.NESTED_RATCHET ? -0.04 : 0.08;
+        return targetPhraseScore(index, regions.size(), TargetOrderProfile.RATCHET) + familyBias;
+    }
+
+    private static int firstRegionWithFamily(final List<RatchetTargetRegion> regions,
+                                             final GestureFamily family) {
+        for (int index = 0; index < regions.size(); index++) {
+            if (regions.get(index).gestureFamily() == family) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static int lastRegionWithFamily(final List<RatchetTargetRegion> regions,
+                                            final GestureFamily family) {
+        for (int index = regions.size() - 1; index >= 0; index--) {
+            if (regions.get(index).gestureFamily() == family) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private static List<Integer> scoredTargetPriorityOrder(final int targetCount,
-                                                           final boolean compactPhrase) {
+                                                           final TargetOrderProfile profile) {
         if (targetCount <= 0) {
             return List.of();
         }
@@ -908,7 +979,7 @@ public final class NestedRhythmGenerator {
         }
         final List<Integer> stableTieBreak = targetPriorityOrder(targetCount);
         indices.sort(Comparator
-                .comparingDouble((Integer index) -> targetPhraseScore(index, targetCount, compactPhrase))
+                .comparingDouble((Integer index) -> targetPhraseScore(index, targetCount, profile))
                 .reversed()
                 .thenComparingInt(stableTieBreak::indexOf));
         return indices;
@@ -916,16 +987,27 @@ public final class NestedRhythmGenerator {
 
     private static double targetPhraseScore(final int index,
                                             final int targetCount,
-                                            final boolean compactPhrase) {
+                                            final TargetOrderProfile profile) {
         final double position = index / (double) Math.max(1, targetCount);
         final double metric = targetMetricWeight(index, targetCount);
         final double anticipation = targetMetricWeight(Math.floorMod(index + 1, targetCount), targetCount);
-        final double call = gaussian(position, 0.25, compactPhrase ? 0.18 : 0.13);
-        final double response = gaussian(position, 0.50, compactPhrase ? 0.20 : 0.15);
-        final double cadence = gaussian(position, 0.88, compactPhrase ? 0.16 : 0.12);
-        final double ground = gaussian(position, 0.0, compactPhrase ? 0.13 : 0.10);
-        final double phraseRole = Math.max(Math.max(call, response * 0.92), Math.max(cadence * 0.82, ground * 0.72));
-        return metric * 0.34 + phraseRole * 0.46 + anticipation * 0.20;
+        final boolean compactPhrase = profile == TargetOrderProfile.STRUCTURAL;
+        final double call = gaussian(position, 0.25, profile == TargetOrderProfile.TUPLET ? 0.16
+                : compactPhrase ? 0.18 : 0.13);
+        final double response = gaussian(position, 0.50, profile == TargetOrderProfile.TUPLET ? 0.18
+                : compactPhrase ? 0.20 : 0.15);
+        final double cadence = gaussian(position, 0.88, profile == TargetOrderProfile.TUPLET ? 0.14
+                : compactPhrase ? 0.16 : 0.12);
+        final double ground = gaussian(position, 0.0, profile == TargetOrderProfile.TUPLET ? 0.12
+                : compactPhrase ? 0.13 : 0.10);
+        final double responseWeight = profile == TargetOrderProfile.TUPLET ? 0.95 : compactPhrase ? 0.92 : 0.90;
+        final double cadenceWeight = profile == TargetOrderProfile.TUPLET ? 0.58 : compactPhrase ? 0.82 : 0.72;
+        final double groundWeight = profile == TargetOrderProfile.TUPLET ? 0.42 : compactPhrase ? 0.72 : 0.50;
+        final double phraseRole = Math.max(Math.max(call, response * responseWeight),
+                Math.max(cadence * cadenceWeight, ground * groundWeight));
+        return profile == TargetOrderProfile.TUPLET
+                ? metric * 0.28 + phraseRole * 0.58 + anticipation * 0.14
+                : metric * 0.34 + phraseRole * 0.46 + anticipation * 0.20;
     }
 
     private static double targetMetricWeight(final int index,
@@ -945,13 +1027,13 @@ public final class NestedRhythmGenerator {
         }
     }
 
-    private static List<Integer> selectedTargetIndices(final int totalTargets,
-                                                       final int selectedCount,
-                                                       final int targetPhase) {
+    private static List<Integer> selectedTupletTargetIndices(final int totalTargets,
+                                                             final int selectedCount,
+                                                             final int targetPhase) {
         if (totalTargets <= 0 || selectedCount <= 0) {
             return List.of();
         }
-        final List<Integer> ordered = targetPriorityOrder(totalTargets);
+        final List<Integer> ordered = tupletTargetPriorityOrder(totalTargets);
         final int count = Math.max(0, Math.min(totalTargets, selectedCount));
         final int phase = Math.floorMod(targetPhase, totalTargets);
         final List<Integer> selected = new ArrayList<>(count);
@@ -997,7 +1079,7 @@ public final class NestedRhythmGenerator {
         }
         final int spanFineSteps = tupletSpanFineSteps(barFineSteps, normalizedRate);
         final int totalSpans = totalTupletSpans(totalFineSteps, spanFineSteps);
-        for (final int spanIndex : selectedTargetIndices(totalSpans, tupletTargets, tupletTargetPhase)) {
+        for (final int spanIndex : selectedTupletTargetIndices(totalSpans, tupletTargets, tupletTargetPhase)) {
             final int start = Math.floorMod(spanIndex * spanFineSteps, totalFineSteps);
             if (cluster <= 0.0001) {
                 starts.keySet().removeIf(candidate ->
@@ -1367,5 +1449,11 @@ public final class NestedRhythmGenerator {
         TUPLET,
         NESTED_RATCHET,
         OTHER
+    }
+
+    private enum TargetOrderProfile {
+        RATCHET,
+        TUPLET,
+        STRUCTURAL
     }
 }

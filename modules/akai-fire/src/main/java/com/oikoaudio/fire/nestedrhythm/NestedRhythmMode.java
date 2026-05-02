@@ -1622,7 +1622,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (tupletTargets >= totalTupletHalfBars()) {
             return "Whole";
         }
-        final List<Integer> priorityOrder = NestedRhythmGenerator.targetPriorityOrder(totalTupletHalfBars());
+        final List<Integer> priorityOrder = NestedRhythmGenerator.tupletTargetPriorityOrder(totalTupletHalfBars());
         final List<Integer> targets = new ArrayList<>(tupletTargets);
         for (int index = 0; index < tupletTargets; index++) {
             targets.add(priorityOrder.get(Math.floorMod(index + tupletTargetPhase, priorityOrder.size())));
