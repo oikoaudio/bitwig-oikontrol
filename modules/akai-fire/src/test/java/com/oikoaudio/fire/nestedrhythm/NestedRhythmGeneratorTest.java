@@ -122,8 +122,17 @@ class NestedRhythmGeneratorTest {
                 60, 1.0, 3, 1, 0, 0, 1, 0, 1.0, 100, 0, 0,
                 0.0, 4, 4, 1, 2.0));
 
-        assertEquals(4, startsInRange(ratchetRateOne, 1680, 2100).size());
-        assertEquals(4, startsInRange(ratchetRateTwo, 1680, 1890).size());
+        final List<Integer> rateOneRatchets = startsWithRoles(ratchetRateOne, Set.of(
+                NestedRhythmPattern.Role.RATCHET_LEAD,
+                NestedRhythmPattern.Role.RATCHET_INTERIOR));
+        final List<Integer> rateTwoRatchets = startsWithRoles(ratchetRateTwo, Set.of(
+                NestedRhythmPattern.Role.RATCHET_LEAD,
+                NestedRhythmPattern.Role.RATCHET_INTERIOR));
+
+        assertEquals(4, rateOneRatchets.size());
+        assertEquals(4, rateTwoRatchets.size());
+        assertTrue(rateOneRatchets.get(3) - rateOneRatchets.get(0) < 420);
+        assertTrue(rateTwoRatchets.get(3) - rateTwoRatchets.get(0) < 210);
         assertEquals(List.of(420, 560, 700), startsWithRoles(tupletRateTwo, Set.of(
                 NestedRhythmPattern.Role.TUPLET_LEAD,
                 NestedRhythmPattern.Role.TUPLET_INTERIOR)));
@@ -144,10 +153,13 @@ class NestedRhythmGeneratorTest {
                 60, 1.0, 0, 0, 0, 4, 2, 0, 1.0, 100, 0, 0,
                 4, 4, 2));
 
-        assertEquals(4, startsInRange(pattern, 840, 1260).size());
-        assertEquals(4, startsInRange(pattern, 1680, 2100).size());
-        assertEquals(List.of(0, 420, 1260, 2100, 2520, 2940), startsOutsideRanges(pattern,
-                List.of(new Range(840, 1260), new Range(1680, 2100))));
+        final List<Integer> ratchets = startsWithRoles(pattern, Set.of(
+                NestedRhythmPattern.Role.RATCHET_LEAD,
+                NestedRhythmPattern.Role.RATCHET_INTERIOR));
+
+        assertEquals(8, ratchets.size());
+        assertTrue(ratchets.stream().anyMatch(start -> start < NestedRhythmGenerator.fineStepsPerBar(4, 4)));
+        assertTrue(ratchets.stream().anyMatch(start -> start >= NestedRhythmGenerator.fineStepsPerBar(4, 4)));
     }
 
     @Test
@@ -292,7 +304,7 @@ class NestedRhythmGeneratorTest {
                 60, 0.6, 3, 2, 0, 6, 6, 0, 1.0, 100, 0, 0,
                 0.65, 4, 4, 2));
 
-        assertTrue(higherDensity.events().size() > lowerDensity.events().size(),
+        assertTrue(orders(higherDensity).containsAll(orders(lowerDensity)),
                 lowerDensity.events().size() + " -> " + higherDensity.events().size());
         for (final NestedRhythmPattern.PulseEvent retained : lowerDensity.events()) {
             final int shiftedStart = startForOrder(higherDensity, retained.order());

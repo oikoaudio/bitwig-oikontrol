@@ -552,7 +552,8 @@ public final class NestedRhythmGenerator {
             final double score = optionalScore(left, cluster, totalFineSteps)
                     + optionalScore(right, cluster, totalFineSteps)
                     + phraseGroupScore(left.gestureFamily(), selectedFamilyCounts)
-                    + compactPairBonus(left, right, totalFineSteps);
+                    + compactPairBonus(left, right, totalFineSteps)
+                    + localGestureIdentityBonus(left, right);
             if (score > bestScore) {
                 bestScore = score;
                 best = new PulsePair(left, right);
@@ -597,7 +598,9 @@ public final class NestedRhythmGenerator {
     private double optionalScore(final PulseSpec pulse,
                                  final double cluster,
                                  final int totalFineSteps) {
-        return pulse.priority() + cluster * clusterMembership(pulse.fineStart(), cluster, totalFineSteps) * 900.0;
+        return pulse.priority()
+                + phrasePositionScore(pulse.fineStart(), totalFineSteps) * 90.0
+                + cluster * clusterMembership(pulse.fineStart(), cluster, totalFineSteps) * 900.0;
     }
 
     private double phraseGroupScore(final GestureFamily family,
@@ -632,6 +635,69 @@ public final class NestedRhythmGenerator {
         final int distance = Math.max(1, right.fineStart() - left.fineStart());
         final double compactness = 1.0 - Math.min(1.0, distance / (double) Math.max(1, totalFineSteps));
         return 75.0 + compactness * 24.0;
+    }
+
+    private double localGestureIdentityBonus(final PulseSpec left,
+                                             final PulseSpec right) {
+        if (!sameGestureFamily(left, right) || left.subdivisionCount() <= 1 || right.subdivisionCount() <= 1) {
+            return 0.0;
+        }
+        double bonus = 0.0;
+        if (sameLocalSubdivisionCell(left, right)) {
+            bonus += 180.0;
+        }
+        if (Math.abs(left.subdivisionIndex() - right.subdivisionIndex()) == 1) {
+            bonus += 70.0;
+        }
+        if (left.subdivisionIndex() == 0 || right.subdivisionIndex() == 0) {
+            bonus += 45.0;
+        }
+        if (left.subdivisionIndex() == left.subdivisionCount() - 1
+                || right.subdivisionIndex() == right.subdivisionCount() - 1) {
+            bonus += 25.0;
+        }
+        return bonus;
+    }
+
+    private boolean sameLocalSubdivisionCell(final PulseSpec left,
+                                             final PulseSpec right) {
+        if (left.subdivisionCount() != right.subdivisionCount()) {
+            return false;
+        }
+        final int count = Math.max(1, left.subdivisionCount());
+        return left.contourIndex() / count == right.contourIndex() / count;
+    }
+
+    private double phrasePositionScore(final int fineStart,
+                                       final int totalFineSteps) {
+        if (totalFineSteps <= 1) {
+            return 1.0;
+        }
+        final double position = fineStart / (double) totalFineSteps;
+        final double metric = metricPositionWeight(fineStart, totalFineSteps);
+        final double call = gaussian(position, 0.25, 0.13);
+        final double response = gaussian(position, 0.50, 0.15) * 0.84;
+        final double cadence = gaussian(position, 0.88, 0.12) * 0.72;
+        final double start = gaussian(position, 0.0, 0.10) * 0.62;
+        return Math.max(metric, Math.max(Math.max(call, response), Math.max(cadence, start)));
+    }
+
+    private static double metricPositionWeight(final int fineStart,
+                                               final int totalFineSteps) {
+        if (fineStart <= 0) {
+            return 1.0;
+        }
+        final int common = greatestCommonDivisor(fineStart, Math.max(1, totalFineSteps));
+        return Math.log(common + 1.0) / Math.log(Math.max(2, totalFineSteps) + 1.0);
+    }
+
+    private static double gaussian(final double value,
+                                   final double center,
+                                   final double width) {
+        final double distance = Math.abs(value - center);
+        final double wrappedDistance = Math.min(distance, 1.0 - distance);
+        final double normalized = wrappedDistance / Math.max(0.0001, width);
+        return Math.exp(-0.5 * normalized * normalized);
     }
 
     private double clusterMembership(final int fineStart,
@@ -744,34 +810,51 @@ public final class NestedRhythmGenerator {
     }
 
     private static List<Integer> structuralTargetPriorityOrder(final int targetCount) {
-        if (targetCount <= 0) {
-            return List.of();
-        }
-        final List<Integer> ordered = new ArrayList<>(targetCount);
-        addTargetIndex(ordered, targetCount, (int) Math.round(targetCount * 0.25));
-        addTargetIndex(ordered, targetCount, 0);
-        addTargetIndex(ordered, targetCount, targetCount - 1);
-        addTargetIndex(ordered, targetCount, targetCount / 2);
-        for (int offset = 2; ordered.size() < targetCount; offset++) {
-            addTargetIndex(ordered, targetCount, offset);
-            addTargetIndex(ordered, targetCount, targetCount - offset);
-        }
-        return ordered;
+        return scoredTargetPriorityOrder(targetCount, true);
     }
 
     private static List<Integer> phraseTargetPriorityOrder(final int targetCount) {
-        final List<Integer> ordered = new ArrayList<>(targetCount);
-        addTargetIndex(ordered, targetCount, (int) Math.round(targetCount * 0.25));
-        addTargetIndex(ordered, targetCount, targetCount / 2);
-        addTargetIndex(ordered, targetCount, 0);
-        addTargetIndex(ordered, targetCount, targetCount - 1);
-        addTargetIndex(ordered, targetCount, 1);
-        addTargetIndex(ordered, targetCount, targetCount - 2);
-        for (int offset = 3; ordered.size() < targetCount; offset++) {
-            addTargetIndex(ordered, targetCount, offset);
-            addTargetIndex(ordered, targetCount, targetCount - offset);
+        return scoredTargetPriorityOrder(targetCount, false);
+    }
+
+    private static List<Integer> scoredTargetPriorityOrder(final int targetCount,
+                                                           final boolean compactPhrase) {
+        if (targetCount <= 0) {
+            return List.of();
         }
-        return ordered;
+        final List<Integer> indices = new ArrayList<>(targetCount);
+        for (int index = 0; index < targetCount; index++) {
+            indices.add(index);
+        }
+        final List<Integer> stableTieBreak = targetPriorityOrder(targetCount);
+        indices.sort(Comparator
+                .comparingDouble((Integer index) -> targetPhraseScore(index, targetCount, compactPhrase))
+                .reversed()
+                .thenComparingInt(stableTieBreak::indexOf));
+        return indices;
+    }
+
+    private static double targetPhraseScore(final int index,
+                                            final int targetCount,
+                                            final boolean compactPhrase) {
+        final double position = index / (double) Math.max(1, targetCount);
+        final double metric = targetMetricWeight(index, targetCount);
+        final double anticipation = targetMetricWeight(Math.floorMod(index + 1, targetCount), targetCount);
+        final double call = gaussian(position, 0.25, compactPhrase ? 0.18 : 0.13);
+        final double response = gaussian(position, 0.50, compactPhrase ? 0.20 : 0.15);
+        final double cadence = gaussian(position, 0.88, compactPhrase ? 0.16 : 0.12);
+        final double ground = gaussian(position, 0.0, compactPhrase ? 0.13 : 0.10);
+        final double phraseRole = Math.max(Math.max(call, response * 0.92), Math.max(cadence * 0.82, ground * 0.72));
+        return metric * 0.34 + phraseRole * 0.46 + anticipation * 0.20;
+    }
+
+    private static double targetMetricWeight(final int index,
+                                             final int targetCount) {
+        if (index == 0) {
+            return 1.0;
+        }
+        final int common = greatestCommonDivisor(index, Math.max(1, targetCount));
+        return Math.log(common + 1.0) / Math.log(Math.max(2, targetCount) + 1.0);
     }
 
     private static void addTargetIndex(final List<Integer> ordered,
