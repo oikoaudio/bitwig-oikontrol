@@ -93,7 +93,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private int ratchetCount = 0;
     private int ratchetWidth = 1;
     private int ratchetPhase = 0;
-    private double velocityDepth = 1.0;
+    private double velocityDepth = NestedRhythmGenerator.DEFAULT_VELOCITY_DEPTH;
     private int velocityCenter = 100;
     private int velocityRotation = 0;
     private double pressureCenter = 0.0;
@@ -1005,7 +1005,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (amount == 0) {
             return;
         }
-        velocityDepth = Math.max(0.25, Math.min(2.0, velocityDepth + amount * 0.05));
+        velocityDepth = Math.max(NestedRhythmGenerator.MIN_VELOCITY_DEPTH,
+                Math.min(NestedRhythmGenerator.MAX_VELOCITY_DEPTH, velocityDepth + amount * 0.05));
         generatePattern("Vel Depth", velocityDepthLabel());
     }
 
