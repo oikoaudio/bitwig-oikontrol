@@ -87,14 +87,15 @@ class NestedRhythmGeneratorTest {
     }
 
     @Test
-    void multiBarRatchetWidthSelectsParentRegionsAcrossPhrasePriorityOrder() {
+    void multiBarRatchetTargetsUseWholePhraseOrderWithoutRepeatingOneBarPattern() {
         final NestedRhythmPattern pattern = generator.generate(new NestedRhythmGenerator.Settings(
                 60, 1.0, 0, 0, 0, 4, 2, 0, 1.0, 100, 0, 0,
                 4, 4, 2));
 
-        assertEquals(4, startsInRange(pattern, 0, 420).size());
-        assertEquals(4, startsInRange(pattern, 420, 840).size());
-        assertEquals(List.of(840, 1260, 1680, 2100, 2520, 2940), startsInRange(pattern, 840, 3360));
+        assertEquals(4, startsInRange(pattern, 840, 1260).size());
+        assertEquals(4, startsInRange(pattern, 1680, 2100).size());
+        assertEquals(List.of(0, 420, 1260, 2100, 2520, 2940), startsOutsideRanges(pattern,
+                List.of(new Range(840, 1260), new Range(1680, 2100))));
     }
 
     @Test
@@ -104,10 +105,12 @@ class NestedRhythmGeneratorTest {
                 4, 4, 2));
 
         assertEquals(4, startsInRange(pattern, 0, 420).size());
-        assertEquals(4, startsInRange(pattern, 420, 840).size());
+        assertEquals(4, startsInRange(pattern, 1680, 2100).size());
         assertEquals(4, startsInRange(pattern, 840, 1260).size());
-        assertEquals(List.of(1260, 1680, 2100, 2520), startsInRange(pattern, 1260, 2940));
         assertEquals(4, startsInRange(pattern, 2940, 3360).size());
+        assertEquals(List.of(420, 1260, 2100, 2520), startsOutsideRanges(pattern,
+                List.of(new Range(0, 420), new Range(840, 1260), new Range(1680, 2100),
+                        new Range(2940, 3360))));
     }
 
     @Test
@@ -660,5 +663,18 @@ class NestedRhythmGeneratorTest {
                 .filter(event -> event.fineStart() < startInclusive || event.fineStart() >= endExclusive)
                 .map(NestedRhythmPattern.PulseEvent::fineStart)
                 .toList();
+    }
+
+    private List<Integer> startsOutsideRanges(final NestedRhythmPattern pattern, final List<Range> ranges) {
+        return pattern.events().stream()
+                .filter(event -> ranges.stream().noneMatch(range -> range.contains(event.fineStart())))
+                .map(NestedRhythmPattern.PulseEvent::fineStart)
+                .toList();
+    }
+
+    private record Range(int startInclusive, int endExclusive) {
+        private boolean contains(final int fineStart) {
+            return fineStart >= startInclusive && fineStart < endExclusive;
+        }
     }
 }

@@ -610,7 +610,7 @@ public final class NestedRhythmGenerator {
         if (regions.isEmpty()) {
             return List.of();
         }
-        final List<RatchetTargetRegion> ordered = ratchetTargetPriorityOrder(regions);
+        final List<RatchetTargetRegion> ordered = ratchetTargetPriorityOrder(regions, settings.barCount());
         final int targetCount = Math.max(0, Math.min(ordered.size(), settings.ratchetTargets()));
         final int targetPhase = Math.floorMod(settings.ratchetTargetPhase(), ordered.size());
         final List<RatchetTargetRegion> selected = new ArrayList<>(targetCount);
@@ -648,8 +648,16 @@ public final class NestedRhythmGenerator {
         return GestureFamily.RATCHET;
     }
 
-    private List<RatchetTargetRegion> ratchetTargetPriorityOrder(final List<RatchetTargetRegion> regions) {
-        return regionPriorityOrder(regions);
+    private List<RatchetTargetRegion> ratchetTargetPriorityOrder(final List<RatchetTargetRegion> regions,
+                                                                 final int barCount) {
+        if (barCount <= 1) {
+            return regionPriorityOrder(regions);
+        }
+        final List<RatchetTargetRegion> ordered = new ArrayList<>(regions.size());
+        for (final int index : phraseTargetPriorityOrder(regions.size())) {
+            ordered.add(regions.get(index));
+        }
+        return ordered;
     }
 
     private List<RatchetTargetRegion> regionPriorityOrder(final List<RatchetTargetRegion> regions) {
@@ -672,6 +680,21 @@ public final class NestedRhythmGenerator {
         addTargetIndex(ordered, targetCount, 0);
         addTargetIndex(ordered, targetCount, targetCount - 1);
         for (int offset = 2; ordered.size() < targetCount; offset++) {
+            addTargetIndex(ordered, targetCount, offset);
+            addTargetIndex(ordered, targetCount, targetCount - offset);
+        }
+        return ordered;
+    }
+
+    private static List<Integer> phraseTargetPriorityOrder(final int targetCount) {
+        final List<Integer> ordered = new ArrayList<>(targetCount);
+        addTargetIndex(ordered, targetCount, (int) Math.round(targetCount * 0.25));
+        addTargetIndex(ordered, targetCount, targetCount / 2);
+        addTargetIndex(ordered, targetCount, 0);
+        addTargetIndex(ordered, targetCount, targetCount - 1);
+        addTargetIndex(ordered, targetCount, 1);
+        addTargetIndex(ordered, targetCount, targetCount - 2);
+        for (int offset = 3; ordered.size() < targetCount; offset++) {
             addTargetIndex(ordered, targetCount, offset);
             addTargetIndex(ordered, targetCount, targetCount - offset);
         }

@@ -57,6 +57,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private static final RgbLigthState BASE_COLOR = new RgbLigthState(0, 90, 34, true);
     private static final int[] RATCHET_DIVISION_VALUES = {2, 3, 4, 5, 6, 7, 8};
     private static final int[] CLIP_BAR_COUNT_VALUES = {1, 2, 4};
+    private static final double DENSITY_DISPLAY_MIN = 0.20;
+    private static final double DENSITY_DISPLAY_STEP = 0.01;
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
@@ -759,7 +761,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 "1: Density / Alt Chance / Shift Rec\n2: Tuplet / Alt Tup.Div / Shift Target Phase\n3: Ratchet / Alt Rat.Div / Shift Target Phase\n4: Cluster / Alt Play Start",
                 new EncoderSlotBinding[]{
                         modifierContinuousSlot(
-                                view("Density", () -> "%.2f".formatted(density), this::adjustDensity),
+                                view("Density", this::densityLabel, this::adjustDensity),
                                 view("Chance", this::chancePrimaryLabel, this::adjustChancePrimary),
                                 view("Recurrence", this::recurrenceDepthLabel, this::adjustRecurrenceDepth)),
                         modifierChoiceSlot(
@@ -1028,8 +1030,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (amount == 0) {
             return;
         }
-        density = clampUnit(density + amount * 0.05);
-        generatePattern("Density", "%.2f".formatted(density));
+        final double displayedDensity = clampUnit(displayDensity() + amount * DENSITY_DISPLAY_STEP);
+        density = internalDensityForDisplay(displayedDensity);
+        generatePattern("Density", densityLabel());
     }
 
     private void adjustCluster(final int amount) {
@@ -1436,6 +1439,18 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return hasHeldPulse()
                 ? Integer.toString(editablePulses.get(activePulseIndex()).effectiveVelocity())
                 : velocityDepthLabel();
+    }
+
+    private String densityLabel() {
+        return percentLabel(displayDensity());
+    }
+
+    private double displayDensity() {
+        return DENSITY_DISPLAY_MIN + density * (1.0 - DENSITY_DISPLAY_MIN);
+    }
+
+    private double internalDensityForDisplay(final double displayedDensity) {
+        return clampUnit((displayedDensity - DENSITY_DISPLAY_MIN) / (1.0 - DENSITY_DISPLAY_MIN));
     }
 
     private String pressureCenterLabel() {
