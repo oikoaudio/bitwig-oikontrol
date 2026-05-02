@@ -23,6 +23,36 @@ Project-specific instructions for coding agents working in this repository.
 - `modules/launchcontrol/` is the Launch Control XL extension; do not apply Akai Fire assumptions there unless explicitly intended.
 - `modules/common/` contains copied/shared Bitwig framework helpers. Avoid broad changes there unless required by both controllers.
 
+## Akai Fire Mode File Map
+
+- Nested Rhythm mode:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/nestedrhythm/NestedRhythmMode.java` owns controller interaction, encoder pages, pad projection, clip writes, and editable generated pulses.
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/nestedrhythm/NestedRhythmGenerator.java` owns deterministic rhythm generation, density thinning, clustering, timing, durations, priorities, and generated velocities.
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/nestedrhythm/NestedRhythmContourShaper.java` owns generated pressure/timbre/pitch/chance/recurrence shaping.
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/nestedrhythm/NestedRhythmPattern.java` is the generated event model and role vocabulary.
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/nestedrhythm/NestedRhythmLoopLength.java` and `NestedRhythmPlayStart.java` own clip length and play-start helpers.
+  - Tests live under `modules/akai-fire/src/test/java/com/oikoaudio/fire/nestedrhythm/`; start with `NestedRhythmGeneratorTest` for generated musical behaviour.
+- Drum Step mode:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/sequence/DrumSequenceMode.java` is the main step sequencer mode.
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/sequence/StepSequencerEncoderHandler.java`, `DrumPadHandler.java`, `StepPadLightHelper.java`, and `RecurrenceEditor.java` handle shared sequencer controls, pads, lights, and recurrence.
+- Melodic Step mode:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/melodic/MelodicStepMode.java` is the main mode.
+  - `MelodicGenerator` implementations such as `MotifGenerator`, `AcidGenerator`, `EuclideanPhraseGenerator`, `RollingBassGenerator`, and `SparseGenerator` own generated phrase styles.
+  - `MelodicRenderer.java`, `MelodicMutator.java`, `MelodicClipAdapter.java`, and `MelodicPattern.java` own rendering, mutation, clip access, and pattern data.
+- Live Note and Drum Pad play modes:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/note/NotePlayMode.java` and `DrumPadPlayMode.java` are the mode entry points.
+  - `PitchedSurfaceLayer.java` holds shared pitched-surface behavior.
+  - `NoteLivePadPerformer.java`, `NoteLivePerformanceControls.java`, `NoteLiveExpressionControls.java`, and `NoteLiveEncoderModeControls.java` own live play behavior and controls.
+  - Layouts live in `NoteGridLayout.java`, `HarmonicLatticeLayout.java`, and `DrumMachinePadLayout.java`.
+- Chord Step mode:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/chordstep/ChordStepMode.java` is the mode entry point.
+  - `ChordStepController.java`, `ChordStepEditControls.java`, `ChordStepClipController.java`, and observation classes own edit behavior, clip writes, and observed state.
+- Perform mode:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/perform/PerformClipLauncherMode.java` is the clip launcher mode.
+  - `PerformLayout.java` owns layout constants.
+- Shared control helpers:
+  - `modules/akai-fire/src/main/java/com/oikoaudio/fire/control/` owns encoder scaling/acceleration, touch reset, RGB/bi-color button wrappers, and physical-control policies used by multiple modes.
+
 ## Delivery Process
 
 - Default to test-driven development for code changes: add or update a failing test first when the change is testable, then implement, then rerun the relevant tests.
