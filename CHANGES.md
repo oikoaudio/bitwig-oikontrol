@@ -2,6 +2,13 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.12.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.11.0...oikontrol-v2.12.0) (2026-05-02)
+
+
+### Features
+
+* add nested rhythm clustering controls ([#36](https://github.com/oikoaudio/bitwig-oikontrol/issues/36)) ([d4d0572](https://github.com/oikoaudio/bitwig-oikontrol/commit/d4d0572fac9cef17303ee661813cdba45fa77f32))
+
 ## [2.11.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.10.0...oikontrol-v2.11.0) (2026-05-02)
 
 
