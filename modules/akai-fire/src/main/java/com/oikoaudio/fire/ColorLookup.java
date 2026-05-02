@@ -69,7 +69,8 @@ public class ColorLookup {
 		final int rv = (int) Math.floor(color.getRed255());
 		final int gv = (int) Math.floor(color.getGreen255());
 		final int bv = (int) Math.floor(color.getBlue255());
-		return dc.computeIfAbsent(rv << 16 | gv << 8 | bv, index -> calcRgbState(rv, gv, bv));
+		return dc.computeIfAbsent(rv << 16 | gv << 8 | bv,
+				index -> calcRgbState(color.getRed(), color.getGreen(), color.getBlue()));
 	}
 
 	private static RgbLigthState calcRgbState(final double red, final double green, final double blue) {
