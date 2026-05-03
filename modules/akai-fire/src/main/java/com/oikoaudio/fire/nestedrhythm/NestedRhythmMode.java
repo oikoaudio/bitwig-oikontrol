@@ -1971,7 +1971,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private int totalTupletHalfBars() {
-        return Math.max(1, (int) Math.round(clipBarCount * 2.0 * rate));
+        return NestedRhythmGenerator.tupletTargetSpanCount(
+                meterNumerator(), meterDenominator(), clipBarCount, rate);
     }
 
     private int[] availableTupletDivisions() {
