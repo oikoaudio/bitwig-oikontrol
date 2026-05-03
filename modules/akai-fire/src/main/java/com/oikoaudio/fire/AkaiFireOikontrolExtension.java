@@ -198,7 +198,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         public String displayName() {
             return switch (this) {
                 case STANDARD -> "Drum XOX";
-                case NESTED_RHYTHM -> "Nested Rhythm";
+                case NESTED_RHYTHM -> "NestedRytm";
                 case DRUM_PADS -> "Drum Pads";
             };
         }
@@ -1341,7 +1341,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         activeDrumSubMode = DrumSubMode.NESTED_RHYTHM;
         modeState.activateDrum();
         switchActiveMode();
-        notifyAction("Mode", "Nested Rhythm");
+        notifyAction("Mode", "NestedRytm");
     }
 
     public boolean isEuclidFullClipEnabled() {
@@ -1489,7 +1489,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melodic Step";
             case FUGUE_STEP -> "Fugue";
-            case NESTED_RHYTHM -> "Nested Rhythm";
+            case NESTED_RHYTHM -> "NestedRytm";
             case PERFORM -> "Perform";
         };
         oled.valueInfo("Mode", modeLabel);
