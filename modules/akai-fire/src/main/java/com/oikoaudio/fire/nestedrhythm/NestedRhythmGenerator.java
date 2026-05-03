@@ -29,7 +29,7 @@ public final class NestedRhythmGenerator {
     private static final int MAX_NUMERATOR = 16;
     private static final double GENERATED_DENSITY_FLOOR = 0.20;
     private static final int[] SUPPORTED_DENOMINATORS = {2, 4, 8, 16};
-    private static final int[] TUPLET_COUNT_CANDIDATES = {0, 3, 4, 5, 6, 7};
+    private static final int[] TUPLET_COUNT_CANDIDATES = {0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     private static final int[] SUPPORTED_RATCHET_DIVISIONS = {0, 2, 3, 4, 5, 6, 7, 8};
     private static final double[] SUPPORTED_RATES = {0.25, 0.5, 1.0, 2.0, 3.0, 4.0};
     private static final int CLUSTERED_INTERIOR_MIN_GAP = FINE_STEPS_PER_WHOLE / 16;
@@ -451,14 +451,24 @@ public final class NestedRhythmGenerator {
     public static int[] supportedTupletCounts(final int meterNumerator,
                                               final int meterDenominator,
                                               final int tupletTargets) {
+        return supportedTupletCounts(meterNumerator, meterDenominator, tupletTargets, 1.0);
+    }
+
+    public static int[] supportedTupletCounts(final int meterNumerator,
+                                              final int meterDenominator,
+                                              final int tupletTargets,
+                                              final double rate) {
         final int barFineSteps = fineStepsPerBar(meterNumerator, meterDenominator);
-        final int spanFineSteps = tupletSpanFineSteps(meterNumerator, meterDenominator, barFineSteps, 1.0);
+        final int spanFineSteps = tupletSpanFineSteps(meterNumerator, meterDenominator, barFineSteps, rate);
         final int eighthFineSteps = FINE_STEPS_PER_WHOLE / 8;
         final int spanUnits = Math.max(1, (int) Math.round(spanFineSteps / (double) eighthFineSteps));
         final List<Integer> supported = new ArrayList<>();
         supported.add(0);
         for (final int candidate : TUPLET_COUNT_CANDIDATES) {
             if (candidate == 0 || candidate == spanUnits) {
+                continue;
+            }
+            if (spanFineSteps / candidate < FINAL_MIN_GAP) {
                 continue;
             }
             if (greatestCommonDivisor(candidate, spanUnits) == 1) {
@@ -470,7 +480,13 @@ public final class NestedRhythmGenerator {
 
     static int[] supportedTupletDivisions(final int meterNumerator,
                                           final int meterDenominator) {
-        final int[] supportedCounts = supportedTupletCounts(meterNumerator, meterDenominator, 1);
+        return supportedTupletDivisions(meterNumerator, meterDenominator, 1.0);
+    }
+
+    static int[] supportedTupletDivisions(final int meterNumerator,
+                                          final int meterDenominator,
+                                          final double rate) {
+        final int[] supportedCounts = supportedTupletCounts(meterNumerator, meterDenominator, 1, rate);
         final List<Integer> divisions = new ArrayList<>();
         for (final int value : supportedCounts) {
             if (value > 0) {
@@ -1038,7 +1054,13 @@ public final class NestedRhythmGenerator {
         if (regions.isEmpty()) {
             return List.of();
         }
-        final List<RatchetTargetRegion> ordered = ratchetTargetPriorityOrder(regions, settings.barCount(), settings.rate());
+        final List<RatchetTargetRegion> ordered = ratchetTargetPriorityOrder(regions, settings.barCount(), settings.rate())
+                .stream()
+                .filter(region -> canRatchetRegion(region, settings.ratchetDivisions()))
+                .toList();
+        if (ordered.isEmpty()) {
+            return List.of();
+        }
         final int targetCount = Math.max(0, Math.min(ordered.size(), settings.ratchetTargets()));
         final int targetPhase = Math.floorMod(settings.ratchetTargetPhase(), ordered.size());
         final List<RatchetTargetRegion> selected = new ArrayList<>(targetCount);
@@ -1047,6 +1069,14 @@ public final class NestedRhythmGenerator {
         }
         selected.sort(Comparator.comparingInt(RatchetTargetRegion::start));
         return selected;
+    }
+
+    private boolean canRatchetRegion(final RatchetTargetRegion region,
+                                     final int ratchetDivisions) {
+        if (ratchetDivisions <= 0) {
+            return false;
+        }
+        return region.length() / ratchetDivisions >= FINAL_MIN_GAP;
     }
 
     private List<RatchetTargetRegion> ratchetParentRegions(final TreeMap<Integer, PulseSpec> structure,
@@ -1175,13 +1205,18 @@ public final class NestedRhythmGenerator {
     private static void addComplementaryRatchetSeedTargets(final List<Integer> ordered,
                                                            final List<RatchetTargetRegion> regions) {
         addTargetIndex(ordered, regions.size(), 0);
-        if (regions.size() > 5) {
+        if (regions.size() > 5 && isBroadCadenceRegion(regions.get(regions.size() - 1))) {
             addTargetIndex(ordered, regions.size(), regions.size() - 1);
         }
         final int firstNested = firstRegionWithFamily(regions, GestureFamily.NESTED_RATCHET);
         addTargetIndex(ordered, regions.size(), firstNested);
         final int lastNested = lastRegionWithFamily(regions, GestureFamily.NESTED_RATCHET);
         addTargetIndex(ordered, regions.size(), lastNested);
+    }
+
+    private static boolean isBroadCadenceRegion(final RatchetTargetRegion region) {
+        return region.gestureFamily() != GestureFamily.NESTED_RATCHET
+                || region.length() >= FINE_STEPS_PER_QUARTER / 2;
     }
 
     private static double complementaryRatchetTargetScore(final int index,
@@ -1306,6 +1341,19 @@ public final class NestedRhythmGenerator {
                                         final int tupletTargetPhase,
                                         final double cluster,
                                         final double rate) {
+        return ratchetParentRegionCount(meterNumerator, meterDenominator, barCount, tupletDivisions,
+                tupletTargets, tupletTargetPhase, cluster, rate, 1);
+    }
+
+    static int ratchetParentRegionCount(final int meterNumerator,
+                                        final int meterDenominator,
+                                        final int barCount,
+                                        final int tupletDivisions,
+                                        final int tupletTargets,
+                                        final int tupletTargetPhase,
+                                        final double cluster,
+                                        final double rate,
+                                        final int ratchetDivisions) {
         final int normalizedMeterNumerator = normalizeNumerator(meterNumerator);
         final int normalizedMeterDenominator = normalizeDenominator(meterDenominator);
         final int normalizedBarCount = Math.max(1, Math.min(MAX_BARS, barCount));
@@ -1318,7 +1366,7 @@ public final class NestedRhythmGenerator {
             starts.put(fineStart, true);
         }
         if (tupletDivisions <= 0 || tupletTargets <= 0) {
-            return starts.size();
+            return eligibleRatchetParentRegionCount(starts, totalFineSteps, ratchetDivisions);
         }
         final int spanFineSteps = tupletSpanFineSteps(normalizedMeterNumerator, normalizedMeterDenominator,
                 barFineSteps, normalizedRate);
@@ -1334,7 +1382,31 @@ public final class NestedRhythmGenerator {
                 starts.put(tupletStart, true);
             }
         }
-        return Math.max(1, starts.size());
+        return eligibleRatchetParentRegionCount(starts, totalFineSteps, ratchetDivisions);
+    }
+
+    private static int eligibleRatchetParentRegionCount(final TreeMap<Integer, Boolean> starts,
+                                                        final int totalFineSteps,
+                                                        final int ratchetDivisions) {
+        if (starts.isEmpty()) {
+            return 0;
+        }
+        if (ratchetDivisions <= 1) {
+            return starts.size();
+        }
+        final List<Integer> orderedStarts = new ArrayList<>(starts.keySet());
+        int eligible = 0;
+        for (int index = 0; index < orderedStarts.size(); index++) {
+            final int start = orderedStarts.get(index);
+            final int next = orderedStarts.get((index + 1) % orderedStarts.size());
+            final int length = next > start
+                    ? next - start
+                    : totalFineSteps - start + next;
+            if (Math.max(1, length) / ratchetDivisions >= FINAL_MIN_GAP) {
+                eligible++;
+            }
+        }
+        return eligible;
     }
 
     private static boolean isInsideWrappedSpan(final int candidate,
@@ -1589,9 +1661,11 @@ public final class NestedRhythmGenerator {
             final int normalizedTupletTargets = Math.max(0, Math.min(totalHalfBars, tupletTargets));
             final int normalizedTupletDivisions = normalizeCount(tupletDivisions, supportedTupletDivisions(
                     normalizedMeterNumerator,
-                    normalizedMeterDenominator));
+                    normalizedMeterDenominator,
+                    normalizedRate));
             final int normalizedTupletTargetPhase = Math.floorMod(tupletTargetPhase, totalHalfBars);
             final double normalizedCluster = Math.max(0.0, Math.min(1.0, cluster));
+            final int normalizedRatchetDivisions = normalizeCount(ratchetDivisions, SUPPORTED_RATCHET_DIVISIONS);
             final int ratchetParentRegionCount = ratchetParentRegionCount(
                     normalizedMeterNumerator,
                     normalizedMeterDenominator,
@@ -1600,14 +1674,15 @@ public final class NestedRhythmGenerator {
                     normalizedTupletTargets,
                     normalizedTupletTargetPhase,
                     normalizedCluster,
-                    normalizedRate);
+                    normalizedRate,
+                    normalizedRatchetDivisions);
             return new Settings(
                     Math.max(0, Math.min(127, midiNote)),
                     Math.max(0.0, Math.min(1.0, density)),
                     normalizedTupletDivisions,
                     normalizedTupletTargets,
                     normalizedTupletTargetPhase,
-                    normalizeCount(ratchetDivisions, SUPPORTED_RATCHET_DIVISIONS),
+                    normalizedRatchetDivisions,
                     Math.max(0, Math.min(ratchetParentRegionCount, ratchetTargets)),
                     Math.floorMod(ratchetTargetPhase, Math.max(1, ratchetParentRegionCount)),
                     Math.max(MIN_VELOCITY_DEPTH, Math.min(MAX_VELOCITY_DEPTH, velocityDepth)),

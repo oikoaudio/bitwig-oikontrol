@@ -1081,7 +1081,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void adjustRatchetTargetPhase(final int amount) {
-        ratchetTargetPhase = Math.floorMod(ratchetTargetPhase + amount, totalRatchetRegions());
+        final int totalRegions = totalRatchetRegions();
+        if (totalRegions <= 0) {
+            ratchetTargets = 0;
+            ratchetTargetPhase = 0;
+            generatePattern("Target Phase", ratchetTargetPhaseLabel());
+            return;
+        }
+        ratchetTargetPhase = Math.floorMod(ratchetTargetPhase + amount, totalRegions);
         generatePattern("Target Phase", ratchetTargetPhaseLabel());
     }
 
@@ -1226,8 +1233,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
         rate = stepRate(rate, amount);
         normalizeTupletControls();
-        ratchetTargets = Math.max(0, Math.min(totalRatchetRegions(), ratchetTargets));
-        ratchetTargetPhase = Math.floorMod(ratchetTargetPhase, totalRatchetRegions());
+        normalizeRatchetControls();
         generatePattern("Rate", rateLabel());
     }
 
@@ -1636,7 +1642,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private String ratchetTargetPhaseLabel() {
-        if (ratchetTargets == 0) {
+        final int totalRegions = totalRatchetRegions();
+        if (ratchetTargets == 0 || totalRegions <= 0) {
             return "Off";
         }
         final StringBuilder label = new StringBuilder();
@@ -1644,7 +1651,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             if (index > 0) {
                 label.append('+');
             }
-            label.append("T").append(Math.floorMod(index + ratchetTargetPhase, totalRatchetRegions()) + 1);
+            label.append("T").append(Math.floorMod(index + ratchetTargetPhase, totalRegions) + 1);
         }
         return label.toString();
     }
@@ -1754,8 +1761,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         selectedClipColor = state.color();
         syncClipLengthFromDaw();
         normalizeTupletControls();
-        ratchetTargets = Math.max(0, Math.min(totalRatchetRegions(), ratchetTargets));
-        ratchetTargetPhase = Math.floorMod(ratchetTargetPhase, totalRatchetRegions());
+        normalizeRatchetControls();
     }
 
     private void syncClipLengthFromDaw() {
@@ -1780,8 +1786,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         clipBarCount = settings.barCount();
         lastStepIndex = settings.lastStepIndex();
         normalizeTupletControls();
-        ratchetTargets = Math.max(0, Math.min(totalRatchetRegions(), ratchetTargets));
-        ratchetTargetPhase = Math.floorMod(ratchetTargetPhase, totalRatchetRegions());
+        normalizeRatchetControls();
     }
 
     private void maybeGenerateOnEmptySelectedClip() {
@@ -1967,7 +1972,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 tupletTargets,
                 tupletTargetPhase,
                 cluster,
-                rate);
+                rate,
+                ratchetDivisions);
+    }
+
+    private void normalizeRatchetControls() {
+        final int totalRegions = totalRatchetRegions();
+        ratchetTargets = Math.max(0, Math.min(totalRegions, ratchetTargets));
+        ratchetTargetPhase = totalRegions <= 0 ? 0 : Math.floorMod(ratchetTargetPhase, totalRegions);
     }
 
     private int totalTupletHalfBars() {
@@ -1976,7 +1988,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private int[] availableTupletDivisions() {
-        return NestedRhythmGenerator.supportedTupletDivisions(meterNumerator(), meterDenominator());
+        return NestedRhythmGenerator.supportedTupletDivisions(meterNumerator(), meterDenominator(), rate);
     }
 
     private int normalizeTupletDivisions(final int count) {
