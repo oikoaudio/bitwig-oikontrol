@@ -228,7 +228,7 @@ Acceptance checks for future changes:
 - A future abstract bias control might be useful, but it should describe
   musical behavior directly, for example `Grounded`, `Sync`, `Cadence`, or
   `Phrase`, not a named tradition.
-- The local `ref/tessella` material is currently image-based. Treat it as a
+- The local `ref/rhythm-reference` material is currently image-based. Treat it as a
   visual/audible comparison point rather than an implementation source.
 - If a future implementation adds randomness, it must be seeded and repeatable
   by default. Current nested-rhythm behavior should remain deterministic.
