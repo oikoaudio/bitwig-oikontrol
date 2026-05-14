@@ -2,6 +2,14 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.13.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.12.0...oikontrol-v2.13.0) (2026-05-14)
+
+
+### Features
+
+* **fire:** improve nested rhythm generation ([#38](https://github.com/oikoaudio/bitwig-oikontrol/issues/38)) ([3a99e1a](https://github.com/oikoaudio/bitwig-oikontrol/commit/3a99e1a0b1e71c939d2972ee5e77a1d5f3877ea6))
+* rework nested rhythm ranking and density controls ([#40](https://github.com/oikoaudio/bitwig-oikontrol/issues/40)) ([793d3bf](https://github.com/oikoaudio/bitwig-oikontrol/commit/793d3bfc532793c2266312faed3affcecc6e07ce))
+
 ## [2.12.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.11.0...oikontrol-v2.12.0) (2026-05-02)
 
 
