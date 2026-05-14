@@ -19,3 +19,5 @@ build/
 
 # Docs site - experimental WIP left out for now
 /docs-site
+
+.wherewasi.yml
