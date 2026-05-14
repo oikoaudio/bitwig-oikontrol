@@ -2,6 +2,22 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.14.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.0...oikontrol-v2.14.0) (2026-05-14)
+
+
+### Features
+
+* add controller navigation and clip recording controls ([#31](https://github.com/oikoaudio/bitwig-oikontrol/issues/31)) ([b15ffc6](https://github.com/oikoaudio/bitwig-oikontrol/commit/b15ffc6f19c39195d537c0c7fb5ef4495a8f888e))
+* add nested rhythm clustering controls ([#36](https://github.com/oikoaudio/bitwig-oikontrol/issues/36)) ([d4d0572](https://github.com/oikoaudio/bitwig-oikontrol/commit/d4d0572fac9cef17303ee661813cdba45fa77f32))
+* **fire:** add Akai Fire DRUM Grid64, Velocity, and Bongos layouts ([#35](https://github.com/oikoaudio/bitwig-oikontrol/issues/35)) ([7481a8f](https://github.com/oikoaudio/bitwig-oikontrol/commit/7481a8f3f16509bc03c54b76a81ab60a5c180ab4))
+* **fire:** improve nested rhythm generation ([#38](https://github.com/oikoaudio/bitwig-oikontrol/issues/38)) ([3a99e1a](https://github.com/oikoaudio/bitwig-oikontrol/commit/3a99e1a0b1e71c939d2972ee5e77a1d5f3877ea6))
+* rework nested rhythm ranking and density controls ([#40](https://github.com/oikoaudio/bitwig-oikontrol/issues/40)) ([793d3bf](https://github.com/oikoaudio/bitwig-oikontrol/commit/793d3bfc532793c2266312faed3affcecc6e07ce))
+
+
+### Bug Fixes
+
+* **fire:** track selection got stuck on hidden tracks ([#33](https://github.com/oikoaudio/bitwig-oikontrol/issues/33)) ([93fcaa1](https://github.com/oikoaudio/bitwig-oikontrol/commit/93fcaa1fe3164d38c853ac243ba0b0e00a030025))
+
 ## [2.13.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.12.0...oikontrol-v2.13.0) (2026-05-14)
 
 
