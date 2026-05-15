@@ -27,6 +27,7 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.chordstep.ChordStepAccentControls;
 import com.oikoaudio.fire.chordstep.ChordStepAccentEditor;
+import com.oikoaudio.fire.chordstep.ChordStepBankButtonControls;
 import com.oikoaudio.fire.chordstep.ChordStepBuilderController;
 import com.oikoaudio.fire.chordstep.ChordStepChordSelection;
 import com.oikoaudio.fire.chordstep.ChordStepClipController;
@@ -42,6 +43,9 @@ import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepPadLightRenderer;
 import com.oikoaudio.fire.chordstep.ChordStepPadController;
 import com.oikoaudio.fire.chordstep.ChordStepPadSurface;
+import com.oikoaudio.fire.chordstep.ChordStepPatternButtonControls;
+import com.oikoaudio.fire.chordstep.ChordStepPitchContextControls;
+import com.oikoaudio.fire.chordstep.ChordStepStepButtonControls;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderValueProfile;
@@ -163,6 +167,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final ChordStepPadController chordStepPadController;
     private final ChordStepPadLightRenderer chordStepPadLightRenderer;
     private final ChordStepAccentControls chordStepAccentControls;
+    private final ChordStepStepButtonControls chordStepStepButtonControls;
+    private final ChordStepBankButtonControls chordStepBankButtonControls;
+    private final ChordStepPatternButtonControls chordStepPatternButtonControls;
+    private final ChordStepPitchContextControls chordStepPitchContextControls;
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
     private final Set<Integer> auditioningNotes = new HashSet<>();
@@ -329,6 +337,11 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
+        this.chordStepStepButtonControls = new ChordStepStepButtonControls(
+                chordStepAccentControls, chordStepStepButtonHost());
+        this.chordStepBankButtonControls = new ChordStepBankButtonControls(chordStepBankButtonHost());
+        this.chordStepPatternButtonControls = new ChordStepPatternButtonControls(chordStepPatternButtonHost());
+        this.chordStepPitchContextControls = new ChordStepPitchContextControls(chordStepPitchContextHost());
         this.chordBuilder = new ChordStepBuilderController(chordSelection, pitchContext,
                 this::getBuilderFirstVisibleMidiNote, CHORD_SOURCE_PAD_COUNT);
         this.chordStepPadController = new ChordStepPadController(chordStepPadSurface,
@@ -1225,28 +1238,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void handleStepSeqPressed(final boolean pressed) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            if (pressed && chordStepPadSurface.hasHeldSteps()) {
-                toggleChordAccentForHeldSteps();
-                return;
-            }
-            if (driver.isGlobalShiftHeld() || chordStepAccentControls.isHeld()) {
-                chordStepAccentControls.handlePressed(pressed);
-                return;
-            }
-            if (driver.isGlobalAltHeld()) {
-                if (pressed) {
-                    driver.toggleFillMode();
-                    oled.valueInfo("Fill", driver.isFillModeActive() ? "On" : "Off");
-                }
-                return;
-            }
-            if (pressed) {
-                if (isChordStepSurface()) {
-                    driver.enterFugueStepMode();
-                    return;
-                }
-                driver.enterMelodicStepMode();
-            }
+            chordStepStepButtonControls.handlePressed(pressed);
             return;
         }
         if (pressed) {
@@ -1544,6 +1536,177 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             @Override
             public void removeHeldBankFineStart(final int stepIndex) {
                 fineNudgeState.invalidateStep(stepIndex);
+            }
+        };
+    }
+
+    private ChordStepStepButtonControls.Host chordStepStepButtonHost() {
+        return new ChordStepStepButtonControls.Host() {
+            @Override
+            public boolean hasHeldSteps() {
+                return chordStepPadSurface.hasHeldSteps();
+            }
+
+            @Override
+            public void toggleAccentForHeldSteps() {
+                PitchedSurfaceLayer.this.toggleChordAccentForHeldSteps();
+            }
+
+            @Override
+            public boolean isShiftHeld() {
+                return driver.isGlobalShiftHeld();
+            }
+
+            @Override
+            public boolean isAltHeld() {
+                return driver.isGlobalAltHeld();
+            }
+
+            @Override
+            public boolean isStandaloneChordStepSurface() {
+                return isChordStepSurface();
+            }
+
+            @Override
+            public void enterFugueStepMode() {
+                driver.enterFugueStepMode();
+            }
+
+            @Override
+            public void enterMelodicStepMode() {
+                driver.enterMelodicStepMode();
+            }
+
+            @Override
+            public void toggleFillMode() {
+                driver.toggleFillMode();
+            }
+
+            @Override
+            public boolean isFillModeActive() {
+                return driver.isFillModeActive();
+            }
+
+            @Override
+            public void showValueInfo(final String title, final String value) {
+                oled.valueInfo(title, value);
+            }
+
+            @Override
+            public BiColorLightState stepFillLightState() {
+                return driver.getStepFillLightState();
+            }
+
+            @Override
+            public BiColorLightState modeButtonLightState() {
+                return getModeButtonLightState();
+            }
+        };
+    }
+
+    private ChordStepBankButtonControls.Host chordStepBankButtonHost() {
+        return new ChordStepBankButtonControls.Host() {
+            @Override
+            public boolean isAltHeld() {
+                return driver.isGlobalAltHeld();
+            }
+
+            @Override
+            public boolean isShiftHeld() {
+                return driver.isGlobalShiftHeld();
+            }
+
+            @Override
+            public void setPendingLengthAdjust(final boolean pending) {
+                fineNudgeState.setPendingLengthAdjust(pending);
+            }
+
+            @Override
+            public boolean isPendingLengthAdjust() {
+                return fineNudgeState.isPendingLengthAdjust();
+            }
+
+            @Override
+            public void adjustLength(final int amount) {
+                chordStepClipNavigation.adjustLength(amount, PitchedSurfaceLayer.this::ensureSelectedNoteClipSlot);
+            }
+
+            @Override
+            public boolean isFineNudgeMoveInFlight() {
+                return chordStepFineNudgeWriter.isMoveInFlight();
+            }
+
+            @Override
+            public Set<Integer> heldStepSnapshot() {
+                return chordStepPadSurface.heldStepSnapshot();
+            }
+
+            @Override
+            public void beginHeldFineNudge(final int amount, final Set<Integer> heldSteps) {
+                fineNudgeController.beginHeldNudge(amount, heldSteps);
+            }
+
+            @Override
+            public void adjustPlayStart(final int amount, final boolean fine) {
+                chordStepClipNavigation.adjustPlayStart(amount, fine, PitchedSurfaceLayer.this::ensureSelectedNoteClipSlot);
+            }
+
+            @Override
+            public boolean completePendingFineNudge() {
+                return fineNudgeController.completePendingNudge();
+            }
+
+            @Override
+            public void clearPendingBankAction() {
+                PitchedSurfaceLayer.this.clearPendingBankAction();
+            }
+        };
+    }
+
+    private ChordStepPatternButtonControls.Host chordStepPatternButtonHost() {
+        return new ChordStepPatternButtonControls.Host() {
+            @Override
+            public boolean isAltHeld() {
+                return driver.isGlobalAltHeld();
+            }
+
+            @Override
+            public void page(final int direction) {
+                pageChordSteps(direction);
+            }
+
+            @Override
+            public boolean canPageLeft() {
+                return chordStepPosition.canScrollLeft().get();
+            }
+
+            @Override
+            public boolean canPageRight() {
+                return chordStepPosition.canScrollRight().get();
+            }
+        };
+    }
+
+    private ChordStepPitchContextControls.Host chordStepPitchContextHost() {
+        return new ChordStepPitchContextControls.Host() {
+            @Override
+            public void adjustRoot(final int amount) {
+                adjustChordRoot(amount);
+            }
+
+            @Override
+            public void adjustOctave(final int amount) {
+                adjustChordOctave(amount);
+            }
+
+            @Override
+            public boolean canLowerOctave() {
+                return chordSelection.canLowerOctave();
+            }
+
+            @Override
+            public boolean canRaiseOctave() {
+                return chordSelection.canRaiseOctave();
             }
         };
     }
@@ -1985,39 +2148,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void handleBankButton(final boolean pressed, final int amount) {
         if (noteStepActive) {
-            if (currentStepSubMode == NoteStepSubMode.CHORD_STEP && driver.isGlobalAltHeld()) {
-                if (pressed) {
-                    fineNudgeState.setPendingLengthAdjust(true);
-                    chordStepClipNavigation.adjustLength(amount, this::ensureSelectedNoteClipSlot);
-                } else if (fineNudgeState.isPendingLengthAdjust()) {
-                    fineNudgeState.setPendingLengthAdjust(false);
-                }
-                clearPendingBankAction();
-                return;
-            }
-            if (chordStepFineNudgeWriter.isMoveInFlight()) {
-                if (!pressed) {
-                    clearPendingBankAction();
-                }
-                return;
-            }
-            if (pressed) {
-                final boolean heldOnly = chordStepPadSurface.hasHeldSteps();
-                if (heldOnly) {
-                    fineNudgeController.beginHeldNudge(amount, chordStepPadSurface.heldStepSnapshot());
-                } else {
-                    chordStepClipNavigation.adjustPlayStart(amount, driver.isGlobalShiftHeld(),
-                            this::ensureSelectedNoteClipSlot);
-                }
-                return;
-            }
-            if (fineNudgeController.completePendingNudge()) {
-                return;
-            }
-            if (!pressed) {
-                clearPendingBankAction();
-                return;
-            }
+            chordStepBankButtonControls.handlePressed(pressed, amount,
+                    currentStepSubMode == NoteStepSubMode.CHORD_STEP);
+            return;
         }
         if (!pressed) {
             return;
@@ -2045,11 +2178,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            if (root) {
-                adjustChordRoot(amount);
-            } else {
-                adjustChordOctave(amount);
-            }
+            chordStepPitchContextControls.handlePressed(true, amount, root);
             return;
         }
         if (root) {
@@ -2076,12 +2205,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private BiColorLightState getPitchContextLightState(final int amount, final boolean root) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            if (root) {
-                return BiColorLightState.AMBER_HALF;
-            }
-            return amount < 0
-                    ? (chordSelection.canLowerOctave() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
-                    : (chordSelection.canRaiseOctave() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+            return chordStepPitchContextControls.lightState(amount, root);
         }
         if (root) {
             return BiColorLightState.AMBER_HALF;
@@ -2092,19 +2216,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private BiColorLightState getStepSeqLightState() {
-        if (!(noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP)) {
-            return BiColorLightState.OFF;
-        }
-        if (driver.isGlobalShiftHeld()) {
-            return chordStepAccentControls.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
-        }
-        if (driver.isGlobalAltHeld()) {
-            return driver.getStepFillLightState();
-        }
-        if (chordStepAccentControls.isActive()) {
-            return BiColorLightState.AMBER_FULL;
-        }
-        return isChordStepSurface() ? getModeButtonLightState() : BiColorLightState.OFF;
+        return chordStepStepButtonControls.lightState(
+                noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP);
     }
 
     private int currentChordVelocity(final int rawVelocity) {
@@ -2941,9 +3054,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            if (!driver.isGlobalAltHeld()) {
-                pageChordSteps(-1);
-            }
+            chordStepPatternButtonControls.handleUpPressed(true);
             return;
         }
         adjustOctave(1);
@@ -2954,9 +3065,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            if (!driver.isGlobalAltHeld()) {
-                pageChordSteps(1);
-            }
+            chordStepPatternButtonControls.handleDownPressed(true);
             return;
         }
         adjustOctave(-1);
@@ -2964,14 +3073,14 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private BiColorLightState getPatternUpLight() {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            return chordStepPosition.canScrollLeft().get() ? BiColorLightState.GREEN_HALF : BiColorLightState.OFF;
+            return chordStepPatternButtonControls.upLight();
         }
         return BiColorLightState.GREEN_HALF;
     }
 
     private BiColorLightState getPatternDownLight() {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            return chordStepPosition.canScrollRight().get() ? BiColorLightState.GREEN_HALF : BiColorLightState.OFF;
+            return chordStepPatternButtonControls.downLight();
         }
         return BiColorLightState.GREEN_HALF;
     }
