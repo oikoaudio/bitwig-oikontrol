@@ -2,6 +2,33 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.14.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.1...oikontrol-v2.14.0) (2026-05-15)
+
+
+### Features
+
+* add Akai Fire extension and release bitwig-oikontrol 2.0 ([27fd04d](https://github.com/oikoaudio/bitwig-oikontrol/commit/27fd04d399f3f2ddd0caa31947b83713cde77dd4))
+* add controller navigation and clip recording controls ([#31](https://github.com/oikoaudio/bitwig-oikontrol/issues/31)) ([e48886d](https://github.com/oikoaudio/bitwig-oikontrol/commit/e48886d4efe7d08134322069a58758740cf4b9ba))
+* add drum user template mode with optional auto-attach ([2a78f26](https://github.com/oikoaudio/bitwig-oikontrol/commit/2a78f26d810c9c0d45930dc829ac447245451e14))
+* add nested rhythm clustering controls ([#36](https://github.com/oikoaudio/bitwig-oikontrol/issues/36)) ([6a43841](https://github.com/oikoaudio/bitwig-oikontrol/commit/6a4384129ae4a4cf504ac45ddc9fa05e189b4bf2))
+* **akai-fire:** add harmonic note input and rework step routing ([1a9ad17](https://github.com/oikoaudio/bitwig-oikontrol/commit/1a9ad17a9d01ddebee202fd84a980626f45c46fa))
+* **akai-fire:** add perform scene launch and targeted recording ([e1ba0c8](https://github.com/oikoaudio/bitwig-oikontrol/commit/e1ba0c868085d9415d8323286bc0285379e6ce44))
+* **fire:** add Akai Fire DRUM Grid64, Velocity, and Bongos layouts ([#35](https://github.com/oikoaudio/bitwig-oikontrol/issues/35)) ([b1221c2](https://github.com/oikoaudio/bitwig-oikontrol/commit/b1221c2b40340f53959339368ca5f340c2bb8c40))
+* **fire:** add chord edit mode to chord step and refine step editing ([ff7f7dd](https://github.com/oikoaudio/bitwig-oikontrol/commit/ff7f7dd46738973f58448dd9fba3651071d89117))
+* **fire:** add chord step length gesture and pads follow track-color ([7177034](https://github.com/oikoaudio/bitwig-oikontrol/commit/71770349ec70faf33a173a8ce7a116ac4497377c))
+* **fire:** improve nested rhythm generation ([#38](https://github.com/oikoaudio/bitwig-oikontrol/issues/38)) ([98e2772](https://github.com/oikoaudio/bitwig-oikontrol/commit/98e2772f567356b253553a2d979d4a9fcd8ba3d9))
+* **fire:** toggle main encoder between last touched and alternate roles ([4fec8ac](https://github.com/oikoaudio/bitwig-oikontrol/commit/4fec8ac03d3fdb7ca28e211678aa45f1aab575e1))
+* initial 1.0.0 release for Bitwig Launch Control XL by Oiko Audio ([f46ae6e](https://github.com/oikoaudio/bitwig-oikontrol/commit/f46ae6e1701ad0be22da63ab817ceb23047cb68f))
+* rework nested rhythm ranking and density controls ([#40](https://github.com/oikoaudio/bitwig-oikontrol/issues/40)) ([cd77641](https://github.com/oikoaudio/bitwig-oikontrol/commit/cd7764168eee604c1b804140b0392bc96d17c3d1))
+
+
+### Bug Fixes
+
+* **controllers:** correct bundled help file paths for Bitwig docs button ([c43c4a5](https://github.com/oikoaudio/bitwig-oikontrol/commit/c43c4a5668e2635143ce4f64c0eecd8d88cfe910))
+* **extensions:** add Fire pad brightness/saturation controls and standardize extension names ([f27a7e0](https://github.com/oikoaudio/bitwig-oikontrol/commit/f27a7e062ad3ce71fbb61642e66bf379e1076e52))
+* **fire:** improve Akai Fire encoder and mode control reliability ([#42](https://github.com/oikoaudio/bitwig-oikontrol/issues/42)) ([4d61ba6](https://github.com/oikoaudio/bitwig-oikontrol/commit/4d61ba66981d8565fa2360046bf1de8f7a315570))
+* **fire:** track selection got stuck on hidden tracks ([#33](https://github.com/oikoaudio/bitwig-oikontrol/issues/33)) ([ea50ba4](https://github.com/oikoaudio/bitwig-oikontrol/commit/ea50ba4f4e4f2d0adb8a96652b55d655af4d0678))
+
 ## [2.13.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.0...oikontrol-v2.13.1) (2026-05-15)
 
 
