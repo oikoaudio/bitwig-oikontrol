@@ -8,13 +8,11 @@ import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.CursorTrack;
-import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
-import com.bitwig.extensions.framework.values.Midi;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -80,14 +78,12 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
-    private final NoteInput noteInput;
     private final SharedPitchContextController pitchContext;
-    private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
     private final ChordStepAccentControls chordStepAccentControls;
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
-    private final Set<Integer> auditioningNotes = new HashSet<>();
+    private final ChordStepAuditionController chordStepAudition;
     private final ChordStepVisibleClipCache visibleClipCache = new ChordStepVisibleClipCache(STEP_COUNT);
     private final ChordStepFineNudgeState<ChordStepEventIndex.Event> fineNudgeState = new ChordStepFineNudgeState<>();
     private final ChordStepFineNudgeController<ChordStepEventIndex.Event> fineNudgeController;
@@ -132,7 +128,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 this::getBuilderFirstVisibleMidiNote, CHORD_SOURCE_PAD_COUNT);
         final ChordStepPadController chordStepPadController = new ChordStepPadController(chordStepPadSurface,
                 CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
-        this.noteInput = driver.getNoteInput();
+        this.chordStepAudition = new ChordStepAuditionController(driver.getNoteInput());
         final ControllerHost host = driver.getHost();
         this.chordStepCursorTrack = host.createCursorTrack("CHORD_STEP_MODE", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
         this.chordStepCursorTrack.name().markInterested();
@@ -202,7 +198,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 () -> chordStepClips.scrollNoteClipToStep(chordStepOffset()),
                 chordStepClips::scrollObservedClipToStepStart);
         this.chordStepEditControls = new ChordStepEditControls(oled::valueInfo, oled::clearScreenDelayed);
-        noteInput.assignPolyphonicAftertouchToExpression(0, NoteInput.NoteExpression.TIMBRE_UP, 1);
+        chordStepAudition.configureExpression();
         this.chordStepController = new ChordStepController(chordStepEditControls, chordStepClipController, chordStepObservationController);
         chordStepController.observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
@@ -247,10 +243,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.chordStepEncoderControls =
                 new ChordStepEncoderControls(driver, oled, chordStepCursorTrack, chordStepEncoderHost());
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
-
-        for (int i = 0; i < noteTranslationTable.length; i++) {
-            noteTranslationTable[i] = -1;
-        }
 
         this.chordStepControlBindings = new ChordStepControlBindings(driver, this, chordStepControlBindingsHost());
         chordStepControlBindings.bind();
@@ -1253,22 +1245,12 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private void startAuditionSelectedChord(final int velocity) {
         final int[] notes = renderSelectedChord();
-        stopAuditionNotes();
-        for (final int midiNote : notes) {
-            noteInput.sendRawMidiEvent(Midi.NOTE_ON, midiNote, velocity);
-            auditioningNotes.add(midiNote);
-        }
+        chordStepAudition.startAudition(notes, velocity);
         oled.valueInfo(currentChordFamilyLabel(), currentChordName());
     }
 
     private void stopAuditionNotes() {
-        if (auditioningNotes.isEmpty()) {
-            return;
-        }
-        for (final int midiNote : auditioningNotes) {
-            noteInput.sendRawMidiEvent(Midi.NOTE_OFF, midiNote, 0);
-        }
-        auditioningNotes.clear();
+        chordStepAudition.stopAudition();
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {
@@ -1523,10 +1505,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private void clearTranslation() {
         chordStepPadSurface.setHeldStepAnchor(null);
-        for (int i = 0; i < noteTranslationTable.length; i++) {
-            noteTranslationTable[i] = -1;
-        }
-        noteInput.setKeyTranslationTable(noteTranslationTable);
+        chordStepAudition.clearTranslation();
     }
 
     private void handlePatternUp(final boolean pressed) {
