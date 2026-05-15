@@ -2101,7 +2101,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (driver.isGlobalAltHeld()) {
             return driver.getStepFillLightState();
         }
-        return chordStepAccentControls.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+        if (chordStepAccentControls.isActive()) {
+            return BiColorLightState.AMBER_FULL;
+        }
+        return isChordStepSurface() ? getModeButtonLightState() : BiColorLightState.OFF;
     }
 
     private int currentChordVelocity(final int rawVelocity) {
@@ -2263,7 +2266,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         return isChordStepSurface() ? BiColorLightState.AMBER_FULL : BiColorLightState.RED_FULL;
     }
 
-    public boolean isChordStepSurface() {
+    protected boolean isChordStepSurface() {
         return false;
     }
 

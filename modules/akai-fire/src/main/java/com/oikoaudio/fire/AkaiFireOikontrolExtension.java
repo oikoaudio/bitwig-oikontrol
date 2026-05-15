@@ -648,13 +648,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.NOTE_PLAY && notePlayMode != null) {
             return notePlayMode.getModeButtonLightState();
         }
-        if (modeState.activeMode() == Mode.CHORD_STEP && chordStepMode != null) {
-            return chordStepMode.getModeButtonLightState();
-        }
         return BiColorLightState.OFF;
     }
 
     private BiColorLightState getStepState() {
+        if (modeState.activeMode() == Mode.CHORD_STEP && chordStepMode != null) {
+            return chordStepMode.getModeButtonLightState();
+        }
         if (modeState.activeMode() == Mode.MELODIC_STEP && melodicStepMode != null) {
             return melodicStepMode.getModeButtonLightState();
         }
