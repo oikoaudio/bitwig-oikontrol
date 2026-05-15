@@ -21,9 +21,9 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
-import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -343,7 +343,7 @@ public class PerformClipLauncherMode extends Layer {
                 }
                 final int parameterIndex = remoteParameterIndex(index, isAltHeld());
                 final Parameter parameter = page.getParameter(parameterIndex);
-                adjustParameter(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), inc);
+                adjustRemoteParameter(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), inc);
             });
             encoders[i].bindTouched(layer, touched -> {
                 if (isSettingsHeld()) {
@@ -352,7 +352,7 @@ public class PerformClipLauncherMode extends Layer {
                 }
                 final int parameterIndex = remoteParameterIndex(index, isAltHeld());
                 final Parameter parameter = page.getParameter(parameterIndex);
-                handleParameterTouch(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), touched);
+                handleRemoteParameterTouch(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), touched);
             });
         }
     }
@@ -366,12 +366,12 @@ public class PerformClipLauncherMode extends Layer {
                     inc -> {
                         final int parameterIndex = remoteParameterIndex(index, isAltHeld());
                         final Parameter parameter = page.getParameter(parameterIndex);
-                        adjustParameter(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), inc);
+                        adjustRemoteParameter(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), inc);
                     });
             encoders[i].bindTouched(layer, touched -> {
                 final int parameterIndex = remoteParameterIndex(index, isAltHeld());
                 final Parameter parameter = page.getParameter(parameterIndex);
-                handleParameterTouch(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), touched);
+                handleRemoteParameterTouch(index, parameter, fallbackPrefix + " " + (parameterIndex + 1), touched);
             });
         }
     }
@@ -430,11 +430,10 @@ public class PerformClipLauncherMode extends Layer {
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
             final Parameter parameter = parameters[i];
-            markParameterInterested(parameter);
             final String label = fallbackLabels[i];
-            encoders[i].bindContinuousEncoder(layer, this::isShiftHeld,
-                    inc -> adjustParameter(index, parameter, label, inc));
-            encoders[i].bindTouched(layer, touched -> handleParameterTouch(index, parameter, label, touched));
+            ParameterEncoderBinding.bind(encoders[i], layer, index, parameter, label, this::isShiftHeld,
+                    ParameterEncoderBinding.TouchResetControl.of(parameterResetHandler), mixerResetPolicy(index),
+                    oled::valueInfo, oled::clearScreenDelayed);
         }
     }
 
@@ -1124,38 +1123,33 @@ public class PerformClipLauncherMode extends Layer {
                 TrackActionRow.ARM.label));
     }
 
-    private void adjustParameter(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
-                                 final int inc) {
-        if (!isMapped(parameter)) {
+    private void adjustRemoteParameter(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
+                                       final int inc) {
+        if (!ParameterEncoderBinding.isMapped(parameter)) {
             return;
         }
         parameterResetHandler.markAdjusted(encoderIndex, Math.abs(inc));
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, isShiftHeld(), inc);
-        oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+        ParameterEncoderBinding.adjustParameter(parameter, isShiftHeld(), inc);
+        ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
     }
 
-    private void handleParameterTouch(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
-                                      final boolean touched) {
+    private void handleRemoteParameterTouch(final int encoderIndex, final Parameter parameter,
+                                            final String fallbackLabel, final boolean touched) {
         if (touched) {
             parameterResetHandler.beginTouchReset(encoderIndex, () -> {
-                if (isMapped(parameter)) {
+                if (ParameterEncoderBinding.isMapped(parameter)) {
                     parameter.reset();
-                    oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+                    ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
                 }
             });
-            if (!isMapped(parameter)) {
+            if (!ParameterEncoderBinding.isMapped(parameter)) {
                 oled.valueInfo(fallbackLabel, "Unmapped");
                 return;
             }
-            oled.valueInfo(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+            ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
             return;
         }
 
-        if (!isMapped(parameter)) {
-            parameterResetHandler.endTouchReset(encoderIndex);
-            oled.clearScreenDelayed();
-            return;
-        }
         parameterResetHandler.endTouchReset(encoderIndex);
         oled.clearScreenDelayed();
     }
@@ -1164,11 +1158,7 @@ public class PerformClipLauncherMode extends Layer {
         if (parameter == null) {
             return;
         }
-        parameter.exists().markInterested();
-        parameter.name().markInterested();
-        parameter.displayedValue().markInterested();
-        parameter.value().markInterested();
-        parameter.discreteValueCount().markInterested();
+        ParameterEncoderBinding.markInterested(parameter);
     }
 
     private void markPageParametersInterested(final CursorRemoteControlsPage page) {
@@ -1184,13 +1174,10 @@ public class PerformClipLauncherMode extends Layer {
         page.getName().markInterested();
     }
 
-    private boolean isMapped(final Parameter parameter) {
-        return parameter != null && parameter.exists().get();
-    }
-
-    private String labelFor(final Parameter parameter, final String fallbackLabel) {
-        final String name = parameter.name().get();
-        return name == null || name.isBlank() ? fallbackLabel : name;
+    private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
+        return index == 0
+                ? ParameterEncoderBinding.ResetPolicy.NONE
+                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
     }
 
     private int trackScrollAmount() {

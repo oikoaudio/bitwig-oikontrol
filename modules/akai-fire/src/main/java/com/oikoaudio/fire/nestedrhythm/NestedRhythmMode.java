@@ -16,6 +16,7 @@ import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -144,11 +145,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 "Nested Rhythm Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.remoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
         for (int i = 0; i < remoteControlsPage.getParameterCount(); i++) {
-            final Parameter parameter = remoteControlsPage.getParameter(i);
-            parameter.name().markInterested();
-            parameter.displayedValue().markInterested();
-            parameter.value().markInterested();
-            parameter.discreteValueCount().markInterested();
+            ParameterEncoderBinding.markInterested(remoteControlsPage.getParameter(i));
         }
         this.clipHandler = new ClipRowHandler(this);
         this.padSurface = new NestedRhythmPadSurface(
@@ -1298,23 +1295,16 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     case 2 -> cursorTrack.sendBank().getItemAt(0);
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
-                parameter.name().markInterested();
-                parameter.displayedValue().markInterested();
-                parameter.value().markInterested();
-                parameter.discreteValueCount().markInterested();
-                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
-                    EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
-                    oled.valueInfo(label, parameter.displayedValue().get());
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        oled.valueInfo(label, parameter.displayedValue().get());
-                    } else {
-                        oled.clearScreenDelayed();
-                    }
-                });
+                ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
+                        handler.touchResetControl(), mixerResetPolicy(index), oled::valueInfo, oled::clearScreenDelayed);
             }
         };
+    }
+
+    private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
+        return index == 0
+                ? ParameterEncoderBinding.ResetPolicy.NONE
+                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
     }
 
     private void ignoreEncoder(final int amount) {

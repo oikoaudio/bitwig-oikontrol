@@ -21,10 +21,10 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
-import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.control.VelocitySettings;
@@ -284,11 +284,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         this.notePlayController = new NotePlayController(liveControls, livePadPerformer);
 
         for (int i = 0; i < liveRemoteControlsPage.getParameterCount(); i++) {
-            final Parameter parameter = liveRemoteControlsPage.getParameter(i);
-            parameter.name().markInterested();
-            parameter.displayedValue().markInterested();
-            parameter.value().markInterested();
-            parameter.discreteValueCount().markInterested();
+            ParameterEncoderBinding.markInterested(liveRemoteControlsPage.getParameter(i));
         }
 
         for (int i = 0; i < noteTranslationTable.length; i++) {
@@ -526,16 +522,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
             final Parameter parameter = liveRemoteControlsPage.getParameter(index);
-            encoders[i].bindContinuousEncoder(liveUser2Layer, driver::isGlobalShiftHeld,
-                    com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG,
-                    inc -> adjustMixerParameter(parameter, parameter.name().get(), inc));
-            encoders[i].bindTouched(liveUser2Layer, touched -> {
-                if (touched) {
-                    oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
-                } else {
-                    oled.clearScreenDelayed();
-                }
-            });
+            ParameterEncoderBinding.bind(encoders[i], liveUser2Layer, index, parameter,
+                    "Remote " + (index + 1), driver::isGlobalShiftHeld,
+                    ParameterEncoderBinding.TouchResetControl.of(encoderTouchResetHandler),
+                    ParameterEncoderBinding.ResetPolicy.NONE, oled::valueInfo, oled::clearScreenDelayed);
         }
     }
 
@@ -547,10 +537,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         params.add(track.sendBank().getItemAt(0));
         params.add(track.sendBank().getItemAt(1));
         for (final com.bitwig.extension.controller.api.Parameter parameter : params) {
-            parameter.name().markInterested();
-            parameter.displayedValue().markInterested();
-            parameter.value().markInterested();
-            parameter.discreteValueCount().markInterested();
+            ParameterEncoderBinding.markInterested(parameter);
         }
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
@@ -570,20 +557,45 @@ public abstract class LivePadSurfaceLayer extends Layer {
                             handleHarmonicMixerEncoder(index, inc);
                             return;
                     }
-                    adjustMixerParameter(parameter, fallbackLabel, inc);
+                    encoderTouchResetHandler.markAdjusted(index, Math.abs(inc));
+                    ParameterEncoderBinding.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
+                    ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
                     });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
                 if (touched) {
                     if (isHarmonicLiveMode()) {
                         showHarmonicMixerInfo(index);
                     } else {
-                        oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+                        handleLiveMixerParameterTouch(index, parameter, fallbackLabel, true);
                     }
                 } else {
-                    oled.clearScreenDelayed();
+                    handleLiveMixerParameterTouch(index, parameter, fallbackLabel, false);
                 }
             });
         }
+    }
+
+    private void handleLiveMixerParameterTouch(final int encoderIndex, final Parameter parameter,
+                                               final String fallbackLabel, final boolean touched) {
+        if (touched) {
+            final ParameterEncoderBinding.ResetPolicy resetPolicy = mixerResetPolicy(encoderIndex);
+            if (resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE) {
+                encoderTouchResetHandler.beginTouchReset(encoderIndex, () -> {
+                    resetPolicy.reset(parameter);
+                    ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
+                });
+            }
+            ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
+            return;
+        }
+        encoderTouchResetHandler.endTouchReset(encoderIndex);
+        oled.clearScreenDelayed();
+    }
+
+    private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
+        return index == 0
+                ? ParameterEncoderBinding.ResetPolicy.NONE
+                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
     }
 
     private void handleHarmonicMixerEncoder(final int encoderIndex, final int inc) {
@@ -1786,11 +1798,6 @@ public abstract class LivePadSurfaceLayer extends Layer {
             noteTranslationTable[i] = -1;
         }
         noteInput.setKeyTranslationTable(noteTranslationTable);
-    }
-
-    private void adjustMixerParameter(final Parameter parameter, final String fallbackLabel, final int inc) {
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
-        oled.valueInfo(fallbackLabel, parameter.displayedValue().get());
     }
 
     private void applyLiveVelocity() {

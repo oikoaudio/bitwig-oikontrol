@@ -9,6 +9,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderTurnBehavior;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -147,6 +148,25 @@ public class StepSequencerEncoderHandler extends Layer {
 
     public void endTouchReset(final int slotIndex) {
         touchResetHandler.endTouchReset(slotIndex);
+    }
+
+    public ParameterEncoderBinding.TouchResetControl touchResetControl() {
+        return new ParameterEncoderBinding.TouchResetControl() {
+            @Override
+            public void begin(final int encoderIndex, final Runnable resetAction) {
+                beginTouchReset(encoderIndex, resetAction);
+            }
+
+            @Override
+            public void markAdjusted(final int encoderIndex, final int units) {
+                recordTouchAdjustment(encoderIndex, units);
+            }
+
+            @Override
+            public void end(final int encoderIndex) {
+                endTouchReset(encoderIndex);
+            }
+        };
     }
 
     public void showAccessorTouchValue(final NoteStepAccess accessor) {

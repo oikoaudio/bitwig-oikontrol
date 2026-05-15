@@ -4,11 +4,10 @@ import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
-import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -313,27 +312,16 @@ final class ChordStepEncoderControls {
                     case 2 -> cursorTrack.sendBank().getItemAt(0);
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
-                parameter.name().markInterested();
-                parameter.displayedValue().markInterested();
-                parameter.value().markInterested();
-                parameter.discreteValueCount().markInterested();
-                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
-                        ContinuousEncoderScaler.Profile.STRONG,
-                        inc -> adjustMixerParameter(parameter, label, inc));
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        oled.valueInfo(label, parameter.displayedValue().get());
-                    } else {
-                        oled.clearScreenDelayed();
-                    }
-                });
+                ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
+                        handler.touchResetControl(), mixerResetPolicy(index), oled::valueInfo, oled::clearScreenDelayed);
             }
         };
     }
 
-    private void adjustMixerParameter(final Parameter parameter, final String fallbackLabel, final int inc) {
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
-        oled.valueInfo(fallbackLabel, parameter.displayedValue().get());
+    private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
+        return index == 0
+                ? ParameterEncoderBinding.ResetPolicy.NONE
+                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
     }
 
     private EncoderSlotBinding chordSlot(final int slotIndex, final EncoderStepAccumulator accumulator,
