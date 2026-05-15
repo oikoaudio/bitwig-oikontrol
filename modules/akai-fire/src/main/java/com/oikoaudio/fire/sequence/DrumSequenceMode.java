@@ -6,7 +6,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.control.RgbButton;
+import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -251,12 +251,18 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void bindClipRowPads(final AkaiFireOikontrolExtension driver) {
-        final RgbButton[] rgbButtons = driver.getRgbButtons();
-        for (int i = 0; i < 16; i++) {
-            final int index = i;
-            rgbButtons[i].bindPressed(mainLayer, pressed -> handleClipRowPad(index, pressed),
-                    () -> getClipRowPadLight(index));
-        }
+        PadMatrixBindings.bindPressed(mainLayer, driver.getRgbButtons(), 0, 16,
+                new PadMatrixBindings.PressHost() {
+                    @Override
+                    public void handlePadPress(final int padIndex, final boolean pressed) {
+                        handleClipRowPad(padIndex, pressed);
+                    }
+
+                    @Override
+                    public RgbLigthState padLight(final int padIndex) {
+                        return getClipRowPadLight(padIndex);
+                    }
+                });
     }
 
     private void handleClipRowPad(final int index, final boolean pressed) {
@@ -279,12 +285,18 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     //TODO DOGGY
     private void initSequenceSection(final AkaiFireOikontrolExtension driver) {
-        final RgbButton[] rgbButtons = driver.getRgbButtons();
-        for (int i = 0; i < 32; i++) {
-            final RgbButton button = rgbButtons[i + 32];
-            final int index = i;
-            button.bindPressed(mainLayer, p -> handleSeqSelection(index, p), () -> stepState(index));
-        }
+        PadMatrixBindings.bindPressed(mainLayer, driver.getRgbButtons(), 32, 32,
+                new PadMatrixBindings.PressHost() {
+                    @Override
+                    public void handlePadPress(final int padIndex, final boolean pressed) {
+                        handleSeqSelection(padIndex, pressed);
+                    }
+
+                    @Override
+                    public RgbLigthState padLight(final int padIndex) {
+                        return stepState(padIndex);
+                    }
+                });
     }
 
     private void handleSeqSelection(final int index, final boolean pressed) {

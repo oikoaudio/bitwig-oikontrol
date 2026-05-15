@@ -3,7 +3,7 @@ package com.oikoaudio.fire.sequence;
 import java.util.List;
 
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.control.RgbButton;
+import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
@@ -40,13 +40,18 @@ public class RecurrenceEditor {
 	}
 
 	private void initClipControlButtons(final Layer clipLayer, final AkaiFireOikontrolExtension driver) {
-		final RgbButton[] rgbButtons = driver.getRgbButtons();
-		for (int i = 0; i < 16; i++) {
-			final RgbButton button = rgbButtons[i + 16];
-			final int index = i;
-			final int mask = 0x1 << i;
-			button.bindPressed(clipLayer, p -> handleMask(p, index), () -> getState(index, mask));
-		}
+		PadMatrixBindings.bindPressed(clipLayer, driver.getRgbButtons(), 16, 16,
+				new PadMatrixBindings.PressHost() {
+					@Override
+					public void handlePadPress(final int padIndex, final boolean pressed) {
+						handleMask(pressed, padIndex);
+					}
+
+					@Override
+					public RgbLigthState padLight(final int padIndex) {
+						return getState(padIndex, 0x1 << padIndex);
+					}
+				});
 	}
 
 	private RgbLigthState getState(final int index, final int mask) {

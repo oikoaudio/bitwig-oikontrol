@@ -16,8 +16,16 @@ public final class PadMatrixBindings {
     }
 
     public static void bindPressed(final Layer layer, final RgbButton[] pads, final PressHost host) {
+        bindPressed(layer, pads, 0, pads.length, host);
+    }
+
+    public static void bindPressed(final Layer layer, final RgbButton[] pads, final int startIndex,
+                                   final int count, final PressHost host) {
         for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
+            if (index < startIndex || index >= startIndex + count) {
+                continue;
+            }
+            final int padIndex = index - startIndex;
             pads[index].bindPressed(layer, pressed -> host.handlePadPress(padIndex, pressed),
                     () -> host.padLight(padIndex));
         }
