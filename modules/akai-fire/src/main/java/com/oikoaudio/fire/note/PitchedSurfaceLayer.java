@@ -11,7 +11,6 @@ import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.DrumPad;
 import com.bitwig.extension.controller.api.DrumPadBank;
 import com.bitwig.extension.controller.api.NoteInput;
-import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
@@ -35,10 +34,10 @@ import com.oikoaudio.fire.chordstep.ChordStepClipEditor;
 import com.oikoaudio.fire.chordstep.ChordStepClipNavigation;
 import com.oikoaudio.fire.chordstep.ChordStepController;
 import com.oikoaudio.fire.chordstep.ChordStepEditControls;
+import com.oikoaudio.fire.chordstep.ChordStepEventIndex;
 import com.oikoaudio.fire.chordstep.ChordStepFineNudgeController;
 import com.oikoaudio.fire.chordstep.ChordStepFineNudgeState;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
-import com.oikoaudio.fire.chordstep.ChordStepObservedState;
 import com.oikoaudio.fire.chordstep.ChordStepPadLightRenderer;
 import com.oikoaudio.fire.chordstep.ChordStepPadController;
 import com.oikoaudio.fire.chordstep.ChordStepPadSurface;
@@ -168,15 +167,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final ChordStepBuilderController chordBuilder;
     private final Set<Integer> auditioningNotes = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
-    private final ChordStepObservedState observedChordStepState = new ChordStepObservedState();
-    private final ChordStepFineNudgeState<ChordEvent> fineNudgeState = new ChordStepFineNudgeState<>();
-    private final ChordStepFineNudgeController<ChordEvent> fineNudgeController;
+    private final ChordStepFineNudgeState<ChordStepEventIndex.Event> fineNudgeState = new ChordStepFineNudgeState<>();
+    private final ChordStepFineNudgeController<ChordStepEventIndex.Event> fineNudgeController;
     private final ChordStepClipController chordStepClipController;
-    private final ChordStepClipEditor<ChordEvent> chordStepClipEditor;
+    private final ChordStepClipEditor<ChordStepEventIndex.Event> chordStepClipEditor;
     private final ChordStepClipNavigation chordStepClipNavigation;
     private final ChordStepObservationController chordStepObservationController;
     private final NotePlayController notePlayController;
     private final ChordStepController chordStepController;
+    private final ChordStepEventIndex chordStepEventIndex;
     private final NoteLiveControlSurface liveControls;
     private final NoteLivePadPerformer livePadPerformer;
     private final NoteLiveExpressionControls liveExpressionControls;
@@ -200,8 +199,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final EncoderTouchResetHandler encoderTouchResetHandler;
     private final ChordStepEditControls chordStepEditControls;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
-    private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
-    private final Map<String, NoteStepMoveSnapshot> pendingMovedNotes = new HashMap<>();
 
     private enum LiveNoteSubMode {
         MELODIC("Note"),
@@ -379,6 +376,14 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.noteStepClip = cursorTrack.createLauncherCursorClip("NOTE_STEP", "NOTE_STEP", STEP_COUNT, 128);
         this.observedNoteClip = host.createLauncherCursorClip(OBSERVED_FINE_STEP_CAPACITY, 128);
         this.chordStepPosition = new StepViewPosition(noteStepClip, STEP_COUNT, "CHORD");
+        this.chordStepEventIndex = new ChordStepEventIndex(
+                this::localToGlobalStep,
+                this::globalToLocalStep,
+                this::isVisibleGlobalStep,
+                this::currentChordVelocity,
+                FINE_STEPS_PER_STEP,
+                FINE_STEP_LENGTH,
+                STEP_LENGTH);
         this.noteClipSlotBank = cursorTrack.clipLauncherSlotBank();
         this.noteClipSlotBank.cursorIndex().markInterested();
         this.noteStepClip.scrollToKey(0);
@@ -400,7 +405,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 this::nudgeHeldNotes);
         this.chordStepClipEditor = new ChordStepClipEditor<>(
                 observedNoteClip,
-                observedChordStepState,
+                chordStepEventIndex.observedState(),
                 fineNudgeState,
                 this::localToGlobalStep,
                 this::localToGlobalFineStep,
@@ -1549,15 +1554,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void loadBuilderFromStep(final int stepIndex) {
-        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
+        final Map<Integer, NoteStep> notesAtStep = chordStepEventIndex.noteStepsAt(stepIndex);
         final Set<Integer> fallbackNotes = bestAvailableStepNotes(stepIndex);
-        if ((notesAtStep == null || notesAtStep.isEmpty()) && fallbackNotes.isEmpty()) {
+        if (notesAtStep.isEmpty() && fallbackNotes.isEmpty()) {
             oled.valueInfo("Select", "Empty step");
             return;
         }
         final Set<Integer> loadedNotes = new HashSet<>();
         int loaded = 0;
-        if (notesAtStep != null && !notesAtStep.isEmpty()) {
+        if (!notesAtStep.isEmpty()) {
             for (final NoteStep note : notesAtStep.values()) {
                 if (note.state() != NoteStep.State.NoteOn) {
                     continue;
@@ -1619,7 +1624,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void handleObservedStepData(final int x, final int y, final int state) {
-        observedChordStepState.handleObservedStepData(x, y, state, FINE_STEPS_PER_STEP);
+        chordStepEventIndex.handleObservedStepData(x, y, state);
     }
 
     private void updateStepCache(final Map<Integer, Set<Integer>> cache, final int x, final int y, final int state) {
@@ -1635,21 +1640,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void handleNoteStepObject(final NoteStep noteStep) {
-        final int x = noteStep.x();
-        final int y = noteStep.y();
-        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.computeIfAbsent(x, ignored -> new HashMap<>());
-        if (noteStep.state() == NoteStep.State.Empty) {
-            notesAtStep.remove(y);
-            if (notesAtStep.isEmpty()) {
-                noteStepsByPosition.remove(x);
-            }
-            return;
-        }
-        notesAtStep.put(y, noteStep);
-        final NoteStepMoveSnapshot pending = pendingMovedNotes.remove(moveKey(x, y));
-        if (pending != null) {
-            applySnapshot(noteStep, pending);
-        }
+        chordStepEventIndex.handleNoteStepObject(noteStep);
     }
 
     private void handlePlayingStep(final int playingStep) {
@@ -1659,24 +1650,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         this.playingStep = localPlayingStep;
-    }
-
-    private String moveKey(final int x, final int y) {
-        return x + ":" + y;
-    }
-
-    private void applySnapshot(final NoteStep dest, final NoteStepMoveSnapshot snapshot) {
-        dest.setChance(snapshot.chance);
-        dest.setPressure(snapshot.pressure);
-        dest.setTimbre(snapshot.timbre);
-        dest.setVelocitySpread(snapshot.velocitySpread);
-        dest.setRepeatCount(snapshot.repeatCount);
-        dest.setRepeatCurve(snapshot.repeatCurve);
-        dest.setRepeatVelocityCurve(snapshot.repeatVelocityCurve);
-        dest.setRepeatVelocityEnd(snapshot.repeatVelocityEnd);
-        dest.setPan(snapshot.pan);
-        dest.setRecurrence(snapshot.recurrenceLength, snapshot.recurrenceMask);
-        dest.setOccurrence(snapshot.occurrence);
     }
 
     private void invertCurrentChord(final int direction) {
@@ -1692,7 +1665,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void nudgeHeldNotes(final int amount, final Set<Integer> targetSteps,
-                                final Map<Integer, ChordEvent> chordEventSnapshot) {
+                                final Map<Integer, ChordStepEventIndex.Event> chordEventSnapshot) {
         if (!ensureChordClipWithinObservedCapacity()) {
             return;
         }
@@ -1700,30 +1673,30 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         chordStepPadSurface.markModifiedSteps(targetSteps);
-        final List<ChordEvent> eventsToNudge = targetSteps.stream()
+        final List<ChordStepEventIndex.Event> eventsToNudge = targetSteps.stream()
                 .map(chordEventSnapshot::get)
                 .filter(java.util.Objects::nonNull)
                 .sorted(amount > 0
-                        ? Comparator.comparingInt(ChordEvent::anchorFineStart).reversed()
-                        : Comparator.comparingInt(ChordEvent::anchorFineStart))
+                        ? Comparator.comparingInt(ChordStepEventIndex.Event::anchorFineStart).reversed()
+                        : Comparator.comparingInt(ChordStepEventIndex.Event::anchorFineStart))
                 .toList();
         if (eventsToNudge.isEmpty()) {
             return;
         }
         fineNudgeState.beginHeldNudge(targetSteps);
         final int loopFineSteps = chordLoopFineSteps();
-        final List<ChordEventNoteMove> noteMoves = new ArrayList<>();
-        final Map<Integer, ChordEvent> movedEvents = new HashMap<>();
-        for (final ChordEvent event : eventsToNudge) {
+        final List<ChordStepEventIndex.EventNoteMove> noteMoves = new ArrayList<>();
+        final Map<Integer, ChordStepEventIndex.Event> movedEvents = new HashMap<>();
+        for (final ChordStepEventIndex.Event event : eventsToNudge) {
             final int targetAnchorFineStart = Math.floorMod(event.anchorFineStart() + amount, loopFineSteps);
-            noteMoves.addAll(createNoteMovesForEvent(event, targetAnchorFineStart, loopFineSteps));
-            movedEvents.put(event.localStep(), moveChordEvent(event, targetAnchorFineStart, loopFineSteps));
+            noteMoves.addAll(chordStepEventIndex.createNoteMovesForEvent(event, targetAnchorFineStart, loopFineSteps));
+            movedEvents.put(event.localStep(), chordStepEventIndex.moveEvent(event, targetAnchorFineStart, loopFineSteps));
         }
         if (noteMoves.isEmpty()) {
             return;
         }
         rewriteChordEventMoves(noteMoves);
-        for (final ChordEventNoteMove move : noteMoves) {
+        for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
             fineNudgeState.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
         }
         movedEvents.forEach((step, event) -> {
@@ -1750,19 +1723,11 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private Set<Integer> getVisibleOccupiedSteps() {
-        final Set<Integer> occupiedSteps = new HashSet<>(noteStepsByPosition.keySet());
-        occupiedSteps.addAll(observedChordStepState.visibleOccupiedSteps(this::isVisibleGlobalStep, this::globalToLocalStep));
-        return occupiedSteps;
+        return chordStepEventIndex.visibleOccupiedSteps();
     }
 
     private Set<Integer> getVisibleStartedSteps() {
-        final Set<Integer> startedSteps =
-                observedChordStepState.visibleStartedSteps(this::isVisibleGlobalStep, this::globalToLocalStep);
-        noteStepsByPosition.entrySet().stream()
-                .filter(entry -> entry.getValue().values().stream().anyMatch(note -> note.state() == NoteStep.State.NoteOn))
-                .map(Map.Entry::getKey)
-                .forEach(startedSteps::add);
-        return startedSteps;
+        return chordStepEventIndex.visibleStartedSteps();
     }
 
     private Map<Integer, Integer> snapshotFineStartsForStep(final int localStep, final boolean heldOnly) {
@@ -1770,9 +1735,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (persisted != null && !persisted.isEmpty()) {
             return new HashMap<>(persisted);
         }
-        final Map<Integer, Integer> starts = chordEventsForStep(localStep, Map.of()).stream()
+        final Map<Integer, Integer> starts = chordStepEventIndex.eventsForStep(localStep, Map.of()).stream()
                 .flatMap(event -> event.notes().stream())
-                .collect(Collectors.toMap(ChordEventNote::midiNote, ChordEventNote::fineStart, (a, b) -> a,
+                .collect(Collectors.toMap(ChordStepEventIndex.EventNote::midiNote,
+                        ChordStepEventIndex.EventNote::fineStart, (a, b) -> a,
                         HashMap::new));
         if (heldOnly && !starts.isEmpty()) {
             fineNudgeState.rememberHeldFineStarts(localStep, starts);
@@ -1780,133 +1746,31 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         return starts;
     }
 
-    private ChordEvent snapshotChordEventForStep(final int localStep, final boolean heldOnly) {
-        final ChordEvent persisted = heldOnly ? fineNudgeState.heldEvent(localStep) : null;
+    private ChordStepEventIndex.Event snapshotChordEventForStep(final int localStep, final boolean heldOnly) {
+        final ChordStepEventIndex.Event persisted = heldOnly ? fineNudgeState.heldEvent(localStep) : null;
         if (persisted != null) {
             return persisted;
         }
-        return chordEventsForStep(localStep, Map.of()).stream().findFirst().orElse(null);
+        return chordStepEventIndex.eventForStep(localStep, Map.of());
     }
 
     private void updateObservedFineStart(final int oldFineStart, final int newFineStart, final int midiNote,
                                          final double duration) {
-        observedChordStepState.moveFineStart(
-                oldFineStart,
-                newFineStart,
-                midiNote,
-                duration,
-                FINE_STEPS_PER_STEP,
-                FINE_STEP_LENGTH);
+        chordStepEventIndex.moveFineStart(oldFineStart, newFineStart, midiNote, duration);
     }
 
-    private List<ChordEvent> chordEventsForStep(final int localStep, final Map<Integer, Integer> startOverrides) {
-        final Map<Integer, NoteStep> visibleNotes = noteStepsByPosition.get(localStep);
-        final int globalStep = localToGlobalStep(localStep);
-        final Map<Integer, Integer> noteStarts = new HashMap<>();
-        noteStarts.putAll(observedChordStepState.noteStartsForStep(globalStep));
-        if (!startOverrides.isEmpty()) {
-            noteStarts.putAll(startOverrides);
-        }
-        if (visibleNotes != null) {
-            visibleNotes.values().stream()
-                    .filter(note -> note.state() == NoteStep.State.NoteOn)
-                    .forEach(note -> noteStarts.putIfAbsent(note.y(), fineStartFor(globalStep, note.y(), note.x())));
-        }
-        if (noteStarts.isEmpty()) {
-            return List.of();
-        }
-        final int anchorFineStart = noteStarts.values().stream().min(Integer::compareTo).orElse(globalStep * FINE_STEPS_PER_STEP);
-        final boolean normalizeToSharedAnchor = noteStarts.size() > 1
-                && noteStarts.values().stream().distinct().count() == 1;
-        final List<ChordEventNote> notes = noteStarts.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue())
-                .map(entry -> {
-                    final int midiNote = entry.getKey();
-                    final int fineStart = entry.getValue();
-                    final int effectiveFineStart = normalizeToSharedAnchor ? anchorFineStart : fineStart;
-                    final NoteStep visibleNote = visibleNotes == null ? null : visibleNotes.get(midiNote);
-                    final int velocity = visibleNote == null
-                            ? currentChordVelocity(127)
-                            : (int) Math.round(visibleNote.velocity() * 127);
-                    final double duration = visibleNote != null
-                            ? visibleNote.duration()
-                            : durationForObservedNote(fineStart, midiNote, STEP_LENGTH);
-                    return new ChordEventNote(
-                            midiNote,
-                            effectiveFineStart,
-                            effectiveFineStart - anchorFineStart,
-                            velocity,
-                            duration,
-                            visibleNote);
-                })
-                .toList();
-        return List.of(new ChordEvent(localStep, globalStep, anchorFineStart, notes));
-    }
-
-    private int fineStartFor(final int globalStep, final int midiNote, final int fallbackLocalStep) {
-        return observedChordStepState.fineStartFor(
-                globalStep,
-                midiNote,
-                localToGlobalStep(fallbackLocalStep) * FINE_STEPS_PER_STEP);
-    }
-
-    private double durationForObservedNote(final int fineStart, final int midiNote, final double fallbackDuration) {
-        int occupiedFineSteps = 0;
-        int currentFineStep = fineStart;
-        while (isObservedFineStepOccupied(currentFineStep, midiNote)) {
-            occupiedFineSteps++;
-            currentFineStep++;
-        }
-        if (occupiedFineSteps == 0) {
-            return fallbackDuration;
-        }
-        return occupiedFineSteps * FINE_STEP_LENGTH;
-    }
-
-    private boolean isObservedFineStepOccupied(final int fineStep, final int midiNote) {
-        return observedChordStepState.isFineStepOccupied(fineStep, midiNote, FINE_STEPS_PER_STEP);
-    }
-
-    private List<ChordEventNoteMove> createNoteMovesForEvent(final ChordEvent event, final int targetAnchorFineStart,
-                                                             final int loopFineSteps) {
-        return event.notes().stream()
-                .map(note -> new ChordEventNoteMove(
-                        event.localStep(),
-                        note,
-                        Math.floorMod(targetAnchorFineStart + note.startOffset(), loopFineSteps)))
-                .filter(move -> move.sourceFineStart() != move.targetFineStart())
-                .toList();
-    }
-
-    private ChordEvent moveChordEvent(final ChordEvent event, final int targetAnchorFineStart, final int loopFineSteps) {
-        final List<ChordEventNote> movedNotes = event.notes().stream()
-                .map(note -> new ChordEventNote(
-                        note.midiNote(),
-                        Math.floorMod(targetAnchorFineStart + note.startOffset(), loopFineSteps),
-                        note.startOffset(),
-                        note.velocity(),
-                        note.duration(),
-                        note.visibleStep()))
-                .toList();
-        return new ChordEvent(
-                event.localStep(),
-                Math.floorDiv(targetAnchorFineStart, FINE_STEPS_PER_STEP),
-                targetAnchorFineStart,
-                movedNotes);
-    }
-
-    private void rewriteChordEventMoves(final List<ChordEventNoteMove> noteMoves) {
-        for (final ChordEventNoteMove move : noteMoves) {
+    private void rewriteChordEventMoves(final List<ChordStepEventIndex.EventNoteMove> noteMoves) {
+        for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
             final int targetGlobalStep = Math.floorDiv(move.targetFineStart(), FINE_STEPS_PER_STEP);
             if (move.visibleStep() != null && isVisibleGlobalStep(targetGlobalStep)) {
-                pendingMovedNotes.put(moveKey(globalToLocalStep(targetGlobalStep), move.midiNote()),
-                        NoteStepMoveSnapshot.capture(move.visibleStep()));
+                chordStepEventIndex.addPendingMoveSnapshot(globalToLocalStep(targetGlobalStep), move.midiNote(),
+                        move.visibleStep());
             }
         }
-        for (final ChordEventNoteMove move : noteMoves) {
+        for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
             observedNoteClip.clearStep(move.sourceFineStart(), move.midiNote());
         }
-        for (final ChordEventNoteMove move : noteMoves) {
+        for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
             observedNoteClip.setStep(move.targetFineStart(), move.midiNote(), move.velocity(), move.duration());
             updateObservedFineStart(move.sourceFineStart(), move.targetFineStart(), move.midiNote(), move.duration());
         }
@@ -1956,7 +1820,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         final double duration = (endStep - startStep + 1) * STEP_LENGTH;
 
         if (anchorStepIndex == startStep) {
-            final Map<Integer, NoteStep> anchorNotes = noteStepsByPosition.getOrDefault(anchorStepIndex, Map.of());
+            final Map<Integer, NoteStep> anchorNotes = chordStepEventIndex.noteStepsAt(anchorStepIndex);
             if (!anchorNotes.isEmpty()) {
                 anchorNotes.values().forEach(note -> note.setDuration(duration));
                 return true;
@@ -1968,10 +1832,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return false;
         }
 
-        final Map<Integer, NoteStep> anchorNotes = noteStepsByPosition.getOrDefault(anchorStepIndex, Map.of());
+        final Map<Integer, NoteStep> anchorNotes = chordStepEventIndex.noteStepsAt(anchorStepIndex);
         if (!anchorNotes.isEmpty()) {
             for (final NoteStep note : anchorNotes.values()) {
-                pendingMovedNotes.put(moveKey(startStep, note.y()), NoteStepMoveSnapshot.capture(note));
+                chordStepEventIndex.addPendingMoveSnapshot(startStep, note.y(), note);
                 chordStepClipEditor.setChordStep(startStep, note.y(), (int) Math.round(note.velocity() * 127), duration);
                 chordStepClipEditor.clearChordNote(note.x(), note.y());
             }
@@ -2087,7 +1951,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private double getStepDuration(final int stepIndex) {
-        return noteStepsByPosition.getOrDefault(stepIndex, Map.of()).values().stream()
+        return chordStepEventIndex.noteStepsAt(stepIndex).values().stream()
                 .filter(note -> note.state() == NoteStep.State.NoteOn)
                 .mapToDouble(NoteStep::duration)
                 .max()
@@ -2303,8 +2167,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void toggleChordAccentForStep(final int stepIndex) {
-        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
-        if (notesAtStep == null || notesAtStep.isEmpty()) {
+        final Map<Integer, NoteStep> notesAtStep = chordStepEventIndex.noteStepsAt(stepIndex);
+        if (notesAtStep.isEmpty()) {
             return;
         }
         final boolean targetAccent = chordStepAccentControls.toggleAccent(notesAtStep.values(), defaultChordVelocity);
@@ -2325,7 +2189,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private boolean isChordStepAccented(final int stepIndex) {
-        return chordStepAccentControls.isStepAccented(noteStepsByPosition.get(stepIndex), defaultChordVelocity);
+        return chordStepAccentControls.isStepAccented(chordStepEventIndex.noteStepsAt(stepIndex), defaultChordVelocity);
     }
 
     private boolean isHarmonicLiveMode() {
@@ -3181,18 +3045,12 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     @Override
     public List<NoteStep> getOnNotes() {
-        return noteStepsByPosition.values().stream()
-                .flatMap(step -> step.values().stream())
-                .filter(note -> note.state() == NoteStep.State.NoteOn)
-                .collect(Collectors.toList());
+        return chordStepEventIndex.allStartedNotes();
     }
 
     @Override
     public List<NoteStep> getHeldNotes() {
-        return chordStepPadSurface.heldStepSnapshot().stream()
-                .flatMap(step -> noteStepsByPosition.getOrDefault(step, Map.of()).values().stream())
-                .filter(note -> note.state() == NoteStep.State.NoteOn)
-                .collect(Collectors.toList());
+        return chordStepEventIndex.heldNotes(chordStepPadSurface.heldStepSnapshot());
     }
 
     @Override
@@ -3201,12 +3059,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (!heldNotes.isEmpty()) {
             return heldNotes;
         }
-        if (selectedPresetStepIndex == null) {
-            return List.of();
-        }
-        return noteStepsByPosition.getOrDefault(selectedPresetStepIndex, Map.of()).values().stream()
-                .filter(note -> note.state() == NoteStep.State.NoteOn)
-                .collect(Collectors.toList());
+        return chordStepEventIndex.selectedStepNotes(selectedPresetStepIndex);
     }
 
     @Override
@@ -3581,37 +3434,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         chordStepController.refreshObservationPass();
     }
     private void clearObservedChordCaches() {
-        observedChordStepState.clear();
-        pendingMovedNotes.clear();
-    }
-
-    private record ChordEvent(int localStep, int globalStep, int anchorFineStart, List<ChordEventNote> notes) {
-    }
-
-    private record ChordEventNote(int midiNote, int fineStart, int startOffset, int velocity, double duration,
-                                  NoteStep visibleStep) {
-    }
-
-    private record ChordEventNoteMove(int localStep, ChordEventNote note, int targetFineStart) {
-        private int sourceFineStart() {
-            return note.fineStart();
-        }
-
-        private int midiNote() {
-            return note.midiNote();
-        }
-
-        private int velocity() {
-            return note.velocity();
-        }
-
-        private double duration() {
-            return note.duration();
-        }
-
-        private NoteStep visibleStep() {
-            return note.visibleStep();
-        }
+        chordStepEventIndex.clear();
     }
 
     private boolean ensureSelectedNoteClip() {
@@ -3628,31 +3451,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private boolean hasLoadedNoteClipContent() {
-        return observedChordStepState.hasAnyObservedNotes()
-                || noteStepsByPosition.values().stream()
-                .flatMap(step -> step.values().stream())
-                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
+        return chordStepEventIndex.hasAnyLoadedNoteContent();
     }
 
     private boolean hasVisibleStepContent(final int stepIndex) {
-        final int globalStep = localToGlobalStep(stepIndex);
-        if (observedChordStepState.hasStepContent(globalStep)) {
-            return true;
-        }
-        if (clipNotesByStep.containsKey(stepIndex)) {
-            return true;
-        }
-        return noteStepsByPosition.getOrDefault(stepIndex, Map.of()).values().stream()
-                .anyMatch(note -> note.state() != NoteStep.State.Empty);
+        return clipNotesByStep.containsKey(stepIndex) || chordStepEventIndex.hasVisibleStepContent(stepIndex);
     }
 
     private boolean hasStepStartNote(final int stepIndex) {
-        final int globalStep = localToGlobalStep(stepIndex);
-        if (observedChordStepState.hasStepStart(globalStep)) {
-            return true;
-        }
-        return noteStepsByPosition.getOrDefault(stepIndex, Map.of()).values().stream()
-                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
+        return chordStepEventIndex.hasStepStart(stepIndex);
     }
 
     private Set<Integer> bestAvailableStepNotes(final int stepIndex) {
@@ -3660,11 +3467,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (visibleNotes != null && !visibleNotes.isEmpty()) {
             return new HashSet<>(visibleNotes);
         }
-        final Set<Integer> observedNotes = observedChordStepState.notesAtStep(localToGlobalStep(stepIndex));
-        if (observedNotes != null && !observedNotes.isEmpty()) {
-            return new HashSet<>(observedNotes);
-        }
-        return Set.of();
+        return chordStepEventIndex.notesAtStep(stepIndex);
     }
 
     @FunctionalInterface
