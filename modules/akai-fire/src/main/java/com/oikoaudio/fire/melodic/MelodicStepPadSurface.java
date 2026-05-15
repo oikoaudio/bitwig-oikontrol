@@ -179,10 +179,13 @@ final class MelodicStepPadSurface {
         }
         if (padIndex == 0 && !pressed && recurrenceSpanAnchorHeld) {
             recurrenceSpanAnchorHeld = false;
-            if (recurrenceSpanGestureUsed) {
-                recurrenceSpanGestureUsed = false;
+            final boolean spanGestureUsed = recurrenceSpanGestureUsed;
+            recurrenceSpanGestureUsed = false;
+            if (spanGestureUsed) {
                 return true;
             }
+            toggleHeldRecurrencePad(0);
+            return true;
         } else if (!pressed) {
             return true;
         }
@@ -201,14 +204,23 @@ final class MelodicStepPadSurface {
             callbacks.applyHeldRecurrenceSpan(targets, padIndex + 1);
             return true;
         }
+        toggleHeldRecurrencePad(padIndex);
+        return true;
+    }
+
+    private void toggleHeldRecurrencePad(final int padIndex) {
+        final List<Integer> targets = heldRecurrenceTargets();
+        if (targets.isEmpty()) {
+            return;
+        }
+        heldStepConsumed = true;
         final MelodicPattern.Step step = callbacks.currentPattern().step(targets.get(0));
         final RecurrencePattern recurrence = recurrenceOf(step);
         final int span = recurrence.effectiveSpan();
         if (padIndex >= span) {
-            return true;
+            return;
         }
         callbacks.applyHeldRecurrenceToggle(targets, padIndex);
-        return true;
     }
 
     private RgbLigthState getRecurrencePadLight(final int padIndex) {

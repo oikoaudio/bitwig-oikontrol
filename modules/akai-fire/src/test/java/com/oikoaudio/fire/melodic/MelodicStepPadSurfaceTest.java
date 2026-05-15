@@ -64,6 +64,38 @@ class MelodicStepPadSurfaceTest {
         assertNull(callbacks.lastClipPad);
     }
 
+    @Test
+    void tappingRecurrencePadZeroTogglesItWithoutLeavingSpanAnchorLatched() {
+        final FakeCallbacks callbacks = new FakeCallbacks();
+        callbacks.pattern = callbacks.pattern.withStep(activeStep(2, 60));
+        final MelodicStepPadSurface surface = new MelodicStepPadSurface(callbacks);
+
+        surface.handlePadPress(MelodicStepPadSurface.STEP_PAD_OFFSET + 2, true);
+        surface.handlePadPress(0, true);
+        surface.handlePadPress(0, false);
+        surface.handlePadPress(3, true);
+
+        assertEquals(List.of(2), callbacks.lastRecurrenceToggleTargets);
+        assertEquals(3, callbacks.lastRecurrenceTogglePad);
+        assertEquals(-1, callbacks.lastRecurrenceSpan);
+    }
+
+    @Test
+    void holdingRecurrencePadZeroAndPressingAnotherPadAppliesSpan() {
+        final FakeCallbacks callbacks = new FakeCallbacks();
+        callbacks.pattern = callbacks.pattern.withStep(activeStep(2, 60));
+        final MelodicStepPadSurface surface = new MelodicStepPadSurface(callbacks);
+
+        surface.handlePadPress(MelodicStepPadSurface.STEP_PAD_OFFSET + 2, true);
+        surface.handlePadPress(0, true);
+        surface.handlePadPress(3, true);
+        surface.handlePadPress(0, false);
+
+        assertEquals(List.of(2), callbacks.lastRecurrenceSpanTargets);
+        assertEquals(4, callbacks.lastRecurrenceSpan);
+        assertEquals(-1, callbacks.lastRecurrenceTogglePad);
+    }
+
     private static MelodicPattern.Step activeStep(final int index, final int pitch) {
         return new MelodicPattern.Step(index, true, false, pitch, 96, 0.8, false, false);
     }
@@ -76,6 +108,8 @@ class MelodicStepPadSurfaceTest {
         private Integer lastClipPad = null;
         private List<Integer> lastRecurrenceToggleTargets = List.of();
         private int lastRecurrenceTogglePad = -1;
+        private List<Integer> lastRecurrenceSpanTargets = List.of();
+        private int lastRecurrenceSpan = -1;
 
         @Override
         public boolean isAccentGestureActive() {
@@ -178,6 +212,8 @@ class MelodicStepPadSurfaceTest {
 
         @Override
         public void applyHeldRecurrenceSpan(final List<Integer> stepIndices, final int newSpan) {
+            lastRecurrenceSpanTargets = List.copyOf(stepIndices);
+            lastRecurrenceSpan = newSpan;
         }
 
         @Override
