@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.melodic;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
-import com.oikoaudio.fire.sequence.RecurrencePadInteraction;
+import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ final class MelodicStepPadSurface {
     static final int STEP_COUNT = 32;
 
     private final Callbacks callbacks;
-    private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
+    private final HeldStepRecurrenceRow recurrenceRow = new HeldStepRecurrenceRow();
     private int selectedStep = 0;
     private Integer heldStep = null;
     private final LinkedHashSet<Integer> heldSteps = new LinkedHashSet<>();
@@ -115,7 +115,7 @@ final class MelodicStepPadSurface {
 
     private void pressStepPad(final int stepIndex) {
         final boolean accentGesture = callbacks.isAccentGestureActive();
-        recurrencePads.beginHoldIfNeeded(!heldSteps.isEmpty());
+        recurrenceRow.beginHoldIfNeeded(!heldSteps.isEmpty());
         heldSteps.add(stepIndex);
         heldStep = stepIndex;
         heldStepConsumed = heldSteps.size() > 1;
@@ -156,13 +156,13 @@ final class MelodicStepPadSurface {
             heldStep = heldSteps.isEmpty() ? null : heldSteps.iterator().next();
             if (heldSteps.isEmpty()) {
                 heldStepConsumed = false;
-                recurrencePads.clearHold();
+                recurrenceRow.clearHold();
             }
         }
     }
 
     private boolean shouldShowRecurrenceRow() {
-        return recurrencePads.shouldShowRow(!heldSteps.isEmpty());
+        return recurrenceRow.shouldShow(!heldSteps.isEmpty());
     }
 
     private boolean handleRecurrencePadPress(final int padIndex, final boolean pressed) {
@@ -174,7 +174,7 @@ final class MelodicStepPadSurface {
             return true;
         }
         final MelodicPattern.Step step = callbacks.currentPattern().step(targets.get(0));
-        return recurrencePads.handlePadPress(padIndex, pressed, !targets.isEmpty(),
+        return recurrenceRow.handlePadPress(padIndex, pressed, !targets.isEmpty(),
                 recurrenceOf(step),
                 this::consumeHeldStepGesture,
                 pad -> callbacks.applyHeldRecurrenceToggle(targets, pad),
@@ -190,7 +190,7 @@ final class MelodicStepPadSurface {
         if (!step.active() || step.pitch() == null) {
             return RgbLigthState.OFF;
         }
-        return recurrencePads.padLight(padIndex, recurrenceOf(step), callbacks.selectedClipColor());
+        return recurrenceRow.padLight(padIndex, recurrenceOf(step), callbacks.selectedClipColor());
     }
 
     private List<Integer> heldActiveSteps() {

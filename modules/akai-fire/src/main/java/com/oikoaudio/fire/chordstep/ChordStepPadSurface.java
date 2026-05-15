@@ -2,8 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.lights.RgbLigthState;
-import com.oikoaudio.fire.sequence.RecurrencePadInteraction;
-import com.oikoaudio.fire.sequence.RecurrencePattern;
+import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 
 import java.util.List;
@@ -82,7 +81,7 @@ public final class ChordStepPadSurface {
         void removeHeldBankFineStart(int stepIndex);
     }
 
-    private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
+    private final HeldStepRecurrenceRow recurrenceRow = new HeldStepRecurrenceRow();
     private final Set<Integer> heldStepPads = new HashSet<>();
     private final Set<Integer> addedStepPads = new HashSet<>();
     private final Set<Integer> modifiedStepPads = new HashSet<>();
@@ -90,11 +89,11 @@ public final class ChordStepPadSurface {
     private Integer heldStepAnchor = null;
 
     void beginRecurrenceHoldIfNeeded() {
-        recurrencePads.beginHoldIfNeeded(hasHeldSteps());
+        recurrenceRow.beginHoldIfNeeded(hasHeldSteps());
     }
 
     void clearRecurrenceHold() {
-        recurrencePads.clearHold();
+        recurrenceRow.clearHold();
     }
 
     public boolean hasHeldSteps() {
@@ -371,7 +370,7 @@ public final class ChordStepPadSurface {
     }
 
     public boolean shouldShowRecurrenceRow() {
-        return recurrencePads.shouldShowRow(hasHeldSteps());
+        return recurrenceRow.shouldShow(hasHeldSteps());
     }
 
     public boolean handleRecurrencePadPress(final int padIndex,
@@ -383,23 +382,14 @@ public final class ChordStepPadSurface {
         if (targets.isEmpty()) {
             return true;
         }
-        final RecurrencePattern recurrence = RecurrencePattern.of(
-                targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask());
-        return recurrencePads.handlePadPress(padIndex, pressed, true, recurrence,
-                markConsumed, togglePad, applySpan);
+        return recurrenceRow.handlePadPress(padIndex, pressed, targets, markConsumed, togglePad, applySpan);
     }
 
     public RgbLigthState recurrencePadLight(final int padIndex,
                                             final List<NoteStep> targets,
                                             final RgbLigthState color,
                                             final RgbLigthState fallback) {
-        if (targets.isEmpty()) {
-            return fallback;
-        }
-        final NoteStep note = targets.get(0);
-        return recurrencePads.padLight(padIndex,
-                RecurrencePattern.of(note.recurrenceLength(), note.recurrenceMask()),
-                color);
+        return recurrenceRow.padLight(padIndex, targets, color, fallback);
     }
 
     public RgbLigthState stepPadLight(final int stepIndex,

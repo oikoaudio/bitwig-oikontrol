@@ -9,7 +9,7 @@ import java.util.stream.Stream;
 
 final class DrumStepPadSurface {
     private final DrumStepPadState state = new DrumStepPadState();
-    private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
+    private final HeldStepRecurrenceRow recurrenceRow = new HeldStepRecurrenceRow();
 
     enum StepReleaseAction {
         NONE,
@@ -96,15 +96,15 @@ final class DrumStepPadSurface {
     }
 
     void beginRecurrenceHoldIfNeeded() {
-        recurrencePads.beginHoldIfNeeded(isAnyStepHeld());
+        recurrenceRow.beginHoldIfNeeded(isAnyStepHeld());
     }
 
     void clearRecurrenceHold() {
-        recurrencePads.clearHold();
+        recurrenceRow.clearHold();
     }
 
     boolean shouldShowRecurrenceRow() {
-        return recurrencePads.shouldShowRow(isAnyStepHeld());
+        return recurrenceRow.shouldShow(isAnyStepHeld());
     }
 
     boolean handleRecurrencePadPress(final int padIndex,
@@ -116,23 +116,14 @@ final class DrumStepPadSurface {
         if (targets.isEmpty()) {
             return true;
         }
-        final RecurrencePattern recurrence = RecurrencePattern.of(
-                targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask());
-        return recurrencePads.handlePadPress(padIndex, pressed, true, recurrence,
-                markConsumed, togglePad, applySpan);
+        return recurrenceRow.handlePadPress(padIndex, pressed, targets, markConsumed, togglePad, applySpan);
     }
 
     RgbLigthState recurrencePadLight(final int padIndex,
                                      final List<NoteStep> targets,
                                      final RgbLigthState color,
                                      final RgbLigthState fallback) {
-        if (targets.isEmpty()) {
-            return fallback;
-        }
-        final NoteStep note = targets.get(0);
-        return recurrencePads.padLight(padIndex,
-                RecurrencePattern.of(note.recurrenceLength(), note.recurrenceMask()),
-                color);
+        return recurrenceRow.padLight(padIndex, targets, color, fallback);
     }
 
     RgbLigthState stepPadLight(final int stepIndex,
