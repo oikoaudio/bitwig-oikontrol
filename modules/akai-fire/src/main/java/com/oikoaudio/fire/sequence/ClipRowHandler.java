@@ -153,7 +153,11 @@ public class ClipRowHandler {
                 slot.select();
                 slot.launch();
             }
-            case CREATE_EMPTY -> slot.createEmptyClip(host.getClipCreateLengthBeats());
+            case CREATE_EMPTY -> {
+                slot.createEmptyClip(host.getClipCreateLengthBeats());
+                slot.select();
+                host.onClipCreated(index);
+            }
         }
     }
 

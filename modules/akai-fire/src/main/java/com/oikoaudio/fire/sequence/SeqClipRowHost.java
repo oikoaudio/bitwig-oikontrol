@@ -12,6 +12,9 @@ public interface SeqClipRowHost {
         return getDriver().getDefaultClipLengthBeats();
     }
 
+    default void onClipCreated(final int index) {
+    }
+
     OledDisplay getOled();
 
     ClipLauncherSlotBank getClipSlotBank();

@@ -38,6 +38,7 @@ import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +49,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private static final double CLIP_STEP_SIZE = 1.0 / NestedRhythmGenerator.FINE_STEPS_PER_QUARTER;
     private static final int STEPPED_ENCODER_THRESHOLD = 5;
     private static final int STEPPED_ENCODER_FINE_THRESHOLD = 9;
+    private static final int CLIP_CREATE_GENERATE_DELAY_MS = 150;
     private static final RgbLigthState BASE_COLOR = new RgbLigthState(0, 90, 34, true);
     private static final int[] RATCHET_DIVISION_VALUES = {
             2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
@@ -77,9 +79,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
     private final NestedRhythmEditablePattern editablePattern = new NestedRhythmEditablePattern();
     private final List<NestedRhythmEditablePulse> editablePulses = editablePattern.pulses();
+    private final Map<Integer, Map<Integer, NoteStep>> observedNoteSteps = new HashMap<>();
     private boolean mainEncoderPressConsumed = false;
     private int selectedClipSlotIndex = -1;
+    private int lastSelectedClipSlotIndex = -1;
     private boolean selectedClipHasContent = false;
+    private boolean nestedRhythmOwnsSelectedClip = false;
     private boolean clipLengthSyncSuppressed = false;
     private RgbLigthState selectedClipColor = BASE_COLOR;
     private double density = 1.0;
@@ -195,11 +200,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }, () -> BiColorLightState.AMBER_HALF);
         patternButtons.setDownCallback(pressed -> {
             if (pressed) {
-                generatePattern("Generate", summaryLabel());
+                generatePatternForced("Generate", summaryLabel());
             }
         }, () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
-        maybeGenerateOnEmptySelectedClip();
+        showNoClipIfNeeded();
     }
 
     @Override
@@ -395,6 +400,16 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!ensureClipAvailable()) {
             return;
         }
+        if (!canWriteSelectedClipFromContinuousControl()) {
+            return;
+        }
+        generatePatternInCurrentState(label, value);
+    }
+
+    private void generatePatternForced(final String label, final String value) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
         generatePatternInCurrentState(label, value);
     }
 
@@ -404,6 +419,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         editablePattern.applyGeneratedPattern(pattern, expressionSettings(), totalFineStepCount());
         padSurface.afterPatternRegenerated(previousSelectionFineStart, editablePattern);
         writeEditablePulses();
+        nestedRhythmOwnsSelectedClip = true;
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
     }
@@ -412,7 +428,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!ensureClipAvailable()) {
             return;
         }
+        if (!canWriteSelectedClipFromContinuousControl()) {
+            return;
+        }
         writeEditablePulses();
+        nestedRhythmOwnsSelectedClip = true;
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
     }
@@ -423,7 +443,28 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void handleNoteStepObject(final NoteStep noteStep) {
+        updateObservedNoteStep(noteStep);
         clipWriter.handleNoteStepObject(noteStep);
+    }
+
+    private void updateObservedNoteStep(final NoteStep noteStep) {
+        final int x = noteStep.x();
+        final int y = noteStep.y();
+        final Map<Integer, NoteStep> notesAtStep = observedNoteSteps.computeIfAbsent(x, ignored -> new HashMap<>());
+        if (noteStep.state() == NoteStep.State.Empty) {
+            notesAtStep.remove(y);
+            if (notesAtStep.isEmpty()) {
+                observedNoteSteps.remove(x);
+            }
+        } else {
+            notesAtStep.put(y, noteStep);
+        }
+    }
+
+    private boolean hasObservedNotes() {
+        return observedNoteSteps.values().stream()
+                .flatMap(notes -> notes.values().stream())
+                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
     }
 
     private void clearPulseEdits() {
@@ -1565,6 +1606,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private void refreshSelectedClipState() {
         final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, BASE_COLOR);
         selectedClipSlotIndex = state.slotIndex();
+        if (selectedClipSlotIndex != lastSelectedClipSlotIndex) {
+            observedNoteSteps.clear();
+            nestedRhythmOwnsSelectedClip = false;
+            lastSelectedClipSlotIndex = selectedClipSlotIndex;
+        }
         selectedClipHasContent = state.hasContent();
         selectedClipColor = state.color();
         syncClipLengthFromDaw();
@@ -1597,11 +1643,33 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         normalizeRatchetControls();
     }
 
-    private void maybeGenerateOnEmptySelectedClip() {
-        if (!cursorTrack.canHoldNoteData().get() || selectedClipSlotIndex < 0 || selectedClipHasContent) {
-            return;
+    private void showNoClipIfNeeded() {
+        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
+                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
+        if (failure != null) {
+            oled.valueInfo(failure.title(), failure.oledDetail());
+            driver.notifyPopup(failure.title(), failure.popupDetail());
         }
-        generatePattern("Generate", summaryLabel());
+    }
+
+    private boolean canWriteSelectedClipFromContinuousControl() {
+        if (nestedRhythmOwnsSelectedClip || !selectedClipHasContent && !hasObservedNotes()) {
+            return true;
+        }
+        oled.valueInfo("Clip Exists", "PTRN DOWN");
+        driver.notifyPopup("Clip Exists", "Press PATTERN DOWN to overwrite");
+        return false;
+    }
+
+    @Override
+    public void onClipCreated(final int index) {
+        nestedRhythmOwnsSelectedClip = true;
+        observedNoteSteps.clear();
+        driver.getHost().scheduleTask(() -> {
+            refreshClipCursor();
+            refreshSelectedClipState();
+            generatePatternForced("Generate", summaryLabel());
+        }, CLIP_CREATE_GENERATE_DELAY_MS);
     }
 
     private boolean ensureClipAvailable() {

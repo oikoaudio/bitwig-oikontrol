@@ -292,7 +292,7 @@
       </table>
       <h3>Nested Rhythm mode</h3>
       <p><code>Nested Rhythm</code> is the second <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>
-      <p>If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern once.</p>
+      <p>Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press <code>PATTERN DOWN</code> to overwrite and claim the clip for Nested Rhythm editing.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -397,7 +397,7 @@
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
           <tr><td><code>Channel</code></td><td>Engine / <code>ALT</code>: subtype</td><td>Density</td><td>Pitch-pool octave / <code>ALT</code>: shared root</td><td>Mutation type / <code>ALT</code>: strength</td></tr>
-          <tr><td><code>Mixer</code></td><td>Halve / double length</td><td>Swivel / mirror-double</td><td>Reverse</td><td>Invert down / up</td></tr>
+          <tr><td><code>Mixer</code></td><td>Halve / double length</td><td>Swivel / Mirror x2</td><td>Reverse</td><td>Invert down / up</td></tr>
           <tr><td><code>User 1</code></td><td>Engine macro</td><td>Tension</td><td>Legato</td><td>Recurrence span helper</td></tr>
           <tr><td><code>User 2</code></td><td>Selected or held step octave</td><td>Gate</td><td>Velocity</td><td>Articulation</td></tr>
       </tbody>

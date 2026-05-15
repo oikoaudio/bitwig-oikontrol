@@ -216,7 +216,7 @@ In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting
 
 `Nested Rhythm` is the second `DRUM` surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.
 
-If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern once.
+Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press `PATTERN DOWN` to overwrite and claim the clip for Nested Rhythm editing.
 
 | Pad row | Role |
 | --- | --- |
@@ -314,7 +314,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
 | `Channel` | Engine / `ALT`: subtype | Density | Pitch-pool octave / `ALT`: shared root | Mutation type / `ALT`: strength |
-| `Mixer` | Halve / double length | Swivel / mirror-double | Reverse | Invert down / up |
+| `Mixer` | Halve / double length | Swivel / Mirror x2 | Reverse | Invert down / up |
 | `User 1` | Engine macro | Tension | Legato | Recurrence span helper |
 | `User 2` | Selected or held step octave | Gate | Velocity | Articulation |
 
