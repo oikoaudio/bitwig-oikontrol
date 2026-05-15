@@ -2,6 +2,14 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.14.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.2...oikontrol-v2.14.0) (2026-05-15)
+
+
+### Features
+
+* improve sequencer clip-start controls ([973865e](https://github.com/oikoaudio/bitwig-oikontrol/commit/973865e9cd3212c1c89bc6f51a56231cfc23f09d))
+* show sequencer clip-start position on pads ([a17c503](https://github.com/oikoaudio/bitwig-oikontrol/commit/a17c5032df3f0c2c40694945f8c04a929732b7da))
+
 ## [2.13.2](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.1...oikontrol-v2.13.2) (2026-05-15)
 
 
