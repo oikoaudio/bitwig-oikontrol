@@ -2,6 +2,13 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## [2.13.2](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.1...oikontrol-v2.13.2) (2026-05-15)
+
+
+### Bug Fixes
+
+* clarify Akai Fire encoder guide ([006af47](https://github.com/oikoaudio/bitwig-oikontrol/commit/006af47010c3f189ff6341b7474e5f7b1ef45fdb))
+
 ## [2.13.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.0...oikontrol-v2.13.1) (2026-05-15)
 
 
