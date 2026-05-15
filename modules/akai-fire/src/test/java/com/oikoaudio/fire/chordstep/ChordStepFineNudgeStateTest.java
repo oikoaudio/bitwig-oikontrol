@@ -12,29 +12,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChordStepFineNudgeStateTest {
     @Test
-    void tracksHeldAndShiftSessionStateSeparately() {
+    void tracksHeldSessionState() {
         final ChordStepFineNudgeState<String> state = new ChordStepFineNudgeState<>();
 
         state.putHeldEvent(2, "held");
-        state.putShiftEvent(3, "shift");
         state.putHeldFineStart(2, 60, 32);
-        state.putShiftFineStart(3, 64, 48);
 
         assertEquals("held", state.heldEvent(2));
-        assertEquals("shift", state.shiftEvent(3));
         assertEquals(Map.of(60, 32), state.fineStartsForStep(2, true));
 
         state.clearHeld();
 
         assertNull(state.heldEvent(2));
-        assertEquals("shift", state.shiftEvent(3));
     }
 
     @Test
     void invalidatingStepClearsAllSessionCopiesForThatStep() {
         final ChordStepFineNudgeState<String> state = new ChordStepFineNudgeState<>();
         state.putHeldEvent(4, "held");
-        state.putShiftEvent(4, "shift");
         state.beginPending(1, true);
         state.addPendingTargetSteps(Set.of(4));
         state.putPendingEvent(4, "pending");
@@ -42,7 +37,6 @@ class ChordStepFineNudgeStateTest {
         state.invalidateStep(4);
 
         assertNull(state.heldEvent(4));
-        assertNull(state.shiftEvent(4));
         assertFalse(state.pendingTargetStepsSnapshot().contains(4));
         assertFalse(state.pendingEventsSnapshot().containsKey(4));
     }
