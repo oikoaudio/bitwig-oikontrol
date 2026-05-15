@@ -42,7 +42,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private Layer currentLayer;
     private final Layer muteLayer;
     private final Layer soloLayer;
-    private final StepSequencerEncoderHandler encoderLayer;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final EuclidState euclidState = new EuclidState();
 
     private final CursorTrack cursorTrack;
@@ -166,7 +166,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         initModeButtons(driver);
         initButtonBehaviour(driver);
         encoderBankLayout = createEncoderBankLayout();
-        encoderLayer = new StepSequencerEncoderHandler(this, driver);
+        encoderLayer = new StepSequencerEncoderLayer(this, driver);
 
         muteMode.addValueObserver(active -> {
             if (active) {
@@ -722,7 +722,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         oled.paramInfoPercent("Timbre", defaultTimbre, "Drum Default", -1, 1);
     }
 
-    private void adjustUser1Velocity(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Velocity(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             adjustDefaultVelocity(inc);
             return;
@@ -730,7 +730,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.VELOCITY);
     }
 
-    private void adjustUser1Pressure(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Pressure(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             adjustDefaultPressure(inc);
             return;
@@ -738,7 +738,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.PRESSURE);
     }
 
-    private void adjustUser1Timbre(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Timbre(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             adjustDefaultTimbre(inc);
             return;
@@ -746,14 +746,14 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.TIMBRE);
     }
 
-    private void adjustUser1Pitch(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Pitch(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             return;
         }
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.PITCH);
     }
 
-    private void handleUser1Touch(final StepSequencerEncoderHandler handler, final boolean touched, final int index,
+    private void handleUser1Touch(final StepSequencerEncoderLayer handler, final boolean touched, final int index,
                                   final NoteStepAccess accessor, final Runnable showDefault,
                                   final Runnable resetDefault) {
         if (touched) {
@@ -1379,7 +1379,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 handler.bindNoteAccess(layer, encoder, slotIndex, access);
             }
@@ -1394,7 +1394,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
                     if (padHandler.adjustMixerParameter(index, inc)) {
@@ -1423,7 +1423,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     final int effective = switch (index) {
@@ -1445,7 +1445,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @FunctionalInterface
     private interface DrumExpressionAdjuster {
-        void adjust(StepSequencerEncoderHandler handler, int inc);
+        void adjust(StepSequencerEncoderLayer handler, int inc);
     }
 
     private EncoderSlotBinding drumExpressionSlot(final NoteStepAccess accessor, final Runnable showDefault,
@@ -1458,7 +1458,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final var action = (java.util.function.IntConsumer) inc -> {
                     if (getExpressionTargetNotes().isEmpty()) {
@@ -1482,7 +1482,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return encoderBankLayout;
     }
 
-    private void handleUser2Touch(final StepSequencerEncoderHandler handler, final boolean touched, final int index) {
+    private void handleUser2Touch(final StepSequencerEncoderLayer handler, final boolean touched, final int index) {
         if (touched) {
             handler.beginTouchReset(index, () -> {
                 if (index == 0) {
@@ -1509,7 +1509,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void markUser2EncoderAdjusted(final int index) {
-        // shared touch-reset accounting is handled by StepSequencerEncoderHandler
+        // shared touch-reset accounting is handled by StepSequencerEncoderLayer
     }
 
     @Override

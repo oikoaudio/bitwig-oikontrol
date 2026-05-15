@@ -42,7 +42,7 @@ import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.AccentLatchState;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
 
@@ -81,7 +81,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final PinnableCursorClip cursorClip;
     private final ClipLauncherSlotBank clipSlotBank;
     private final CursorRemoteControlsPage remoteControlsPage;
-    private final StepSequencerEncoderHandler encoderLayer;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final EncoderBankLayout encoderBankLayout;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final MelodicStepClipWriter clipWriter = new MelodicStepClipWriter();
@@ -186,7 +186,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         new PadBankRowControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
-        this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
+        this.encoderLayer = new StepSequencerEncoderLayer(this, driver);
         this.seed = driver.initialMelodicSeed();
         this.poolLayoutRootPitch = nearestPhraseRootPitch(phraseContext().baseMidiNote());
     }
@@ -2059,7 +2059,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindThresholdedEncoder(layer, ENGINE_ENCODER_THRESHOLD, ENGINE_ENCODER_THRESHOLD * 2,
                         driver::isGlobalShiftHeld, steps -> {
@@ -2097,7 +2097,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (driver.isGlobalAltHeld()) {
@@ -2143,7 +2143,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (driver.isGlobalAltHeld()) {
@@ -2175,7 +2175,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (driver.isGlobalAltHeld()) {
@@ -2208,7 +2208,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
@@ -2249,7 +2249,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, adjuster::accept);
                 encoder.bindTouched(layer, touched -> {
@@ -2271,7 +2271,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final Parameter parameter = switch (index) {
                     case 0 -> cursorTrack.volume();
@@ -2299,7 +2299,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator accumulator = new EncoderStepAccumulator(ENGINE_ENCODER_THRESHOLD);
                 final EncoderStepAccumulator fineAccumulator = new EncoderStepAccumulator(ENGINE_ENCODER_THRESHOLD * 2);
@@ -2335,7 +2335,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator primaryAccumulator = new EncoderStepAccumulator(ENGINE_ENCODER_THRESHOLD);
                 final EncoderStepAccumulator primaryFineAccumulator = new EncoderStepAccumulator(ENGINE_ENCODER_THRESHOLD * 2);
@@ -2378,7 +2378,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 handler.bindNoteAccess(layer, encoder, slotIndex, access);
             }

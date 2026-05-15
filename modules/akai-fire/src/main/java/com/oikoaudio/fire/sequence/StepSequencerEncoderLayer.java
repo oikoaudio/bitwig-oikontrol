@@ -19,11 +19,11 @@ import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 
 /**
- * Shared encoder-page controller for step-sequencer-style modes.
+ * Shared encoder-page layer for step-sequencer-style modes.
  * It manages encoder bank switching, touch gestures, OLED feedback, and the wiring between encoder
  * slots and note or mixer parameters.
  */
-public class StepSequencerEncoderHandler extends Layer {
+public class StepSequencerEncoderLayer extends Layer {
     private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
@@ -62,7 +62,7 @@ public class StepSequencerEncoderHandler extends Layer {
 		void set(NoteStep step, int value);
 	}
 
-	public StepSequencerEncoderHandler(final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
+	public StepSequencerEncoderLayer(final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
 		super(driver.getLayers(), "Encoder_layer");
 		this.parent = host;
         this.driver = driver;

@@ -16,7 +16,7 @@ import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -203,7 +203,7 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 handler.bindNoteAccess(layer, encoder, slotIndex, access);
             }
@@ -218,7 +218,7 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     final boolean rootContext = driver.isGlobalAltHeld();
@@ -270,7 +270,7 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
@@ -304,7 +304,7 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final Parameter parameter = switch (index) {
                     case 0 -> cursorTrack.volume();
@@ -334,7 +334,7 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int boundSlotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     final int amount = accumulator.consume(inc);
@@ -369,7 +369,7 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0) {

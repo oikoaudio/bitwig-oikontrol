@@ -26,7 +26,7 @@ Adopt a shared Akai Fire mode-boundary vocabulary and apply it incrementally. Th
 - Promote shared binding helpers for repeated physical-control mechanics or repeated configurable button groups. Do not promote a mode's semantic button contract merely because another mode uses the same physical buttons with different meanings.
 - Shared physical-control groups are acceptable when they describe the controller shape rather than a mode meaning, for example the pad matrix, bank-button pair, or an indexed button row.
 - `PadControls` is the pad-specific part of that boundary when the 64-pad matrix is complex enough to name separately: mapping raw pad indexes to regions, routing pad press/release input, and returning pad-light state.
-- `EncoderControls` owns mode-specific encoder page construction and encoder turn/touch behavior. Shared encoder binding infrastructure such as `StepSequencerEncoderHandler` remains separate from mode-specific encoder maps.
+- `EncoderControls` owns mode-specific encoder page construction and encoder turn/touch behavior. Shared encoder binding infrastructure such as `StepSequencerEncoderLayer` remains separate from mode-specific encoder maps.
 - `ButtonControls` owns mode-specific button gestures when a group of buttons has a cohesive policy, for example chord-step bank, pattern, accent, step, or pitch-context buttons.
 - Velocity center, velocity sensitivity, and raw-velocity blending are shared control policy when a mode maps pad input velocity through encoder-adjustable targets. Modes that use fixed velocity, generated velocity, or accent-only velocity may keep narrower mode-local policies.
 

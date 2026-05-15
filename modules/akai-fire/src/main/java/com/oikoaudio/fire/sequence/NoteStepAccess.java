@@ -3,10 +3,10 @@ package com.oikoaudio.fire.sequence;
 import java.util.List;
 
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteDoubleGetter;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteDoubleSetter;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteIntGetter;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler.NoteIntSetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteDoubleGetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteDoubleSetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteIntGetter;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteIntSetter;
 import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 

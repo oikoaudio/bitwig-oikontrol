@@ -28,7 +28,7 @@ import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 
@@ -102,7 +102,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final CursorTrack chordStepCursorTrack;
     private final ChordStepControlBindings chordStepControlBindings;
     private final ChordStepEncoderControls chordStepEncoderControls;
-    private final StepSequencerEncoderHandler stepEncoderLayer;
+    private final StepSequencerEncoderLayer stepEncoderLayer;
     private final ChordStepEditControls chordStepEditControls;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
@@ -242,7 +242,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 chordStepEventIndex);
         this.chordStepEncoderControls =
                 new ChordStepEncoderControls(driver, oled, chordStepCursorTrack, chordStepEncoderHost());
-        this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
+        this.stepEncoderLayer = new StepSequencerEncoderLayer(this, driver);
 
         this.chordStepControlBindings = new ChordStepControlBindings(driver, this, chordStepControlBindingsHost());
         chordStepControlBindings.bind();

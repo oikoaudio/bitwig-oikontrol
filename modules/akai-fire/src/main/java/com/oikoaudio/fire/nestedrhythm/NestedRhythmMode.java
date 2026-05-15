@@ -31,7 +31,7 @@ import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
 
@@ -68,7 +68,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final CursorRemoteControlsPage remoteControlsPage;
     private final ClipRowHandler clipHandler;
     private final NestedRhythmPadSurface padSurface;
-    private final StepSequencerEncoderHandler encoderLayer;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final EncoderBankLayout encoderBankLayout;
     private final NestedRhythmGenerator generator = new NestedRhythmGenerator();
     private final NestedRhythmClipWriter clipWriter;
@@ -162,7 +162,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         new PadBankRowControlBindings(driver, this, nestedRhythmControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
-        this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
+        this.encoderLayer = new StepSequencerEncoderLayer(this, driver);
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -655,7 +655,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator normal = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 final EncoderStepAccumulator altAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
@@ -698,7 +698,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0 && hasHeldPulse()) {
@@ -728,7 +728,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator altAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 encoder.bindEncoder(layer, inc -> {
@@ -767,7 +767,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator altAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 final EncoderStepAccumulator shiftAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
@@ -827,7 +827,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0 && hasHeldPulse()) {
@@ -862,7 +862,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindThresholdedEncoder(layer, STEPPED_ENCODER_THRESHOLD, STEPPED_ENCODER_FINE_THRESHOLD,
                         driver::isGlobalShiftHeld, steps -> {
@@ -1287,7 +1287,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final Parameter parameter = switch (index) {
                     case 0 -> cursorTrack.volume();
