@@ -1327,7 +1327,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         suppressNextMelodicStepRelease = true;
         modeState.enterMelodicStepMode();
         switchActiveMode();
-        notifyAction("Mode", "Step");
+        notifyAction("Mode", "Melo Step");
     }
 
     public void enterFugueStepMode() {
@@ -1487,7 +1487,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case DRUM -> activeDrumSubMode.displayName();
             case NOTE_PLAY -> "Note";
             case CHORD_STEP -> "Chord Step";
-            case MELODIC_STEP -> "Melodic Step";
+            case MELODIC_STEP -> "Melo Step";
             case FUGUE_STEP -> "Fugue";
             case NESTED_RHYTHM -> "NestedRytm";
             case PERFORM -> "Perform";
