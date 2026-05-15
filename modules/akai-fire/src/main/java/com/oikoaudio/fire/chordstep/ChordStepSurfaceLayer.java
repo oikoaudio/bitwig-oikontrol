@@ -17,9 +17,6 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.bitwig.extensions.framework.values.Midi;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -258,8 +255,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             noteTranslationTable[i] = -1;
         }
 
-        bindPads();
-        bindButtons();
+        new ChordStepControlBindings(driver, this, chordStepControlBindingsHost()).bind();
         chordStepEncoderControls.bindMainEncoder(this);
     }
 
@@ -267,29 +263,82 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         clipHandler.notifyBlink(blinkTicks);
     }
 
-    private void bindPads() {
-        final RgbButton[] pads = driver.getRgbButtons();
-        for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
-            pads[index].bindPressedVelocity(this, velocity -> handlePadPress(padIndex, true, velocity),
-                    () -> handlePadPress(padIndex, false, 0), () -> getPadLight(padIndex));
-        }
-    }
-
-    private void bindButtons() {
-        driver.getButton(NoteAssign.STEP_SEQ).bindPressed(this, this::handleStepSeqPressed, this::getStepSeqLightState);
-        driver.getButton(NoteAssign.BANK_L).bindPressed(this, pressed -> handleBankButton(pressed, -1),
-                this::getBankLightState);
-        driver.getButton(NoteAssign.BANK_R).bindPressed(this, pressed -> handleBankButton(pressed, 1),
-                this::getBankLightState);
-        driver.getButton(NoteAssign.MUTE_1).bindPressed(this, this::handleMute1Button, this::getMute1LightState);
-        driver.getButton(NoteAssign.MUTE_2).bindPressed(this, this::handleMute2Button, this::getMute2LightState);
-        driver.getButton(NoteAssign.MUTE_3).bindPressed(this, this::handleMute3Button, this::getMute3LightState);
-        driver.getButton(NoteAssign.MUTE_4).bindPressed(this, this::handleMute4Button, this::getMute4LightState);
-    }
-
     private void syncEncoderLayers() {
         stepEncoderLayer.activate();
+    }
+
+    private ChordStepControlBindings.Host chordStepControlBindingsHost() {
+        return new ChordStepControlBindings.Host() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
+                ChordStepSurfaceLayer.this.handlePadPress(padIndex, pressed, velocity);
+            }
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return ChordStepSurfaceLayer.this.getPadLight(padIndex);
+            }
+
+            @Override
+            public void handleStepSeqPressed(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handleStepSeqPressed(pressed);
+            }
+
+            @Override
+            public BiColorLightState stepSeqLightState() {
+                return ChordStepSurfaceLayer.this.getStepSeqLightState();
+            }
+
+            @Override
+            public void handleBankButton(final boolean pressed, final int amount) {
+                ChordStepSurfaceLayer.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return ChordStepSurfaceLayer.this.getBankLightState();
+            }
+
+            @Override
+            public void handleMute1Button(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handleMute1Button(pressed);
+            }
+
+            @Override
+            public BiColorLightState mute1LightState() {
+                return ChordStepSurfaceLayer.this.getMute1LightState();
+            }
+
+            @Override
+            public void handleMute2Button(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handleMute2Button(pressed);
+            }
+
+            @Override
+            public BiColorLightState mute2LightState() {
+                return ChordStepSurfaceLayer.this.getMute2LightState();
+            }
+
+            @Override
+            public void handleMute3Button(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handleMute3Button(pressed);
+            }
+
+            @Override
+            public BiColorLightState mute3LightState() {
+                return ChordStepSurfaceLayer.this.getMute3LightState();
+            }
+
+            @Override
+            public void handleMute4Button(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handleMute4Button(pressed);
+            }
+
+            @Override
+            public BiColorLightState mute4LightState() {
+                return ChordStepSurfaceLayer.this.getMute4LightState();
+            }
+        };
     }
 
     private boolean isChordStepModeActive() {
