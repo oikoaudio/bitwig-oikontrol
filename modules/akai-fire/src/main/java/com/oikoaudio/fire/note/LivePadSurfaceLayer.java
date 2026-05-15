@@ -19,12 +19,14 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.BankButtonBindings;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.ButtonRowBindings;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.control.RgbButton;
+import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.control.VelocitySettings;
@@ -354,38 +356,76 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void bindPads() {
-        final RgbButton[] pads = driver.getRgbButtons();
-        for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
-            pads[index].bindPressedVelocity(this, velocity -> handlePadPress(padIndex, true, velocity),
-                    () -> handlePadPress(padIndex, false, 0), () -> getPadLight(padIndex));
-        }
+        PadMatrixBindings.bindPressedVelocity(this, driver.getRgbButtons(), new PadMatrixBindings.Host() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
+                LivePadSurfaceLayer.this.handlePadPress(padIndex, pressed, velocity);
+            }
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return LivePadSurfaceLayer.this.getPadLight(padIndex);
+            }
+        });
     }
 
     private void bindButtons() {
         final BiColorButton stepSeqButton = driver.getButton(NoteAssign.STEP_SEQ);
         stepSeqButton.bindPressed(this, this::handleStepSeqPressed, this::getStepSeqLightState);
 
-        final BiColorButton bankLeftButton = driver.getButton(NoteAssign.BANK_L);
-        bankLeftButton.bindPressed(this, pressed -> handleBankButton(pressed, -1), this::getBankLightState);
+        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
+                new BankButtonBindings.Host() {
+                    @Override
+                    public void handleBankButton(final boolean pressed, final int amount) {
+                        LivePadSurfaceLayer.this.handleBankButton(pressed, amount);
+                    }
 
-        final BiColorButton bankRightButton = driver.getButton(NoteAssign.BANK_R);
-        bankRightButton.bindPressed(this, pressed -> handleBankButton(pressed, 1), this::getBankLightState);
+                    @Override
+                    public BiColorLightState bankLightState() {
+                        return LivePadSurfaceLayer.this.getBankLightState();
+                    }
+                });
 
-        final BiColorButton mute1Button = driver.getButton(NoteAssign.MUTE_1);
-        mute1Button.bindPressed(this, pressed -> handleMute1Button(pressed), this::getMute1LightState);
+        final BiColorButton[] muteButtons = {
+                driver.getButton(NoteAssign.MUTE_1),
+                driver.getButton(NoteAssign.MUTE_2),
+                driver.getButton(NoteAssign.MUTE_3),
+                driver.getButton(NoteAssign.MUTE_4)
+        };
+        ButtonRowBindings.bindPressed(this, muteButtons, new ButtonRowBindings.Host() {
+            @Override
+            public void handleButton(final int index, final boolean pressed) {
+                LivePadSurfaceLayer.this.handleMuteButton(index, pressed);
+            }
 
-        final BiColorButton mute2Button = driver.getButton(NoteAssign.MUTE_2);
-        mute2Button.bindPressed(this, pressed -> handleMute2Button(pressed), this::getMute2LightState);
-
-        final BiColorButton mute3Button = driver.getButton(NoteAssign.MUTE_3);
-        mute3Button.bindPressed(this, pressed -> handleMute3Button(pressed), this::getMute3LightState);
-
-        final BiColorButton mute4Button = driver.getButton(NoteAssign.MUTE_4);
-        mute4Button.bindPressed(this, pressed -> handleMute4Button(pressed), this::getMute4LightState);
+            @Override
+            public BiColorLightState lightState(final int index) {
+                return LivePadSurfaceLayer.this.muteLightState(index);
+            }
+        });
 
         final BiColorButton knobModeButton = driver.getButton(NoteAssign.KNOB_MODE);
         knobModeButton.bindPressed(liveModeControlLayer, this::handleLiveModeAdvance, this::getLiveModeLightState);
+    }
+
+    private void handleMuteButton(final int index, final boolean pressed) {
+        switch (index) {
+            case 0 -> handleMute1Button(pressed);
+            case 1 -> handleMute2Button(pressed);
+            case 2 -> handleMute3Button(pressed);
+            case 3 -> handleMute4Button(pressed);
+            default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        }
+    }
+
+    private BiColorLightState muteLightState(final int index) {
+        return switch (index) {
+            case 0 -> getMute1LightState();
+            case 1 -> getMute2LightState();
+            case 2 -> getMute3LightState();
+            case 3 -> getMute4LightState();
+            default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        };
     }
 
     private void bindEncoders() {
