@@ -190,6 +190,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final NoteLiveExpressionControls liveExpressionControls;
     private final ClipRowHandler clipHandler;
     private final CursorTrack cursorTrack;
+    private final CursorTrack chordStepCursorTrack;
     private final PinnableCursorDevice liveCursorDevice;
     private final PinnableCursorDevice liveDrumMachineDevice;
     private final DrumPadBank liveDrumPadBank;
@@ -367,10 +368,13 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         final ControllerHost host = driver.getHost();
         this.cursorTrack = host.createCursorTrack("NOTE_VIEW", "Note View", 8, CLIP_ROW_PAD_COUNT, true);
         this.cursorTrack.name().markInterested();
-        this.cursorTrack.color().markInterested();
         this.cursorTrack.canHoldNoteData().markInterested();
-        this.cursorTrack.color().addValueObserver((r, g, b) -> chordStepBaseColor = ColorLookup.getColor(r, g, b));
-        chordStepBaseColor = ColorLookup.getColor(this.cursorTrack.color().get());
+        this.chordStepCursorTrack = host.createCursorTrack("CHORD_STEP", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
+        this.chordStepCursorTrack.name().markInterested();
+        this.chordStepCursorTrack.color().markInterested();
+        this.chordStepCursorTrack.canHoldNoteData().markInterested();
+        this.chordStepCursorTrack.color().addValueObserver((r, g, b) -> chordStepBaseColor = ColorLookup.getColor(r, g, b));
+        chordStepBaseColor = ColorLookup.getColor(this.chordStepCursorTrack.color().get());
         this.liveCursorDevice = cursorTrack.createCursorDevice("NOTE_LIVE_DEVICE", "Note Live Device", 8,
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.liveDrumMachineDevice = drumPadsOnly
@@ -381,8 +385,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.liveDrumPadBank = liveDrumMachineDevice.createDrumPadBank(DrumMachinePadLayout.PAD_WINDOW_SIZE);
         observeLiveDrumPads();
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
-        this.chordStepClips = new ChordStepClipResources(host, cursorTrack, STEP_COUNT, OBSERVED_FINE_STEP_CAPACITY,
-                FINE_STEP_LENGTH);
+        this.chordStepClips = new ChordStepClipResources(host, chordStepCursorTrack, STEP_COUNT,
+                OBSERVED_FINE_STEP_CAPACITY, FINE_STEP_LENGTH);
         this.chordStepEventIndex = new ChordStepEventIndex(
                 this::localToGlobalStep,
                 this::globalToLocalStep,
@@ -394,7 +398,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.chordStepClips.observe(this::handleStepData, this::handleNoteStepObject,
                 this::handleObservedStepData, this::handlePlayingStep);
         this.chordStepClipController = new ChordStepClipController(
-                () -> cursorTrack.canHoldNoteData().get(),
+                () -> chordStepCursorTrack.canHoldNoteData().get(),
                 this::hasLoadedNoteClipContent,
                 this::queueChordObservationResync,
                 this::showClipAvailabilityFailure);
