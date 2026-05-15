@@ -1204,6 +1204,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void handleStepSeqPressed(final boolean pressed) {
         if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+            if (pressed && chordStepPadSurface.hasHeldSteps()) {
+                toggleChordAccentForHeldSteps();
+                return;
+            }
             if (driver.isGlobalShiftHeld() || chordAccentState.isHeld()) {
                 handleChordAccentPressed(pressed);
                 return;
@@ -2552,11 +2556,11 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private void handleChordAccentPressed(final boolean pressed) {
         final AccentLatchState.Transition transition = chordAccentState.handlePressed(pressed);
         if (transition == AccentLatchState.Transition.PRESSED) {
-            oled.valueInfo("Accent", chordAccentState.isActive() ? "On" : "Off");
+            oled.valueInfo("Accent Mode", chordAccentState.isActive() ? "On" : "Off");
             return;
         }
         if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
-            oled.valueInfo("Accent", chordAccentState.isActive() ? "On" : "Off");
+            oled.valueInfo("Accent Mode", chordAccentState.isActive() ? "On" : "Off");
             return;
         }
         oled.clearScreenDelayed();
@@ -2579,6 +2583,20 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         notesAtStep.values().forEach(note -> note.setVelocity(targetVelocity));
         chordAccentState.markModified();
         oled.valueInfo("Accent", accented ? "Normal" : "Accented");
+    }
+
+    private void toggleChordAccentForHeldSteps() {
+        final List<NoteStep> heldNotes = getHeldNotes();
+        if (heldNotes.isEmpty()) {
+            oled.valueInfo("Accent", "No Step");
+            return;
+        }
+        final boolean allAccented = heldNotes.stream().allMatch(this::isChordAccented);
+        final double targetVelocity = (allAccented ? defaultChordVelocity : DEFAULT_CHORD_ACCENTED_VELOCITY) / 127.0;
+        heldNotes.forEach(note -> note.setVelocity(targetVelocity));
+        chordStepPadSurface.markModifiedNotes(heldNotes);
+        oled.valueInfo("Accent", allAccented ? "Normal" : "Accented");
+        driver.notifyPopup("Accent", allAccented ? "Normal" : "Accented");
     }
 
     private boolean isChordAccented(final NoteStep noteStep) {

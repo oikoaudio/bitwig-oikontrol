@@ -123,6 +123,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private View view = View.PROCESS;
     private Generator generator = Generator.ACID;
     private MelodicMutator.Mode mutationMode = MelodicMutator.Mode.PRESERVE_RHYTHM;
+    private boolean stepButtonHeldAccentConsumed = false;
 
     private enum View {
         NOTES("Notes"),
@@ -284,13 +285,22 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
             return;
         }
+        if (!pressed && stepButtonHeldAccentConsumed) {
+            stepButtonHeldAccentConsumed = false;
+            return;
+        }
+        if (pressed && padSurface.hasHeldSteps()) {
+            stepButtonHeldAccentConsumed = true;
+            toggleAccentForHeldSteps();
+            return;
+        }
         final AccentLatchState.Transition transition = accentState.handlePressed(pressed);
         if (transition == AccentLatchState.Transition.PRESSED) {
-            oled.valueInfo("Accent", accentState.isActive() ? "On" : "Off");
+            oled.valueInfo("Accent Mode", accentState.isActive() ? "On" : "Off");
             return;
         }
         if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
-            oled.valueInfo("Accent", accentState.isActive() ? "On" : "Off");
+            oled.valueInfo("Accent Mode", accentState.isActive() ? "On" : "Off");
             return;
         }
         oled.clearScreenDelayed();
@@ -782,6 +792,25 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         applyPattern(patternState.currentPattern().withStep(step.withAccent(!step.accent())
                         .withVelocity(step.accent() ? DEFAULT_VELOCITY : 118)),
                 "Accent", "Step " + (stepIndex + 1));
+    }
+
+    private void toggleAccentForHeldSteps() {
+        final List<Integer> targets = padSurface.heldEditableTargets();
+        if (targets.isEmpty()) {
+            oled.valueInfo("Accent", "No Step");
+            return;
+        }
+        final MelodicPattern current = patternState.currentPattern();
+        final boolean allAccented = targets.stream().allMatch(stepIndex -> current.step(stepIndex).accent());
+        final boolean targetAccent = !allAccented;
+        MelodicPattern updated = current;
+        for (final int stepIndex : targets) {
+            final MelodicPattern.Step step = updated.step(stepIndex);
+            updated = updated.withStep(step.withAccent(targetAccent)
+                    .withVelocity(targetAccent ? 118 : DEFAULT_VELOCITY));
+        }
+        padSurface.consumeHeldStepGesture();
+        applyPattern(updated, "Accent", targetAccent ? "Accented" : "Normal");
     }
 
     private void toggleTie(final int stepIndex) {

@@ -1509,6 +1509,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
+        if (pressed && isAnyStepHeld()) {
+            toggleAccentForHeldSteps();
+            return;
+        }
         if (shiftActive.get() || accentHandler.isHolding()) {
             accentHandler.handlePressed(pressed);
             return;
@@ -1523,6 +1527,23 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (pressed) {
             driver.enterMelodicStepMode();
         }
+    }
+
+    private void toggleAccentForHeldSteps() {
+        final List<NoteStep> heldNotes = getHeldNotes();
+        if (heldNotes.isEmpty()) {
+            oled.valueInfo("Accent", "No Step");
+            return;
+        }
+        final boolean allAccented = heldNotes.stream().allMatch(accentHandler::isAccented);
+        final int targetVelocity = allAccented ? accentHandler.getStandardVelocity() : accentHandler.getAccentedVelocity();
+        for (final NoteStep note : heldNotes) {
+            note.setVelocity(targetVelocity / 127.0);
+            stepPadSurface.markModified(note.x());
+            stepPadSurface.markGestureConsumed(note.x());
+        }
+        oled.valueInfo("Accent", allAccented ? "Normal" : "Accented");
+        notifyPopup("Accent", allAccented ? "Normal" : "Accented");
     }
 
     private BiColorLightState getStepSeqLightState() {
