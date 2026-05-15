@@ -1238,8 +1238,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(cycleSource, isDrumGridRoleAvailable());
         currentMainEncoderRole = nextRole;
         alternateMainEncoderRole = nextRole;
-        notifyAction("Encoder Role", nextRole);
-        return nextRole;
+        final String effectiveRole = getMainEncoderRolePreference();
+        notifyAction("Encoder Role", mainEncoderRoleDisplayName(effectiveRole));
+        return effectiveRole;
     }
 
     public String toggleMainEncoderRolePreference() {
@@ -1251,8 +1252,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 : normalizedAlternateRole)
                 : FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
         currentMainEncoderRole = nextRole;
-        notifyAction("Encoder Role", nextRole);
-        return nextRole;
+        final String effectiveRole = getMainEncoderRolePreference();
+        notifyAction("Encoder Role", mainEncoderRoleDisplayName(effectiveRole));
+        return effectiveRole;
     }
 
     private boolean isDrumGridRoleAvailable() {
@@ -1261,10 +1263,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private String resolveMainEncoderRoleForActiveMode(final String role) {
         final String normalizedRole = FireControlPreferences.normalizeMainEncoderRole(role);
+        if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)
+                && isDrumGridRoleAvailable()
+                && shouldAutoPinFirstDrumMachine()) {
+            return FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
+        }
         if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(normalizedRole) && !isDrumGridRoleAvailable()) {
             return FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
         }
         return normalizedRole;
+    }
+
+    private String mainEncoderRoleDisplayName(final String role) {
+        if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(role)) {
+            return "Grid Resolution";
+        }
+        return role;
     }
 
     public boolean isStepSeqPadAuditionEnabled() {
