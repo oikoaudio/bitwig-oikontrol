@@ -14,6 +14,7 @@ import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -1317,7 +1318,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return isChordStepSurface() ? BiColorLightState.AMBER_FULL : BiColorLightState.RED_FULL;
+        return isChordStepSurface() ? ModeButtonLights.MODE_2 : ModeButtonLights.MODE_3;
     }
 
     private boolean isChordStepSurface() {

@@ -31,6 +31,7 @@ import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
@@ -1995,7 +1996,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (accentState.isHeld()) {
             return accentState.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
-        return accentState.isActive() ? BiColorLightState.AMBER_HALF : BiColorLightState.GREEN_FULL;
+        return accentState.isActive() ? BiColorLightState.AMBER_HALF : ModeButtonLights.MODE_1;
     }
 
     private String mutationLabel(final MelodicMutator.Mode mode) {

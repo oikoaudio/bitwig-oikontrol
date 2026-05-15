@@ -15,6 +15,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
@@ -181,7 +182,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : BiColorLightState.AMBER_FULL;
+        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : ModeButtonLights.MODE_2;
     }
 
     @Override

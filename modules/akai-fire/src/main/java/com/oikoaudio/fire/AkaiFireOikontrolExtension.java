@@ -2,6 +2,7 @@ package com.oikoaudio.fire;
 
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
@@ -177,9 +178,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     private enum DrumSubMode {
-        STANDARD(BiColorLightState.GREEN_FULL),
-        NESTED_RHYTHM(BiColorLightState.AMBER_FULL),
-        DRUM_PADS(BiColorLightState.RED_FULL);
+        STANDARD(ModeButtonLights.MODE_1),
+        NESTED_RHYTHM(ModeButtonLights.MODE_2),
+        DRUM_PADS(ModeButtonLights.MODE_3);
 
         private final BiColorLightState lightState;
 
@@ -672,12 +673,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return BiColorLightState.OFF;
         }
         if (performMode != null && performMode.isTrackActionMode()) {
-            return BiColorLightState.RED_FULL;
+            return ModeButtonLights.MODE_3;
         }
         if (performMode != null && performMode.isSceneActionMode()) {
-            return BiColorLightState.AMBER_FULL;
+            return ModeButtonLights.MODE_2;
         }
-        return BiColorLightState.GREEN_FULL;
+        return ModeButtonLights.MODE_1;
     }
 
     private void dummyAction(final boolean pressed) {

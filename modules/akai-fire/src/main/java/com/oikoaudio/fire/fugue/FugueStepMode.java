@@ -7,6 +7,7 @@ import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -100,7 +101,7 @@ public final class FugueStepMode extends Layer {
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : BiColorLightState.RED_FULL;
+        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : ModeButtonLights.MODE_3;
     }
 
     public void notifyBlink(final int blinkTicks) {

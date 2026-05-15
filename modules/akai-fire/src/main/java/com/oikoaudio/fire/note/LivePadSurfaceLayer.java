@@ -23,6 +23,7 @@ import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
@@ -1282,7 +1283,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return BiColorLightState.RED_FULL;
+        return switch (liveNoteSubMode) {
+            case MELODIC -> ModeButtonLights.MODE_1;
+            case HARMONIC -> ModeButtonLights.MODE_2;
+            case DRUM_PADS -> ModeButtonLights.MODE_3;
+        };
     }
 
     private void adjustScale(final int amount) {
