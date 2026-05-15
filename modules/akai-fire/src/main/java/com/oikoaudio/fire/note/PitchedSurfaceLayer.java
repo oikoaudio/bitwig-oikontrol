@@ -29,11 +29,13 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.chordstep.ChordStepAccentControls;
 import com.oikoaudio.fire.chordstep.ChordStepAccentEditor;
+import com.oikoaudio.fire.chordstep.ChordStepChordSelection;
 import com.oikoaudio.fire.chordstep.ChordStepClipController;
 import com.oikoaudio.fire.chordstep.ChordStepController;
 import com.oikoaudio.fire.chordstep.ChordStepEditControls;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepObservedState;
+import com.oikoaudio.fire.chordstep.ChordStepPadController;
 import com.oikoaudio.fire.chordstep.ChordStepPadSurface;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
@@ -68,7 +70,6 @@ import com.oikoaudio.fire.values.StepViewPosition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -79,15 +80,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class PitchedSurfaceLayer extends Layer implements StepSequencerHost, SeqClipRowHost {
-    protected enum SurfaceRole {
-        NOTE_PLAY,
-        CHORD_STEP
-    }
     private static final int CLIP_ROW_PAD_COUNT = 16;
     private static final int CHORD_SOURCE_PAD_OFFSET = 16;
     private static final int CHORD_SOURCE_PAD_COUNT = 16;
-    private static final int BUILDER_FAMILY_INDEX = 0;
-    private static final String BUILDER_FAMILY_LABEL = "Builder";
     private static final int MIN_OCTAVE = 0;
     private static final int MAX_OCTAVE = 7;
     private static final int MIN_TRANSPOSE = 0;
@@ -112,8 +107,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 6;
     private static final int MIN_CHORD_ROOT_OFFSET = -24;
     private static final int MAX_CHORD_ROOT_OFFSET = 24;
-    private static final int MIN_CHORD_OCTAVE_OFFSET = -3;
-    private static final int MAX_CHORD_OCTAVE_OFFSET = 3;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
@@ -157,7 +150,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final RgbLigthState DEFERRED_BOTTOM = new RgbLigthState(36, 16, 0, true);
 
     private final AkaiFireOikontrolExtension driver;
-    private final SurfaceRole surfaceRole;
     private final OledDisplay oled;
     private final NoteInput noteInput;
     private final PatternButtons patternButtons;
@@ -165,9 +157,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
+    private final ChordStepPadController chordStepPadController;
     private final ChordStepAccentControls chordStepAccentControls;
+    private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final Set<Integer> auditioningNotes = new HashSet<>();
-    private final Set<Integer> builderSelectedNotes = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
     private final ChordStepObservedState observedChordStepState = new ChordStepObservedState();
     private final Map<Integer, Map<Integer, Integer>> heldBankFineStarts = new HashMap<>();
@@ -178,7 +171,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final Set<Integer> pendingBankTargetSteps = new HashSet<>();
     private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
     private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
-    private final ChordBank chordBank = new ChordBank();
     private final ChordStepClipController chordStepClipController;
     private final ChordStepObservationController chordStepObservationController;
     private final NotePlayController notePlayController;
@@ -251,12 +243,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final boolean drumPadsOnly;
     private LiveNoteSubMode liveNoteSubMode = LiveNoteSubMode.MELODIC;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.CHORD_STEP;
-    private ChordInterpretation chordInterpretation = ChordInterpretation.AS_IS;
-    private int selectedChordFamily = 0;
-    private int chordPage = 0;
-    private int selectedChordSlot = 0;
     private Integer selectedPresetStepIndex = null;
-    private int chordOctaveOffset = 0;
     private int liveVelocity = DEFAULT_LIVE_VELOCITY;
     private int liveVelocitySensitivity = 100;
     private int chordVelocitySensitivity = 100;
@@ -331,44 +318,24 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         }
     }
 
-    private enum ChordInterpretation {
-        AS_IS("As Is"),
-        IN_SCALE("In Scale");
-
-        private final String displayName;
-
-        ChordInterpretation(final String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String displayName() {
-            return displayName;
-        }
-
-        public ChordInterpretation next() {
-            return values()[(ordinal() + 1) % values().length];
-        }
+    protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
+                                  final NoteRepeatHandler noteRepeatHandler,
+                                  final String layerName) {
+        this(driver, noteRepeatHandler, layerName, false);
     }
 
     protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
                                   final NoteRepeatHandler noteRepeatHandler,
                                   final String layerName,
-                                  final SurfaceRole surfaceRole) {
-        this(driver, noteRepeatHandler, layerName, surfaceRole, false);
-    }
-
-    protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
-                                  final NoteRepeatHandler noteRepeatHandler,
-                                  final String layerName,
-                                  final SurfaceRole surfaceRole,
                                   final boolean drumPadsOnly) {
         super(driver.getLayers(), layerName);
         this.driver = driver;
-        this.surfaceRole = surfaceRole;
         this.drumPadsOnly = drumPadsOnly;
         this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
+        this.chordStepPadController = new ChordStepPadController(chordStepPadSurface,
+                CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
         this.noteRepeatHandler = noteRepeatHandler;
@@ -1249,7 +1216,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if (currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            handleChordStepPadPress(padIndex, pressed, velocity);
+            chordStepPadController.handlePadPress(padIndex, pressed, velocity);
             return;
         }
         handleClipStepRecordPadPress(padIndex, pressed);
@@ -1341,57 +1308,94 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         oled.valueInfo("Drum Pad", name);
     }
 
-    private void handleChordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
-        if (padIndex < CLIP_ROW_PAD_COUNT) {
-            handleChordStepClipRowPadPress(padIndex, pressed);
-            return;
-        }
-        if (padIndex < STEP_PAD_OFFSET) {
-            handleChordStepSourcePadPress(padIndex - CHORD_SOURCE_PAD_OFFSET, pressed, velocity);
-            return;
-        }
-        handleChordStepStepPadPress(padIndex - STEP_PAD_OFFSET, pressed, velocity);
-    }
-
-    private void handleChordStepClipRowPadPress(final int padIndex, final boolean pressed) {
-        if (chordStepPadSurface.hasHeldSteps() && handleChordStepRecurrencePadPress(padIndex, pressed)) {
-            return;
-        }
-        clipHandler.handlePadPress(padIndex, pressed);
-    }
-
-    private void handleChordStepSourcePadPress(final int sourcePadIndex, final boolean pressed, final int velocity) {
-        if (isBuilderFamily()) {
-            handleBuilderSourcePadPress(sourcePadIndex, pressed);
-            return;
-        }
-        if (!chordBank.hasSlot(currentPresetFamilyIndex(), chordPage, sourcePadIndex)) {
-            return;
-        }
-        if (pressed) {
-            selectedChordSlot = sourcePadIndex;
-            final boolean hasHeldSteps = chordStepPadSurface.hasHeldSteps();
-            final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
-            final boolean transportStopped = !driver.isTransportPlaying();
-            if (auditionEnabled && (!hasHeldSteps || transportStopped)) {
-                startAuditionSelectedChord(currentChordVelocity(velocity));
+    private ChordStepPadController.Host chordStepPadHost() {
+        return new ChordStepPadController.Host() {
+            @Override
+            public void handleClipRowPad(final int padIndex, final boolean pressed) {
+                clipHandler.handlePadPress(padIndex, pressed);
             }
-            if (hasHeldSteps) {
-                assignSelectedChordToHeldSteps(velocity);
-            } else if (!auditionEnabled) {
-                showCurrentChord();
+
+            @Override
+            public boolean isBuilderFamily() {
+                return PitchedSurfaceLayer.this.isBuilderFamily();
             }
-        } else {
-            stopAuditionNotes();
-        }
-    }
 
-    private void handleChordStepStepPadPress(final int stepIndex, final boolean pressed, final int velocity) {
-        chordStepPadSurface.handleStepPadPress(stepIndex, pressed, velocity, chordStepPadCallbacks());
-    }
+            @Override
+            public boolean hasChordSlot(final int sourcePadIndex) {
+                return chordSelection.hasSlot(sourcePadIndex);
+            }
 
-    private ChordStepPadSurface.StepPadCallbacks chordStepPadCallbacks() {
-        return new ChordStepPadSurface.StepPadCallbacks() {
+            @Override
+            public void selectChordSlot(final int sourcePadIndex) {
+                chordSelection.selectSlot(sourcePadIndex);
+            }
+
+            @Override
+            public boolean isStepAuditionEnabled() {
+                return driver.isStepSeqPadAuditionEnabled();
+            }
+
+            @Override
+            public boolean isTransportPlaying() {
+                return driver.isTransportPlaying();
+            }
+
+            @Override
+            public void startAuditionSelectedChord(final int velocity) {
+                PitchedSurfaceLayer.this.startAuditionSelectedChord(velocity);
+            }
+
+            @Override
+            public void startAuditionSelectedChord() {
+                PitchedSurfaceLayer.this.startAuditionSelectedChord();
+            }
+
+            @Override
+            public void stopAuditionNotes() {
+                PitchedSurfaceLayer.this.stopAuditionNotes();
+            }
+
+            @Override
+            public int currentChordVelocity(final int velocity) {
+                return PitchedSurfaceLayer.this.currentChordVelocity(velocity);
+            }
+
+            @Override
+            public void assignSelectedChordToHeldSteps(final int velocity) {
+                PitchedSurfaceLayer.this.assignSelectedChordToHeldSteps(velocity);
+            }
+
+            @Override
+            public boolean assignSelectedChordToSteps(final Set<Integer> stepIndexes, final int velocity) {
+                return PitchedSurfaceLayer.this.assignSelectedChordToSteps(stepIndexes, velocity);
+            }
+
+            @Override
+            public void showCurrentChord() {
+                PitchedSurfaceLayer.this.showCurrentChord();
+            }
+
+            @Override
+            public void toggleBuilderNoteOffset(final int sourcePadIndex) {
+                PitchedSurfaceLayer.this.toggleBuilderNoteOffset(sourcePadIndex);
+            }
+
+            @Override
+            public void applyBuilderToHeldSteps() {
+                PitchedSurfaceLayer.this.applyBuilderToHeldSteps();
+            }
+
+            @Override
+            public List<NoteStep> heldNotes() {
+                return PitchedSurfaceLayer.this.getHeldNotes();
+            }
+
+            @Override
+            public void applyChordStepRecurrence(final List<NoteStep> targets,
+                                                 final java.util.function.UnaryOperator<RecurrencePattern> updater) {
+                PitchedSurfaceLayer.this.applyChordStepRecurrence(targets, updater);
+            }
+
             @Override
             public boolean ensureSelectedNoteClipSlot() {
                 return PitchedSurfaceLayer.this.ensureSelectedNoteClipSlot();
@@ -1428,7 +1432,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             }
 
             @Override
-            public void handleSelectStep(final int stepIndex) {
+            public void selectStep(final int stepIndex) {
                 if (isBuilderFamily()) {
                     loadBuilderFromStep(stepIndex);
                 } else {
@@ -1449,11 +1453,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             @Override
             public void clearChordStep(final int stepIndex) {
                 PitchedSurfaceLayer.this.clearChordStep(stepIndex);
-            }
-
-            @Override
-            public boolean isBuilderFamily() {
-                return PitchedSurfaceLayer.this.isBuilderFamily();
             }
 
             @Override
@@ -1482,11 +1481,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             }
 
             @Override
-            public boolean assignSelectedChordToStep(final int stepIndex, final int velocity) {
-                return assignSelectedChordToSteps(Collections.singleton(stepIndex), velocity);
-            }
-
-            @Override
             public void loadBuilderFromStep(final int stepIndex) {
                 PitchedSurfaceLayer.this.loadBuilderFromStep(stepIndex);
             }
@@ -1501,36 +1495,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 heldBankFineStarts.remove(stepIndex);
             }
         };
-    }
-
-    private void handleBuilderSourcePadPress(final int padIndex, final boolean pressed) {
-        if (!pressed) {
-            stopAuditionNotes();
-            return;
-        }
-        toggleBuilderNoteOffset(padIndex);
-        applyBuilderToHeldSteps();
-        final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
-        if (auditionEnabled) {
-            startAuditionSelectedChord();
-        } else {
-            showCurrentChord();
-        }
-    }
-
-    private boolean handleChordStepRecurrencePadPress(final int padIndex, final boolean pressed) {
-        final List<NoteStep> targets = chordStepRecurrenceTargets();
-        if (targets.isEmpty()) {
-            return true;
-        }
-        return chordStepPadSurface.handleRecurrencePadPress(padIndex, pressed, targets,
-                () -> chordStepPadSurface.markModifiedSteps(chordStepPadSurface.heldStepSnapshot()),
-                pad -> applyChordStepRecurrence(targets, recurrencePattern -> recurrencePattern.toggledAt(pad)),
-                span -> applyChordStepRecurrence(targets, recurrencePattern -> recurrencePattern.applySpanGesture(span)));
-    }
-
-    private List<NoteStep> chordStepRecurrenceTargets() {
-        return getHeldNotes();
     }
 
     private void applyChordStepRecurrence(final List<NoteStep> targets,
@@ -1555,25 +1519,23 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             oled.valueInfo("Select", "Empty step");
             return;
         }
-        selectedChordFamily = BUILDER_FAMILY_INDEX;
-        chordPage = 0;
-        selectedChordSlot = 0;
-        builderSelectedNotes.clear();
+        final Set<Integer> loadedNotes = new HashSet<>();
         int loaded = 0;
         if (notesAtStep != null && !notesAtStep.isEmpty()) {
             for (final NoteStep note : notesAtStep.values()) {
                 if (note.state() != NoteStep.State.NoteOn) {
                     continue;
                 }
-                builderSelectedNotes.add(note.y());
+                loadedNotes.add(note.y());
                 loaded++;
             }
         } else {
             for (final int midiNote : fallbackNotes) {
-                builderSelectedNotes.add(midiNote);
+                loadedNotes.add(midiNote);
                 loaded++;
             }
         }
+        chordSelection.replaceBuilderNotes(loadedNotes);
         oled.valueInfo("Select Step", loaded > 0 ? "Step " + (stepIndex + 1) : "Empty");
     }
 
@@ -1754,14 +1716,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             oled.valueInfo("Invert", "Empty");
             return;
         }
-        selectedChordFamily = BUILDER_FAMILY_INDEX;
-        chordPage = 0;
-        selectedChordSlot = 0;
         final int[] inverted = ChordInversion.rotate(currentNotes, direction);
-        builderSelectedNotes.clear();
-        for (final int midiNote : inverted) {
-            builderSelectedNotes.add(midiNote);
-        }
+        chordSelection.replaceBuilderNotes(Arrays.stream(inverted).boxed().collect(Collectors.toSet()));
         applyBuilderToHeldSteps();
         oled.valueInfo("Invert", direction > 0 ? "Up" : "Down");
     }
@@ -2260,35 +2216,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void adjustChordPage(final int amount) {
-        if (amount == 0) {
-            return;
+        if (chordSelection.adjustPage(amount)) {
+            showCurrentChord();
         }
-        if (isBuilderFamily()) {
-            return;
-        }
-        final int nextPage = Math.max(0, Math.min(currentChordPageCount() - 1, chordPage + amount));
-        if (nextPage == chordPage) {
-            return;
-        }
-        chordPage = nextPage;
-        ensureSelectedChordSlotValid();
-        showCurrentChord();
     }
 
     private void adjustChordFamily(final int amount) {
-        if (amount == 0) {
-            return;
+        if (chordSelection.adjustFamily(amount)) {
+            showCurrentChord();
         }
-        final int familyCount = chordFamilyCount();
-        final int nextFamily = Math.max(0, Math.min(familyCount - 1, selectedChordFamily + amount));
-        if (nextFamily == selectedChordFamily) {
-            return;
-        }
-        selectedChordFamily = nextFamily;
-        chordPage = 0;
-        selectedChordSlot = 0;
-        ensureSelectedChordSlotValid();
-        showCurrentChord();
     }
 
     private void adjustChordRoot(final int amount) {
@@ -2304,40 +2240,25 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void adjustChordOctave(final int amount) {
-        if (amount == 0) {
-            return;
+        if (chordSelection.adjustOctave(amount)) {
+            showChordOctaveInfo();
         }
-        final int nextOffset = Math.max(MIN_CHORD_OCTAVE_OFFSET,
-                Math.min(MAX_CHORD_OCTAVE_OFFSET, chordOctaveOffset + amount));
-        if (nextOffset == chordOctaveOffset) {
-            return;
-        }
-        chordOctaveOffset = nextOffset;
-        showChordOctaveInfo();
     }
 
     private void resetChordOctave() {
-        chordOctaveOffset = 0;
+        chordSelection.resetOctave();
     }
 
     private void toggleChordInterpretation() {
-        chordInterpretation = chordInterpretation == ChordInterpretation.AS_IS
-                ? ChordInterpretation.IN_SCALE
-                : ChordInterpretation.AS_IS;
-        oled.valueInfo("Chord Step Mode", chordInterpretation.displayName());
-        driver.notifyPopup("Chord Step Mode", chordInterpretation.displayName());
+        chordSelection.toggleInterpretation();
+        oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
+        driver.notifyPopup("Chord Step Mode", chordSelection.interpretationDisplayName());
     }
 
     private void adjustChordInterpretation(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        if (amount > 0 && chordInterpretation == ChordInterpretation.AS_IS) {
-            toggleChordInterpretation();
-            return;
-        }
-        if (amount < 0 && chordInterpretation == ChordInterpretation.IN_SCALE) {
-            toggleChordInterpretation();
+        if (chordSelection.adjustInterpretation(amount)) {
+            oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
+            driver.notifyPopup("Chord Step Mode", chordSelection.interpretationDisplayName());
         }
     }
 
@@ -2532,8 +2453,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 return BiColorLightState.AMBER_HALF;
             }
             return amount < 0
-                    ? (chordOctaveOffset > MIN_CHORD_OCTAVE_OFFSET ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
-                    : (chordOctaveOffset < MAX_CHORD_OCTAVE_OFFSET ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+                    ? (chordSelection.canLowerOctave() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
+                    : (chordSelection.canRaiseOctave() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
         }
         if (root) {
             return BiColorLightState.AMBER_HALF;
@@ -2590,12 +2511,11 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private boolean isHarmonicLiveMode() {
-        return !noteStepActive && surfaceRole == SurfaceRole.NOTE_PLAY && liveNoteSubMode == LiveNoteSubMode.HARMONIC;
+        return !noteStepActive && !isChordStepSurface() && liveNoteSubMode == LiveNoteSubMode.HARMONIC;
     }
 
     private boolean isDrumMachineLiveMode() {
-        return !noteStepActive && surfaceRole == SurfaceRole.NOTE_PLAY
-                && liveNoteSubMode == LiveNoteSubMode.DRUM_PADS;
+        return !noteStepActive && !isChordStepSurface() && liveNoteSubMode == LiveNoteSubMode.DRUM_PADS;
     }
 
     public String currentNoteSubModeLabel() {
@@ -2717,7 +2637,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     public boolean isChordStepSurface() {
-        return surfaceRole == SurfaceRole.CHORD_STEP;
+        return false;
     }
 
     private void adjustScale(final int amount) {
@@ -3140,14 +3060,14 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             if (isBuilderFamily()) {
                 return getBuilderSourcePadLight(sourcePadIndex);
             }
-            if (!chordBank.hasSlot(currentPresetFamilyIndex(), chordPage, sourcePadIndex)) {
+            if (!chordSelection.hasSlot(sourcePadIndex)) {
                 return RgbLigthState.OFF;
             }
-            final ChordBank.Slot slot = chordBank.slot(currentPresetFamilyIndex(), chordPage, sourcePadIndex);
+            final ChordBank.Slot slot = chordSelection.slot(sourcePadIndex);
             final int groupIndex = sourcePadIndex / 8;
-            final RgbLigthState grouped = getFamilyGroupColor(slot.family(), groupIndex, chordPage,
+            final RgbLigthState grouped = getFamilyGroupColor(slot.family(), groupIndex, chordSelection.page(),
                     currentChordPageCount());
-            return sourcePadIndex == selectedChordSlot ? SELECTED_CHORD : grouped.getDimmed();
+            return sourcePadIndex == chordSelection.selectedSlot() ? SELECTED_CHORD : grouped.getDimmed();
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
         final boolean occupied = hasVisibleStepContent(stepIndex);
@@ -3158,7 +3078,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private RgbLigthState chordStepRecurrencePadLight(final int padIndex) {
-        final List<NoteStep> targets = chordStepRecurrenceTargets();
+        final List<NoteStep> targets = getHeldNotes();
         if (targets.isEmpty()) {
             return clipHandler.getPadLight(padIndex);
         }
@@ -3172,7 +3092,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (midiNote < 0) {
             return RgbLigthState.OFF;
         }
-        if (builderSelectedNotes.contains(midiNote)) {
+        if (chordSelection.isBuilderNoteSelected(midiNote)) {
             return SELECTED_BUILDER_NOTE;
         }
         return getBuilderBasePadLight(padIndex);
@@ -3275,7 +3195,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if ("Interpretation".equals(focus) && noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            oled.valueInfo("Chord Step Mode", chordInterpretation.displayName());
+            oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
             return;
         }
         final String liveModeDetail;
@@ -3306,7 +3226,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void showCurrentChord() {
-        oled.valueInfo("%s %d/%d".formatted(currentChordFamilyLabel(), chordPage + 1,
+        oled.valueInfo("%s %d/%d".formatted(currentChordFamilyLabel(), chordSelection.page() + 1,
                         currentChordPageCount()),
                 "%s %s".formatted(currentChordName(), chordInterpretationSuffix()));
     }
@@ -3315,118 +3235,16 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         return "%s %s".formatted(currentChordName(), chordInterpretationSuffix());
     }
 
-    private String oledChordName(final ChordBank.Slot slot) {
-        if ("Barker".equals(slot.family())) {
-            return switch (slot.formulaIndex()) {
-                case 0 -> "Q stack";
-                case 1 -> "Q b7/9";
-                case 2 -> "Q Maj7";
-                case 3 -> "Q add6";
-                case 4 -> "5th+Q";
-                case 5 -> "Q +11";
-                case 6 -> "Q oct";
-                case 7 -> "Q 6/10";
-                default -> "Barker";
-            };
-        }
-        if ("Root Drone".equals(slot.family())) {
-            return switch (slot.formulaIndex()) {
-                case 0 -> "9/11";
-                case 1 -> "sus";
-                case 2 -> "6/9";
-                case 3 -> "#11";
-                case 4 -> "5/10";
-                case 5 -> "add9";
-                case 6 -> "sus69";
-                case 7 -> "Maj7";
-                default -> "Drone";
-            };
-        }
-        return switch (slot.name()) {
-            case "Fully diminished" -> "Fully dim";
-            case "Half-diminished" -> "Half dim";
-            case "Dominant 7th" -> "Dom 7th";
-            case "Dominant 7th (b9)" -> "Dom 7b9";
-            case "10th (Spread maj7)" -> "10th sprd";
-            default -> slot.name();
-        };
-    }
-
-    private String oledFamilyLabel(final String family) {
-        return switch (family) {
-            case BUILDER_FAMILY_LABEL -> BUILDER_FAMILY_LABEL;
-            case "Sus Motion" -> "SusMot";
-            case "Minor Drift" -> "MinDrft";
-            case "Dorian Lift" -> "DorLift";
-            case "Root Drone" -> "RootDrn";
-            default -> family;
-        };
-    }
-
     private String chordInterpretationSuffix() {
-        return "F%d %s K%s O%s".formatted(selectedChordFamily + 1,
-                chordInterpretation == ChordInterpretation.AS_IS ? "Raw" : "InKey",
-                NoteGridLayout.noteName(getRootNote()),
-                formatSignedValue(chordOctaveOffset));
-    }
-
-    private ChordBank.Slot currentChordSlot() {
-        if (isBuilderFamily()) {
-            throw new IllegalStateException("Builder source has no preset slot");
-        }
-        ensureSelectedChordSlotValid();
-        return chordBank.slot(currentPresetFamilyIndex(), chordPage, selectedChordSlot);
-    }
-
-    private void ensureSelectedChordSlotValid() {
-        if (isBuilderFamily()) {
-            chordPage = 0;
-            selectedChordSlot = 0;
-            return;
-        }
-        if (chordBank.hasSlot(currentPresetFamilyIndex(), chordPage, selectedChordSlot)) {
-            return;
-        }
-        final int pageStart = chordPage * ChordBank.PAGE_SIZE;
-        final int familySlotCount = chordBank.family(currentPresetFamilyIndex()).slots().size();
-        if (pageStart >= familySlotCount) {
-            chordPage = Math.max(0, currentChordPageCount() - 1);
-        }
-        selectedChordSlot = 0;
-        while (selectedChordSlot < ChordBank.PAGE_SIZE
-                && !chordBank.hasSlot(currentPresetFamilyIndex(), chordPage, selectedChordSlot)) {
-            selectedChordSlot++;
-        }
-        if (selectedChordSlot >= ChordBank.PAGE_SIZE) {
-            selectedChordSlot = 0;
-        }
+        return chordSelection.interpretationSuffix(getRootNote());
     }
 
     private int[] renderSelectedChord() {
-        if (isBuilderFamily()) {
-            return renderBuilderChord();
-        }
-        final ChordBank.Slot slot = currentChordSlot();
-        if (chordInterpretation == ChordInterpretation.IN_SCALE) {
-            final int shiftedRoot = getRootNote();
-            final int castRoot = Math.floorMod(shiftedRoot, 12);
-            final int castOctaveOffset = chordOctaveOffset;
-            return transpose(chordBank.renderCast(currentPresetFamilyIndex(), chordPage, selectedChordSlot, getScale(), castRoot),
-                    castOctaveOffset * 12);
-        }
-        return chordBank.renderAsIs(currentPresetFamilyIndex(), chordPage, selectedChordSlot,
-                getChordRootMidi() + chordOctaveOffset * 12);
-    }
-
-    private int[] renderBuilderChord() {
-        return builderSelectedNotes.stream()
-                .sorted()
-                .mapToInt(Integer::intValue)
-                .toArray();
+        return chordSelection.renderSelectedChord(getScale(), getRootNote());
     }
 
     private void ensureBuilderSeededIfEmpty() {
-        if (!isBuilderFamily() || !builderSelectedNotes.isEmpty()) {
+        if (!isBuilderFamily() || chordSelection.hasBuilderNotes()) {
             return;
         }
         final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
@@ -3437,29 +3255,18 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         for (int padIndex = 0; padIndex < CHORD_SOURCE_PAD_COUNT; padIndex++) {
             final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
             if (midiNote >= 0 && getScale().isRootMidiNote(builderRoot, midiNote)) {
-                builderSelectedNotes.add(midiNote);
+                chordSelection.addBuilderNote(midiNote);
                 return;
             }
         }
         final int firstPadNote = getBuilderRenderedNoteMidiForPad(0);
         if (firstPadNote >= 0) {
-            builderSelectedNotes.add(firstPadNote);
+            chordSelection.addBuilderNote(firstPadNote);
         }
     }
 
     private int getChordRootMidi() {
-        return (ChordBank.MID_REGISTER_OCTAVE + 1) * 12 + getRootNote();
-    }
-
-    private int[] transpose(final int[] notes, final int semitones) {
-        if (semitones == 0) {
-            return notes;
-        }
-        final int[] transposed = new int[notes.length];
-        for (int i = 0; i < notes.length; i++) {
-            transposed[i] = notes[i] + semitones;
-        }
-        return transposed;
+        return chordSelection.chordRootMidi(getRootNote());
     }
 
     private void showChordRootInfo() {
@@ -3467,32 +3274,19 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private boolean isBuilderFamily() {
-        return selectedChordFamily == BUILDER_FAMILY_INDEX;
-    }
-
-    private int currentPresetFamilyIndex() {
-        return selectedChordFamily - 1;
-    }
-
-    private int chordFamilyCount() {
-        return chordBank.families().size() + 1;
+        return chordSelection.isBuilderFamily();
     }
 
     private int currentChordPageCount() {
-        return isBuilderFamily() ? 1 : chordBank.pageCount(currentPresetFamilyIndex());
+        return chordSelection.pageCount();
     }
 
     private String currentChordFamilyLabel() {
-        return isBuilderFamily()
-                ? BUILDER_FAMILY_LABEL
-                : oledFamilyLabel(chordBank.family(currentPresetFamilyIndex()).family());
+        return chordSelection.familyLabel();
     }
 
     private String currentChordName() {
-        if (isBuilderFamily()) {
-            return builderSelectedNotes.isEmpty() ? "Empty" : builderSelectionSummary();
-        }
-        return oledChordName(currentChordSlot());
+        return chordSelection.chordName();
     }
 
     private void toggleBuilderNoteOffset(final int padIndex) {
@@ -3500,11 +3294,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (midiNote < 0) {
             return;
         }
-        if (builderSelectedNotes.contains(midiNote)) {
-            builderSelectedNotes.remove(midiNote);
-        } else {
-            builderSelectedNotes.add(midiNote);
-        }
+        chordSelection.toggleBuilderNote(midiNote);
     }
 
     private int getBuilderNoteMidiForPad(final int padIndex) {
@@ -3532,18 +3322,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private int getBuilderRenderedNoteMidiForPad(final int padIndex) {
         return getBuilderNoteMidiForPad(padIndex);
-    }
-
-    private String builderSelectionSummary() {
-        final List<Integer> renderedNotes = builderSelectedNotes.stream()
-                .sorted()
-                .toList();
-        final List<String> noteNames = renderedNotes.stream()
-                .limit(4)
-                .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
-                .toList();
-        final String suffix = renderedNotes.size() > 4 ? " +" + (renderedNotes.size() - 4) : "";
-        return "%d notes %s%s".formatted(renderedNotes.size(), String.join(" ", noteNames), suffix).trim();
     }
 
     private RgbLigthState getBuilderBasePadLight(final int padIndex) {
@@ -3575,23 +3353,19 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void showChordOctaveInfo() {
-        oled.valueInfo("Chord Oct", formatSignedValue(chordOctaveOffset));
+        oled.valueInfo("Chord Oct", formatSignedValue(chordSelection.octaveOffset()));
     }
 
     private void showChordFamilyInfo() {
         if (isBuilderFamily()) {
-            oled.valueInfo("Chord Family", BUILDER_FAMILY_LABEL);
+            oled.valueInfo("Chord Family", ChordStepChordSelection.BUILDER_FAMILY_LABEL);
             return;
         }
-        final ChordBank.Family family = chordBank.family(currentPresetFamilyIndex());
-        oled.valueInfo("Chord Family", family.family());
+        oled.valueInfo("Chord Family", chordSelection.rawFamilyName());
     }
 
     private void resetChordFamilySelection() {
-        selectedChordFamily = BUILDER_FAMILY_INDEX;
-        chordPage = 0;
-        selectedChordSlot = 0;
-        ensureSelectedChordSlotValid();
+        chordSelection.resetToBuilder();
     }
 
     private String formatSignedValue(final int value) {
@@ -3701,7 +3475,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private int getBuilderFirstVisibleMidiNote() {
-        final int firstVisible = applyLivePitchOffset(getChordRootMidi() + chordOctaveOffset * 12);
+        final int firstVisible = applyLivePitchOffset(getChordRootMidi());
         return firstVisible >= 0 && firstVisible <= 127 ? firstVisible : -1;
     }
 
@@ -4407,10 +4181,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                             return;
                         }
                         handler.beginTouchReset(slotIndex, () -> {
-                            chordInterpretation = ChordInterpretation.AS_IS;
-                            oled.valueInfo("Interpret", chordInterpretation.displayName());
+                            chordSelection.resetInterpretation();
+                            oled.valueInfo("Interpret", chordSelection.interpretationDisplayName());
                         });
-                        oled.valueInfo("Interpret", chordInterpretation.displayName());
+                        oled.valueInfo("Interpret", chordSelection.interpretationDisplayName());
                         return;
                     }
                     handler.endTouchReset(slotIndex);
@@ -4433,7 +4207,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     protected void onActivate() {
         noteStepActive = isChordStepSurface();
         currentStepSubMode = NoteStepSubMode.CHORD_STEP;
-        builderSelectedNotes.clear();
+        chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
         selectedPresetStepIndex = null;
         chordStepPosition.setPage(0);
@@ -4468,7 +4242,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         noteStepActive = false;
         clearHeldBongoPads();
         notePlayController.deactivate(this::releaseHeldLiveNotes);
-        builderSelectedNotes.clear();
+        chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
         selectedPresetStepIndex = null;
         liveModeControlLayer.deactivate();
