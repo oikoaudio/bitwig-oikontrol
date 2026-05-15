@@ -33,6 +33,7 @@ import com.oikoaudio.fire.chordstep.ChordStepChordSelection;
 import com.oikoaudio.fire.chordstep.ChordStepClipController;
 import com.oikoaudio.fire.chordstep.ChordStepController;
 import com.oikoaudio.fire.chordstep.ChordStepEditControls;
+import com.oikoaudio.fire.chordstep.ChordStepFineNudgeState;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepObservedState;
 import com.oikoaudio.fire.chordstep.ChordStepPadController;
@@ -163,14 +164,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final Set<Integer> auditioningNotes = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
     private final ChordStepObservedState observedChordStepState = new ChordStepObservedState();
-    private final Map<Integer, Map<Integer, Integer>> heldBankFineStarts = new HashMap<>();
-    private final Map<Integer, ChordEvent> heldBankChordEvents = new HashMap<>();
-    private final Set<Integer> shiftBankTargetSteps = new HashSet<>();
-    private final Map<Integer, Map<Integer, Integer>> shiftBankFineStarts = new HashMap<>();
-    private final Map<Integer, ChordEvent> shiftBankChordEvents = new HashMap<>();
-    private final Set<Integer> pendingBankTargetSteps = new HashSet<>();
-    private final Map<Integer, Map<Integer, Integer>> pendingBankFineStarts = new HashMap<>();
-    private final Map<Integer, ChordEvent> pendingBankChordEvents = new HashMap<>();
+    private final ChordStepFineNudgeState<ChordEvent> fineNudgeState = new ChordStepFineNudgeState<>();
     private final ChordStepClipController chordStepClipController;
     private final ChordStepObservationController chordStepObservationController;
     private final NotePlayController notePlayController;
@@ -249,7 +243,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private int chordVelocitySensitivity = 100;
     private int defaultChordVelocity = DEFAULT_CHORD_STANDARD_VELOCITY;
     private int playingStep = -1;
-    private int pendingBankDir = 0;
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
     private int liveScaleDegreeGlissOffset = 0;
     private LivePitchGlissMode livePitchGlissMode = LivePitchGlissMode.FIFTH_OCTAVE;
@@ -270,8 +263,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private boolean livePitchBendTouched = false;
     private int livePitchBendReturnGeneration = 0;
     private int livePitchBendInactivityGeneration = 0;
-    private boolean pendingBankFineMove = false;
-    private boolean pendingBankLengthAdjust = false;
     private boolean bankMoveInFlight = false;
     private int bankMoveGeneration = 0;
     private RgbLigthState chordStepBaseColor = OCCUPIED_STEP;
@@ -383,6 +374,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.noteStepClip.scrollToKey(0);
         this.observedNoteClip.scrollToKey(0);
         this.observedNoteClip.setStepSize(FINE_STEP_LENGTH);
+        this.noteStepClip.getPlayStart().markInterested();
         this.noteStepClip.addStepDataObserver(this::handleStepData);
         this.noteStepClip.addNoteStepObserver(this::handleNoteStepObject);
         this.observedNoteClip.addStepDataObserver(this::handleObservedStepData);
@@ -1492,7 +1484,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
             @Override
             public void removeHeldBankFineStart(final int stepIndex) {
-                heldBankFineStarts.remove(stepIndex);
+                fineNudgeState.invalidateStep(stepIndex);
             }
         };
     }
@@ -1655,12 +1647,12 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         }
         final Map<Integer, ChordEvent> coarseMoveSnapshot = new HashMap<>();
         selectedSteps.forEach(step -> {
-            final ChordEvent heldEvent = heldBankChordEvents.get(step);
+            final ChordEvent heldEvent = fineNudgeState.heldEvent(step);
             if (heldEvent != null) {
                 coarseMoveSnapshot.put(step, heldEvent);
                 return;
             }
-            final ChordEvent shiftEvent = shiftBankChordEvents.get(step);
+            final ChordEvent shiftEvent = fineNudgeState.shiftEvent(step);
             if (shiftEvent != null) {
                 coarseMoveSnapshot.put(step, shiftEvent);
             }
@@ -1700,8 +1692,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         rewriteChordEventMoves(noteMoves);
         for (final ChordEventNoteMove move : noteMoves) {
             if (chordStepPadSurface.hasHeldStep(move.localStep())) {
-                heldBankFineStarts.computeIfAbsent(move.localStep(), ignored -> new HashMap<>())
-                        .put(move.midiNote(), move.targetFineStart());
+                fineNudgeState.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
             }
         }
         if (wrappedMoveApplied) {
@@ -1743,15 +1734,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if (heldOnly) {
-            heldBankFineStarts.keySet().retainAll(targetSteps);
-            targetSteps.forEach(step -> heldBankFineStarts.put(step, new HashMap<>()));
-            heldBankChordEvents.keySet().retainAll(targetSteps);
+            fineNudgeState.beginHeldNudge(targetSteps);
         } else if (driver.isGlobalShiftHeld()) {
-            shiftBankTargetSteps.clear();
-            shiftBankTargetSteps.addAll(targetSteps);
-            shiftBankFineStarts.keySet().retainAll(targetSteps);
-            targetSteps.forEach(step -> shiftBankFineStarts.put(step, new HashMap<>()));
-            shiftBankChordEvents.keySet().retainAll(targetSteps);
+            fineNudgeState.beginShiftNudge(targetSteps);
         } else {
             clearShiftBankFineNudgeSession();
         }
@@ -1769,18 +1754,16 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         rewriteChordEventMoves(noteMoves);
         for (final ChordEventNoteMove move : noteMoves) {
             if (heldOnly) {
-                heldBankFineStarts.computeIfAbsent(move.localStep(), ignored -> new HashMap<>())
-                        .put(move.midiNote(), move.targetFineStart());
+                fineNudgeState.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
             } else if (driver.isGlobalShiftHeld()) {
-                shiftBankFineStarts.computeIfAbsent(move.localStep(), ignored -> new HashMap<>())
-                        .put(move.midiNote(), move.targetFineStart());
+                fineNudgeState.putShiftFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
             }
         }
         movedEvents.forEach((step, event) -> {
             if (heldOnly) {
-                heldBankChordEvents.put(step, event);
+                fineNudgeState.putHeldEvent(step, event);
             } else if (driver.isGlobalShiftHeld()) {
-                shiftBankChordEvents.put(step, event);
+                fineNudgeState.putShiftEvent(step, event);
             }
         });
         oled.valueInfo("Nudge", amount > 0 ? "+Fine" : "-Fine");
@@ -1820,7 +1803,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private Map<Integer, Integer> snapshotFineStartsForStep(final int localStep, final boolean heldOnly) {
-        final Map<Integer, Integer> persisted = heldOnly ? heldBankFineStarts.get(localStep) : null;
+        final Map<Integer, Integer> persisted = fineNudgeState.fineStartsForStep(localStep, heldOnly);
         if (persisted != null && !persisted.isEmpty()) {
             return new HashMap<>(persisted);
         }
@@ -1829,13 +1812,13 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 .collect(Collectors.toMap(ChordEventNote::midiNote, ChordEventNote::fineStart, (a, b) -> a,
                         HashMap::new));
         if (heldOnly && !starts.isEmpty()) {
-            heldBankFineStarts.put(localStep, new HashMap<>(starts));
+            fineNudgeState.rememberHeldFineStarts(localStep, starts);
         }
         return starts;
     }
 
     private ChordEvent snapshotChordEventForStep(final int localStep, final boolean heldOnly) {
-        final ChordEvent persisted = heldOnly ? heldBankChordEvents.get(localStep) : null;
+        final ChordEvent persisted = heldOnly ? fineNudgeState.heldEvent(localStep) : null;
         if (persisted != null) {
             return persisted;
         }
@@ -2000,12 +1983,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void clearPendingBankAction() {
-        pendingBankDir = 0;
-        pendingBankFineMove = false;
-        pendingBankLengthAdjust = false;
-        pendingBankTargetSteps.clear();
-        pendingBankFineStarts.clear();
-        pendingBankChordEvents.clear();
+        fineNudgeState.clearPending();
     }
 
     private boolean isVisibleGlobalStep(final int globalStep) {
@@ -2187,13 +2165,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private void invalidateObservedChordStep(final int stepIndex) {
         final int globalStep = localToGlobalStep(stepIndex);
         observedChordStepState.invalidateStep(globalStep);
-        heldBankFineStarts.remove(stepIndex);
-        heldBankChordEvents.remove(stepIndex);
-        shiftBankFineStarts.remove(stepIndex);
-        shiftBankChordEvents.remove(stepIndex);
-        pendingBankFineStarts.remove(stepIndex);
-        pendingBankChordEvents.remove(stepIndex);
-        pendingBankTargetSteps.remove(stepIndex);
+        fineNudgeState.invalidateStep(stepIndex);
     }
 
     private void applyBuilderToHeldSteps() {
@@ -2302,10 +2274,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (noteStepActive) {
             if (currentStepSubMode == NoteStepSubMode.CHORD_STEP && driver.isGlobalAltHeld()) {
                 if (pressed) {
-                    pendingBankLengthAdjust = true;
+                    fineNudgeState.setPendingLengthAdjust(true);
                     adjustChordClipLength(amount);
-                } else if (pendingBankLengthAdjust) {
-                    pendingBankLengthAdjust = false;
+                } else if (fineNudgeState.isPendingLengthAdjust()) {
+                    fineNudgeState.setPendingLengthAdjust(false);
                 }
                 clearPendingBankAction();
                 return;
@@ -2317,44 +2289,34 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 return;
             }
             if (pressed) {
-                pendingBankDir = amount;
-                pendingBankFineMove = driver.isGlobalShiftHeld() || chordStepPadSurface.hasHeldSteps();
-                pendingBankTargetSteps.clear();
-                pendingBankFineStarts.clear();
-                pendingBankChordEvents.clear();
-                if (pendingBankFineMove) {
-                    final boolean heldOnly = chordStepPadSurface.hasHeldSteps();
-                    final Set<Integer> targetSteps = heldOnly
-                            ? new HashSet<>(chordStepPadSurface.heldStepSnapshot())
-                            : shiftBankTargetSteps.isEmpty()
-                            ? getVisibleStartedSteps()
-                            : new HashSet<>(shiftBankTargetSteps);
-                    pendingBankTargetSteps.addAll(targetSteps);
+                final boolean heldOnly = chordStepPadSurface.hasHeldSteps();
+                fineNudgeState.beginPending(amount, heldOnly);
+                if (heldOnly) {
+                    final Set<Integer> targetSteps = new HashSet<>(chordStepPadSurface.heldStepSnapshot());
+                    fineNudgeState.addPendingTargetSteps(targetSteps);
                     for (final int stepIndex : targetSteps) {
-                        final ChordEvent event = heldOnly
-                                ? snapshotChordEventForStep(stepIndex, true)
-                                : shiftBankChordEvents.containsKey(stepIndex)
-                                ? shiftBankChordEvents.get(stepIndex)
-                                : snapshotChordEventForStep(stepIndex, false);
+                        final ChordEvent event = snapshotChordEventForStep(stepIndex, true);
                         if (event != null) {
-                            pendingBankChordEvents.put(stepIndex, event);
+                            fineNudgeState.putPendingEvent(stepIndex, event);
                             final Map<Integer, Integer> starts = event.notes().stream()
                                     .collect(Collectors.toMap(ChordEventNote::midiNote, ChordEventNote::fineStart,
                                             (a, b) -> a, HashMap::new));
-                            pendingBankFineStarts.put(stepIndex, starts);
+                            fineNudgeState.putPendingFineStarts(stepIndex, starts);
                         }
                     }
+                } else {
+                    adjustChordPlayStart(amount, driver.isGlobalShiftHeld());
                 }
                 return;
             }
-            if (pendingBankFineMove) {
-                nudgeHeldNotes(pendingBankDir, new HashSet<>(pendingBankTargetSteps), new HashMap<>(pendingBankChordEvents));
+            if (fineNudgeState.isPendingFineMove()) {
+                nudgeHeldNotes(fineNudgeState.pendingDirection(),
+                        new HashSet<>(fineNudgeState.pendingTargetStepsSnapshot()),
+                        new HashMap<>(fineNudgeState.pendingEventsSnapshot()));
                 clearPendingBankAction();
                 return;
             }
             if (!pressed) {
-                oled.valueInfo("Coarse Nudge", "Disabled");
-                driver.notifyPopup("Coarse Nudge", "Use fine nudge in chord step mode");
                 clearPendingBankAction();
                 return;
             }
@@ -2381,6 +2343,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             }
             final double newLength = Math.max(STEP_LENGTH, currentLength / 2.0);
             noteStepClip.getLoopLength().set(newLength);
+            handleChordClipLengthChanged(newLength);
             oled.valueInfo("Clip Length", formatBars(newLength));
             return;
         }
@@ -2391,7 +2354,43 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         }
         noteStepClip.duplicateContent();
         noteStepClip.getLoopLength().set(newLength);
+        handleChordClipLengthChanged(newLength);
         oled.valueInfo("Clip Length", formatBars(newLength));
+    }
+
+    private void adjustChordPlayStart(final int direction, final boolean fine) {
+        if (!ensureSelectedNoteClipSlot()) {
+            return;
+        }
+        final double loopLength = Math.max(STEP_LENGTH, noteStepClip.getLoopLength().get());
+        final double step = fine ? FINE_STEP_LENGTH : STEP_LENGTH;
+        final double next = wrapBeatTime(noteStepClip.getPlayStart().get() + direction * step, loopLength);
+        noteStepClip.getPlayStart().set(next);
+        oled.valueInfo(fine ? "Clip Start Fine" : "Clip Start", formatChordPlayStart(next));
+        driver.notifyPopup(fine ? "Clip Start Fine" : "Clip Start", formatChordPlayStart(next));
+    }
+
+    private double wrapBeatTime(final double value, final double length) {
+        final double wrapped = value % length;
+        return wrapped < 0 ? wrapped + length : wrapped;
+    }
+
+    private String formatChordPlayStart(final double beatTime) {
+        final int fineStepIndex = (int) Math.round(beatTime / FINE_STEP_LENGTH);
+        final int quarterNote = (int) Math.floor(beatTime);
+        final int bar = quarterNote / 4;
+        final int beat = quarterNote % 4;
+        final int sixteenth = (int) Math.floor((beatTime - quarterNote) / STEP_LENGTH);
+        final int fine = Math.floorMod(fineStepIndex, FINE_STEPS_PER_STEP);
+        return fine == 0
+                ? "%d.%d.%d".formatted(bar + 1, beat + 1, sixteenth + 1)
+                : "%d.%d.%d+%d".formatted(bar + 1, beat + 1, sixteenth + 1, fine);
+    }
+
+    private void handleChordClipLengthChanged(final double newLength) {
+        chordStepPosition.handleLoopLengthChanged(newLength);
+        clearAllBankFineNudgeSessions();
+        refreshChordStepObservation();
     }
 
     private String formatBars(final double beatLength) {
@@ -3660,19 +3659,15 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void clearHeldBankFineNudgeSession() {
-        heldBankFineStarts.clear();
-        heldBankChordEvents.clear();
+        fineNudgeState.clearHeld();
     }
 
     private void clearShiftBankFineNudgeSession() {
-        shiftBankTargetSteps.clear();
-        shiftBankFineStarts.clear();
-        shiftBankChordEvents.clear();
+        fineNudgeState.clearShift();
     }
 
     private void clearAllBankFineNudgeSessions() {
-        clearHeldBankFineNudgeSession();
-        clearShiftBankFineNudgeSession();
+        fineNudgeState.clearAll();
     }
 
     private void showChordPageInfo() {
