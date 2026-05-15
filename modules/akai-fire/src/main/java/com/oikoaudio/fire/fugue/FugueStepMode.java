@@ -7,6 +7,10 @@ import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.BankButtonBindings;
+import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.ButtonRowBindings;
+import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -130,37 +134,64 @@ public final class FugueStepMode extends Layer {
     }
 
     private void bindPads() {
-        final var pads = driver.getRgbButtons();
-        for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
-            pads[index].bindPressed(this, pressed -> handlePadPress(padIndex, pressed), () -> getPadLight(padIndex));
-        }
+        PadMatrixBindings.bindPressed(this, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed) {
+                FugueStepMode.this.handlePadPress(padIndex, pressed);
+            }
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return FugueStepMode.this.getPadLight(padIndex);
+            }
+        });
     }
 
     private void bindButtons() {
         driver.getButton(NoteAssign.KNOB_MODE).bindPressed(this, this::handleEncoderModeButton, this::encoderModeLight);
-        driver.getButton(NoteAssign.BANK_L).bindPressed(this, pressed -> {
-            if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    halveClipLength();
-                } else {
-                    adjustStartOffset(activeLineIndex(), -1);
-                }
+        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
+                new BankButtonBindings.Host() {
+                    @Override
+                    public void handleBankButton(final boolean pressed, final int amount) {
+                        FugueStepMode.this.handleBankButton(pressed, amount);
+                    }
+
+                    @Override
+                    public BiColorLightState bankLightState() {
+                        return BiColorLightState.HALF;
+                    }
+                });
+        ButtonRowBindings.bindPressed(this, new BiColorButton[] {
+                driver.getButton(NoteAssign.MUTE_1),
+                driver.getButton(NoteAssign.MUTE_2),
+                driver.getButton(NoteAssign.MUTE_3),
+                driver.getButton(NoteAssign.MUTE_4)
+        }, new ButtonRowBindings.Host() {
+            @Override
+            public void handleButton(final int index, final boolean pressed) {
+                toggleLineEnabled(index, pressed);
             }
-        }, () -> BiColorLightState.HALF);
-        driver.getButton(NoteAssign.BANK_R).bindPressed(this, pressed -> {
-            if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    doubleClipLength();
-                } else {
-                    adjustStartOffset(activeLineIndex(), 1);
-                }
+
+            @Override
+            public BiColorLightState lightState(final int index) {
+                return lineLight(index);
             }
-        }, () -> BiColorLightState.HALF);
-        driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> toggleLineEnabled(0, pressed), () -> lineLight(0));
-        driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> toggleLineEnabled(1, pressed), () -> lineLight(1));
-        driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> toggleLineEnabled(2, pressed), () -> lineLight(2));
-        driver.getButton(NoteAssign.MUTE_4).bindPressed(this, pressed -> toggleLineEnabled(3, pressed), () -> lineLight(3));
+        });
+    }
+
+    private void handleBankButton(final boolean pressed, final int amount) {
+        if (!pressed) {
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            if (amount < 0) {
+                halveClipLength();
+            } else {
+                doubleClipLength();
+            }
+            return;
+        }
+        adjustStartOffset(activeLineIndex(), amount);
     }
 
     private void bindEncoders() {
