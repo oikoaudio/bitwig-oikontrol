@@ -4,7 +4,7 @@
 
 - Recent Akai Fire refactors split several large mode classes into named collaborators.
 - The most important repeated problem is not only class size. It is that equivalent responsibilities had different names and locations across modes, increasing the cost of understanding, changing, or borrowing the extension code.
-- Chord Step proved the pattern outside generated-pattern modes: it was extracted from live pad surface inheritance into a `ChordStepMode` shell and chord-step-owned collaborators under `com.oikoaudio.fire.chordstep`.
+- Chord Step proved the pattern outside generated-pattern modes: it was extracted from live pad surface inheritance into a chord-step-owned mode and collaborators under `com.oikoaudio.fire.chordstep`.
 - Nested Rhythm and Melodic Step proved complementary parts of the same pattern through pad interaction collaborators, generated/editable pattern state, and clip writer collaborators.
 - Drum XOX, Perform, Fugue, and remaining live pad surfaces do not all fit the same domain model, but they should still use the same vocabulary when they own equivalent responsibilities.
 
@@ -16,7 +16,7 @@ Adopt a shared Akai Fire mode-boundary vocabulary and apply it incrementally. Th
 
 - `Mode` owns lifecycle and high-level composition. It should make mode activation, collaborators, and top-level services easy to find.
 - A top-level hardware mode should not be implemented as a thin wrapper around another layer that represents the same mode. Chord Step is its own top-level mode under its own physical button, not a live-note sub-surface.
-- `ChordStepSurfaceLayer` is a transitional extraction artifact, not the target architecture. It removed obsolete live-note inheritance first, but should be refactored away by moving activation, binding, and collaborator composition into `ChordStepMode` plus named `ControlBindings`, `PadControls`, `EncoderControls`, `ButtonControls`, clip, observation, and edit collaborators.
+- The former `ChordStepSurfaceLayer` was a transitional extraction artifact, not the target architecture. It removed obsolete live-note inheritance first, then disappeared once activation, binding, and collaborator composition moved into `ChordStepMode` plus named `ControlBindings`, `PadControls`, `EncoderControls`, `ButtonControls`, clip, observation, and edit collaborators.
 - Use an internal Bitwig `Layer` only when there is a real activation scope to model, not to work around a large mode class.
 
 ### Physical Control Boundary
@@ -53,7 +53,7 @@ Accepted - incremental adoption in progress.
 - New mode refactors should first identify which responsibility slice is moving, then choose the matching name from this vocabulary.
 - Existing classes do not need cosmetic renames when their current names are accurate, but stale names that preserve obsolete coupling are valid refactor targets.
 - Chord Step is now the reference for removing cross-mode inheritance coupling: sequencing behavior should live in the mode package that owns it.
-- `ChordStepSurfaceLayer` should not be copied as a pattern. It should shrink or disappear as Chord Step is aligned with the same mode-boundary vocabulary.
+- `ChordStepMode` is now the top-level mode implementation rather than a shell around `ChordStepSurfaceLayer`; do not copy the removed wrapper-layer pattern.
 - Nested Rhythm is the reference for generated editable patterns and clip-write pending patching.
 - Melodic Step is the reference for current/base pattern state and generated-pattern clip writing, with pitch-pool and encoder controls still candidates for extraction.
 - Drum XOX should be used to check that the vocabulary also works for simple direct-step editing, especially before adding shared abstractions.
