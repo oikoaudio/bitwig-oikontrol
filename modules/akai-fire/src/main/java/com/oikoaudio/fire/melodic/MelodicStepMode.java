@@ -18,10 +18,13 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.BankButtonBindings;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.ButtonRowBindings;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
+import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -196,75 +199,123 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void bindPads() {
-        final var pads = driver.getRgbButtons();
-        for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
-            pads[index].bindPressed(this, pressed -> padSurface.handlePadPress(padIndex, pressed),
-                    () -> padSurface.getPadLight(padIndex));
-        }
+        PadMatrixBindings.bindPressed(this, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed) {
+                padSurface.handlePadPress(padIndex, pressed);
+            }
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return padSurface.getPadLight(padIndex);
+            }
+        });
     }
 
     private void bindButtons() {
-        final BiColorButton bankLeftButton = driver.getButton(NoteAssign.BANK_L);
-        bankLeftButton.bindPressed(this, pressed -> {
-            if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    applyHalveLength();
-                } else {
-                    applyTransform(patternState.currentPattern().rotated(-1), "Rotate", "Left", false);
-                }
-            }
-        }, this::bankLightState);
+        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
+                new BankButtonBindings.Host() {
+                    @Override
+                    public void handleBankButton(final boolean pressed, final int amount) {
+                        MelodicStepMode.this.handleBankButton(pressed, amount);
+                    }
 
-        final BiColorButton bankRightButton = driver.getButton(NoteAssign.BANK_R);
-        bankRightButton.bindPressed(this, pressed -> {
-            if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    applyRepeatDouble();
-                } else {
-                    applyTransform(patternState.currentPattern().rotated(1), "Rotate", "Right", false);
-                }
-            }
-        }, this::bankLightState);
+                    @Override
+                    public BiColorLightState bankLightState() {
+                        return MelodicStepMode.this.bankLightState();
+                    }
+                });
 
-        driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> {
-            if (pressed) {
-                selectHeld.set(true);
-                oled.valueInfo("Select", "Load clip");
+        ButtonRowBindings.bindPressed(this, new BiColorButton[] {
+                driver.getButton(NoteAssign.MUTE_1),
+                driver.getButton(NoteAssign.MUTE_2),
+                driver.getButton(NoteAssign.MUTE_3),
+                driver.getButton(NoteAssign.MUTE_4)
+        }, new ButtonRowBindings.Host() {
+            @Override
+            public void handleButton(final int index, final boolean pressed) {
+                MelodicStepMode.this.handleMuteButton(index, pressed);
+            }
+
+            @Override
+            public BiColorLightState lightState(final int index) {
+                return MelodicStepMode.this.muteLightState(index);
+            }
+        });
+    }
+
+    private void handleBankButton(final boolean pressed, final int amount) {
+        if (!pressed) {
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            if (amount < 0) {
+                applyHalveLength();
             } else {
-                selectHeld.set(false);
-                oled.clearScreenDelayed();
+                applyRepeatDouble();
             }
-        }, () -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF);
+            return;
+        }
+        applyTransform(patternState.currentPattern().rotated(amount), "Rotate", amount < 0 ? "Left" : "Right", false);
+    }
 
-        driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> {
-            fixedLengthHeld.set(pressed);
-            if (pressed) {
-                oled.valueInfo("Last Step", "Target step");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        }, () -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF);
+    private void handleMuteButton(final int index, final boolean pressed) {
+        switch (index) {
+            case 0 -> handleSelectButton(pressed);
+            case 1 -> handleFixedLengthButton(pressed);
+            case 2 -> handleCopyButton(pressed);
+            case 3 -> handleDeleteButton(pressed);
+            default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        }
+    }
 
-        driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> {
-            if (pressed) {
-                copyHeld.set(true);
-                oled.valueInfo("Paste", "Clip target");
-            } else {
-                copyHeld.set(false);
-                oled.clearScreenDelayed();
-            }
-        }, () -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
+    private BiColorLightState muteLightState(final int index) {
+        return switch (index) {
+            case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 1 -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+            case 3 -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+            default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        };
+    }
 
-        driver.getButton(NoteAssign.MUTE_4).bindPressed(this, pressed -> {
-            if (pressed) {
-                deleteHeld.set(true);
-                oled.valueInfo("Delete", "Clip / step target");
-            } else {
-                deleteHeld.set(false);
-                oled.clearScreenDelayed();
-            }
-        }, () -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF);
+    private void handleSelectButton(final boolean pressed) {
+        if (pressed) {
+            selectHeld.set(true);
+            oled.valueInfo("Select", "Load clip");
+        } else {
+            selectHeld.set(false);
+            oled.clearScreenDelayed();
+        }
+    }
+
+    private void handleFixedLengthButton(final boolean pressed) {
+        fixedLengthHeld.set(pressed);
+        if (pressed) {
+            oled.valueInfo("Last Step", "Target step");
+        } else {
+            oled.clearScreenDelayed();
+        }
+    }
+
+    private void handleCopyButton(final boolean pressed) {
+        if (pressed) {
+            copyHeld.set(true);
+            oled.valueInfo("Paste", "Clip target");
+        } else {
+            copyHeld.set(false);
+            oled.clearScreenDelayed();
+        }
+    }
+
+    private void handleDeleteButton(final boolean pressed) {
+        if (pressed) {
+            deleteHeld.set(true);
+            oled.valueInfo("Delete", "Clip / step target");
+        } else {
+            deleteHeld.set(false);
+            oled.clearScreenDelayed();
+        }
     }
 
     private void bindMainEncoder() {
