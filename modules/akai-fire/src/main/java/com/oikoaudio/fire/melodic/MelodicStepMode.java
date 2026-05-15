@@ -18,13 +18,9 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BankButtonBindings;
-import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.ButtonRowBindings;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
-import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -189,8 +185,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
         this.padSurface = new MelodicStepPadSurface(new MelodicPadCallbacks());
-        bindPads();
-        bindButtons();
+        new MelodicStepControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
@@ -198,8 +193,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.poolLayoutRootPitch = nearestPhraseRootPitch(phraseContext().baseMidiNote());
     }
 
-    private void bindPads() {
-        PadMatrixBindings.bindPressed(this, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
+    private MelodicStepControlBindings.Host melodicStepControlBindingsHost() {
+        return new MelodicStepControlBindings.Host() {
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed) {
                 padSurface.handlePadPress(padIndex, pressed);
@@ -209,39 +204,27 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             public RgbLigthState padLight(final int padIndex) {
                 return padSurface.getPadLight(padIndex);
             }
-        });
-    }
 
-    private void bindButtons() {
-        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
-                new BankButtonBindings.Host() {
-                    @Override
-                    public void handleBankButton(final boolean pressed, final int amount) {
-                        MelodicStepMode.this.handleBankButton(pressed, amount);
-                    }
-
-                    @Override
-                    public BiColorLightState bankLightState() {
-                        return MelodicStepMode.this.bankLightState();
-                    }
-                });
-
-        ButtonRowBindings.bindPressed(this, new BiColorButton[] {
-                driver.getButton(NoteAssign.MUTE_1),
-                driver.getButton(NoteAssign.MUTE_2),
-                driver.getButton(NoteAssign.MUTE_3),
-                driver.getButton(NoteAssign.MUTE_4)
-        }, new ButtonRowBindings.Host() {
             @Override
-            public void handleButton(final int index, final boolean pressed) {
+            public void handleBankButton(final boolean pressed, final int amount) {
+                MelodicStepMode.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return MelodicStepMode.this.bankLightState();
+            }
+
+            @Override
+            public void handleMuteButton(final int index, final boolean pressed) {
                 MelodicStepMode.this.handleMuteButton(index, pressed);
             }
 
             @Override
-            public BiColorLightState lightState(final int index) {
+            public BiColorLightState muteLightState(final int index) {
                 return MelodicStepMode.this.muteLightState(index);
             }
-        });
+        };
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {
