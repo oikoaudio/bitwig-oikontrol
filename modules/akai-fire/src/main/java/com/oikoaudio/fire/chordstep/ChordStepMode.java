@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.note.ChordInversion;
-import com.oikoaudio.fire.note.LiveVelocityLogic;
 import com.oikoaudio.fire.note.NoteGridLayout;
 
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
@@ -15,6 +14,7 @@ import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -58,8 +58,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
-    private static final int DEFAULT_CHORD_STANDARD_VELOCITY = ChordStepAccentEditor.STANDARD_VELOCITY;
-    private static final int DEFAULT_CHORD_ACCENTED_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
+    private static final int STANDARD_CHORD_VELOCITY = ChordStepAccentEditor.STANDARD_VELOCITY;
+    private static final int ACCENTED_CHORD_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
     private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
@@ -84,6 +84,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
     private final ChordStepAuditionController chordStepAudition;
+    private final VelocitySettings chordStepVelocity = new VelocitySettings(STANDARD_CHORD_VELOCITY, MIN_VELOCITY,
+            ACCENTED_CHORD_VELOCITY - 1, 100);
     private final ChordStepVisibleClipCache visibleClipCache = new ChordStepVisibleClipCache(STEP_COUNT);
     private final ChordStepFineNudgeState<ChordStepEventIndex.Event> fineNudgeState = new ChordStepFineNudgeState<>();
     private final ChordStepFineNudgeController<ChordStepEventIndex.Event> fineNudgeController;
@@ -106,8 +108,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private boolean noteStepActive = false;
     private Integer selectedPresetStepIndex = null;
-    private int chordVelocitySensitivity = 100;
-    private int defaultChordVelocity = DEFAULT_CHORD_STANDARD_VELOCITY;
     private int playingStep = -1;
     private RgbLigthState chordStepBaseColor = OCCUPIED_STEP;
     public ChordStepMode(final AkaiFireOikontrolExtension driver) {
@@ -815,8 +815,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void adjustDefaultChordVelocity(final int inc) {
-                ChordStepMode.this.adjustDefaultChordVelocity(inc);
+            public void adjustChordVelocityCenter(final int inc) {
+                ChordStepMode.this.adjustChordVelocityCenter(inc);
             }
 
             @Override
@@ -825,8 +825,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void resetChordVelocityDefaults() {
-                ChordStepMode.this.resetChordVelocityDefaults();
+            public void resetChordVelocityTargets() {
+                ChordStepMode.this.resetChordVelocityTargets();
             }
 
             @Override
@@ -1272,9 +1272,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private int currentChordVelocity(final int rawVelocity) {
         if (chordStepAccentControls.isActive()) {
-            return DEFAULT_CHORD_ACCENTED_VELOCITY;
+            return ACCENTED_CHORD_VELOCITY;
         }
-        return LiveVelocityLogic.resolveVelocity(defaultChordVelocity, chordVelocitySensitivity, rawVelocity);
+        return chordStepVelocity.resolveVelocity(rawVelocity);
     }
 
     private void toggleChordAccentForStep(final int stepIndex) {
@@ -1282,7 +1282,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         if (notesAtStep.isEmpty()) {
             return;
         }
-        final boolean targetAccent = chordStepAccentControls.toggleAccent(notesAtStep.values(), defaultChordVelocity);
+        final boolean targetAccent = chordStepAccentControls.toggleAccent(notesAtStep.values(),
+                chordStepVelocity.centerVelocity());
         chordStepAccentControls.markModified();
         oled.valueInfo("Accent", targetAccent ? "Accented" : "Normal");
     }
@@ -1293,14 +1294,16 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             oled.valueInfo("Accent", "No Step");
             return;
         }
-        final boolean targetAccent = chordStepAccentControls.toggleAccent(heldNotes, defaultChordVelocity);
+        final boolean targetAccent = chordStepAccentControls.toggleAccent(heldNotes,
+                chordStepVelocity.centerVelocity());
         chordStepPadSurface.markModifiedNotes(heldNotes);
         oled.valueInfo("Accent", targetAccent ? "Accented" : "Normal");
         driver.notifyPopup("Accent", targetAccent ? "Accented" : "Normal");
     }
 
     private boolean isChordStepAccented(final int stepIndex) {
-        return chordStepAccentControls.isStepAccented(chordStepEventIndex.noteStepsAt(stepIndex), defaultChordVelocity);
+        return chordStepAccentControls.isStepAccented(chordStepEventIndex.noteStepsAt(stepIndex),
+                chordStepVelocity.centerVelocity());
     }
 
     public void toggleSurfaceVariant() {
@@ -1693,37 +1696,31 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         return chordStepEncoderControls.layout();
     }
 
-    private void adjustDefaultChordVelocity(final int inc) {
-        final int nextVelocity = Math.max(MIN_VELOCITY,
-                Math.min(DEFAULT_CHORD_ACCENTED_VELOCITY - 1, defaultChordVelocity + inc));
-        if (nextVelocity == defaultChordVelocity) {
+    private void adjustChordVelocityCenter(final int inc) {
+        if (!chordStepVelocity.adjustCenterVelocity(inc)) {
             return;
         }
-        defaultChordVelocity = nextVelocity;
-        oled.paramInfo("Default Velocity", defaultChordVelocity, "Chord Step", MIN_VELOCITY,
-                DEFAULT_CHORD_ACCENTED_VELOCITY - 1);
+        oled.paramInfo("Velocity Center", chordStepVelocity.centerVelocity(), "Chord Step",
+                chordStepVelocity.minCenterVelocity(), chordStepVelocity.maxCenterVelocity());
     }
 
     private void adjustChordVelocitySensitivity(final int inc) {
-        final int nextSensitivity = LiveVelocityLogic.clampSensitivity(chordVelocitySensitivity + inc);
-        if (nextSensitivity == chordVelocitySensitivity) {
+        if (!chordStepVelocity.adjustSensitivity(inc)) {
             return;
         }
-        chordVelocitySensitivity = nextSensitivity;
-        oled.paramInfo("Velocity Sens", chordVelocitySensitivity, "Chord Step", 0, 100);
+        oled.paramInfo("Velocity Sens", chordStepVelocity.sensitivity(), "Chord Step", 0, 100);
     }
 
-    private void resetChordVelocityDefaults() {
-        defaultChordVelocity = DEFAULT_CHORD_STANDARD_VELOCITY;
-        chordVelocitySensitivity = 100;
+    private void resetChordVelocityTargets() {
+        chordStepVelocity.reset();
     }
 
     private void showChordVelocityInfo() {
         if (driver.isGlobalShiftHeld()) {
-            oled.valueInfo("Default Velocity", Integer.toString(defaultChordVelocity));
+            oled.valueInfo("Velocity Center", Integer.toString(chordStepVelocity.centerVelocity()));
             return;
         }
-        oled.valueInfo("Velocity", "Sens %d%% / Def %d".formatted(chordVelocitySensitivity, defaultChordVelocity));
+        oled.valueInfo("Velocity", chordStepVelocity.summary());
     }
 
     private void observeSelectedNoteClip() {

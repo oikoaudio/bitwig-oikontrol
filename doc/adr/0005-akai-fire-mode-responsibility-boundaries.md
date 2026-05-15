@@ -22,9 +22,13 @@ Adopt a shared Akai Fire mode-boundary vocabulary and apply it incrementally. Th
 ### Physical Control Boundary
 
 - `ControlBindings` / `PhysicalControls` owns the physical controller boundary for a mode: pads, encoders, the main/select knob, mode buttons, bank buttons, mute buttons, and other hardware inputs/lights that need binding to the mode's Bitwig `Layer`.
+- A mode-package `ControlBindings` class can look generic while still being mode-specific. Keep the hardware inventory, binding idioms, and reusable button-group mechanics centralized enough that new modes configure known controls rather than reimplementing raw bindings. Keep the mode's semantic host contract in the mode package when it names that mode's gestures, button meanings, light policies, or activation lifecycle.
+- Promote shared binding helpers for repeated physical-control mechanics or repeated configurable button groups. Do not promote a mode's semantic button contract merely because another mode uses the same physical buttons with different meanings.
+- Shared physical-control groups are acceptable when they describe the controller shape rather than a mode meaning, for example `PadMatrixBindings`, `BankButtonBindings`, and `ButtonRowBindings`.
 - `PadControls` is the pad-specific part of that boundary when the 64-pad matrix is complex enough to name separately: mapping raw pad indexes to regions, routing pad press/release input, and returning pad-light state.
 - `EncoderControls` owns mode-specific encoder page construction and encoder turn/touch behavior. Shared encoder binding infrastructure such as `StepSequencerEncoderHandler` remains separate from mode-specific encoder maps.
 - `ButtonControls` owns mode-specific button gestures when a group of buttons has a cohesive policy, for example chord-step bank, pattern, accent, step, or pitch-context buttons.
+- Velocity center and velocity sensitivity are shared control value concepts when they are encoder targets across modes. Keep the reusable math and state holder in `com.oikoaudio.fire.control` (`LiveVelocityLogic`, `VelocitySettings`), while each mode still supplies its own ranges, accent override, and OLED/popup wording.
 
 ### Interaction State And Routing
 
@@ -58,4 +62,5 @@ Accepted - incremental adoption in progress.
 - Melodic Step is the reference for current/base pattern state and generated-pattern clip writing, with pitch-pool and encoder controls still candidates for extraction.
 - Drum XOX should be used to check that the vocabulary also works for simple direct-step editing, especially before adding shared abstractions.
 - Shared helpers should emerge from repeated behavior in at least two real modes. Small behavior-specific helpers such as recurrence-row interaction are preferred over generic mode routers.
+- 2026-05-15 refinement: `ChordStepControlBindings` remains mode-owned because it maps shared physical controls onto Chord Step semantics, but this should not lead to scattered raw binding code. Shared binding mechanics belong in `control` or explicit reusable button-group helpers. Velocity center/sensitivity moved the other way: those targets recur across modes, so their shared policy belongs in `control`.
 - ADR 0002 remains the Launch Control XL controller-layer separation decision. This ADR records the later Akai Fire mode-level boundary vocabulary.

@@ -276,7 +276,7 @@ final class ChordStepEncoderControls {
                 encoder.bindEncoder(layer, inc -> {
                     handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
                     if (driver.isGlobalShiftHeld()) {
-                        host.adjustDefaultChordVelocity(inc);
+                        host.adjustChordVelocityCenter(inc);
                     } else {
                         host.adjustChordVelocitySensitivity(inc);
                     }
@@ -284,7 +284,7 @@ final class ChordStepEncoderControls {
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         handler.beginTouchReset(slotIndex, () -> {
-                            host.resetChordVelocityDefaults();
+                            host.resetChordVelocityTargets();
                             host.showChordVelocityInfo();
                         });
                         host.showChordVelocityInfo();
@@ -438,11 +438,11 @@ final class ChordStepEncoderControls {
 
         void showChordOctaveInfo();
 
-        void adjustDefaultChordVelocity(int inc);
+        void adjustChordVelocityCenter(int inc);
 
         void adjustChordVelocitySensitivity(int inc);
 
-        void resetChordVelocityDefaults();
+        void resetChordVelocityTargets();
 
         void showChordVelocityInfo();
 

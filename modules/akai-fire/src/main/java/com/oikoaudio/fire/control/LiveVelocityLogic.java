@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.control;
 
 public final class LiveVelocityLogic {
     private LiveVelocityLogic() {

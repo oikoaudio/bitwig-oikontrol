@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.control;
 
 import org.junit.jupiter.api.Test;
 
