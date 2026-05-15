@@ -25,8 +25,21 @@ public final class VelocitySettings {
         return LiveVelocityLogic.resolveVelocity(centerVelocity, sensitivity, rawVelocity);
     }
 
+    public int resolveVelocityFromCenter(final int centerVelocity, final int rawVelocity) {
+        return LiveVelocityLogic.resolveVelocity(centerVelocity, sensitivity, rawVelocity);
+    }
+
     public boolean adjustCenterVelocity(final int amount) {
         final int nextVelocity = clampCenterVelocity(centerVelocity + amount);
+        if (nextVelocity == centerVelocity) {
+            return false;
+        }
+        centerVelocity = nextVelocity;
+        return true;
+    }
+
+    public boolean setCenterVelocity(final int velocity) {
+        final int nextVelocity = clampCenterVelocity(velocity);
         if (nextVelocity == centerVelocity) {
             return false;
         }
@@ -40,6 +53,15 @@ public final class VelocitySettings {
             return false;
         }
         sensitivity = nextSensitivity;
+        return true;
+    }
+
+    public boolean setSensitivity(final int sensitivity) {
+        final int nextSensitivity = LiveVelocityLogic.clampSensitivity(sensitivity);
+        if (nextSensitivity == this.sensitivity) {
+            return false;
+        }
+        this.sensitivity = nextSensitivity;
         return true;
     }
 

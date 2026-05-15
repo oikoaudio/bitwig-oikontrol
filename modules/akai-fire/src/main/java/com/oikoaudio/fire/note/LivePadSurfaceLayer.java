@@ -23,11 +23,11 @@ import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
-import com.oikoaudio.fire.control.LiveVelocityLogic;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
+import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -145,8 +145,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean mainEncoderPressConsumed = false;
     private final boolean drumPadsOnly;
     private LiveNoteSubMode liveNoteSubMode = LiveNoteSubMode.MELODIC;
-    private int liveVelocity = DEFAULT_LIVE_VELOCITY;
-    private int liveVelocitySensitivity = 100;
+    private final VelocitySettings liveVelocity = new VelocitySettings(DEFAULT_LIVE_VELOCITY, MIN_VELOCITY,
+            MAX_MIDI_VALUE, 100);
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
     private int liveScaleDegreeGlissOffset = 0;
     private LivePitchGlissMode livePitchGlissMode = LivePitchGlissMode.FIFTH_OCTAVE;
@@ -347,7 +347,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void applyDefaultVelocitySensitivityPreference() {
-        liveVelocitySensitivity = driver.getDefaultVelocitySensitivityPreference();
+        liveVelocity.setSensitivity(driver.getDefaultVelocitySensitivityPreference());
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -626,21 +626,18 @@ public abstract class LivePadSurfaceLayer extends Layer {
         }
         liveControls.markEncoderAdjusted(encoderIndex);
         if (driver.isGlobalShiftHeld()) {
-            final int nextVelocity = Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, liveVelocity + steps));
-            if (nextVelocity == liveVelocity) {
+            if (!liveVelocity.adjustCenterVelocity(steps)) {
                 return;
             }
-            liveVelocity = nextVelocity;
             applyLiveVelocity();
-            oled.paramInfo("Default Velocity", liveVelocity, "Live Note", MIN_VELOCITY, MAX_MIDI_VALUE);
+            oled.paramInfo("Velocity Center", liveVelocity.centerVelocity(), "Live Note",
+                    liveVelocity.minCenterVelocity(), liveVelocity.maxCenterVelocity());
             return;
         }
-        final int nextSensitivity = LiveVelocityLogic.clampSensitivity(liveVelocitySensitivity + steps);
-        if (nextSensitivity == liveVelocitySensitivity) {
+        if (!liveVelocity.adjustSensitivity(steps)) {
             return;
         }
-        liveVelocitySensitivity = nextSensitivity;
-        oled.paramInfo("Velocity Sens", liveVelocitySensitivity, "Live Note", 0, 100);
+        oled.paramInfo("Velocity Sens", liveVelocity.sensitivity(), "Live Note", 0, 100);
     }
 
     private void handleDrumMachineLayoutEncoder(final int encoderIndex, final int inc) {
@@ -975,7 +972,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         if (pressed && isDrumMachineLiveMode() && handleDrumMachinePadPress(padIndex)) {
             return;
         }
-        notePlayController.handlePadPress(padIndex, pressed, velocity, liveVelocity);
+        notePlayController.handlePadPress(padIndex, pressed, velocity, liveVelocity.centerVelocity());
     }
 
     private boolean handleBongoSurfaceGate(final int padIndex, final boolean pressed) {
@@ -1443,7 +1440,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         livePadPerformer.retuneHeldPads(() -> {
             stateChange.run();
             applyLayout();
-        }, liveVelocity);
+        }, liveVelocity.centerVelocity());
     }
 
     private int[] getLivePadMidiNotes(final int padIndex) {
@@ -1478,7 +1475,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         if (isDrumMachineLiveMode() && drumMachineLayout == DrumMachinePadLayout.Layout.VELOCITY) {
             return drumMachineFixedVelocityForPad(padIndex);
         }
-        return LiveVelocityLogic.resolveVelocity(configuredVelocity, liveVelocitySensitivity, rawVelocity);
+        return liveVelocity.resolveVelocityFromCenter(configuredVelocity, rawVelocity);
     }
 
     private int resolveLivePadTimbre(final int padIndex) {
@@ -1502,7 +1499,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         final int rowFromTop = padIndex / NoteGridLayout.PAD_COLUMNS;
         final int rowFromBottom = NoteGridLayout.PAD_ROWS - 1 - rowFromTop;
         if (column < 4) {
-            return liveVelocity;
+            return liveVelocity.centerVelocity();
         }
         final int columnTier = Math.min(3, (column - 4) / 3);
         return Math.max(MIN_VELOCITY, Math.min(MAX_MIDI_VALUE, 36 + rowFromBottom * 22 + columnTier * 8));
@@ -1510,10 +1507,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private void showLiveVelocityInfo() {
         if (driver.isGlobalShiftHeld()) {
-            oled.valueInfo("Default Velocity", Integer.toString(liveVelocity));
+            oled.valueInfo("Velocity Center", Integer.toString(liveVelocity.centerVelocity()));
             return;
         }
-        oled.valueInfo("Velocity", "Sens %d%% / Def %d".formatted(liveVelocitySensitivity, liveVelocity));
+        oled.valueInfo("Velocity", liveVelocity.summary());
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -1767,10 +1764,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private void applyLiveVelocity() {
         final Integer[] velocityTable = new Integer[128];
         for (int i = 0; i < velocityTable.length; i++) {
-            velocityTable[i] = liveVelocity;
+            velocityTable[i] = liveVelocity.centerVelocity();
         }
         noteInput.setVelocityTranslationTable(velocityTable);
-        noteRepeatHandler.setNoteInputVelocity(liveVelocity);
+        noteRepeatHandler.setNoteInputVelocity(liveVelocity.centerVelocity());
     }
 
     @Override

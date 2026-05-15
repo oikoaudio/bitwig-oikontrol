@@ -16,6 +16,13 @@ class VelocitySettingsTest {
     }
 
     @Test
+    void resolvesRawVelocityThroughExplicitCenterAndCurrentSensitivity() {
+        final VelocitySettings settings = new VelocitySettings(100, 1, 126, 50);
+
+        assertEquals(96, settings.resolveVelocityFromCenter(64, 127));
+    }
+
+    @Test
     void clampsCenterVelocityToConfiguredRange() {
         final VelocitySettings settings = new VelocitySettings(100, 1, 126, 100);
 
@@ -31,6 +38,17 @@ class VelocitySettingsTest {
         assertTrue(settings.adjustSensitivity(-200));
         assertEquals(0, settings.sensitivity());
         assertFalse(settings.adjustSensitivity(-1));
+    }
+
+    @Test
+    void settersClampVelocityTargets() {
+        final VelocitySettings settings = new VelocitySettings(100, 1, 126, 100);
+
+        assertTrue(settings.setCenterVelocity(200));
+        assertTrue(settings.setSensitivity(-40));
+
+        assertEquals(126, settings.centerVelocity());
+        assertEquals(0, settings.sensitivity());
     }
 
     @Test

@@ -203,7 +203,7 @@ Hold one or more step pads, then use the timing gestures to move those held note
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 
-In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; the OLED shows the lower-left note as `Pad Low`, for example `C1`. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: default velocity. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
+In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; the OLED shows the lower-left note as `Pad Low`, for example `C1`. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
 | Encoder page | Encoders |
 | --- | --- |
@@ -275,7 +275,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Mod | Pitch Gliss | Velocity sensitivity / `SHIFT`: Default velocity | Shared scale / `ALT`: Shared root key / `SHIFT`: local layout |
+| `Channel` | Mod | Pitch Gliss | Velocity sensitivity / `SHIFT`: velocity center | Shared scale / `ALT`: Shared root key / `SHIFT`: local layout |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Aftertouch | Pressure | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
@@ -357,7 +357,7 @@ Press `STEP SEQ` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to retu
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave / `ALT`: shared root | Velocity sensitivity / `SHIFT`: default velocity | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: shared root |
+| `Channel` | Chord octave / `ALT`: shared root | Velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: shared root |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity edit | Note chance edit | Recurrence-oriented note editing | Recurrence-oriented note editing |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
