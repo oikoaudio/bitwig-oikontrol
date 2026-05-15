@@ -88,7 +88,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
     private final Set<Integer> auditioningNotes = new HashSet<>();
-    private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
+    private final ChordStepVisibleClipCache visibleClipCache = new ChordStepVisibleClipCache(STEP_COUNT);
     private final ChordStepFineNudgeState<ChordStepEventIndex.Event> fineNudgeState = new ChordStepFineNudgeState<>();
     private final ChordStepFineNudgeController<ChordStepEventIndex.Event> fineNudgeController;
     private final ChordStepFineNudgeWriter chordStepFineNudgeWriter;
@@ -973,26 +973,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void handleStepData(final int x, final int y, final int state) {
-        if (x < 0 || x >= STEP_COUNT) {
-            return;
-        }
-        updateStepCache(clipNotesByStep, x, y, state);
+        visibleClipCache.handleStepData(x, y, state);
     }
 
     private void handleObservedStepData(final int x, final int y, final int state) {
         chordStepEventIndex.handleObservedStepData(x, y, state);
-    }
-
-    private void updateStepCache(final Map<Integer, Set<Integer>> cache, final int x, final int y, final int state) {
-        final Set<Integer> stepNotes = cache.computeIfAbsent(x, ignored -> new HashSet<>());
-        if (state == NoteStep.State.Empty.ordinal()) {
-            stepNotes.remove(y);
-            if (stepNotes.isEmpty()) {
-                cache.remove(x);
-            }
-            return;
-        }
-        stepNotes.add(y);
     }
 
     private void handleNoteStepObject(final NoteStep noteStep) {
@@ -1803,7 +1788,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private boolean hasVisibleStepContent(final int stepIndex) {
-        return clipNotesByStep.containsKey(stepIndex) || chordStepEventIndex.hasVisibleStepContent(stepIndex);
+        return visibleClipCache.hasStepContent(stepIndex) || chordStepEventIndex.hasVisibleStepContent(stepIndex);
     }
 
     private boolean hasStepStartNote(final int stepIndex) {
@@ -1811,9 +1796,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private Set<Integer> bestAvailableStepNotes(final int stepIndex) {
-        final Set<Integer> visibleNotes = clipNotesByStep.get(stepIndex);
-        if (visibleNotes != null && !visibleNotes.isEmpty()) {
-            return new HashSet<>(visibleNotes);
+        final Set<Integer> visibleNotes = visibleClipCache.notesAtStep(stepIndex);
+        if (!visibleNotes.isEmpty()) {
+            return visibleNotes;
         }
         return chordStepEventIndex.notesAtStep(stepIndex);
     }
