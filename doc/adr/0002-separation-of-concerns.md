@@ -29,3 +29,4 @@ Accepted — refactor in progress and partially implemented (binding manager, dr
 - **Easier evolution:** Additional settings (e.g., future arp/drum options) can join `DrumSettings`/future `ArpSettings` without touching orchestration code; new LED schemes drop into renderers.
 - **Adapter reuse:** Pure helpers are hardware-agnostic; another controller could reuse them by providing its own binding manager and note/CC maps while keeping the orchestrator/controller shape. Full hardware support would still live in a separate extension module, but the domain/rendering pieces can be shared.
 - **Migration effort:** Some factory-only logic still lives in the main class; follow-up refactors should extract remaining binding/paint concerns similarly to keep symmetry with the arp module.
+- **Related Akai Fire work:** ADR 0005 records the later Akai Fire mode-level responsibility vocabulary that emerged from the Nested Rhythm, Melodic Step, and Chord Step refactors.
