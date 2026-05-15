@@ -55,12 +55,56 @@ def splitMarkdownTableRow = { String line ->
     trimmed.split(/\|/, -1).collect { it.trim() }
 }
 
+def tableClassForHeaders = { List<String> headers ->
+    if (headers == ['Encoder page', 'Encoder 1', 'Encoder 2', 'Encoder 3', 'Encoder 4']
+            || headers == ['Encoder page', 'Encoders']) {
+        return ' class="encoder-map"'
+    }
+    if (headers == ['Control', 'Action'] || headers == ['Left-side button', 'Action']) {
+        return ' class="control-map"'
+    }
+    return ''
+}
+
+def tableRowClassForCells = { List<String> headers, List<String> cells ->
+    if (cells.isEmpty()) {
+        return ''
+    }
+    def rowLabel = cells[0].replace('`', '').trim()
+    def dataCells = cells.drop(1).collect { it.replace('`', '').trim().toLowerCase(Locale.ROOT) }
+    def rowText = cells.join(' ').toLowerCase(Locale.ROOT)
+    if (headers[0] == 'Encoder page') {
+        def remotePage = rowText.contains('remote')
+        def mixerPage = rowLabel == 'Mixer' && (
+                rowText.contains('track volume') || rowText.contains('track pan')
+                        || rowText.contains('selected pad volume') || rowText.contains('selected pad pan')
+                        || rowText.contains('selected track volume') || rowText.contains('selected track pan')
+                        || dataCells == ['volume', 'pan', 'send 1', 'send 2']
+                        || dataCells == ['track volume', 'track pan', 'send 1', 'send 2']
+        )
+        if (remotePage || mixerPage) {
+            return ' class="encoder-shared"'
+        }
+        if (rowLabel == 'Channel') {
+            return ' class="encoder-primary"'
+        }
+        if (rowText.contains('expression') || rowText.contains('pressure') || rowText.contains('timbre')
+                || rowText.contains('aftertouch') || rowText.contains('velocity spread')
+                || rowText.contains('held-hit') || rowText.contains('chance')) {
+            return ' class="encoder-expression"'
+        }
+        return ' class="encoder-mode"'
+    }
+    return ''
+}
+
 def renderMarkdownToHtml = { String markdown ->
     def html = new StringBuilder()
     def lines = markdown.readLines()
     def paragraph = []
     def listStack = []
     def inTable = false
+    def tableHeaders = []
 
     def closeParagraph = {
         if (!paragraph.isEmpty()) {
@@ -128,7 +172,8 @@ def renderMarkdownToHtml = { String markdown ->
             closeAllLists()
             closeTable()
             def headers = splitMarkdownTableRow(trimmed)
-            html << '      <table>\n'
+            tableHeaders = headers
+            html << '      <table' << tableClassForHeaders(headers) << '>\n'
             html << '        <thead><tr>'
             headers.each { html << '<th>' << renderInlineMarkdown(it) << '</th>' }
             html << '</tr></thead>\n'
@@ -140,7 +185,7 @@ def renderMarkdownToHtml = { String markdown ->
 
         if (inTable && trimmed.startsWith('|')) {
             def cells = splitMarkdownTableRow(trimmed)
-            html << '          <tr>'
+            html << '          <tr' << tableRowClassForCells(tableHeaders, cells) << '>'
             cells.each { html << '<td>' << renderInlineMarkdown(it) << '</td>' }
             html << '</tr>\n'
             continue
@@ -199,6 +244,12 @@ def renderUserGuideDocument = { String markdown ->
       --line: #d7c2a8;
       --accent: #bb5a2a;
       --code: #f1ece4;
+      --primary-row: #e8f5ef;
+      --primary-line: #35835c;
+      --expression-row: #eef1fb;
+      --expression-line: #5369a6;
+      --shared-row: #f5f1ea;
+      --shared-line: #9b8670;
     }
     * { box-sizing: border-box; }
     body {
@@ -238,6 +289,61 @@ def renderUserGuideDocument = { String markdown ->
       vertical-align: top;
     }
     th { background: #f1e4d2; }
+    .encoder-map td:first-child {
+      width: 9.5rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .encoder-map tr.encoder-primary td {
+      background: var(--primary-row);
+      border-top-color: #b9d8c8;
+      border-bottom-color: #b9d8c8;
+    }
+    .encoder-map tr.encoder-primary td:first-child {
+      border-left: 5px solid var(--primary-line);
+    }
+    .encoder-map tr.encoder-expression td {
+      background: var(--expression-row);
+      border-top-color: #c5cce4;
+      border-bottom-color: #c5cce4;
+    }
+    .encoder-map tr.encoder-expression td:first-child {
+      border-left: 5px solid var(--expression-line);
+    }
+    .encoder-map tr.encoder-mode td {
+      background: #fffaf2;
+      border-top-color: #e3c9a7;
+      border-bottom-color: #e3c9a7;
+    }
+    .encoder-map tr.encoder-mode td:first-child {
+      border-left: 5px solid var(--accent);
+    }
+    .encoder-map tr.encoder-shared td {
+      background: var(--shared-row);
+      color: #43505b;
+      border-top-color: #d9cbb8;
+      border-bottom-color: #d9cbb8;
+    }
+    .encoder-map tr.encoder-shared td:first-child {
+      border-left: 5px solid var(--shared-line);
+    }
+    .encoder-map tr.encoder-primary td:first-child::after,
+    .encoder-map tr.encoder-expression td:first-child::after,
+    .encoder-map tr.encoder-mode td:first-child::after,
+    .encoder-map tr.encoder-shared td:first-child::after {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.68rem;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .encoder-map tr.encoder-primary td:first-child::after { content: "primary"; color: var(--primary-line); }
+    .encoder-map tr.encoder-expression td:first-child::after { content: "expression"; color: var(--expression-line); }
+    .encoder-map tr.encoder-mode td:first-child::after { content: "mode"; color: var(--accent); }
+    .encoder-map tr.encoder-shared td:first-child::after { content: "shared"; color: var(--shared-line); }
     code {
       background: var(--code);
       border-radius: 6px;

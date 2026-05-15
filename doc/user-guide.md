@@ -184,6 +184,13 @@ Global `SELECT` turn chords:
 | Row 2 | Visible drum slots |
 | Rows 3-4 | 32 visible steps for the selected lane |
 
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Note length | Chance | Velocity spread | Repeats |
+| `Mixer` | Selected pad volume | Selected pad pan | Selected pad send 1 | Selected pad send 2 |
+| `User 1` | Velocity or default velocity | Pressure or default pressure | Timbre or default timbre | Pitch expression |
+| `User 2` | Euclid length | Euclid pulses | Euclid rotation | Accent density |
+
 | Control | Action |
 | --- | --- |
 | `STEP` | Enter `Melodic Step` |
@@ -205,13 +212,6 @@ Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selecte
 
 In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; the OLED shows the lower-left note as `Pad Low`, for example `C1`. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
-| Encoder page | Encoders |
-| --- | --- |
-| `Channel` | Shared step-expression editing |
-| `Mixer` | Track volume, pan, send 1, send 2 |
-| `User 1` | Step behavior page |
-| `User 2` | Euclid length, pulses, rotation, accent density |
-
 ### Nested Rhythm mode
 
 `Nested Rhythm` is the second `DRUM` surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.
@@ -224,6 +224,15 @@ Entering the mode never overwrites an existing clip. If there is no selected cli
 | Rows 2-3 | 32-bin projected rhythm view |
 | Row 4 | First 16 generated hits in hit order, shown by velocity with playhead highlight |
 
+The `Channel` encoder page is the primary Nested Rhythm surface: it changes the generator structure. `User 1` and `User 2` shape generated or held-hit expression, while `Mixer` remains the shared track-control page.
+
+| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Channel` | Density / `ALT`: density direction / `SHIFT`: recurrence | Tuplet / `ALT`: Tup.Div / `SHIFT`: target phase | Ratchet / `ALT`: Rat.Div / `SHIFT`: target phase | Cluster / `ALT`: play start / `SHIFT`: rate |
+| `Mixer` | Volume | Pan | Send 1 | Send 2 |
+| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Chance / `ALT`: baseline / `SHIFT`: rotate |
+| `User 2` | Linear pitch | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate | Clip length / `ALT`: play start / `SHIFT`: rate | Reset hit edits / `ALT`: ratchet mode |
+
 | Control | Action |
 | --- | --- |
 | `DRUM` while in `XOX Drum mode` | Enter `Nested Rhythm mode` |
@@ -233,17 +242,10 @@ Entering the mode never overwrites an existing clip. If there is no selected cli
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold `MUTE_2` + projected rhythm pad | Set last step within the 32-step edit view |
-| Hold projected rhythm pad | Target nearest generated hit |
+| Hold projected rhythm pad | Hold the nearest generated hit for recurrence or expression editing |
 | Tap bottom-row hit pad | Toggle that hit |
 | Hold bottom-row hit pad + expression encoder | Edit that hit directly |
 | `SHIFT` + hit pad | Reset that hit's local edits |
-
-| Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
-| --- | --- | --- | --- | --- |
-| `Channel` | Density / `ALT`: density direction / `SHIFT`: recurrence | Tuplet / `ALT`: Tup.Div / `SHIFT`: target phase | Ratchet / `ALT`: Rat.Div / `SHIFT`: target phase | Cluster / `ALT`: play start / `SHIFT`: rate |
-| `Mixer` | Volume | Pan | Send 1 | Send 2 |
-| `User 1` | Velocity spread or held-hit velocity / `ALT`: center / `SHIFT`: rotate | Pressure spread or held-hit pressure / `ALT`: center / `SHIFT`: rotate | Timbre spread or held-hit timbre / `ALT`: center / `SHIFT`: rotate | Chance / `ALT`: baseline / `SHIFT`: rotate |
-| `User 2` | Linear pitch | Pitch Expr spread or held-hit pitch expr / `ALT`: center / `SHIFT`: rotate | Clip length / `ALT`: play start / `SHIFT`: rate | Reset hit edits / `ALT`: ratchet mode |
 
 Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. `Clip length` adjusts from that DAW value, and `ALT + BANK LEFT/RIGHT` halves or doubles it.
 

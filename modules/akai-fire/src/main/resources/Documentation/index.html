@@ -13,6 +13,12 @@
       --line: #d7c2a8;
       --accent: #bb5a2a;
       --code: #f1ece4;
+      --primary-row: #e8f5ef;
+      --primary-line: #35835c;
+      --expression-row: #eef1fb;
+      --expression-line: #5369a6;
+      --shared-row: #f5f1ea;
+      --shared-line: #9b8670;
     }
     * { box-sizing: border-box; }
     body {
@@ -52,6 +58,61 @@
       vertical-align: top;
     }
     th { background: #f1e4d2; }
+    .encoder-map td:first-child {
+      width: 9.5rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .encoder-map tr.encoder-primary td {
+      background: var(--primary-row);
+      border-top-color: #b9d8c8;
+      border-bottom-color: #b9d8c8;
+    }
+    .encoder-map tr.encoder-primary td:first-child {
+      border-left: 5px solid var(--primary-line);
+    }
+    .encoder-map tr.encoder-expression td {
+      background: var(--expression-row);
+      border-top-color: #c5cce4;
+      border-bottom-color: #c5cce4;
+    }
+    .encoder-map tr.encoder-expression td:first-child {
+      border-left: 5px solid var(--expression-line);
+    }
+    .encoder-map tr.encoder-mode td {
+      background: #fffaf2;
+      border-top-color: #e3c9a7;
+      border-bottom-color: #e3c9a7;
+    }
+    .encoder-map tr.encoder-mode td:first-child {
+      border-left: 5px solid var(--accent);
+    }
+    .encoder-map tr.encoder-shared td {
+      background: var(--shared-row);
+      color: #43505b;
+      border-top-color: #d9cbb8;
+      border-bottom-color: #d9cbb8;
+    }
+    .encoder-map tr.encoder-shared td:first-child {
+      border-left: 5px solid var(--shared-line);
+    }
+    .encoder-map tr.encoder-primary td:first-child::after,
+    .encoder-map tr.encoder-expression td:first-child::after,
+    .encoder-map tr.encoder-mode td:first-child::after,
+    .encoder-map tr.encoder-shared td:first-child::after {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.68rem;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .encoder-map tr.encoder-primary td:first-child::after { content: "primary"; color: var(--primary-line); }
+    .encoder-map tr.encoder-expression td:first-child::after { content: "expression"; color: var(--expression-line); }
+    .encoder-map tr.encoder-mode td:first-child::after { content: "mode"; color: var(--accent); }
+    .encoder-map tr.encoder-shared td:first-child::after { content: "shared"; color: var(--shared-line); }
     code {
       background: var(--code);
       border-radius: 6px;
@@ -199,7 +260,7 @@
       <p>Shared pitch context is global across <code>NOTE</code>, <code>Melodic Step</code>, <code>Chord Step</code>, and the settings overlay. <code>Root Key</code>, <code>Scale</code>, and <code>Octave</code> changes in one of those places update the others.</p>
       <p>Pad colors in <code>DRUM</code> and <code>PERFORM</code> follow Bitwig track, drum-lane, and clip colors. <code>Pad Brightness</code> and <code>Pad Saturation</code> control how strongly those project colors translate to the Fire LEDs.</p>
       <h3>Shared controls</h3>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>PLAY</code></td><td>Toggle transport, with retrigger-on-start behavior</td></tr>
@@ -231,7 +292,7 @@
       <h3>Main SELECT encoder</h3>
       <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
       <p>Global <code>SELECT</code> turn chords:</p>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td>Hold <code>PATTERN</code> + turn <code>SELECT</code></td><td>Move the play position by the current meter's beat unit</td></tr>
@@ -261,7 +322,16 @@
           <tr><td>Rows 3-4</td><td>32 visible steps for the selected lane</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="encoder-map">
+        <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
+        <tbody>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Note length</td><td>Chance</td><td>Velocity spread</td><td>Repeats</td></tr>
+          <tr class="encoder-shared"><td><code>Mixer</code></td><td>Selected pad volume</td><td>Selected pad pan</td><td>Selected pad send 1</td><td>Selected pad send 2</td></tr>
+          <tr class="encoder-expression"><td><code>User 1</code></td><td>Velocity or default velocity</td><td>Pressure or default pressure</td><td>Timbre or default timbre</td><td>Pitch expression</td></tr>
+          <tr class="encoder-mode"><td><code>User 2</code></td><td>Euclid length</td><td>Euclid pulses</td><td>Euclid rotation</td><td>Accent density</td></tr>
+      </tbody>
+      </table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code></td></tr>
@@ -281,15 +351,6 @@
       <p>Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.</p>
       <p>Hold <code>MUTE_3</code> and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.</p>
       <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; the OLED shows the lower-left note as <code>Pad Low</code>, for example <code>C1</code>. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: velocity center. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
-      <table>
-        <thead><tr><th>Encoder page</th><th>Encoders</th></tr></thead>
-        <tbody>
-          <tr><td><code>Channel</code></td><td>Shared step-expression editing</td></tr>
-          <tr><td><code>Mixer</code></td><td>Track volume, pan, send 1, send 2</td></tr>
-          <tr><td><code>User 1</code></td><td>Step behavior page</td></tr>
-          <tr><td><code>User 2</code></td><td>Euclid length, pulses, rotation, accent density</td></tr>
-      </tbody>
-      </table>
       <h3>Nested Rhythm mode</h3>
       <p><code>Nested Rhythm</code> is the second <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>
       <p>Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press <code>PATTERN DOWN</code> to overwrite and claim the clip for Nested Rhythm editing.</p>
@@ -301,7 +362,17 @@
           <tr><td>Row 4</td><td>First 16 generated hits in hit order, shown by velocity with playhead highlight</td></tr>
       </tbody>
       </table>
-      <table>
+      <p>The <code>Channel</code> encoder page is the primary Nested Rhythm surface: it changes the generator structure. <code>User 1</code> and <code>User 2</code> shape generated or held-hit expression, while <code>Mixer</code> remains the shared track-control page.</p>
+      <table class="encoder-map">
+        <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
+        <tbody>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Density / <code>ALT</code>: density direction / <code>SHIFT</code>: recurrence</td><td>Tuplet / <code>ALT</code>: Tup.Div / <code>SHIFT</code>: target phase</td><td>Ratchet / <code>ALT</code>: Rat.Div / <code>SHIFT</code>: target phase</td><td>Cluster / <code>ALT</code>: play start / <code>SHIFT</code>: rate</td></tr>
+          <tr class="encoder-shared"><td><code>Mixer</code></td><td>Volume</td><td>Pan</td><td>Send 1</td><td>Send 2</td></tr>
+          <tr class="encoder-expression"><td><code>User 1</code></td><td>Velocity spread or held-hit velocity / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Pressure spread or held-hit pressure / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Timbre spread or held-hit timbre / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Chance / <code>ALT</code>: baseline / <code>SHIFT</code>: rotate</td></tr>
+          <tr class="encoder-expression"><td><code>User 2</code></td><td>Linear pitch</td><td>Pitch Expr spread or held-hit pitch expr / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Clip length / <code>ALT</code>: play start / <code>SHIFT</code>: rate</td><td>Reset hit edits / <code>ALT</code>: ratchet mode</td></tr>
+      </tbody>
+      </table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>DRUM</code> while in <code>XOX Drum mode</code></td><td>Enter <code>Nested Rhythm mode</code></td></tr>
@@ -311,19 +382,10 @@
           <tr><td><code>PATTERN DOWN</code></td><td>Generate current nested rhythm into the selected clip</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
           <tr><td>Hold <code>MUTE_2</code> + projected rhythm pad</td><td>Set last step within the 32-step edit view</td></tr>
-          <tr><td>Hold projected rhythm pad</td><td>Target nearest generated hit</td></tr>
+          <tr><td>Hold projected rhythm pad</td><td>Hold the nearest generated hit for recurrence or expression editing</td></tr>
           <tr><td>Tap bottom-row hit pad</td><td>Toggle that hit</td></tr>
           <tr><td>Hold bottom-row hit pad + expression encoder</td><td>Edit that hit directly</td></tr>
           <tr><td><code>SHIFT</code> + hit pad</td><td>Reset that hit's local edits</td></tr>
-      </tbody>
-      </table>
-      <table>
-        <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
-        <tbody>
-          <tr><td><code>Channel</code></td><td>Density / <code>ALT</code>: density direction / <code>SHIFT</code>: recurrence</td><td>Tuplet / <code>ALT</code>: Tup.Div / <code>SHIFT</code>: target phase</td><td>Ratchet / <code>ALT</code>: Rat.Div / <code>SHIFT</code>: target phase</td><td>Cluster / <code>ALT</code>: play start / <code>SHIFT</code>: rate</td></tr>
-          <tr><td><code>Mixer</code></td><td>Volume</td><td>Pan</td><td>Send 1</td><td>Send 2</td></tr>
-          <tr><td><code>User 1</code></td><td>Velocity spread or held-hit velocity / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Pressure spread or held-hit pressure / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Timbre spread or held-hit timbre / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Chance / <code>ALT</code>: baseline / <code>SHIFT</code>: rotate</td></tr>
-          <tr><td><code>User 2</code></td><td>Linear pitch</td><td>Pitch Expr spread or held-hit pitch expr / <code>ALT</code>: center / <code>SHIFT</code>: rotate</td><td>Clip length / <code>ALT</code>: play start / <code>SHIFT</code>: rate</td><td>Reset hit edits / <code>ALT</code>: ratchet mode</td></tr>
       </tbody>
       </table>
       <p>Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. <code>Clip length</code> adjusts from that DAW value, and <code>ALT + BANK LEFT/RIGHT</code> halves or doubles it.</p>
@@ -349,13 +411,13 @@
           <tr><td><code>KNOB MODE</code></td><td>Cycle live-note encoder pages</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Mod</td><td>Pitch Gliss</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Shared scale / <code>ALT</code>: Shared root key / <code>SHIFT</code>: local layout</td></tr>
-          <tr><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
-          <tr><td><code>User 1</code></td><td>Aftertouch</td><td>Pressure</td><td>Timbre</td><td>Pitch expression</td></tr>
-          <tr><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Mod</td><td>Pitch Gliss</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Shared scale / <code>ALT</code>: Shared root key / <code>SHIFT</code>: local layout</td></tr>
+          <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
+          <tr class="encoder-expression"><td><code>User 1</code></td><td>Aftertouch</td><td>Pressure</td><td>Timbre</td><td>Pitch expression</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
       </tbody>
       </table>
       <h3>Melodic Step mode</h3>
@@ -368,7 +430,7 @@
           <tr><td>Rows 3-4</td><td>32-step melodic phrase</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td>Tap pitch-pool pad</td><td>Add / remove that pitch</td></tr>
@@ -383,7 +445,7 @@
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Left-side button</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>MUTE_1</code></td><td>Select clip without launch</td></tr>
@@ -393,13 +455,13 @@
           <tr><td><code>SHIFT + MUTE_4</code> on clip pad</td><td>Remove clip object</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Engine / <code>ALT</code>: subtype</td><td>Density</td><td>Pitch-pool octave / <code>ALT</code>: shared root</td><td>Mutation type / <code>ALT</code>: strength</td></tr>
-          <tr><td><code>Mixer</code></td><td>Halve / double length</td><td>Swivel / Mirror x2</td><td>Reverse</td><td>Invert down / up</td></tr>
-          <tr><td><code>User 1</code></td><td>Engine macro</td><td>Tension</td><td>Legato</td><td>Recurrence span helper</td></tr>
-          <tr><td><code>User 2</code></td><td>Selected or held step octave</td><td>Gate</td><td>Velocity</td><td>Articulation</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Engine / <code>ALT</code>: subtype</td><td>Density</td><td>Pitch-pool octave / <code>ALT</code>: shared root</td><td>Mutation type / <code>ALT</code>: strength</td></tr>
+          <tr class="encoder-mode"><td><code>Mixer</code></td><td>Halve / double length</td><td>Swivel / Mirror x2</td><td>Reverse</td><td>Invert down / up</td></tr>
+          <tr class="encoder-mode"><td><code>User 1</code></td><td>Engine macro</td><td>Tension</td><td>Legato</td><td>Recurrence span helper</td></tr>
+          <tr class="encoder-mode"><td><code>User 2</code></td><td>Selected or held step octave</td><td>Gate</td><td>Velocity</td><td>Articulation</td></tr>
       </tbody>
       </table>
       <p>Current generator modes are <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Rolling</code>, and <code>Octave</code>. If you manually edit the pitch pool, it becomes user-owned and is not auto-replaced on mode switch.</p>
@@ -415,7 +477,7 @@
           <tr><td>Rows 3-4</td><td>32 visible steps</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td>Tap empty step</td><td>Place selected chord</td></tr>
@@ -429,7 +491,7 @@
           <tr><td><code>SHIFT + BANK LEFT/RIGHT</code></td><td>Experimental micro-timing nudge for visible chord material</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Left-side button</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>MUTE_1</code></td><td>Select / load step</td></tr>
@@ -440,20 +502,20 @@
           <tr><td><code>SHIFT + ALT + MUTE_4</code></td><td>Invert chord in the opposite direction</td></tr>
       </tbody>
       </table>
-      <table>
+      <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: shared root</td></tr>
-          <tr><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
-          <tr><td><code>User 1</code></td><td>Note velocity edit</td><td>Note chance edit</td><td>Recurrence-oriented note editing</td><td>Recurrence-oriented note editing</td></tr>
-          <tr><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: shared root</td></tr>
+          <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
+          <tr class="encoder-expression"><td><code>User 1</code></td><td>Note velocity edit</td><td>Note chance edit</td><td>Recurrence-oriented note editing</td><td>Recurrence-oriented note editing</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
       </tbody>
       </table>
       <p>Chord banks are static libraries of chord formulas and voicing variants. Changing shared <code>Root Key</code> or <code>Scale</code> does not switch bank, page, or slot; it only changes how the selected slot is rendered. <code>As Is</code> transposes the stored chord shape from the current root. <code>In Scale</code> rebuilds that slot from the current shared scale and root.</p>
       <p>Coarse nudge is intentionally disabled in <code>Chord Step</code>; micro-timing is currently temperamental and should be treated as experimental.</p>
       <h3>Fugue mode</h3>
       <p>Press <code>STEP</code> from <code>Chord Step</code> to enter <code>Fugue</code>. <code>Fugue</code> treats MIDI channel 1 as the source line and generates related lines on channels 2-4.</p>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>PATTERN DOWN</code></td><td>Reread channel 1 from the clip and rebuild derived lines</td></tr>
@@ -466,7 +528,7 @@
       <h3>PERFORM mode</h3>
       <p><code>PERFORM</code> is the 16x4 clip-launch and performance surface. Filled slots select and launch. Empty slots create a new clip using <code>Default Clip Length</code>, then launch.</p>
       <p><code>Perform Clip Launcher Layout</code> chooses whether the mode starts as <code>PerformV</code> or <code>PerformH</code>. <code>ALT + PERFORM</code> still toggles the layout for the current session.</p>
-      <table>
+      <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>REC</code> + pad</td><td>Record into the targeted launcher slot using <code>Default Clip Length</code></td></tr>
@@ -490,13 +552,13 @@
       <p>The <code>Scene Launch</code> page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold <code>MUTE_1</code> and press a scene pad to select it as the scene copy source, hold <code>MUTE_3</code> and press a scene pad to copy the selected scene to that target, and hold <code>MUTE_4</code> and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. <code>MUTE_2</code> is unused on this page.</p>
       <p>On <code>Scene Launch</code>, <code>BANK LEFT/RIGHT</code> also scrolls the visible scene window, with <code>SHIFT + BANK LEFT/RIGHT</code> scrolling by one scene.</p>
       <p>On remote encoder pages, hold <code>ALT</code> while turning an encoder to control remotes 5-8 on the same page.</p>
-      <table>
+      <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Project Remote 1</td><td>Project Remote 2</td><td>Project Remote 3</td><td>Project Remote 4</td></tr>
-          <tr><td><code>Mixer</code></td><td>Selected track volume</td><td>Selected track pan</td><td>Selected track send 1</td><td>Selected track send 2</td></tr>
-          <tr><td><code>User 1</code></td><td>Selected track remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
-          <tr><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>Channel</code></td><td>Project Remote 1</td><td>Project Remote 2</td><td>Project Remote 3</td><td>Project Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>Mixer</code></td><td>Selected track volume</td><td>Selected track pan</td><td>Selected track send 1</td><td>Selected track send 2</td></tr>
+          <tr class="encoder-shared"><td><code>User 1</code></td><td>Selected track remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
       </tbody>
       </table>
       <h2>Preferences</h2>
