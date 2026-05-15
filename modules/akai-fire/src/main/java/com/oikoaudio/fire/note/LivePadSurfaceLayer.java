@@ -19,14 +19,12 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BankButtonBindings;
 import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.ButtonRowBindings;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.control.VelocitySettings;
@@ -296,7 +294,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             noteTranslationTable[i] = -1;
         }
 
-        bindPads();
+        bindPadBankRowControls();
         bindButtons();
         bindEncoders();
         applyDefaultLayoutPreference();
@@ -355,8 +353,13 @@ public abstract class LivePadSurfaceLayer extends Layer {
     public void notifyBlink(final int blinkTicks) {
     }
 
-    private void bindPads() {
-        PadMatrixBindings.bindPressedVelocity(this, driver.getRgbButtons(), new PadMatrixBindings.Host() {
+    private void bindPadBankRowControls() {
+        PadBankRowControlBindings.velocitySensitivePads(driver, this, new PadBankRowControlBindings.Host() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed) {
+                LivePadSurfaceLayer.this.handlePadPress(padIndex, pressed, 0);
+            }
+
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
                 LivePadSurfaceLayer.this.handlePadPress(padIndex, pressed, velocity);
@@ -366,44 +369,31 @@ public abstract class LivePadSurfaceLayer extends Layer {
             public RgbLigthState padLight(final int padIndex) {
                 return LivePadSurfaceLayer.this.getPadLight(padIndex);
             }
-        });
-    }
 
-    private void bindButtons() {
-        final BiColorButton stepSeqButton = driver.getButton(NoteAssign.STEP_SEQ);
-        stepSeqButton.bindPressed(this, this::handleStepSeqPressed, this::getStepSeqLightState);
-
-        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
-                new BankButtonBindings.Host() {
-                    @Override
-                    public void handleBankButton(final boolean pressed, final int amount) {
-                        LivePadSurfaceLayer.this.handleBankButton(pressed, amount);
-                    }
-
-                    @Override
-                    public BiColorLightState bankLightState() {
-                        return LivePadSurfaceLayer.this.getBankLightState();
-                    }
-                });
-
-        final BiColorButton[] muteButtons = {
-                driver.getButton(NoteAssign.MUTE_1),
-                driver.getButton(NoteAssign.MUTE_2),
-                driver.getButton(NoteAssign.MUTE_3),
-                driver.getButton(NoteAssign.MUTE_4)
-        };
-        ButtonRowBindings.bindPressed(this, muteButtons, new ButtonRowBindings.Host() {
             @Override
-            public void handleButton(final int index, final boolean pressed) {
+            public void handleBankButton(final boolean pressed, final int amount) {
+                LivePadSurfaceLayer.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return LivePadSurfaceLayer.this.getBankLightState();
+            }
+
+            @Override
+            public void handleRowButton(final int index, final boolean pressed) {
                 LivePadSurfaceLayer.this.handleMuteButton(index, pressed);
             }
 
             @Override
-            public BiColorLightState lightState(final int index) {
+            public BiColorLightState rowLightState(final int index) {
                 return LivePadSurfaceLayer.this.muteLightState(index);
             }
-        });
+        }, new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.STEP_SEQ,
+                this::handleStepSeqPressed, this::getStepSeqLightState)).bind();
+    }
 
+    private void bindButtons() {
         final BiColorButton knobModeButton = driver.getButton(NoteAssign.KNOB_MODE);
         knobModeButton.bindPressed(liveModeControlLayer, this::handleLiveModeAdvance, this::getLiveModeLightState);
     }

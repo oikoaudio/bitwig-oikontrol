@@ -13,13 +13,28 @@ public final class PadBankRowControlBindings {
     private final AkaiFireOikontrolExtension driver;
     private final Layer layer;
     private final Host host;
+    private final boolean velocitySensitivePads;
     private final ExtraButtonBinding[] extraButtonBindings;
 
     public PadBankRowControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host,
                                      final ExtraButtonBinding... extraButtonBindings) {
+        this(driver, layer, host, false, extraButtonBindings);
+    }
+
+    public static PadBankRowControlBindings velocitySensitivePads(final AkaiFireOikontrolExtension driver,
+                                                                  final Layer layer,
+                                                                  final Host host,
+                                                                  final ExtraButtonBinding... extraButtonBindings) {
+        return new PadBankRowControlBindings(driver, layer, host, true, extraButtonBindings);
+    }
+
+    private PadBankRowControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host,
+                                      final boolean velocitySensitivePads,
+                                      final ExtraButtonBinding... extraButtonBindings) {
         this.driver = driver;
         this.layer = layer;
         this.host = host;
+        this.velocitySensitivePads = velocitySensitivePads;
         this.extraButtonBindings = extraButtonBindings;
     }
 
@@ -29,6 +44,20 @@ public final class PadBankRowControlBindings {
     }
 
     private void bindPads() {
+        if (velocitySensitivePads) {
+            PadMatrixBindings.bindPressedVelocity(layer, driver.getRgbButtons(), new PadMatrixBindings.Host() {
+                @Override
+                public void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
+                    host.handlePadPress(padIndex, pressed, velocity);
+                }
+
+                @Override
+                public RgbLigthState padLight(final int padIndex) {
+                    return host.padLight(padIndex);
+                }
+            });
+            return;
+        }
         PadMatrixBindings.bindPressed(layer, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed) {
@@ -79,6 +108,10 @@ public final class PadBankRowControlBindings {
 
     public interface Host {
         void handlePadPress(int padIndex, boolean pressed);
+
+        default void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
+            handlePadPress(padIndex, pressed);
+        }
 
         RgbLigthState padLight(int padIndex);
 
