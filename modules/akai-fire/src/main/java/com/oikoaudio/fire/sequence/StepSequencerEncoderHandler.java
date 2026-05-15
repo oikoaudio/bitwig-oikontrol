@@ -238,6 +238,7 @@ public class StepSequencerEncoderHandler extends Layer {
 				handleIncDouble(inc, accessor, notes, note, first);
 			}
 		}
+        parent.registerModifiedSteps(notes);
 	}
 
 	private NoteOccurrence incrementOccurence(final int inc, final NoteStep note) {
