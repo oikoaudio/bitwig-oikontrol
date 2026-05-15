@@ -28,6 +28,7 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.chordstep.ChordStepAccentControls;
 import com.oikoaudio.fire.chordstep.ChordStepAccentEditor;
+import com.oikoaudio.fire.chordstep.ChordStepBuilderController;
 import com.oikoaudio.fire.chordstep.ChordStepChordSelection;
 import com.oikoaudio.fire.chordstep.ChordStepClipController;
 import com.oikoaudio.fire.chordstep.ChordStepClipEditor;
@@ -38,6 +39,7 @@ import com.oikoaudio.fire.chordstep.ChordStepFineNudgeController;
 import com.oikoaudio.fire.chordstep.ChordStepFineNudgeState;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepObservedState;
+import com.oikoaudio.fire.chordstep.ChordStepPadLightRenderer;
 import com.oikoaudio.fire.chordstep.ChordStepPadController;
 import com.oikoaudio.fire.chordstep.ChordStepPadSurface;
 import com.oikoaudio.fire.control.BiColorButton;
@@ -148,8 +150,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final RgbLigthState EMPTY_STEP_B = RgbLigthState.GRAY_2;
     private static final RgbLigthState OCCUPIED_STEP = new RgbLigthState(0, 90, 38, true);
     private static final RgbLigthState HELD_STEP = new RgbLigthState(120, 88, 0, true);
-    private static final RgbLigthState SELECTED_CHORD = new RgbLigthState(110, 24, 118, true);
-    private static final RgbLigthState SELECTED_BUILDER_NOTE = new RgbLigthState(88, 18, 127, true);
     private static final RgbLigthState DEFERRED_TOP = new RgbLigthState(110, 38, 0, true);
     private static final RgbLigthState DEFERRED_BOTTOM = new RgbLigthState(36, 16, 0, true);
 
@@ -162,8 +162,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
     private final ChordStepPadController chordStepPadController;
+    private final ChordStepPadLightRenderer chordStepPadLightRenderer;
     private final ChordStepAccentControls chordStepAccentControls;
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
+    private final ChordStepBuilderController chordBuilder;
     private final Set<Integer> auditioningNotes = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
     private final ChordStepObservedState observedChordStepState = new ChordStepObservedState();
@@ -239,7 +241,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private boolean inKey = false;
     private boolean noteStepActive = false;
     private boolean mainEncoderPressConsumed = false;
-    private boolean builderInKey = true;
     private final boolean drumPadsOnly;
     private LiveNoteSubMode liveNoteSubMode = LiveNoteSubMode.MELODIC;
     private NoteStepSubMode currentStepSubMode = NoteStepSubMode.CHORD_STEP;
@@ -332,6 +333,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
+        this.chordBuilder = new ChordStepBuilderController(chordSelection, pitchContext,
+                this::getBuilderFirstVisibleMidiNote, CHORD_SOURCE_PAD_COUNT);
         this.chordStepPadController = new ChordStepPadController(chordStepPadSurface,
                 CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
         this.noteInput = driver.getNoteInput();
@@ -479,6 +482,18 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.chordStepController = new ChordStepController(chordStepEditControls, chordStepClipController, chordStepObservationController);
         chordStepController.observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
+        this.chordStepPadLightRenderer = new ChordStepPadLightRenderer(
+                chordStepPadSurface,
+                chordBuilder,
+                chordSelection,
+                clipHandler::getPadLight,
+                this::getHeldNotes,
+                this::getChordOccupiedStepColor,
+                chordStepPosition::getAvailableSteps,
+                () -> playingStep,
+                this::hasVisibleStepContent,
+                stepIndex -> hasVisibleStepContent(stepIndex) && isChordStepAccented(stepIndex),
+                this::isChordStepSustained);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
 
@@ -2430,9 +2445,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void toggleBuilderLayout() {
-        builderInKey = !builderInKey;
-        oled.valueInfo("Builder Layout", builderInKey ? "In Key" : "Chromatic");
-        driver.notifyPopup("Builder Layout", builderInKey ? "In Key" : "Chromatic");
+        chordBuilder.toggleLayout();
+        oled.valueInfo("Builder Layout", chordBuilder.layoutDisplayName());
+        driver.notifyPopup("Builder Layout", chordBuilder.layoutDisplayName());
     }
 
     public BiColorLightState getModeButtonLightState() {
@@ -2852,53 +2867,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private RgbLigthState getChordStepPadLight(final int padIndex) {
-        if (padIndex < CLIP_ROW_PAD_COUNT) {
-            if (chordStepPadSurface.shouldShowRecurrenceRow()) {
-                return chordStepRecurrencePadLight(padIndex);
-            }
-            return clipHandler.getPadLight(padIndex);
-        }
-        if (padIndex < STEP_PAD_OFFSET) {
-            final int sourcePadIndex = padIndex - CHORD_SOURCE_PAD_OFFSET;
-            if (isBuilderFamily()) {
-                return getBuilderSourcePadLight(sourcePadIndex);
-            }
-            if (!chordSelection.hasSlot(sourcePadIndex)) {
-                return RgbLigthState.OFF;
-            }
-            final ChordBank.Slot slot = chordSelection.slot(sourcePadIndex);
-            final int groupIndex = sourcePadIndex / 8;
-            final RgbLigthState grouped = getFamilyGroupColor(slot.family(), groupIndex, chordSelection.page(),
-                    currentChordPageCount());
-            return sourcePadIndex == chordSelection.selectedSlot() ? SELECTED_CHORD : grouped.getDimmed();
-        }
-        final int stepIndex = padIndex - STEP_PAD_OFFSET;
-        final boolean occupied = hasVisibleStepContent(stepIndex);
-        final boolean accented = occupied && isChordStepAccented(stepIndex);
-        final boolean sustained = !occupied && isChordStepSustained(stepIndex);
-        return chordStepPadSurface.stepPadLight(stepIndex, chordStepPosition.getAvailableSteps(), occupied, accented,
-                sustained, playingStep, getChordOccupiedStepColor(), getChordSustainedStepColor(), HELD_STEP);
-    }
-
-    private RgbLigthState chordStepRecurrencePadLight(final int padIndex) {
-        final List<NoteStep> targets = getHeldNotes();
-        if (targets.isEmpty()) {
-            return clipHandler.getPadLight(padIndex);
-        }
-        return chordStepPadSurface.recurrencePadLight(padIndex, targets,
-                chordStepBaseColor != null ? chordStepBaseColor : OCCUPIED_STEP,
-                clipHandler.getPadLight(padIndex));
-    }
-
-    private RgbLigthState getBuilderSourcePadLight(final int padIndex) {
-        final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
-        if (midiNote < 0) {
-            return RgbLigthState.OFF;
-        }
-        if (chordSelection.isBuilderNoteSelected(midiNote)) {
-            return SELECTED_BUILDER_NOTE;
-        }
-        return getBuilderBasePadLight(padIndex);
+        return chordStepPadLightRenderer.padLight(padIndex, CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET,
+                STEP_PAD_OFFSET);
     }
 
     private RgbLigthState getChordOccupiedStepColor() {
@@ -2906,10 +2876,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return chordStepController.color();
         }
         return chordStepBaseColor != null ? chordStepBaseColor : OCCUPIED_STEP;
-    }
-
-    private RgbLigthState getChordSustainedStepColor() {
-        return getChordOccupiedStepColor().getVeryDimmed();
     }
 
     private boolean isChordStepSustained(final int stepIndex) {
@@ -2928,46 +2894,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return HELD_STEP.getBrightest();
         }
         return hasVisibleStepContent(stepIndex) ? OCCUPIED_STEP : DEFERRED_BOTTOM;
-    }
-
-    private RgbLigthState getFamilyColor(final String family) {
-        return switch (family) {
-            case "Barker" -> new RgbLigthState(120, 70, 0, true);
-            case "Audible" -> new RgbLigthState(0, 90, 110, true);
-            case "Sus Motion" -> new RgbLigthState(12, 100, 58, true);
-            case "Quartal" -> new RgbLigthState(0, 58, 120, true);
-            case "Cluster" -> new RgbLigthState(70, 0, 110, true);
-            case "Minor Drift" -> new RgbLigthState(110, 20, 36, true);
-            case "Dorian Lift" -> new RgbLigthState(30, 90, 18, true);
-            default -> new RgbLigthState(88, 64, 0, true);
-        };
-    }
-
-    private RgbLigthState getFamilyGroupColor(final String family, final int groupIndex, final int pageIndex,
-                                              final int pageCount) {
-        final boolean alternatePageVariant = pageCount > 1 && (pageIndex % 2 == 1);
-        return switch (groupIndex % 4) {
-            case 0 -> alternatePageVariant ? getAlternateFamilyColor(family).getBrightend()
-                    : getFamilyColor(family).getBrightend();
-            case 1 -> alternatePageVariant ? getFamilyColor(family) : getAlternateFamilyColor(family);
-            case 2 -> alternatePageVariant ? getAlternateFamilyColor(family).getDimmed()
-                    : getFamilyColor(family).getDimmed();
-            default -> alternatePageVariant ? getFamilyColor(family).getDimmed()
-                    : getAlternateFamilyColor(family).getDimmed();
-        };
-    }
-
-    private RgbLigthState getAlternateFamilyColor(final String family) {
-        return switch (family) {
-            case "Barker" -> new RgbLigthState(24, 100, 34, true);
-            case "Audible" -> new RgbLigthState(110, 72, 0, true);
-            case "Sus Motion" -> new RgbLigthState(0, 66, 122, true);
-            case "Quartal" -> new RgbLigthState(112, 22, 70, true);
-            case "Cluster" -> new RgbLigthState(24, 108, 44, true);
-            case "Minor Drift" -> new RgbLigthState(0, 94, 110, true);
-            case "Dorian Lift" -> new RgbLigthState(114, 64, 0, true);
-            default -> new RgbLigthState(44, 86, 24, true);
-        };
     }
 
     private void showState(final String focus) {
@@ -3047,25 +2973,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void ensureBuilderSeededIfEmpty() {
-        if (!isBuilderFamily() || chordSelection.hasBuilderNotes()) {
-            return;
-        }
-        final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
-        if (firstVisibleNote < 0) {
-            return;
-        }
-        final int builderRoot = Math.floorMod(firstVisibleNote, 12);
-        for (int padIndex = 0; padIndex < CHORD_SOURCE_PAD_COUNT; padIndex++) {
-            final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
-            if (midiNote >= 0 && pitchContext.isRootMidiNote(builderRoot, midiNote)) {
-                chordSelection.addBuilderNote(midiNote);
-                return;
-            }
-        }
-        final int firstPadNote = getBuilderRenderedNoteMidiForPad(0);
-        if (firstPadNote >= 0) {
-            chordSelection.addBuilderNote(firstPadNote);
-        }
+        chordBuilder.ensureSeededIfEmpty();
     }
 
     private int getChordRootMidi() {
@@ -3093,66 +3001,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void toggleBuilderNoteOffset(final int padIndex) {
-        final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
-        if (midiNote < 0) {
-            return;
-        }
-        chordSelection.toggleBuilderNote(midiNote);
-    }
-
-    private int getBuilderNoteMidiForPad(final int padIndex) {
-        if (padIndex < 0 || padIndex >= CHORD_SOURCE_PAD_COUNT) {
-            return -1;
-        }
-        final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
-        if (firstVisibleNote < 0) {
-            return -1;
-        }
-        if (!builderInKey) {
-            final int note = firstVisibleNote + padIndex;
-            return note >= 0 && note <= 127 ? note : -1;
-        }
-        final int builderRoot = Math.floorMod(firstVisibleNote, 12);
-        int note = firstVisibleNote;
-        for (int i = 0; i < padIndex; i++) {
-            note = nextBuilderScaleNote(note, builderRoot);
-            if (note < 0) {
-                return -1;
-            }
-        }
-        return note;
-    }
-
-    private int getBuilderRenderedNoteMidiForPad(final int padIndex) {
-        return getBuilderNoteMidiForPad(padIndex);
-    }
-
-    private RgbLigthState getBuilderBasePadLight(final int padIndex) {
-        final int midiNote = getBuilderNoteMidiForPad(padIndex);
-        final int firstVisibleNote = getBuilderFirstVisibleMidiNote();
-        final int builderRoot = firstVisibleNote >= 0
-                ? Math.floorMod(firstVisibleNote, 12)
-                : Math.floorMod(getRootNote(), 12);
-        final RgbLigthState base;
-        if (midiNote < 0) {
-            base = RgbLigthState.OFF;
-        } else {
-            final NoteGridLayout.PadRole role;
-            if (pitchContext.isRootMidiNote(builderRoot, midiNote)) {
-                role = NoteGridLayout.PadRole.ROOT;
-            } else if (pitchContext.isMidiNoteInScale(builderRoot, midiNote)) {
-                role = NoteGridLayout.PadRole.IN_SCALE;
-            } else {
-                role = NoteGridLayout.PadRole.OUT_OF_SCALE;
-            }
-            base = switch (role) {
-                case ROOT -> ROOT_COLOR;
-                case IN_SCALE -> IN_SCALE_COLOR;
-                case OUT_OF_SCALE -> OUT_OF_SCALE_COLOR;
-                case UNAVAILABLE -> RgbLigthState.OFF;
-            };
-        }
-        return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
+        chordBuilder.toggleNoteOffset(padIndex);
     }
 
     private void showChordOctaveInfo() {
@@ -3250,10 +3099,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private int getBuilderFirstVisibleMidiNote() {
         final int firstVisible = applyLivePitchOffset(getChordRootMidi());
         return firstVisible >= 0 && firstVisible <= 127 ? firstVisible : -1;
-    }
-
-    private int nextBuilderScaleNote(final int currentNote, final int builderRoot) {
-        return pitchContext.nextScaleNote(currentNote, builderRoot);
     }
 
     private int applyLivePitchOffset(final int midiNote) {
