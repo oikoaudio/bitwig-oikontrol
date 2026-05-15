@@ -27,11 +27,14 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.chordstep.ChordStepAccentControls;
+import com.oikoaudio.fire.chordstep.ChordStepAccentEditor;
 import com.oikoaudio.fire.chordstep.ChordStepClipController;
 import com.oikoaudio.fire.chordstep.ChordStepController;
 import com.oikoaudio.fire.chordstep.ChordStepEditControls;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
 import com.oikoaudio.fire.chordstep.ChordStepObservedState;
+import com.oikoaudio.fire.chordstep.ChordStepPadSurface;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderValueProfile;
@@ -57,7 +60,6 @@ import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
-import com.oikoaudio.fire.sequence.AccentLatchState;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
@@ -116,8 +118,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
     private static final int DEFAULT_LIVE_VELOCITY = 100;
-    private static final int DEFAULT_CHORD_STANDARD_VELOCITY = 100;
-    private static final int DEFAULT_CHORD_ACCENTED_VELOCITY = 127;
+    private static final int DEFAULT_CHORD_STANDARD_VELOCITY = ChordStepAccentEditor.STANDARD_VELOCITY;
+    private static final int DEFAULT_CHORD_ACCENTED_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
     private static final int DEFAULT_DRUM_MACHINE_LOW_NOTE = 36;
     private static final int MAX_DRUM_MACHINE_SCROLL_POSITION = MAX_MIDI_VALUE - DrumMachinePadLayout.PAD_WINDOW_SIZE + 1;
     private static final long TOUCH_RESET_HOLD_MS = 750L;
@@ -163,6 +165,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
+    private final ChordStepAccentControls chordStepAccentControls;
     private final Set<Integer> auditioningNotes = new HashSet<>();
     private final Set<Integer> builderSelectedNotes = new HashSet<>();
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
@@ -243,7 +246,6 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private boolean inKey = false;
     private boolean noteStepActive = false;
-    private final AccentLatchState chordAccentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
     private boolean builderInKey = true;
     private final boolean drumPadsOnly;
@@ -366,6 +368,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.drumPadsOnly = drumPadsOnly;
         this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();
+        this.chordStepAccentControls = new ChordStepAccentControls(oled);
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
         this.noteRepeatHandler = noteRepeatHandler;
@@ -1208,8 +1211,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 toggleChordAccentForHeldSteps();
                 return;
             }
-            if (driver.isGlobalShiftHeld() || chordAccentState.isHeld()) {
-                handleChordAccentPressed(pressed);
+            if (driver.isGlobalShiftHeld() || chordStepAccentControls.isHeld()) {
+                chordStepAccentControls.handlePressed(pressed);
                 return;
             }
             if (driver.isGlobalAltHeld()) {
@@ -1396,7 +1399,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
             @Override
             public boolean isAccentGestureActive() {
-                return chordAccentState.isHeld() || chordAccentState.isActive();
+                return chordStepAccentControls.isGestureActive();
             }
 
             @Override
@@ -2545,29 +2548,16 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return BiColorLightState.OFF;
         }
         if (driver.isGlobalShiftHeld()) {
-            return chordAccentState.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return chordStepAccentControls.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
         if (driver.isGlobalAltHeld()) {
             return driver.getStepFillLightState();
         }
-        return chordAccentState.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
-    }
-
-    private void handleChordAccentPressed(final boolean pressed) {
-        final AccentLatchState.Transition transition = chordAccentState.handlePressed(pressed);
-        if (transition == AccentLatchState.Transition.PRESSED) {
-            oled.valueInfo("Accent Mode", chordAccentState.isActive() ? "On" : "Off");
-            return;
-        }
-        if (transition == AccentLatchState.Transition.TOGGLED_ON_RELEASE) {
-            oled.valueInfo("Accent Mode", chordAccentState.isActive() ? "On" : "Off");
-            return;
-        }
-        oled.clearScreenDelayed();
+        return chordStepAccentControls.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     private int currentChordVelocity(final int rawVelocity) {
-        if (chordAccentState.isActive()) {
+        if (chordStepAccentControls.isActive()) {
             return DEFAULT_CHORD_ACCENTED_VELOCITY;
         }
         return LiveVelocityLogic.resolveVelocity(defaultChordVelocity, chordVelocitySensitivity, rawVelocity);
@@ -2578,11 +2568,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         if (notesAtStep == null || notesAtStep.isEmpty()) {
             return;
         }
-        final boolean accented = notesAtStep.values().stream().allMatch(this::isChordAccented);
-        final double targetVelocity = (accented ? defaultChordVelocity : DEFAULT_CHORD_ACCENTED_VELOCITY) / 127.0;
-        notesAtStep.values().forEach(note -> note.setVelocity(targetVelocity));
-        chordAccentState.markModified();
-        oled.valueInfo("Accent", accented ? "Normal" : "Accented");
+        final boolean targetAccent = chordStepAccentControls.toggleAccent(notesAtStep.values(), defaultChordVelocity);
+        chordStepAccentControls.markModified();
+        oled.valueInfo("Accent", targetAccent ? "Accented" : "Normal");
     }
 
     private void toggleChordAccentForHeldSteps() {
@@ -2591,28 +2579,14 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             oled.valueInfo("Accent", "No Step");
             return;
         }
-        final boolean allAccented = heldNotes.stream().allMatch(this::isChordAccented);
-        final double targetVelocity = (allAccented ? defaultChordVelocity : DEFAULT_CHORD_ACCENTED_VELOCITY) / 127.0;
-        heldNotes.forEach(note -> note.setVelocity(targetVelocity));
+        final boolean targetAccent = chordStepAccentControls.toggleAccent(heldNotes, defaultChordVelocity);
         chordStepPadSurface.markModifiedNotes(heldNotes);
-        oled.valueInfo("Accent", allAccented ? "Normal" : "Accented");
-        driver.notifyPopup("Accent", allAccented ? "Normal" : "Accented");
-    }
-
-    private boolean isChordAccented(final NoteStep noteStep) {
-        final int velocity = (int) Math.round(noteStep.velocity() * 127);
-        final int distanceToAccent = Math.abs(velocity - DEFAULT_CHORD_ACCENTED_VELOCITY);
-        final int distanceToStandard = Math.abs(velocity - DEFAULT_CHORD_STANDARD_VELOCITY);
-        return distanceToAccent <= distanceToStandard;
+        oled.valueInfo("Accent", targetAccent ? "Accented" : "Normal");
+        driver.notifyPopup("Accent", targetAccent ? "Accented" : "Normal");
     }
 
     private boolean isChordStepAccented(final int stepIndex) {
-        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.get(stepIndex);
-        return notesAtStep != null
-                && !notesAtStep.isEmpty()
-                && notesAtStep.values().stream()
-                .filter(note -> note.state() == NoteStep.State.NoteOn)
-                .allMatch(this::isChordAccented);
+        return chordStepAccentControls.isStepAccented(noteStepsByPosition.get(stepIndex), defaultChordVelocity);
     }
 
     private boolean isHarmonicLiveMode() {
