@@ -33,7 +33,6 @@ import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
-import com.oikoaudio.fire.utils.PatternButtons;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,7 +81,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
     private final NoteInput noteInput;
-    private final PatternButtons patternButtons;
     private final SharedPitchContextController pitchContext;
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
@@ -104,6 +102,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private final ChordStepSurfaceController chordStepSurface;
     private final ClipRowHandler clipHandler;
     private final CursorTrack chordStepCursorTrack;
+    private final ChordStepControlBindings chordStepControlBindings;
     private final ChordStepEncoderControls chordStepEncoderControls;
     private final StepSequencerEncoderHandler stepEncoderLayer;
     private final ChordStepEditControls chordStepEditControls;
@@ -135,7 +134,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         final ChordStepPadController chordStepPadController = new ChordStepPadController(chordStepPadSurface,
                 CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
         this.noteInput = driver.getNoteInput();
-        this.patternButtons = driver.getPatternButtons();
         final ControllerHost host = driver.getHost();
         this.chordStepCursorTrack = host.createCursorTrack("CHORD_STEP_MODE", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
         this.chordStepCursorTrack.name().markInterested();
@@ -255,7 +253,8 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             noteTranslationTable[i] = -1;
         }
 
-        new ChordStepControlBindings(driver, this, chordStepControlBindingsHost()).bind();
+        this.chordStepControlBindings = new ChordStepControlBindings(driver, this, chordStepControlBindingsHost());
+        chordStepControlBindings.bind();
         chordStepEncoderControls.bindMainEncoder(this);
     }
 
@@ -337,6 +336,26 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             @Override
             public BiColorLightState mute4LightState() {
                 return ChordStepSurfaceLayer.this.getMute4LightState();
+            }
+
+            @Override
+            public void handlePatternUp(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handlePatternUp(pressed);
+            }
+
+            @Override
+            public BiColorLightState patternUpLight() {
+                return ChordStepSurfaceLayer.this.getPatternUpLight();
+            }
+
+            @Override
+            public void handlePatternDown(final boolean pressed) {
+                ChordStepSurfaceLayer.this.handlePatternDown(pressed);
+            }
+
+            @Override
+            public BiColorLightState patternDownLight() {
+                return ChordStepSurfaceLayer.this.getPatternDownLight();
             }
         };
     }
@@ -1807,16 +1826,14 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         chordStepPadSurface.clearStepTracking();
         selectedPresetStepIndex = null;
         chordStepClips.position().setPage(0);
-        patternButtons.setUpCallback(this::handlePatternUp, this::getPatternUpLight);
-        patternButtons.setDownCallback(this::handlePatternDown, this::getPatternDownLight);
+        chordStepControlBindings.activatePatternButtons();
         stepEncoderLayer.deactivate();
         enterCurrentStepSubMode();
     }
 
     @Override
     protected void onDeactivate() {
-        patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
-        patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
+        chordStepControlBindings.deactivatePatternButtons();
         noteStepActive = false;
         stopAuditionNotes();
         chordSelection.resetToBuilder();

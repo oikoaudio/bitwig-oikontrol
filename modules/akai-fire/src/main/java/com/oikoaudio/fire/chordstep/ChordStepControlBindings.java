@@ -23,6 +23,16 @@ final class ChordStepControlBindings {
         bindButtons();
     }
 
+    void activatePatternButtons() {
+        driver.getPatternButtons().setUpCallback(host::handlePatternUp, host::patternUpLight);
+        driver.getPatternButtons().setDownCallback(host::handlePatternDown, host::patternDownLight);
+    }
+
+    void deactivatePatternButtons() {
+        driver.getPatternButtons().setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
+        driver.getPatternButtons().setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
+    }
+
     private void bindPads() {
         final RgbButton[] pads = driver.getRgbButtons();
         for (int index = 0; index < pads.length; index++) {
@@ -72,5 +82,13 @@ final class ChordStepControlBindings {
         void handleMute4Button(boolean pressed);
 
         BiColorLightState mute4LightState();
+
+        void handlePatternUp(boolean pressed);
+
+        BiColorLightState patternUpLight();
+
+        void handlePatternDown(boolean pressed);
+
+        BiColorLightState patternDownLight();
     }
 }
