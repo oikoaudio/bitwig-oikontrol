@@ -10,7 +10,6 @@ import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteStep;
-import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.MusicalScale;
@@ -20,22 +19,12 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.EncoderTouchResetHandler;
-import com.oikoaudio.fire.control.EncoderValueProfile;
-import com.oikoaudio.fire.control.EncoderStepAccumulator;
-import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.RgbButton;
-import com.oikoaudio.fire.control.TouchEncoder;
-import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
-import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
-import com.oikoaudio.fire.sequence.EncoderMode;
-import com.oikoaudio.fire.sequence.EncoderSlotBinding;
-import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
@@ -51,7 +40,6 @@ import com.oikoaudio.fire.utils.PatternButtons;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -73,17 +61,11 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private static final int OBSERVED_FINE_STEP_CAPACITY = MAX_CHORD_STEPS * FINE_STEPS_PER_STEP;
     private static final double FINE_STEP_LENGTH = STEP_LENGTH / FINE_STEPS_PER_STEP;
     private static final int AUDITION_VELOCITY = 96;
-    private static final int CHORD_ROOT_ENCODER_THRESHOLD = 16;
-    private static final int CHORD_OCTAVE_ENCODER_THRESHOLD = 8;
-    private static final int CHORD_FAMILY_ENCODER_THRESHOLD = 8;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
     private static final int DEFAULT_CHORD_STANDARD_VELOCITY = ChordStepAccentEditor.STANDARD_VELOCITY;
     private static final int DEFAULT_CHORD_ACCENTED_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
-    private static final long TOUCH_RESET_HOLD_MS = 750L;
-    private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
-    private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
     private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
@@ -124,27 +106,18 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private final ChordStepEventIndex chordStepEventIndex;
     private final ChordStepSurfaceController chordStepSurface;
     private final ClipRowHandler clipHandler;
-    private final CursorTrack cursorTrack;
     private final CursorTrack chordStepCursorTrack;
+    private final ChordStepEncoderControls chordStepEncoderControls;
     private final StepSequencerEncoderHandler stepEncoderLayer;
-    private final EncoderBankLayout stepEncoderBankLayout;
-    private final EncoderTouchResetHandler encoderTouchResetHandler;
     private final ChordStepEditControls chordStepEditControls;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
     private boolean noteStepActive = false;
-    private boolean mainEncoderPressConsumed = false;
     private Integer selectedPresetStepIndex = null;
     private int chordVelocitySensitivity = 100;
     private int defaultChordVelocity = DEFAULT_CHORD_STANDARD_VELOCITY;
     private int playingStep = -1;
     private RgbLigthState chordStepBaseColor = OCCUPIED_STEP;
-    private final EncoderStepAccumulator chordRootEncoder = new EncoderStepAccumulator(CHORD_ROOT_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator chordOctaveEncoder = new EncoderStepAccumulator(CHORD_OCTAVE_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator chordFamilyEncoder = new EncoderStepAccumulator(CHORD_FAMILY_ENCODER_THRESHOLD);
-    private final TouchResetGesture touchResetGesture =
-            new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
-                    TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
     public ChordStepSurfaceLayer(final AkaiFireOikontrolExtension driver,
                                   final String layerName) {
         super(driver.getLayers(), layerName);
@@ -166,12 +139,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
                 CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
-        this.encoderTouchResetHandler = new EncoderTouchResetHandler(
-                touchResetGesture,
-                driver::isEncoderTouchResetEnabled,
-                (task, delayMs) -> driver.getHost().scheduleTask(task, delayMs),
-                TOUCH_RESET_HOLD_MS,
-                oled::clearScreenDelayed);
         final ControllerHost host = driver.getHost();
         this.chordStepCursorTrack = host.createCursorTrack("CHORD_STEP_MODE", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
         this.chordStepCursorTrack.name().markInterested();
@@ -179,7 +146,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         this.chordStepCursorTrack.canHoldNoteData().markInterested();
         this.chordStepCursorTrack.color().addValueObserver((r, g, b) -> chordStepBaseColor = ColorLookup.getColor(r, g, b));
         chordStepBaseColor = ColorLookup.getColor(this.chordStepCursorTrack.color().get());
-        this.cursorTrack = chordStepCursorTrack;
         this.chordStepClips = new ChordStepClipResources(host, chordStepCursorTrack, STEP_COUNT,
                 OBSERVED_FINE_STEP_CAPACITY, FINE_STEP_LENGTH);
         this.chordStepEventIndex = new ChordStepEventIndex(
@@ -284,7 +250,8 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
                 chordStepController,
                 chordStepClips,
                 chordStepEventIndex);
-        this.stepEncoderBankLayout = createStepEncoderBankLayout();
+        this.chordStepEncoderControls =
+                new ChordStepEncoderControls(driver, oled, chordStepCursorTrack, chordStepEncoderHost());
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
 
         for (int i = 0; i < noteTranslationTable.length; i++) {
@@ -293,7 +260,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
 
         bindPads();
         bindButtons();
-        bindEncoders();
+        chordStepEncoderControls.bindMainEncoder(this);
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -319,12 +286,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         driver.getButton(NoteAssign.MUTE_2).bindPressed(this, this::handleMute2Button, this::getMute2LightState);
         driver.getButton(NoteAssign.MUTE_3).bindPressed(this, this::handleMute3Button, this::getMute3LightState);
         driver.getButton(NoteAssign.MUTE_4).bindPressed(this, this::handleMute4Button, this::getMute4LightState);
-    }
-
-    private void bindEncoders() {
-        final TouchEncoder mainEncoder = driver.getMainEncoder();
-        mainEncoder.bindEncoder(this, this::handleMainEncoder);
-        mainEncoder.bindTouched(this, this::handleMainEncoderPress);
     }
 
     private void syncEncoderLayers() {
@@ -758,6 +719,110 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             @Override
             public boolean canRaiseOctave() {
                 return chordSelection.canRaiseOctave();
+            }
+        };
+    }
+
+    private ChordStepEncoderControls.Host chordStepEncoderHost() {
+        return new ChordStepEncoderControls.Host() {
+            @Override
+            public void adjustChordRoot(final int amount) {
+                ChordStepSurfaceLayer.this.adjustChordRoot(amount);
+            }
+
+            @Override
+            public void resetChordRoot() {
+                ChordStepSurfaceLayer.this.resetChordRoot();
+            }
+
+            @Override
+            public void showChordRootInfo() {
+                ChordStepSurfaceLayer.this.showChordRootInfo();
+            }
+
+            @Override
+            public void adjustChordOctave(final int amount) {
+                ChordStepSurfaceLayer.this.adjustChordOctave(amount);
+            }
+
+            @Override
+            public void resetChordOctave() {
+                ChordStepSurfaceLayer.this.resetChordOctave();
+            }
+
+            @Override
+            public void showChordOctaveInfo() {
+                ChordStepSurfaceLayer.this.showChordOctaveInfo();
+            }
+
+            @Override
+            public void adjustDefaultChordVelocity(final int inc) {
+                ChordStepSurfaceLayer.this.adjustDefaultChordVelocity(inc);
+            }
+
+            @Override
+            public void adjustChordVelocitySensitivity(final int inc) {
+                ChordStepSurfaceLayer.this.adjustChordVelocitySensitivity(inc);
+            }
+
+            @Override
+            public void resetChordVelocityDefaults() {
+                ChordStepSurfaceLayer.this.resetChordVelocityDefaults();
+            }
+
+            @Override
+            public void showChordVelocityInfo() {
+                ChordStepSurfaceLayer.this.showChordVelocityInfo();
+            }
+
+            @Override
+            public void adjustChordPage(final int amount) {
+                ChordStepSurfaceLayer.this.adjustChordPage(amount);
+            }
+
+            @Override
+            public void adjustChordFamily(final int amount) {
+                ChordStepSurfaceLayer.this.adjustChordFamily(amount);
+            }
+
+            @Override
+            public void showCurrentChord() {
+                ChordStepSurfaceLayer.this.showCurrentChord();
+            }
+
+            @Override
+            public void resetChordFamilySelection() {
+                ChordStepSurfaceLayer.this.resetChordFamilySelection();
+            }
+
+            @Override
+            public void adjustChordSharedScale(final int amount) {
+                ChordStepSurfaceLayer.this.adjustChordSharedScale(amount);
+            }
+
+            @Override
+            public String getScaleDisplayName() {
+                return ChordStepSurfaceLayer.this.getScaleDisplayName();
+            }
+
+            @Override
+            public void invertCurrentChord(final int direction) {
+                ChordStepSurfaceLayer.this.invertCurrentChord(direction);
+            }
+
+            @Override
+            public void adjustChordInterpretation(final int amount) {
+                ChordStepSurfaceLayer.this.adjustChordInterpretation(amount);
+            }
+
+            @Override
+            public void resetChordInterpretation() {
+                chordSelection.resetInterpretation();
+            }
+
+            @Override
+            public void showChordInterpretationInfo() {
+                oled.valueInfo("Interpret", chordSelection.interpretationDisplayName());
             }
         };
     }
@@ -1234,88 +1299,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         showState("Octave");
     }
 
-    private void handleMainEncoder(final int inc) {
-        if (driver.isPopupBrowserActive()) {
-            driver.routeBrowserMainEncoder(inc);
-            return;
-        }
-        driver.markMainEncoderTurned();
-        if (driver.handleMainEncoderGlobalChord(inc)) {
-            return;
-        }
-        final boolean fine = driver.isGlobalShiftHeld();
-        final String mainEncoderRole = driver.getMainEncoderRolePreference();
-        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
-            oled.valueInfo("Note Repeat", "Live only");
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
-            driver.adjustTempo(inc, fine);
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
-            driver.adjustGrooveShuffleAmount(inc, fine);
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
-            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
-            oled.valueInfo("Drum Grid", "Drum only");
-        } else {
-            driver.adjustMainCursorParameter(inc, fine);
-        }
-    }
-
-    private void handleMainEncoderPress(final boolean pressed) {
-        if (driver.isPopupBrowserActive()) {
-            driver.routeBrowserMainEncoderPress(pressed);
-            return;
-        }
-        driver.setMainEncoderPressed(pressed);
-        if (pressed && driver.isGlobalAltHeld()) {
-            mainEncoderPressConsumed = true;
-            driver.toggleCurrentDeviceWindow();
-            return;
-        }
-        if (!pressed && mainEncoderPressConsumed) {
-            mainEncoderPressConsumed = false;
-            return;
-        }
-        if (pressed && driver.isGlobalShiftHeld()) {
-            mainEncoderPressConsumed = true;
-            driver.cycleMainEncoderRolePreference();
-            return;
-        }
-        final String mainEncoderRole = driver.getMainEncoderRolePreference();
-        if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
-            driver.toggleMainEncoderRolePreference();
-            return;
-        }
-        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
-            if (pressed) {
-                oled.valueInfo("Note Repeat", "Live only");
-            }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
-            if (pressed) {
-                driver.showTempoInfo();
-            } else {
-                oled.clearScreenDelayed();
-            }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
-            if (pressed) {
-                driver.showGrooveShuffleInfo();
-            }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
-            if (pressed) {
-                driver.showSelectedTrackInfo(false);
-            } else {
-                oled.clearScreenDelayed();
-            }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
-            if (pressed) {
-                oled.valueInfo("Drum Grid", "Drum only");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        } else if (pressed) {
-            driver.showMainCursorParameterInfo();
-        }
-    }
-
     private void applyLayoutChange(final Runnable stateChange) {
         stateChange.run();
         showContextInfo();
@@ -1674,160 +1657,9 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         chordStepPadSurface.markModifiedNotes(notes);
     }
 
-    private void adjustMixerParameter(final Parameter parameter, final String fallbackLabel, final int inc) {
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
-        oled.valueInfo(fallbackLabel, parameter.displayedValue().get());
-    }
-
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
-        return stepEncoderBankLayout;
-    }
-
-    private EncoderBankLayout createStepEncoderBankLayout() {
-        final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
-        banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Octave/Root\n2: Velocity\n3: Chord Family\n4: Interpret/Invert",
-                new EncoderSlotBinding[]{
-                        chordPitchContextSlot(),
-                        chordBuildVelocitySlot(),
-                        chordSlot(2, chordFamilyEncoder,
-                                amount -> {
-                                    if (driver.isGlobalAltHeld()) {
-                                        adjustChordPage(amount);
-                                    } else {
-                                        adjustChordFamily(amount);
-                                    }
-                                },
-                                this::showCurrentChord, this::resetChordFamilySelection),
-                        interpretSlot()
-                }));
-        banks.put(EncoderMode.MIXER, new EncoderBank(
-                "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
-                new EncoderSlotBinding[]{
-                        chordMixerSlot(0, "Volume"),
-                        chordMixerSlot(1, "Pan"),
-                        chordMixerSlot(2, "Send 1"),
-                        chordMixerSlot(3, "Send 2")
-                }));
-        banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
-                new EncoderSlotBinding[]{
-                        noteAccessSlot(NoteStepAccess.VELOCITY),
-                        noteAccessSlot(NoteStepAccess.PRESSURE),
-                        noteAccessSlot(NoteStepAccess.TIMBRE),
-                        noteAccessSlot(NoteStepAccess.PITCH)
-                }));
-        banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
-                new EncoderSlotBinding[]{
-                        noteAccessSlot(NoteStepAccess.DURATION),
-                        noteAccessSlot(NoteStepAccess.CHANCE),
-                        noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD),
-                        noteAccessSlot(NoteStepAccess.REPEATS)
-                }));
-        return new EncoderBankLayout(banks);
-    }
-
-    private EncoderSlotBinding noteAccessSlot(final NoteStepAccess access) {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return access.getResolution();
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                handler.bindNoteAccess(layer, encoder, slotIndex, access);
-            }
-        };
-    }
-
-    private EncoderSlotBinding chordPitchContextSlot() {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return 0.25;
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    final boolean rootContext = driver.isGlobalAltHeld();
-                    final EncoderStepAccumulator accumulator = rootContext ? chordRootEncoder : chordOctaveEncoder;
-                    final int amount = accumulator.consume(inc);
-                    if (amount == 0) {
-                        return;
-                    }
-                    handler.recordTouchAdjustment(slotIndex, Math.abs(amount));
-                    encoderTouchResetHandler.markAdjusted(rootContext ? 1 : 0);
-                    if (rootContext) {
-                        adjustChordRoot(amount);
-                    } else {
-                        adjustChordOctave(amount);
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        final boolean rootContext = driver.isGlobalAltHeld();
-                        handler.beginTouchReset(slotIndex, () -> {
-                            (rootContext ? chordRootEncoder : chordOctaveEncoder).reset();
-                            if (rootContext) {
-                                resetChordRoot();
-                                showChordRootInfo();
-                            } else {
-                                resetChordOctave();
-                                showChordOctaveInfo();
-                            }
-                        });
-                        if (rootContext) {
-                            showChordRootInfo();
-                        } else {
-                            showChordOctaveInfo();
-                        }
-                        return;
-                    }
-                    handler.endTouchReset(slotIndex);
-                    oled.clearScreenDelayed();
-                });
-            }
-        };
-    }
-
-    private EncoderSlotBinding chordBuildVelocitySlot() {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return MixerEncoderProfile.STEP_SIZE;
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                    if (driver.isGlobalShiftHeld()) {
-                        adjustDefaultChordVelocity(inc);
-                    } else {
-                        adjustChordVelocitySensitivity(inc);
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        handler.beginTouchReset(slotIndex, () -> {
-                            resetChordVelocityDefaults();
-                            showChordVelocityInfo();
-                        });
-                        showChordVelocityInfo();
-                        return;
-                    }
-                    handler.endTouchReset(slotIndex);
-                    oled.clearScreenDelayed();
-                });
-            }
-        };
+        return chordStepEncoderControls.layout();
     }
 
     private void adjustDefaultChordVelocity(final int inc) {
@@ -1861,59 +1693,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             return;
         }
         oled.valueInfo("Velocity", "Sens %d%% / Def %d".formatted(chordVelocitySensitivity, defaultChordVelocity));
-    }
-
-    private EncoderSlotBinding emptySlot() {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return MixerEncoderProfile.STEP_SIZE;
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> { });
-                encoder.bindTouched(layer, touched -> {
-                    if (!touched) {
-                        oled.clearScreenDelayed();
-                    }
-                });
-            }
-        };
-    }
-
-    private EncoderSlotBinding chordMixerSlot(final int index, final String label) {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return MixerEncoderProfile.STEP_SIZE;
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                final com.bitwig.extension.controller.api.Parameter parameter = switch (index) {
-                    case 0 -> cursorTrack.volume();
-                    case 1 -> cursorTrack.pan();
-                    case 2 -> cursorTrack.sendBank().getItemAt(0);
-                    default -> cursorTrack.sendBank().getItemAt(1);
-                };
-                parameter.name().markInterested();
-                parameter.displayedValue().markInterested();
-                parameter.value().markInterested();
-                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
-                        com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.STRONG,
-                        inc -> adjustMixerParameter(parameter, label, inc));
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        oled.valueInfo(label, parameter.displayedValue().get());
-                    } else {
-                        oled.clearScreenDelayed();
-                    }
-                });
-            }
-        };
     }
 
     private void observeSelectedNoteClip() {
@@ -1970,96 +1749,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             return new HashSet<>(visibleNotes);
         }
         return chordStepEventIndex.notesAtStep(stepIndex);
-    }
-
-    @FunctionalInterface
-    private interface ChordAdjuster {
-        void adjust(int amount);
-    }
-
-    private EncoderSlotBinding chordSlot(final int slotIndex, final EncoderStepAccumulator accumulator,
-                                          final ChordAdjuster adjuster, final Runnable showInfo,
-                                          final Runnable resetAction) {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return 0.25;
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int boundSlotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    final int amount = accumulator.consume(inc);
-                    if (amount != 0) {
-                        handler.recordTouchAdjustment(boundSlotIndex, Math.abs(amount));
-                        encoderTouchResetHandler.markAdjusted(slotIndex);
-                        adjuster.adjust(amount);
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        handler.beginTouchReset(boundSlotIndex, () -> {
-                            accumulator.reset();
-                            resetAction.run();
-                            showInfo.run();
-                        });
-                        showInfo.run();
-                        return;
-                    }
-                    handler.endTouchReset(boundSlotIndex);
-                    oled.clearScreenDelayed();
-                });
-            }
-        };
-    }
-
-    private EncoderSlotBinding interpretSlot() {
-        return new EncoderSlotBinding() {
-            @Override
-            public double stepSize() {
-                return 1.0;
-            }
-
-            @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    if (inc != 0) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                        if (driver.isGlobalShiftHeld()) {
-                            adjustChordSharedScale(inc);
-                        } else if (driver.isGlobalAltHeld()) {
-                            invertCurrentChord(inc > 0 ? 1 : -1);
-                        } else {
-                            adjustChordInterpretation(inc);
-                        }
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        if (driver.isGlobalShiftHeld()) {
-                            handler.beginTouchReset(slotIndex, () -> { });
-                            oled.valueInfo("Scale", getScaleDisplayName());
-                            return;
-                        }
-                        if (driver.isGlobalAltHeld()) {
-                            handler.beginTouchReset(slotIndex, () -> { });
-                            oled.valueInfo("Invert", "Turn encoder");
-                            return;
-                        }
-                        handler.beginTouchReset(slotIndex, () -> {
-                            chordSelection.resetInterpretation();
-                            oled.valueInfo("Interpret", chordSelection.interpretationDisplayName());
-                        });
-                        oled.valueInfo("Interpret", chordSelection.interpretationDisplayName());
-                        return;
-                    }
-                    handler.endTouchReset(slotIndex);
-                    oled.clearScreenDelayed();
-                });
-            }
-        };
     }
 
     @Override
