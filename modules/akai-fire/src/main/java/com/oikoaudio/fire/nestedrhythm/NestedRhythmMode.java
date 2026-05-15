@@ -12,14 +12,9 @@ import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BankButtonBindings;
-import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.ButtonRowBindings;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -165,8 +160,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 this::lastStepPadLight,
                 this::clipBaseColor,
                 this::applyEditablePattern);
-        bindPads();
-        bindButtons();
+        new NestedRhythmControlBindings(driver, this, nestedRhythmControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
@@ -221,8 +215,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         encoderLayer.deactivate();
     }
 
-    private void bindPads() {
-        PadMatrixBindings.bindPressed(this, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
+    private NestedRhythmControlBindings.Host nestedRhythmControlBindingsHost() {
+        return new NestedRhythmControlBindings.Host() {
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed) {
                 NestedRhythmMode.this.handlePadPress(padIndex, pressed);
@@ -232,39 +226,27 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             public RgbLigthState padLight(final int padIndex) {
                 return NestedRhythmMode.this.getPadLight(padIndex);
             }
-        });
-    }
 
-    private void bindButtons() {
-        ButtonRowBindings.bindPressed(this, new BiColorButton[] {
-                driver.getButton(NoteAssign.MUTE_1),
-                driver.getButton(NoteAssign.MUTE_2),
-                driver.getButton(NoteAssign.MUTE_3),
-                driver.getButton(NoteAssign.MUTE_4)
-        }, new ButtonRowBindings.Host() {
             @Override
-            public void handleButton(final int index, final boolean pressed) {
+            public void handleBankButton(final boolean pressed, final int amount) {
+                NestedRhythmMode.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return driver.isGlobalAltHeld() ? BiColorLightState.HALF : BiColorLightState.OFF;
+            }
+
+            @Override
+            public void handleMuteButton(final int index, final boolean pressed) {
                 NestedRhythmMode.this.handleMuteButton(index, pressed);
             }
 
             @Override
-            public BiColorLightState lightState(final int index) {
+            public BiColorLightState muteLightState(final int index) {
                 return NestedRhythmMode.this.muteLightState(index);
             }
-        });
-
-        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
-                new BankButtonBindings.Host() {
-                    @Override
-                    public void handleBankButton(final boolean pressed, final int amount) {
-                        NestedRhythmMode.this.handleBankButton(pressed, amount);
-                    }
-
-                    @Override
-                    public BiColorLightState bankLightState() {
-                        return driver.isGlobalAltHeld() ? BiColorLightState.HALF : BiColorLightState.OFF;
-                    }
-                });
+        };
     }
 
     private void handleMuteButton(final int index, final boolean pressed) {
