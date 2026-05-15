@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.note.PitchedSurfaceLayer;
+import com.oikoaudio.fire.note.LivePadSurfaceLayer;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -12,15 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 class ChordStepModeDecouplingTest {
     @Test
     void chordStepModeDoesNotUsePitchedSurfaceInheritance() {
-        assertFalse(PitchedSurfaceLayer.class.isAssignableFrom(ChordStepMode.class));
+        assertFalse(LivePadSurfaceLayer.class.isAssignableFrom(ChordStepMode.class));
         for (final Class<?> nestedClass : ChordStepMode.class.getDeclaredClasses()) {
-            assertFalse(PitchedSurfaceLayer.class.isAssignableFrom(nestedClass));
+            assertFalse(LivePadSurfaceLayer.class.isAssignableFrom(nestedClass));
         }
     }
 
     @Test
-    void pitchedSurfaceLayerDoesNotRetainChordStepImplementation() throws IOException {
-        final Path sourcePath = Path.of("src/main/java/com/oikoaudio/fire/note/PitchedSurfaceLayer.java");
+    void livePadSurfaceLayerDoesNotRetainChordStepImplementation() throws IOException {
+        final Path sourcePath = Path.of("src/main/java/com/oikoaudio/fire/note/LivePadSurfaceLayer.java");
         final String source = Files.readString(Files.exists(sourcePath)
                 ? sourcePath
                 : Path.of("modules/akai-fire").resolve(sourcePath));

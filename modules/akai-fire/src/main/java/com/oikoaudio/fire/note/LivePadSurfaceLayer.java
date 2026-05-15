@@ -38,7 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public abstract class PitchedSurfaceLayer extends Layer {
+public abstract class LivePadSurfaceLayer extends Layer {
     private static final int CLIP_ROW_PAD_COUNT = 16;
     private static final int MIN_OCTAVE = 0;
     private static final int MAX_OCTAVE = 7;
@@ -176,13 +176,13 @@ public abstract class PitchedSurfaceLayer extends Layer {
             new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
                     TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
 
-    protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
+    protected LivePadSurfaceLayer(final AkaiFireOikontrolExtension driver,
                                   final NoteRepeatHandler noteRepeatHandler,
                                   final String layerName) {
         this(driver, noteRepeatHandler, layerName, false);
     }
 
-    protected PitchedSurfaceLayer(final AkaiFireOikontrolExtension driver,
+    protected LivePadSurfaceLayer(final AkaiFireOikontrolExtension driver,
                                   final NoteRepeatHandler noteRepeatHandler,
                                   final String layerName,
                                   final boolean drumPadsOnly) {
