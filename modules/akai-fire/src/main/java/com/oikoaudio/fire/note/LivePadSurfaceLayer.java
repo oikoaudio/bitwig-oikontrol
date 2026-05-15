@@ -1178,7 +1178,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private BiColorLightState getStepSeqLightState() {
-        return BiColorLightState.GREEN_HALF;
+        return BiColorLightState.OFF;
     }
 
     private boolean isHarmonicLiveMode() {
