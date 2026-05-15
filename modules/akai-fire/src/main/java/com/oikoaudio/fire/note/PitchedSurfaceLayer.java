@@ -40,6 +40,7 @@ import com.oikoaudio.fire.chordstep.ChordStepFineNudgeController;
 import com.oikoaudio.fire.chordstep.ChordStepFineNudgeState;
 import com.oikoaudio.fire.chordstep.ChordStepFineNudgeWriter;
 import com.oikoaudio.fire.chordstep.ChordStepObservationController;
+import com.oikoaudio.fire.chordstep.ChordStepPadControls;
 import com.oikoaudio.fire.chordstep.ChordStepPadLightRenderer;
 import com.oikoaudio.fire.chordstep.ChordStepPadController;
 import com.oikoaudio.fire.chordstep.ChordStepPadSurface;
@@ -164,8 +165,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final SharedPitchContextController pitchContext;
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
-    private final ChordStepPadController chordStepPadController;
-    private final ChordStepPadLightRenderer chordStepPadLightRenderer;
+    private final ChordStepPadControls chordStepPadControls;
     private final ChordStepAccentControls chordStepAccentControls;
     private final ChordStepStepButtonControls chordStepStepButtonControls;
     private final ChordStepBankButtonControls chordStepBankButtonControls;
@@ -344,7 +344,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.chordStepPitchContextControls = new ChordStepPitchContextControls(chordStepPitchContextHost());
         this.chordBuilder = new ChordStepBuilderController(chordSelection, pitchContext,
                 this::getBuilderFirstVisibleMidiNote, CHORD_SOURCE_PAD_COUNT);
-        this.chordStepPadController = new ChordStepPadController(chordStepPadSurface,
+        final ChordStepPadController chordStepPadController = new ChordStepPadController(chordStepPadSurface,
                 CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
@@ -510,7 +510,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         this.chordStepController = new ChordStepController(chordStepEditControls, chordStepClipController, chordStepObservationController);
         chordStepController.observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
-        this.chordStepPadLightRenderer = new ChordStepPadLightRenderer(
+        final ChordStepPadLightRenderer chordStepPadLightRenderer = new ChordStepPadLightRenderer(
                 chordStepPadSurface,
                 chordBuilder,
                 chordSelection,
@@ -522,6 +522,12 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 this::hasVisibleStepContent,
                 stepIndex -> hasVisibleStepContent(stepIndex) && isChordStepAccented(stepIndex),
                 this::isChordStepSustained);
+        this.chordStepPadControls = new ChordStepPadControls(
+                chordStepPadController,
+                chordStepPadLightRenderer,
+                CLIP_ROW_PAD_COUNT,
+                CHORD_SOURCE_PAD_OFFSET,
+                STEP_PAD_OFFSET);
         this.stepEncoderBankLayout = createStepEncoderBankLayout();
         this.stepEncoderLayer = new StepSequencerEncoderHandler(this, driver);
 
@@ -1259,7 +1265,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         if (currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            chordStepPadController.handlePadPress(padIndex, pressed, velocity);
+            chordStepPadControls.handlePadPress(padIndex, pressed, velocity);
             return;
         }
         handleClipStepRecordPadPress(padIndex, pressed);
@@ -2792,8 +2798,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private RgbLigthState getChordStepPadLight(final int padIndex) {
-        return chordStepPadLightRenderer.padLight(padIndex, CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET,
-                STEP_PAD_OFFSET);
+        return chordStepPadControls.padLight(padIndex);
     }
 
     private RgbLigthState getChordOccupiedStepColor() {

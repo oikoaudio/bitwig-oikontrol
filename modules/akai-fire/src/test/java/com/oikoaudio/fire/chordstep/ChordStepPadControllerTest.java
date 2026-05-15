@@ -97,8 +97,8 @@ class ChordStepPadControllerTest {
         return note;
     }
 
-    private static final class FakeHost implements ChordStepPadController.Host {
-        private final List<String> events = new ArrayList<>();
+    static final class FakeHost implements ChordStepPadController.Host {
+        final List<String> events = new ArrayList<>();
         private final Set<Integer> chordSlots = new HashSet<>();
         private List<NoteStep> heldNotes = List.of();
         private boolean builderFamily;
