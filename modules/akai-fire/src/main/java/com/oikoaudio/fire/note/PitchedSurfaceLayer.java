@@ -1336,40 +1336,50 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void handleChordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
         if (padIndex < CLIP_ROW_PAD_COUNT) {
-            if (chordStepPadSurface.hasHeldSteps() && handleChordStepRecurrencePadPress(padIndex, pressed)) {
-                return;
-            }
-            clipHandler.handlePadPress(padIndex, pressed);
+            handleChordStepClipRowPadPress(padIndex, pressed);
             return;
         }
         if (padIndex < STEP_PAD_OFFSET) {
-            final int sourcePadIndex = padIndex - CHORD_SOURCE_PAD_OFFSET;
-            if (isBuilderFamily()) {
-                handleBuilderSourcePadPress(sourcePadIndex, pressed);
-                return;
-            }
-            if (!chordBank.hasSlot(currentPresetFamilyIndex(), chordPage, sourcePadIndex)) {
-                return;
-            }
-            if (pressed) {
-                selectedChordSlot = sourcePadIndex;
-                final boolean hasHeldSteps = chordStepPadSurface.hasHeldSteps();
-                final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
-                final boolean transportStopped = !driver.isTransportPlaying();
-                if (auditionEnabled && (!hasHeldSteps || transportStopped)) {
-                    startAuditionSelectedChord(currentChordVelocity(velocity));
-                }
-                if (hasHeldSteps) {
-                    assignSelectedChordToHeldSteps(velocity);
-                } else if (!auditionEnabled) {
-                    showCurrentChord();
-                }
-            } else {
-                stopAuditionNotes();
-            }
+            handleChordStepSourcePadPress(padIndex - CHORD_SOURCE_PAD_OFFSET, pressed, velocity);
             return;
         }
-        final int stepIndex = padIndex - STEP_PAD_OFFSET;
+        handleChordStepStepPadPress(padIndex - STEP_PAD_OFFSET, pressed, velocity);
+    }
+
+    private void handleChordStepClipRowPadPress(final int padIndex, final boolean pressed) {
+        if (chordStepPadSurface.hasHeldSteps() && handleChordStepRecurrencePadPress(padIndex, pressed)) {
+            return;
+        }
+        clipHandler.handlePadPress(padIndex, pressed);
+    }
+
+    private void handleChordStepSourcePadPress(final int sourcePadIndex, final boolean pressed, final int velocity) {
+        if (isBuilderFamily()) {
+            handleBuilderSourcePadPress(sourcePadIndex, pressed);
+            return;
+        }
+        if (!chordBank.hasSlot(currentPresetFamilyIndex(), chordPage, sourcePadIndex)) {
+            return;
+        }
+        if (pressed) {
+            selectedChordSlot = sourcePadIndex;
+            final boolean hasHeldSteps = chordStepPadSurface.hasHeldSteps();
+            final boolean auditionEnabled = driver.isStepSeqPadAuditionEnabled();
+            final boolean transportStopped = !driver.isTransportPlaying();
+            if (auditionEnabled && (!hasHeldSteps || transportStopped)) {
+                startAuditionSelectedChord(currentChordVelocity(velocity));
+            }
+            if (hasHeldSteps) {
+                assignSelectedChordToHeldSteps(velocity);
+            } else if (!auditionEnabled) {
+                showCurrentChord();
+            }
+        } else {
+            stopAuditionNotes();
+        }
+    }
+
+    private void handleChordStepStepPadPress(final int stepIndex, final boolean pressed, final int velocity) {
         final boolean accentGesture = chordAccentState.isHeld() || chordAccentState.isActive();
         if (pressed && !ensureSelectedNoteClipSlot()) {
             return;
@@ -1391,53 +1401,83 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 return;
             }
             final Integer heldStepAnchor = chordStepPadSurface.heldStepAnchor();
-            if (heldStepAnchor != null
+            final boolean canExtendFromAnchor = heldStepAnchor != null
                     && heldStepAnchor != stepIndex
                     && chordStepPadSurface.hasHeldStep(heldStepAnchor)
-                    && canExtendHeldChordRange(heldStepAnchor, stepIndex)
-                    && extendHeldChordRange(heldStepAnchor, stepIndex)) {
-                chordStepPadSurface.addHeldStep(stepIndex);
-                chordStepPadSurface.markModifiedStep(heldStepAnchor);
-                chordStepPadSurface.markModifiedStep(stepIndex);
-                showExtendedStepInfo(heldStepAnchor, stepIndex);
+                    && canExtendHeldChordRange(heldStepAnchor, stepIndex);
+            final ChordStepPadSurface.RangePressAction rangeAction = chordStepPadSurface.rangePressAction(stepIndex,
+                    canExtendFromAnchor);
+            if (handleChordStepRangePressAction(stepIndex, heldStepAnchor, rangeAction)) {
                 return;
             }
-            if (heldStepAnchor != null
-                    && heldStepAnchor != stepIndex
-                    && chordStepPadSurface.hasHeldStep(heldStepAnchor)
-                    && !canExtendHeldChordRange(heldStepAnchor, stepIndex)) {
-                showBlockedStepInfo();
+            final ChordStepPadSurface.StepPressAction stepAction = chordStepPadSurface.stepPressAction(stepIndex,
+                    hasStepStartNote(stepIndex), isBuilderFamily());
+            if (!handleChordStepNormalPressAction(stepIndex, velocity, stepAction)) {
                 return;
-            }
-            chordStepPadSurface.beginRecurrenceHoldIfNeeded(chordStepPadSurface.hasHeldSteps());
-            chordStepPadSurface.addHeldStep(stepIndex);
-            if (chordStepPadSurface.heldStepAnchor() == null) {
-                chordStepPadSurface.setHeldStepAnchor(stepIndex);
-            }
-            if (!hasStepStartNote(stepIndex)) {
-                final boolean assigned = assignSelectedChordToSteps(Collections.singleton(stepIndex), velocity);
-                if (!assigned) {
-                    chordStepPadSurface.removeHeldStep(stepIndex);
-                    refreshHeldStepAnchor(stepIndex);
-                    return;
-                }
-                chordStepPadSurface.markAddedStep(stepIndex);
-            } else if (isBuilderFamily()) {
-                loadBuilderFromStep(stepIndex);
             }
             showHeldStepInfo(stepIndex);
         } else {
-            chordStepPadSurface.removeHeldStep(stepIndex);
+            final ChordStepPadSurface.StepReleaseAction releaseAction = chordStepPadSurface.stepReleaseAction(
+                    stepIndex, hasStepStartNote(stepIndex));
             heldBankFineStarts.remove(stepIndex);
-            refreshHeldStepAnchor(stepIndex);
-            if (chordStepPadSurface.consumeModifiedStep(stepIndex)) {
-                // Edited steps remain in place on release.
-            } else if (chordStepPadSurface.consumeAddedStep(stepIndex)) {
-                // Newly inserted steps remain in place on release.
-            } else if (hasStepStartNote(stepIndex)) {
-                clearChordStep(stepIndex);
+            handleChordStepReleaseAction(stepIndex, releaseAction);
+        }
+    }
+
+    private boolean handleChordStepNormalPressAction(final int stepIndex,
+                                                     final int velocity,
+                                                     final ChordStepPadSurface.StepPressAction action) {
+        switch (action) {
+            case HOLD_EXISTING -> {
+                return true;
+            }
+            case ADD_STEP -> {
+                final boolean assigned = assignSelectedChordToSteps(Collections.singleton(stepIndex), velocity);
+                if (!assigned) {
+                    chordStepPadSurface.cancelStepPress(stepIndex);
+                    return false;
+                }
+                chordStepPadSurface.markAddedStep(stepIndex);
+                return true;
+            }
+            case LOAD_BUILDER -> {
+                loadBuilderFromStep(stepIndex);
+                return true;
             }
         }
+        return true;
+    }
+
+    private void handleChordStepReleaseAction(final int stepIndex,
+                                              final ChordStepPadSurface.StepReleaseAction action) {
+        switch (action) {
+            case NONE -> {
+            }
+            case CLEAR_STEP -> clearChordStep(stepIndex);
+        }
+    }
+
+    private boolean handleChordStepRangePressAction(final int stepIndex,
+                                                    final Integer heldStepAnchor,
+                                                    final ChordStepPadSurface.RangePressAction action) {
+        switch (action) {
+            case NONE -> {
+                return false;
+            }
+            case EXTEND -> {
+                if (heldStepAnchor == null || !extendHeldChordRange(heldStepAnchor, stepIndex)) {
+                    return false;
+                }
+                chordStepPadSurface.markRangeExtended(stepIndex);
+                showExtendedStepInfo(heldStepAnchor, stepIndex);
+                return true;
+            }
+            case BLOCK -> {
+                showBlockedStepInfo();
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean handleChordStepModifierPressAction(final int stepIndex,
@@ -3103,7 +3143,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private RgbLigthState getChordStepPadLight(final int padIndex) {
         if (padIndex < CLIP_ROW_PAD_COUNT) {
-            if (chordStepPadSurface.shouldShowRecurrenceRow(chordStepPadSurface.hasHeldSteps())) {
+            if (chordStepPadSurface.shouldShowRecurrenceRow()) {
                 return chordStepRecurrencePadLight(padIndex);
             }
             return clipHandler.getPadLight(padIndex);
@@ -3127,8 +3167,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         final boolean accented = occupied && isChordStepAccented(stepIndex);
         final boolean sustained = !occupied && isChordStepSustained(stepIndex);
         return chordStepPadSurface.stepPadLight(stepIndex, chordStepPosition.getAvailableSteps(), occupied, accented,
-                sustained, chordStepPadSurface.hasHeldStep(stepIndex), playingStep, getChordOccupiedStepColor(),
-                getChordSustainedStepColor(), HELD_STEP);
+                sustained, playingStep, getChordOccupiedStepColor(), getChordSustainedStepColor(), HELD_STEP);
     }
 
     private RgbLigthState chordStepRecurrencePadLight(final int padIndex) {

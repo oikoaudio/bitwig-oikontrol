@@ -21,6 +21,23 @@ final class ChordStepPadSurface {
         DELETE
     }
 
+    enum RangePressAction {
+        NONE,
+        EXTEND,
+        BLOCK
+    }
+
+    enum StepPressAction {
+        HOLD_EXISTING,
+        ADD_STEP,
+        LOAD_BUILDER
+    }
+
+    enum StepReleaseAction {
+        NONE,
+        CLEAR_STEP
+    }
+
     private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
     private final Set<Integer> heldStepPads = new HashSet<>();
     private final Set<Integer> addedStepPads = new HashSet<>();
@@ -28,8 +45,8 @@ final class ChordStepPadSurface {
     private final Set<Integer> modifierHandledStepPads = new HashSet<>();
     private Integer heldStepAnchor = null;
 
-    void beginRecurrenceHoldIfNeeded(final boolean hasHeldSteps) {
-        recurrencePads.beginHoldIfNeeded(hasHeldSteps);
+    void beginRecurrenceHoldIfNeeded() {
+        recurrencePads.beginHoldIfNeeded(hasHeldSteps());
     }
 
     void clearRecurrenceHold() {
@@ -95,6 +112,55 @@ final class ChordStepPadSurface {
         return addedStepPads.contains(stepIndex);
     }
 
+    RangePressAction rangePressAction(final int stepIndex, final boolean canExtendFromAnchor) {
+        if (heldStepAnchor == null || heldStepAnchor == stepIndex || !heldStepPads.contains(heldStepAnchor)) {
+            return RangePressAction.NONE;
+        }
+        return canExtendFromAnchor ? RangePressAction.EXTEND : RangePressAction.BLOCK;
+    }
+
+    void markRangeExtended(final int stepIndex) {
+        if (heldStepAnchor != null) {
+            heldStepPads.add(stepIndex);
+            modifiedStepPads.add(heldStepAnchor);
+            modifiedStepPads.add(stepIndex);
+        }
+    }
+
+    StepPressAction stepPressAction(final int stepIndex,
+                                    final boolean hasStepStartNote,
+                                    final boolean builderFamily) {
+        beginRecurrenceHoldIfNeeded();
+        addHeldStep(stepIndex);
+        if (heldStepAnchor == null) {
+            heldStepAnchor = stepIndex;
+        }
+        if (!hasStepStartNote) {
+            return StepPressAction.ADD_STEP;
+        }
+        if (builderFamily) {
+            return StepPressAction.LOAD_BUILDER;
+        }
+        return StepPressAction.HOLD_EXISTING;
+    }
+
+    void cancelStepPress(final int stepIndex) {
+        removeHeldStep(stepIndex);
+        refreshHeldStepAnchor(stepIndex);
+    }
+
+    StepReleaseAction stepReleaseAction(final int stepIndex, final boolean hasStepStartNote) {
+        removeHeldStep(stepIndex);
+        refreshHeldStepAnchor(stepIndex);
+        if (consumeModifiedStep(stepIndex)) {
+            return StepReleaseAction.NONE;
+        }
+        if (consumeAddedStep(stepIndex)) {
+            return StepReleaseAction.NONE;
+        }
+        return hasStepStartNote ? StepReleaseAction.CLEAR_STEP : StepReleaseAction.NONE;
+    }
+
     ModifierPressAction modifierPressAction(final boolean selectHeld,
                                             final boolean fixedLengthHeld,
                                             final boolean copyHeld,
@@ -138,8 +204,8 @@ final class ChordStepPadSurface {
         clearRecurrenceHold();
     }
 
-    boolean shouldShowRecurrenceRow(final boolean hasHeldSteps) {
-        return recurrencePads.shouldShowRow(hasHeldSteps);
+    boolean shouldShowRecurrenceRow() {
+        return recurrencePads.shouldShowRow(hasHeldSteps());
     }
 
     boolean handleRecurrencePadPress(final int padIndex,
@@ -175,7 +241,6 @@ final class ChordStepPadSurface {
                                final boolean occupied,
                                final boolean accented,
                                final boolean sustained,
-                               final boolean held,
                                final int playingStep,
                                final RgbLigthState occupiedStepColor,
                                final RgbLigthState sustainedStepColor,
@@ -183,7 +248,7 @@ final class ChordStepPadSurface {
         if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, availableSteps)) {
             return RgbLigthState.OFF;
         }
-        if (held) {
+        if (hasHeldStep(stepIndex)) {
             return heldStepColor.getBrightest();
         }
         if (occupied) {

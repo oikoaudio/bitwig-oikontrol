@@ -60,9 +60,10 @@ class ChordStepPadSurfaceTest {
     void rendersHeldStepAsBrightestHeldColor() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
         final RgbLigthState held = new RgbLigthState(120, 88, 0, true);
+        surface.addHeldStep(5);
 
         assertSame(held.getBrightest(), surface.stepPadLight(5, 16,
-                true, false, false, true, 0,
+                true, false, false, 0,
                 RgbLigthState.PURPLE, RgbLigthState.GRAY_1, held));
     }
 
@@ -72,7 +73,7 @@ class ChordStepPadSurfaceTest {
         final RgbLigthState occupied = RgbLigthState.PURPLE;
 
         assertSame(occupied.getBrightend(), surface.stepPadLight(5, 16,
-                true, true, false, false, 0,
+                true, true, false, 0,
                 occupied, RgbLigthState.GRAY_1, new RgbLigthState(120, 88, 0, true)));
     }
 
@@ -81,7 +82,7 @@ class ChordStepPadSurfaceTest {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
         assertSame(RgbLigthState.OFF, surface.stepPadLight(17, 16,
-                true, true, false, false, 0,
+                true, true, false, 0,
                 RgbLigthState.PURPLE, RgbLigthState.GRAY_1, new RgbLigthState(120, 88, 0, true)));
     }
 
@@ -166,6 +167,67 @@ class ChordStepPadSurfaceTest {
                 surface.modifierPressAction(false, false, false, true));
         assertEquals(ChordStepPadSurface.ModifierPressAction.NONE,
                 surface.modifierPressAction(false, false, false, false));
+    }
+
+    @Test
+    void resolvesRangePressActionFromHeldAnchor() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+
+        assertEquals(ChordStepPadSurface.RangePressAction.NONE, surface.rangePressAction(3, true));
+
+        surface.addHeldStep(2);
+        surface.setHeldStepAnchor(2);
+
+        assertEquals(ChordStepPadSurface.RangePressAction.EXTEND, surface.rangePressAction(5, true));
+        assertEquals(ChordStepPadSurface.RangePressAction.BLOCK, surface.rangePressAction(5, false));
+        assertEquals(ChordStepPadSurface.RangePressAction.NONE, surface.rangePressAction(2, true));
+    }
+
+    @Test
+    void markingRangeExtendedAddsStepAndMarksBothStepsModified() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+        surface.addHeldStep(2);
+        surface.setHeldStepAnchor(2);
+
+        surface.markRangeExtended(5);
+
+        assertTrue(surface.hasHeldStep(5));
+        assertTrue(surface.consumeModifiedStep(2));
+        assertTrue(surface.consumeModifiedStep(5));
+    }
+
+    @Test
+    void resolvesNormalStepPressActionAndTracksHeldStep() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+
+        assertEquals(ChordStepPadSurface.StepPressAction.ADD_STEP,
+                surface.stepPressAction(2, false, false));
+        assertTrue(surface.hasHeldStep(2));
+        assertEquals(2, surface.heldStepAnchor());
+
+        assertEquals(ChordStepPadSurface.StepPressAction.LOAD_BUILDER,
+                surface.stepPressAction(3, true, true));
+        assertEquals(ChordStepPadSurface.StepPressAction.HOLD_EXISTING,
+                surface.stepPressAction(4, true, false));
+    }
+
+    @Test
+    void releaseActionPreservesAddedAndModifiedStepsButClearsPlainExistingSteps() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+
+        surface.addHeldStep(2);
+        surface.markAddedStep(2);
+        assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(2, true));
+
+        surface.addHeldStep(3);
+        surface.markModifiedStep(3);
+        assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(3, true));
+
+        surface.addHeldStep(4);
+        assertEquals(ChordStepPadSurface.StepReleaseAction.CLEAR_STEP, surface.stepReleaseAction(4, true));
+
+        surface.addHeldStep(5);
+        assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(5, false));
     }
 
     private static NoteStep note(final int x, final int recurrenceLength, final int recurrenceMask) {
