@@ -7,10 +7,7 @@ import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BankButtonBindings;
-import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.ButtonRowBindings;
-import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -95,8 +92,9 @@ public final class FugueStepMode extends Layer {
         this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
 
-        bindPads();
-        bindButtons();
+        new PadBankRowControlBindings(driver, this, fugueStepControlBindingsHost(),
+                new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
+                        this::handleEncoderModeButton, this::encoderModeLight)).bind();
         bindEncoders();
         bindMainEncoder();
     }
@@ -133,8 +131,8 @@ public final class FugueStepMode extends Layer {
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
     }
 
-    private void bindPads() {
-        PadMatrixBindings.bindPressed(this, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
+    private PadBankRowControlBindings.Host fugueStepControlBindingsHost() {
+        return new PadBankRowControlBindings.Host() {
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed) {
                 FugueStepMode.this.handlePadPress(padIndex, pressed);
@@ -144,39 +142,27 @@ public final class FugueStepMode extends Layer {
             public RgbLigthState padLight(final int padIndex) {
                 return FugueStepMode.this.getPadLight(padIndex);
             }
-        });
-    }
 
-    private void bindButtons() {
-        driver.getButton(NoteAssign.KNOB_MODE).bindPressed(this, this::handleEncoderModeButton, this::encoderModeLight);
-        BankButtonBindings.bind(this, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
-                new BankButtonBindings.Host() {
-                    @Override
-                    public void handleBankButton(final boolean pressed, final int amount) {
-                        FugueStepMode.this.handleBankButton(pressed, amount);
-                    }
-
-                    @Override
-                    public BiColorLightState bankLightState() {
-                        return BiColorLightState.HALF;
-                    }
-                });
-        ButtonRowBindings.bindPressed(this, new BiColorButton[] {
-                driver.getButton(NoteAssign.MUTE_1),
-                driver.getButton(NoteAssign.MUTE_2),
-                driver.getButton(NoteAssign.MUTE_3),
-                driver.getButton(NoteAssign.MUTE_4)
-        }, new ButtonRowBindings.Host() {
             @Override
-            public void handleButton(final int index, final boolean pressed) {
+            public void handleBankButton(final boolean pressed, final int amount) {
+                FugueStepMode.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return BiColorLightState.HALF;
+            }
+
+            @Override
+            public void handleRowButton(final int index, final boolean pressed) {
                 toggleLineEnabled(index, pressed);
             }
 
             @Override
-            public BiColorLightState lightState(final int index) {
-                return lineLight(index);
+            public BiColorLightState rowLightState(final int index) {
+                return FugueStepMode.this.lineLight(index);
             }
-        });
+        };
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {

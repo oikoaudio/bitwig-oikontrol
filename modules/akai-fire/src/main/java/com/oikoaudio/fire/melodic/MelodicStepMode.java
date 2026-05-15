@@ -17,10 +17,10 @@ import com.bitwig.extensions.framework.values.Midi;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -185,7 +185,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
         this.padSurface = new MelodicStepPadSurface(new MelodicPadCallbacks());
-        new MelodicStepControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
+        new PadBankRowControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
@@ -193,8 +193,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.poolLayoutRootPitch = nearestPhraseRootPitch(phraseContext().baseMidiNote());
     }
 
-    private MelodicStepControlBindings.Host melodicStepControlBindingsHost() {
-        return new MelodicStepControlBindings.Host() {
+    private PadBankRowControlBindings.Host melodicStepControlBindingsHost() {
+        return new PadBankRowControlBindings.Host() {
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed) {
                 padSurface.handlePadPress(padIndex, pressed);
@@ -216,12 +216,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public void handleMuteButton(final int index, final boolean pressed) {
+            public void handleRowButton(final int index, final boolean pressed) {
                 MelodicStepMode.this.handleMuteButton(index, pressed);
             }
 
             @Override
-            public BiColorLightState muteLightState(final int index) {
+            public BiColorLightState rowLightState(final int index) {
                 return MelodicStepMode.this.muteLightState(index);
             }
         };

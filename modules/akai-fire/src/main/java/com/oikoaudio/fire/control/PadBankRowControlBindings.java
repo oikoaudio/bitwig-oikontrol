@@ -1,27 +1,29 @@
-package com.oikoaudio.fire.melodic;
+package com.oikoaudio.fire.control;
 
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BankButtonBindings;
-import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.ButtonRowBindings;
-import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 
-final class MelodicStepControlBindings {
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+public final class PadBankRowControlBindings {
     private final AkaiFireOikontrolExtension driver;
     private final Layer layer;
     private final Host host;
+    private final ExtraButtonBinding[] extraButtonBindings;
 
-    MelodicStepControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host) {
+    public PadBankRowControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host,
+                                     final ExtraButtonBinding... extraButtonBindings) {
         this.driver = driver;
         this.layer = layer;
         this.host = host;
+        this.extraButtonBindings = extraButtonBindings;
     }
 
-    void bind() {
+    public void bind() {
         bindPads();
         bindButtons();
     }
@@ -41,6 +43,9 @@ final class MelodicStepControlBindings {
     }
 
     private void bindButtons() {
+        for (final ExtraButtonBinding binding : extraButtonBindings) {
+            driver.getButton(binding.assignment()).bindPressed(layer, binding.handler(), binding.lightState());
+        }
         BankButtonBindings.bind(layer, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
                 new BankButtonBindings.Host() {
                     @Override
@@ -53,27 +58,26 @@ final class MelodicStepControlBindings {
                         return host.bankLightState();
                     }
                 });
-
-        final BiColorButton[] muteButtons = {
+        final BiColorButton[] rowButtons = {
                 driver.getButton(NoteAssign.MUTE_1),
                 driver.getButton(NoteAssign.MUTE_2),
                 driver.getButton(NoteAssign.MUTE_3),
                 driver.getButton(NoteAssign.MUTE_4)
         };
-        ButtonRowBindings.bindPressed(layer, muteButtons, new ButtonRowBindings.Host() {
+        ButtonRowBindings.bindPressed(layer, rowButtons, new ButtonRowBindings.Host() {
             @Override
             public void handleButton(final int index, final boolean pressed) {
-                host.handleMuteButton(index, pressed);
+                host.handleRowButton(index, pressed);
             }
 
             @Override
             public BiColorLightState lightState(final int index) {
-                return host.muteLightState(index);
+                return host.rowLightState(index);
             }
         });
     }
 
-    interface Host {
+    public interface Host {
         void handlePadPress(int padIndex, boolean pressed);
 
         RgbLigthState padLight(int padIndex);
@@ -82,8 +86,12 @@ final class MelodicStepControlBindings {
 
         BiColorLightState bankLightState();
 
-        void handleMuteButton(int index, boolean pressed);
+        void handleRowButton(int index, boolean pressed);
 
-        BiColorLightState muteLightState(int index);
+        BiColorLightState rowLightState(int index);
+    }
+
+    public record ExtraButtonBinding(NoteAssign assignment, Consumer<Boolean> handler,
+                                     Supplier<BiColorLightState> lightState) {
     }
 }

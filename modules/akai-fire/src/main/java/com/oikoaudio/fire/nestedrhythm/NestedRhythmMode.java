@@ -15,6 +15,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -160,7 +161,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 this::lastStepPadLight,
                 this::clipBaseColor,
                 this::applyEditablePattern);
-        new NestedRhythmControlBindings(driver, this, nestedRhythmControlBindingsHost()).bind();
+        new PadBankRowControlBindings(driver, this, nestedRhythmControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
@@ -215,8 +216,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         encoderLayer.deactivate();
     }
 
-    private NestedRhythmControlBindings.Host nestedRhythmControlBindingsHost() {
-        return new NestedRhythmControlBindings.Host() {
+    private PadBankRowControlBindings.Host nestedRhythmControlBindingsHost() {
+        return new PadBankRowControlBindings.Host() {
             @Override
             public void handlePadPress(final int padIndex, final boolean pressed) {
                 NestedRhythmMode.this.handlePadPress(padIndex, pressed);
@@ -238,12 +239,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void handleMuteButton(final int index, final boolean pressed) {
+            public void handleRowButton(final int index, final boolean pressed) {
                 NestedRhythmMode.this.handleMuteButton(index, pressed);
             }
 
             @Override
-            public BiColorLightState muteLightState(final int index) {
+            public BiColorLightState rowLightState(final int index) {
                 return NestedRhythmMode.this.muteLightState(index);
             }
         };
