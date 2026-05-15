@@ -269,7 +269,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
         drumPadPlayMode = new DrumPadPlayMode(this, noteRepeatHandler);
-        chordStepMode = new ChordStepMode(this, noteRepeatHandler);
+        chordStepMode = new ChordStepMode(this);
         melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
         fugueStepMode = new FugueStepMode(this);
         nestedRhythmMode = new NestedRhythmMode(this);

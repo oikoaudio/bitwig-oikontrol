@@ -4,26 +4,20 @@ import com.oikoaudio.fire.note.ChordInversion;
 import com.oikoaudio.fire.note.LiveVelocityLogic;
 import com.oikoaudio.fire.note.NoteGridLayout;
 
-import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
-import com.bitwig.extension.api.Color;
-import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
-import com.bitwig.extension.controller.api.SettableRangedValue;
-import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.bitwig.extensions.framework.values.Midi;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
@@ -41,7 +35,6 @@ import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
-import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
@@ -72,9 +65,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private static final int CHORD_SOURCE_PAD_COUNT = 16;
     private static final int MIN_OCTAVE = 0;
     private static final int MAX_OCTAVE = 7;
-    private static final int MIN_TRANSPOSE = 0;
-    private static final int MAX_TRANSPOSE = MAX_OCTAVE * 12 + 11;
-    private static final int HELD_NOTE_VELOCITY = 100;
     private static final int STEP_PAD_OFFSET = 32;
     private static final int STEP_COUNT = 32;
     private static final int MAX_CHORD_STEPS = 2048;
@@ -82,42 +72,18 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private static final int FINE_STEPS_PER_STEP = 16;
     private static final int OBSERVED_FINE_STEP_CAPACITY = MAX_CHORD_STEPS * FINE_STEPS_PER_STEP;
     private static final double FINE_STEP_LENGTH = STEP_LENGTH / FINE_STEPS_PER_STEP;
-    private static final double MIN_GATE_RATIO = 0.25;
-    private static final double MAX_GATE_RATIO = 1.0;
     private static final int AUDITION_VELOCITY = 96;
-    private static final int LIVE_NOTE_ENCODER_THRESHOLD = 4;
-    private static final int LIVE_LAYOUT_ENCODER_THRESHOLD = 6;
     private static final int CHORD_ROOT_ENCODER_THRESHOLD = 16;
     private static final int CHORD_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final int CHORD_FAMILY_ENCODER_THRESHOLD = 8;
-    private static final int LIVE_VELOCITY_ENCODER_THRESHOLD = 1;
-    private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 6;
-    private static final int MIN_CHORD_ROOT_OFFSET = -24;
-    private static final int MAX_CHORD_ROOT_OFFSET = 24;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
-    private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_CHORD_STANDARD_VELOCITY = ChordStepAccentEditor.STANDARD_VELOCITY;
     private static final int DEFAULT_CHORD_ACCENTED_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
-    private static final int DEFAULT_DRUM_MACHINE_LOW_NOTE = 36;
     private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
-    private static final int DEFAULT_LIVE_PITCH_BEND = 64;
-    private static final int DEFAULT_LIVE_PITCH_EXPRESSION = 64;
-    private static final int LIVE_PITCH_BEND_RETURN_STEP = 6;
-    private static final long LIVE_PITCH_BEND_RETURN_DELAY_MS = 15L;
-    private static final long LIVE_PITCH_BEND_INACTIVITY_RETURN_MS = 120L;
-    private static final int MIDI_CC_MOD = 1;
-    private static final int MIDI_CC_SUSTAIN = 64;
-    private static final int MIDI_CC_SOSTENUTO = 66;
-    private static final int MIDI_CC_TIMBRE = 74;
-    private static final int[] LIVE_PITCH_OFFSETS = {-24, -19, -12, -7, 0, 7, 12, 19, 24};
-    private static final int DEFAULT_LIVE_PITCH_OFFSET_INDEX = 4;
-    private static final int DRUM_MACHINE_SCROLL_COARSE_STEPS = 16;
-    private static final int MIN_SCALE_DEGREE_GLISS = -14;
-    private static final int MAX_SCALE_DEGREE_GLISS = 14;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
     private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
@@ -132,12 +98,12 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private static final RgbLigthState HELD_STEP = new RgbLigthState(120, 88, 0, true);
     private static final RgbLigthState DEFERRED_TOP = new RgbLigthState(110, 38, 0, true);
     private static final RgbLigthState DEFERRED_BOTTOM = new RgbLigthState(36, 16, 0, true);
+    private static final String MODE_NAME = "Chord Step";
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
     private final NoteInput noteInput;
     private final PatternButtons patternButtons;
-    private final NoteRepeatHandler noteRepeatHandler;
     private final SharedPitchContextController pitchContext;
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
@@ -166,88 +132,24 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     private final ChordStepEditControls chordStepEditControls;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
-    private boolean inKey = false;
     private boolean noteStepActive = false;
     private boolean mainEncoderPressConsumed = false;
-    private final boolean drumPadsOnly;
-    private NoteStepSubMode currentStepSubMode = NoteStepSubMode.CHORD_STEP;
     private Integer selectedPresetStepIndex = null;
-    private int liveVelocity = DEFAULT_LIVE_VELOCITY;
-    private int liveVelocitySensitivity = 100;
     private int chordVelocitySensitivity = 100;
     private int defaultChordVelocity = DEFAULT_CHORD_STANDARD_VELOCITY;
     private int playingStep = -1;
-    private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
-    private int liveScaleDegreeGlissOffset = 0;
-    private int harmonicNoteCountIndex = 2;
-    private int harmonicOctaveSpan = 1;
-    private boolean harmonicBassColumns = true;
-    private int drumMachineScrollPosition = 0;
-    private boolean drumMachineDefaultPageApplied = false;
-    private final boolean[][] heldBongoPads = new boolean[2][NoteGridLayout.PAD_COUNT];
-    private final int[] heldBongoPadCounts = new int[2];
-    private int livePitchBend = DEFAULT_LIVE_PITCH_BEND;
-    private boolean livePitchBendTouched = false;
-    private int livePitchBendReturnGeneration = 0;
-    private int livePitchBendInactivityGeneration = 0;
     private RgbLigthState chordStepBaseColor = OCCUPIED_STEP;
-    private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator liveScaleEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator liveOctaveEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator liveLayoutEncoder = new EncoderStepAccumulator(LIVE_LAYOUT_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator chordRootEncoder = new EncoderStepAccumulator(CHORD_ROOT_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator chordOctaveEncoder = new EncoderStepAccumulator(CHORD_OCTAVE_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator chordFamilyEncoder = new EncoderStepAccumulator(CHORD_FAMILY_ENCODER_THRESHOLD);
     private final TouchResetGesture touchResetGesture =
             new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
                     TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS);
-    private enum NoteStepSubMode {
-        CHORD_STEP("Chord Step", BiColorLightState.GREEN_HALF, BiColorLightState.GREEN_FULL),
-        CLIP_STEP_RECORD("Clip Step Record", BiColorLightState.AMBER_HALF, BiColorLightState.AMBER_FULL);
-
-        private final String displayName;
-        private final BiColorLightState idleLight;
-        private final BiColorLightState activeLight;
-
-        NoteStepSubMode(final String displayName, final BiColorLightState idleLight,
-                        final BiColorLightState activeLight) {
-            this.displayName = displayName;
-            this.idleLight = idleLight;
-            this.activeLight = activeLight;
-        }
-
-        public String displayName() {
-            return displayName;
-        }
-
-        public BiColorLightState idleLight() {
-            return idleLight;
-        }
-
-        public BiColorLightState activeLight() {
-            return activeLight;
-        }
-
-        public NoteStepSubMode next() {
-            return values()[(ordinal() + 1) % values().length];
-        }
-    }
-
     public ChordStepSurfaceLayer(final AkaiFireOikontrolExtension driver,
-                                  final NoteRepeatHandler noteRepeatHandler,
                                   final String layerName) {
-        this(driver, noteRepeatHandler, layerName, false);
-    }
-
-    public ChordStepSurfaceLayer(final AkaiFireOikontrolExtension driver,
-                                  final NoteRepeatHandler noteRepeatHandler,
-                                  final String layerName,
-                                  final boolean drumPadsOnly) {
         super(driver.getLayers(), layerName);
         this.driver = driver;
         this.pitchContext = driver.getSharedPitchContextController();
-        this.drumPadsOnly = false;
         this.oled = driver.getOled();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
         final ChordStepStepButtonControls chordStepStepButtonControls = new ChordStepStepButtonControls(
@@ -264,7 +166,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
                 CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, chordStepPadHost());
         this.noteInput = driver.getNoteInput();
         this.patternButtons = driver.getPatternButtons();
-        this.noteRepeatHandler = noteRepeatHandler;
         this.encoderTouchResetHandler = new EncoderTouchResetHandler(
                 touchResetGesture,
                 driver::isEncoderTouchResetEnabled,
@@ -430,25 +331,8 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         stepEncoderLayer.activate();
     }
 
-    private void scrollDrumMachineWindow(final int amount) {
-    }
-
-    private void retuneLivePads(final Runnable stateChange) {
-        stateChange.run();
-    }
-
-    private int bongoZoneForPad(final int padIndex) {
-        return -1;
-    }
-
-    private void showDrumMachineWindowInfo() {
-    }
-
-    private void clearHeldBongoPads() {
-    }
-
     private boolean isChordStepModeActive() {
-        return noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP;
+        return noteStepActive;
     }
 
     private void handleMute1Button(final boolean pressed) {
@@ -505,7 +389,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+        if (noteStepActive) {
             chordStepSurface.handleStepButton(pressed);
             return;
         }
@@ -1131,33 +1015,12 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         chordStepClips.position().setPage(0);
         clearTranslation();
         syncEncoderLayers();
-        if (currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            refreshChordStepObservation();
-            ensureBuilderSeededIfEmpty();
-            if (chordPageCount() > 1) {
-                showChordPageInfo();
-            } else {
-                showCurrentChord();
-            }
-            return;
-        }
-        oled.valueInfo("Step Mode", "Clip Step Record");
-    }
-
-    private void applyLiveEncoderStepSizes(final EncoderMode mode) {
-        final TouchEncoder[] encoders = driver.getEncoders();
-        switch (mode) {
-            case CHANNEL -> {
-                encoders[0].setStepSize(MixerEncoderProfile.STEP_SIZE);
-                encoders[1].setStepSize(MixerEncoderProfile.STEP_SIZE);
-                encoders[2].setStepSize(MixerEncoderProfile.STEP_SIZE);
-                encoders[3].setStepSize(MixerEncoderProfile.STEP_SIZE);
-            }
-            case MIXER, USER_1, USER_2 -> {
-                for (final TouchEncoder encoder : encoders) {
-                    encoder.setStepSize(MixerEncoderProfile.STEP_SIZE);
-                }
-            }
+        refreshChordStepObservation();
+        ensureBuilderSeededIfEmpty();
+        if (chordPageCount() > 1) {
+            showChordPageInfo();
+        } else {
+            showCurrentChord();
         }
     }
 
@@ -1293,18 +1156,8 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
 
     private void handleBankButton(final boolean pressed, final int amount) {
         if (noteStepActive) {
-            chordStepSurface.handleBankButton(pressed, amount,
-                    currentStepSubMode == NoteStepSubMode.CHORD_STEP);
-            return;
+            chordStepSurface.handleBankButton(pressed, amount, true);
         }
-        if (!pressed) {
-            return;
-        }
-        if (isDrumMachineLiveMode()) {
-            oled.valueInfo("Pad Window", "Use Pattern");
-            return;
-        }
-        adjustOctave(amount);
     }
 
     private BiColorLightState getBankLightState() {
@@ -1314,21 +1167,8 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         return BiColorLightState.HALF;
     }
 
-    private BiColorLightState getPitchContextLightState(final int amount, final boolean root) {
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            return chordStepSurface.pitchContextLight(amount, root);
-        }
-        if (root) {
-            return BiColorLightState.AMBER_HALF;
-        }
-        return amount < 0
-                ? (getOctave() > MIN_OCTAVE ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF)
-                : (getOctave() < MAX_OCTAVE ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
-    }
-
     private BiColorLightState getStepSeqLightState() {
-        return chordStepSurface.stepButtonLight(
-                noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP);
+        return chordStepSurface.stepButtonLight(noteStepActive);
     }
 
     private int currentChordVelocity(final int rawVelocity) {
@@ -1364,29 +1204,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         return chordStepAccentControls.isStepAccented(chordStepEventIndex.noteStepsAt(stepIndex), defaultChordVelocity);
     }
 
-    private boolean isHarmonicLiveMode() {
-        return false;
-    }
-
-    private boolean isDrumMachineLiveMode() {
-        return false;
-    }
-
-    public String currentNoteSubModeLabel() {
-        return "Chord Step";
-    }
-
-    public boolean isHarmonicNoteSubMode() {
-        return false;
-    }
-
-    public void resetNoteSubMode() {
-    }
-
-    public void cycleNoteSubMode() {
-        toggleSurfaceVariant();
-    }
-
     public void toggleSurfaceVariant() {
         toggleBuilderLayout();
     }
@@ -1405,29 +1222,8 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         return true;
     }
 
-    private void adjustScale(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        final int minScale = liveScaleMinIndex();
-        final int nextScale = pitchContext.getScaleIndex() + amount;
-        if (nextScale < minScale || nextScale >= pitchContext.getScaleCount()) {
-            return;
-        }
-        applyLayoutChange(() -> driver.setSharedScaleIndex(nextScale));
-        showState("Scale");
-    }
-
-    public void adjustSharedScaleFromOverview(final int amount) {
-        driver.adjustSharedScaleIndex(amount, liveScaleMinIndex());
-    }
-
     private void adjustOctave(final int amount) {
         if (amount == 0) {
-            return;
-        }
-        if (isDrumMachineLiveMode()) {
-            scrollDrumMachineWindow(amount * DRUM_MACHINE_SCROLL_COARSE_STEPS);
             return;
         }
         final int nextOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE, getOctave() + amount));
@@ -1436,23 +1232,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         }
         applyLayoutChange(() -> driver.setSharedOctave(nextOctave));
         showState("Octave");
-    }
-
-    private static String formatMidiNoteName(final int midiNote) {
-        final int octave = midiNote / 12 - 2;
-        return NoteGridLayout.noteName(midiNote) + octave;
-    }
-
-    private void showDrumMachineLayoutInfo() {
-        oled.valueInfo("Drum Layout", "--");
-    }
-
-    private void adjustTransposeSemitone(final int amount) {
-        if (amount == 0) {
-            return;
-        }
-        applyLayoutChange(() -> driver.adjustSharedRootNote(amount));
-        showState("Root");
     }
 
     private void handleMainEncoder(final int inc) {
@@ -1464,16 +1243,10 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         if (driver.handleMainEncoderGlobalChord(inc)) {
             return;
         }
-        if (!noteStepActive && noteRepeatHandler.getNoteRepeatActive().get()) {
-            // While transient live note repeat is active, keep SELECT dedicated to repeat-rate edits.
-            // Turning through the minimum rate should not drop straight into the underlying encoder role.
-            noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld(), false);
-            return;
-        }
         final boolean fine = driver.isGlobalShiftHeld();
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
-            noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld());
+            oled.valueInfo("Note Repeat", "Live only");
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
             driver.adjustTempo(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
@@ -1502,10 +1275,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             mainEncoderPressConsumed = false;
             return;
         }
-        if (!noteStepActive && noteRepeatHandler.getNoteRepeatActive().get()) {
-            noteRepeatHandler.handlePressed(pressed);
-            return;
-        }
         if (pressed && driver.isGlobalShiftHeld()) {
             mainEncoderPressConsumed = true;
             driver.cycleMainEncoderRolePreference();
@@ -1517,7 +1286,9 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             return;
         }
         if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
-            noteRepeatHandler.handlePressed(pressed);
+            if (pressed) {
+                oled.valueInfo("Note Repeat", "Live only");
+            }
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showTempoInfo();
@@ -1545,28 +1316,9 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         }
     }
 
-    private void applyLayout() {
-        for (int i = 0; i < noteTranslationTable.length; i++) {
-            noteTranslationTable[i] = -1;
-        }
-        noteInput.setKeyTranslationTable(noteTranslationTable);
-    }
-
     private void applyLayoutChange(final Runnable stateChange) {
-        if (noteStepActive) {
-            stateChange.run();
-            showContextInfo();
-            return;
-        }
-        retuneLivePads(stateChange);
-    }
-
-    private void showLiveVelocityInfo() {
-        if (driver.isGlobalShiftHeld()) {
-            oled.valueInfo("Default Velocity", Integer.toString(liveVelocity));
-            return;
-        }
-        oled.valueInfo("Velocity", "Sens %d%% / Def %d".formatted(liveVelocitySensitivity, liveVelocity));
+        stateChange.run();
+        showContextInfo();
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -1612,42 +1364,22 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
             return;
         }
         if ("Octave".equals(focus)) {
-            if (isDrumMachineLiveMode()) {
-                showDrumMachineWindowInfo();
-                return;
-            }
             oled.valueInfo("Octave", Integer.toString(getOctave()));
             return;
         }
-        if ("Layout".equals(focus)) {
-            if (isHarmonicLiveMode()) {
-                oled.valueInfo("Layout", harmonicBassColumns ? "Bass Columns" : "Full Field");
-            } else if (isDrumMachineLiveMode()) {
-                showDrumMachineLayoutInfo();
-            } else {
-                oled.valueInfo("Layout", inKey ? "In Key" : "Chromatic");
-            }
-            return;
-        }
-        if ("Interpretation".equals(focus) && noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+        if ("Interpretation".equals(focus) && noteStepActive) {
             oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
             return;
         }
-        final String liveModeDetail = inKey ? "In Key" : "Chromatic";
         oled.lineInfo("Root %s%d".formatted(NoteGridLayout.noteName(getRootNote()), getOctave()),
                 noteStepActive
-                        ? "Step: %s\n%s".formatted(currentStepSubMode.displayName(),
-                        currentStepSubMode == NoteStepSubMode.CHORD_STEP ? currentChordDisplay() : "Deferred")
-                        : "Scale: %s\n%s".formatted(getScaleDisplayName(), liveModeDetail));
+                        ? "Step: %s\n%s".formatted(MODE_NAME, currentChordDisplay())
+                        : "Scale: %s".formatted(getScaleDisplayName()));
     }
 
     private void showContextInfo() {
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
-            showCurrentChord();
-            return;
-        }
         if (noteStepActive) {
-            oled.valueInfo("Step Mode", currentStepSubMode.displayName());
+            showCurrentChord();
             return;
         }
         showState("Mode");
@@ -1707,14 +1439,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         oled.valueInfo("Chord Oct", formatSignedValue(chordSelection.octaveOffset()));
     }
 
-    private void showChordFamilyInfo() {
-        if (isBuilderFamily()) {
-            oled.valueInfo("Chord Family", ChordStepChordSelection.BUILDER_FAMILY_LABEL);
-            return;
-        }
-        oled.valueInfo("Chord Family", chordSelection.rawFamilyName());
-    }
-
     private void resetChordFamilySelection() {
         chordSelection.resetToBuilder();
     }
@@ -1745,53 +1469,21 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         return pitchContext.getMusicalScale();
     }
 
-    public MusicalScale getCurrentScale() {
-        return getScale();
-    }
-
     private String getScaleDisplayName() {
         return pitchContext.getShortScaleDisplayName();
-    }
-
-    public String getCurrentScaleDisplayName() {
-        return getScaleDisplayName();
     }
 
     private int getRootNote() {
         return pitchContext.getRootNote();
     }
 
-    public int getCurrentRootNoteClass() {
-        return getRootNote();
-    }
-
     private int getOctave() {
         return pitchContext.getOctave();
     }
 
-    public int getCurrentOctave() {
-        return getOctave();
-    }
-
-    public int getCurrentBaseMidiNote() {
-        return pitchContext.getBaseMidiNote();
-    }
-
-    private int liveScaleMinIndex() {
-        return 1;
-    }
-
     private int getBuilderFirstVisibleMidiNote() {
         final int midiNote = getChordRootMidi();
-        return midiNote >= 0 && midiNote <= 127 ? midiNote : -1;
-    }
-
-    private NoteGridLayout createLayout() {
-        return new NoteGridLayout(getScale(), getRootNote(), getOctave(), false);
-    }
-
-    private int applyLivePitchOffset(final int midiNote) {
-        return midiNote >= 0 && midiNote <= 127 ? midiNote : -1;
+        return midiNote >= MIN_MIDI_VALUE && midiNote <= MAX_MIDI_VALUE ? midiNote : -1;
     }
 
     private void clearTranslation() {
@@ -1806,7 +1498,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         if (!pressed) {
             return;
         }
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+        if (noteStepActive) {
             chordStepSurface.handlePatternUp(true);
             return;
         }
@@ -1817,7 +1509,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         if (!pressed) {
             return;
         }
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+        if (noteStepActive) {
             chordStepSurface.handlePatternDown(true);
             return;
         }
@@ -1825,14 +1517,14 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
     }
 
     private BiColorLightState getPatternUpLight() {
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+        if (noteStepActive) {
             return chordStepSurface.patternUpLight();
         }
         return BiColorLightState.GREEN_HALF;
     }
 
     private BiColorLightState getPatternDownLight() {
-        if (noteStepActive && currentStepSubMode == NoteStepSubMode.CHORD_STEP) {
+        if (noteStepActive) {
             return chordStepSurface.patternDownLight();
         }
         return BiColorLightState.GREEN_HALF;
@@ -1874,7 +1566,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
 
     @Override
     public String getDetails(final List<NoteStep> heldNotes) {
-        return "%s <%d>".formatted(currentStepSubMode.displayName(), heldNotes.size());
+        return "%s <%d>".formatted(MODE_NAME, heldNotes.size());
     }
 
     @Override
@@ -1962,7 +1654,7 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
 
     @Override
     public String getPadInfo() {
-        return currentStepSubMode.displayName();
+        return MODE_NAME;
     }
 
     @Override
@@ -2370,19 +2062,9 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         };
     }
 
-    private void applyLiveVelocity() {
-        final Integer[] velocityTable = new Integer[128];
-        for (int i = 0; i < velocityTable.length; i++) {
-            velocityTable[i] = liveVelocity;
-        }
-        noteInput.setVelocityTranslationTable(velocityTable);
-        noteRepeatHandler.setNoteInputVelocity(liveVelocity);
-    }
-
     @Override
     protected void onActivate() {
         noteStepActive = true;
-        currentStepSubMode = NoteStepSubMode.CHORD_STEP;
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
         selectedPresetStepIndex = null;
@@ -2398,7 +2080,6 @@ public final class ChordStepSurfaceLayer extends Layer implements StepSequencerH
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
         noteStepActive = false;
-        clearHeldBongoPads();
         stopAuditionNotes();
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
