@@ -6,7 +6,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.control.RgbButton;
+import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -26,10 +26,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final AkaiFireOikontrolExtension driver;
     private Application app;
 
-    private final IntSetValue heldSteps = new IntSetValue();
-    private final Set<Integer> addedSteps = new HashSet<>();
-    private final Set<Integer> modifiedSteps = new HashSet<>();
-    private final Set<Integer> gestureConsumedSteps = new HashSet<>();
+    private final DrumStepPadSurface stepPadSurface = new DrumStepPadSurface();
     private final HashMap<Integer, NoteStep> expectedNoteChanges = new HashMap<>();
     // Maintain fractional offsets for held notes.
     private final Map<NoteStep, Double> fractionalOffsets = new HashMap<>();
@@ -45,7 +42,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private Layer currentLayer;
     private final Layer muteLayer;
     private final Layer soloLayer;
-    private final StepSequencerEncoderHandler encoderLayer;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final EuclidState euclidState = new EuclidState();
 
     private final CursorTrack cursorTrack;
@@ -145,7 +142,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         padHandler = new DrumPadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
         clipHandler = new ClipRowHandler(this);
-        clipHandler.bindClipRow(mainLayer, driver.getRgbButtons());
+        bindClipRowPads(driver);
         recurrenceEditor = new RecurrenceEditor(driver, this);
         editButtonBinder = new SequencerEditButtonBinder(mainLayer, shiftActive, new SequencerEditButtonBinder.EditFunctionFeedback() {
             @Override
@@ -169,7 +166,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         initModeButtons(driver);
         initButtonBehaviour(driver);
         encoderBankLayout = createEncoderBankLayout();
-        encoderLayer = new StepSequencerEncoderHandler(this, driver);
+        encoderLayer = new StepSequencerEncoderLayer(this, driver);
 
         muteMode.addValueObserver(active -> {
             if (active) {
@@ -253,56 +250,86 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     }
 
+    private void bindClipRowPads(final AkaiFireOikontrolExtension driver) {
+        PadMatrixBindings.bindPressed(mainLayer, driver.getRgbButtons(), 0, 16,
+                new PadMatrixBindings.PressHost() {
+                    @Override
+                    public void handlePadPress(final int padIndex, final boolean pressed) {
+                        handleClipRowPad(padIndex, pressed);
+                    }
+
+                    @Override
+                    public RgbLigthState padLight(final int padIndex) {
+                        return getClipRowPadLight(padIndex);
+                    }
+                });
+    }
+
+    private void handleClipRowPad(final int index, final boolean pressed) {
+        if (isAnyStepHeld() && handleRecurrencePadPress(index, pressed)) {
+            return;
+        }
+        clipHandler.handlePadPress(index, pressed);
+    }
+
+    private RgbLigthState getClipRowPadLight(final int index) {
+        if (stepPadSurface.shouldShowRecurrenceRow()) {
+            return recurrencePadLight(index);
+        }
+        return clipHandler.getPadLight(index);
+    }
+
+    private boolean isAnyStepHeld() {
+        return stepPadSurface.isAnyStepHeld();
+    }
+
     //TODO DOGGY
     private void initSequenceSection(final AkaiFireOikontrolExtension driver) {
-        final RgbButton[] rgbButtons = driver.getRgbButtons();
-        for (int i = 0; i < 32; i++) {
-            final RgbButton button = rgbButtons[i + 32];
-            final int index = i;
-            button.bindPressed(mainLayer, p -> handleSeqSelection(index, p), () -> stepState(index));
-        }
+        PadMatrixBindings.bindPressed(mainLayer, driver.getRgbButtons(), 32, 32,
+                new PadMatrixBindings.PressHost() {
+                    @Override
+                    public void handlePadPress(final int padIndex, final boolean pressed) {
+                        handleSeqSelection(padIndex, pressed);
+                    }
+
+                    @Override
+                    public RgbLigthState padLight(final int padIndex) {
+                        return stepState(padIndex);
+                    }
+                });
     }
 
     private void handleSeqSelection(final int index, final boolean pressed) {
         final NoteStep note = assignments[index];
         final boolean accentGesture = accentHandler.isHolding() || accentHandler.isActive();
         if (!pressed) {
-            heldSteps.remove(index);
+            final DrumStepPadSurface.StepReleaseAction releaseAction = stepPadSurface.handleStepRelease(index, note,
+                    copyHeld.get(), fixedLengthHeld.get(), accentGesture);
             heldStepFineStarts.remove(index);
-            if (copyHeld.get() || fixedLengthHeld.get()) {
-                // do nothing
-            } else if (accentGesture) {
-                // Accent mode applies on press and should not fall through to normal step toggling on release.
-                gestureConsumedSteps.remove(index);
-            } else if (gestureConsumedSteps.remove(index)) {
-                // A non-toggle gesture already handled this step on press.
-            } else if (note != null && note.state() == State.NoteOn && !addedSteps.contains(index)) {
-                if (!modifiedSteps.contains(index)) {
-                    cursorClip.clearStep(index, 0);
-                } else {
-                    modifiedSteps.remove(index);
+            switch (releaseAction) {
+                case NONE -> {
                 }
+                case CLEAR_STEP -> cursorClip.clearStep(index, 0);
             }
-            addedSteps.remove(index);
         } else {
-            heldSteps.add(index);
+            final DrumStepPadSurface.StepPressAction pressAction = stepPadSurface.handleStepPress(index, note,
+                    fixedLengthHeld.get(), copyHeld.get(), accentGesture);
             primeHeldStepFineStart(index, note);
-            if (fixedLengthHeld.get()) {
-                stepActionFixedLength(index);
-            } else if (copyHeld.get()) {
-                handleNoteCopyAction(index, note);
-            } else if (accentGesture) {
-                handleAccentStepAction(index, note);
-            } else {
-                if (note == null || note.state() == State.Empty || note.state() == State.NoteSustain) {
+            switch (pressAction) {
+                case NONE -> {
+                }
+                case FIXED_LENGTH -> stepActionFixedLength(index);
+                case COPY -> handleNoteCopyAction(index, note);
+                case ACCENT -> handleAccentStepAction(index, note);
+                case ADD_STEP -> {
                     if (!ensureSelectedClip()) {
-                        heldSteps.remove(index);
+                        stepPadSurface.cancelPressedStep(index);
                         heldStepFineStarts.remove(index);
                         return;
                     }
                     cursorClip.setStep(index, 0, accentHandler.getCurrentVelocity(),
                             positionHandler.getGridResolution() * gatePercent);
-                    addedSteps.add(index);
+                    stepPadSurface.markAdded(index);
                     heldStepFineStarts.put(index, coarseLower(index));
                 }
             }
@@ -331,50 +358,50 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private RgbLigthState stepState(final int index) {
-        final int steps = positionHandler.getAvailableSteps();
-        if (index < steps) {
-            final NoteStep noteStep = assignments[index];
-            final State state = noteStep == null ? State.Empty : noteStep.state();
-
-            if (state == State.Empty) {
-                return emptyNoteState(index);
-            } else if (state == State.NoteSustain) {
-                if (lengthDisplay.get()) {
-                    if (index == playingStep) {
-                        return padHandler.getCurrentPadColor().getBrightend();
-                    }
-                    return padHandler.getCurrentPadColor().getVeryDimmed();
-                }
-                return emptyNoteState(index);
-            }
-
-            if (copyNote != null && copyNote.x() == index) {
-                if (blinkState % 4 < 2) {
-                    return RgbLigthState.GRAY_1;
-                }
-                return padHandler.getCurrentPadColor();
-            }
-            if (index == playingStep) {
-                return velocityLitStepState(noteStep, true);
-            }
-            return velocityLitStepState(noteStep, false);
-
-        }
-        return RgbLigthState.OFF;
+        return stepPadSurface.stepPadLight(index, positionHandler.getAvailableSteps(), assignments[index],
+                playingStep, lengthDisplay.get(), copyNote, blinkState, padHandler.getCurrentPadColor(),
+                accentHandler.getAccentedVelocity());
     }
 
-    private RgbLigthState velocityLitStepState(final NoteStep noteStep, final boolean playing) {
-        final RgbLigthState base = padHandler.getCurrentPadColor();
-        if (noteStep == null) {
-            return StepPadLightHelper.renderOccupiedStep(base, false, playing);
+    private boolean handleRecurrencePadPress(final int padIndex, final boolean pressed) {
+        final List<NoteStep> targets = getHeldNotes();
+        if (targets.isEmpty()) {
+            return true;
         }
-
-        final int velocity = (int) Math.round(noteStep.velocity() * 127);
-        return StepPadLightHelper.renderOccupiedStep(base, velocity >= accentHandler.getAccentedVelocity(), playing);
+        return stepPadSurface.handleRecurrencePadPress(padIndex, pressed, targets,
+                () -> markRecurrenceGestureConsumed(targets),
+                pad -> applyHeldRecurrence(targets, current -> current.toggledAt(pad)),
+                span -> applyHeldRecurrence(targets, current -> current.applySpanGesture(span)));
     }
 
-    private RgbLigthState emptyNoteState(final int index) {
-        return StepPadLightHelper.renderEmptyStep(index, playingStep);
+    private void markRecurrenceGestureConsumed(final List<NoteStep> targets) {
+        registerModifiedSteps(targets);
+        targets.forEach(note -> stepPadSurface.markGestureConsumed(note.x()));
+    }
+
+    private void applyHeldRecurrence(final List<NoteStep> targets,
+                                     final java.util.function.UnaryOperator<RecurrencePattern> updater) {
+        if (targets.isEmpty()) {
+            return;
+        }
+        final RecurrencePattern updated = updater.apply(
+                RecurrencePattern.of(targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
+        for (final NoteStep note : targets) {
+            note.setRecurrence(updated.bitwigLength(), updated.bitwigMask());
+            stepPadSurface.markModified(note.x());
+            stepPadSurface.markGestureConsumed(note.x());
+        }
+        oled.valueInfo("Recurrence", updated.summary());
+        notifyPopup("Recurrence", updated.summary());
+    }
+
+    private RgbLigthState recurrencePadLight(final int padIndex) {
+        final List<NoteStep> targets = getHeldNotes();
+        if (targets.isEmpty()) {
+            return clipHandler.getPadLight(padIndex);
+        }
+        return stepPadSurface.recurrencePadLight(padIndex, targets, padHandler.getCurrentPadColor(),
+                clipHandler.getPadLight(padIndex));
     }
 
     // Declare a field to hold the original (normal) step size.
@@ -473,7 +500,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private void movePatternFractional(Clip clip, int dir, boolean heldOnly, List<Integer> heldStepSnapshot,
                                        Map<Integer, Integer> heldFineStartSnapshot) {
         // Prevent held pads from being toggled off on release after a nudge.
-        heldStepSnapshot.forEach(modifiedSteps::add);
+        heldStepSnapshot.forEach(stepPadSurface::markModified);
 
         final int targetMidi = padHandler.getSelectedPadMidi();
         if (targetMidi < 0) {
@@ -695,7 +722,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         oled.paramInfoPercent("Timbre", defaultTimbre, "Drum Default", -1, 1);
     }
 
-    private void adjustUser1Velocity(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Velocity(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             adjustDefaultVelocity(inc);
             return;
@@ -703,7 +730,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.VELOCITY);
     }
 
-    private void adjustUser1Pressure(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Pressure(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             adjustDefaultPressure(inc);
             return;
@@ -711,7 +738,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.PRESSURE);
     }
 
-    private void adjustUser1Timbre(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Timbre(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             adjustDefaultTimbre(inc);
             return;
@@ -719,14 +746,14 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.TIMBRE);
     }
 
-    private void adjustUser1Pitch(final StepSequencerEncoderHandler handler, final int inc) {
+    private void adjustUser1Pitch(final StepSequencerEncoderLayer handler, final int inc) {
         if (getExpressionTargetNotes().isEmpty()) {
             return;
         }
         handler.handleExplicitNoteAccess(inc, NoteStepAccess.PITCH);
     }
 
-    private void handleUser1Touch(final StepSequencerEncoderHandler handler, final boolean touched, final int index,
+    private void handleUser1Touch(final StepSequencerEncoderLayer handler, final boolean touched, final int index,
                                   final NoteStepAccess accessor, final Runnable showDefault,
                                   final Runnable resetDefault) {
         if (touched) {
@@ -756,7 +783,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
             cursorClip.setStep(index, 0, accentHandler.getAccentedVelocity(),
                     positionHandler.getGridResolution() * gatePercent);
-            addedSteps.add(index);
+            stepPadSurface.markAdded(index);
             heldStepFineStarts.put(index, coarseLower(index));
             return;
         }
@@ -765,7 +792,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 ? accentHandler.getStandardVelocity()
                 : accentHandler.getAccentedVelocity();
         note.setVelocity(targetVelocity / 127.0);
-        gestureConsumedSteps.add(index);
+        stepPadSurface.markGestureConsumed(index);
     }
 
     private void handleMainEncoderPress(final boolean press) {
@@ -1057,17 +1084,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     public void registerModifiedSteps(final List<NoteStep> notes) {
-        notes.forEach(s -> modifiedSteps.add(s.x()));
+        notes.forEach(stepPadSurface::markModified);
     }
 
     @Override
     public List<NoteStep> getHeldNotes() {
-        return heldSteps.stream()
-                // Only use indices within 0 to 31.
-                .filter(idx -> idx >= 0 && idx <= 31)
-                .map(idx -> assignments[idx])
-                .filter(ns -> ns != null && ns.state() == State.NoteOn)
-                .collect(Collectors.toList());
+        return stepPadSurface.heldNotes(assignments);
     }
 
     @Override
@@ -1131,7 +1153,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             final NoteStep previousStep = expectedNoteChanges.get(newStep);
             expectedNoteChanges.remove(newStep);
             applyValues(noteStep, previousStep);
-        } else if (addedSteps.contains(newStep) && noteStep.state() == State.NoteOn) {
+        } else if (stepPadSurface.shouldApplyDefaultsToObservedStep(noteStep)) {
             noteStep.setPressure(defaultPressure);
             noteStep.setTimbre(defaultTimbre);
         }
@@ -1178,6 +1200,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         encoderLayer.deactivate();
         clearPatternButtonCallbacks();
         padHandler.disableNotePlaying();
+        stepPadSurface.clearRecurrenceHold();
     }
 
     public void retrigger() {
@@ -1240,7 +1263,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     public IntSetValue getHeldSteps() {
-        return heldSteps;
+        return stepPadSurface.heldStepsValue();
     }
 
     public boolean isPadBeingHeld() {
@@ -1356,7 +1379,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 handler.bindNoteAccess(layer, encoder, slotIndex, access);
             }
@@ -1371,7 +1394,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
                     if (padHandler.adjustMixerParameter(index, inc)) {
@@ -1400,7 +1423,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     final int effective = switch (index) {
@@ -1422,7 +1445,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @FunctionalInterface
     private interface DrumExpressionAdjuster {
-        void adjust(StepSequencerEncoderHandler handler, int inc);
+        void adjust(StepSequencerEncoderLayer handler, int inc);
     }
 
     private EncoderSlotBinding drumExpressionSlot(final NoteStepAccess accessor, final Runnable showDefault,
@@ -1435,7 +1458,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final var action = (java.util.function.IntConsumer) inc -> {
                     if (getExpressionTargetNotes().isEmpty()) {
@@ -1459,7 +1482,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return encoderBankLayout;
     }
 
-    private void handleUser2Touch(final StepSequencerEncoderHandler handler, final boolean touched, final int index) {
+    private void handleUser2Touch(final StepSequencerEncoderLayer handler, final boolean touched, final int index) {
         if (touched) {
             handler.beginTouchReset(index, () -> {
                 if (index == 0) {
@@ -1486,7 +1509,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void markUser2EncoderAdjusted(final int index) {
-        // shared touch-reset accounting is handled by StepSequencerEncoderHandler
+        // shared touch-reset accounting is handled by StepSequencerEncoderLayer
     }
 
     @Override
@@ -1498,6 +1521,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
+        if (pressed && isAnyStepHeld()) {
+            toggleAccentForHeldSteps();
+            return;
+        }
         if (shiftActive.get() || accentHandler.isHolding()) {
             accentHandler.handlePressed(pressed);
             return;
@@ -1512,6 +1539,23 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (pressed) {
             driver.enterMelodicStepMode();
         }
+    }
+
+    private void toggleAccentForHeldSteps() {
+        final List<NoteStep> heldNotes = getHeldNotes();
+        if (heldNotes.isEmpty()) {
+            oled.valueInfo("Accent", "No Step");
+            return;
+        }
+        final boolean allAccented = heldNotes.stream().allMatch(accentHandler::isAccented);
+        final int targetVelocity = allAccented ? accentHandler.getStandardVelocity() : accentHandler.getAccentedVelocity();
+        for (final NoteStep note : heldNotes) {
+            note.setVelocity(targetVelocity / 127.0);
+            stepPadSurface.markModified(note.x());
+            stepPadSurface.markGestureConsumed(note.x());
+        }
+        oled.valueInfo("Accent", allAccented ? "Normal" : "Accented");
+        notifyPopup("Accent", allAccented ? "Normal" : "Accented");
     }
 
     private BiColorLightState getStepSeqLightState() {
@@ -1532,7 +1576,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             pendingBankHeldSteps.clear();
             pendingBankHeldFineStarts.clear();
             final int targetMidi = padHandler.getSelectedPadMidi();
-            heldSteps.stream().sorted().forEach(index -> {
+            stepPadSurface.heldStepStream().sorted().forEach(index -> {
                 pendingBankHeldSteps.add(index);
                 Integer fineX = heldStepFineStarts.get(index);
                 if (fineX == null) {

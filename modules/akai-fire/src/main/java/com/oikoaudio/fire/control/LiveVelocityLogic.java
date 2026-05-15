@@ -1,10 +1,10 @@
-package com.oikoaudio.fire.note;
+package com.oikoaudio.fire.control;
 
-final class LiveVelocityLogic {
+public final class LiveVelocityLogic {
     private LiveVelocityLogic() {
     }
 
-    static int resolveVelocity(final int defaultVelocity, final int sensitivityPercent, final int rawVelocity) {
+    public static int resolveVelocity(final int defaultVelocity, final int sensitivityPercent, final int rawVelocity) {
         final int clampedDefault = clampVelocity(defaultVelocity);
         final int clampedSensitivity = Math.max(0, Math.min(100, sensitivityPercent));
         final int clampedRaw = clampVelocity(rawVelocity);
@@ -12,11 +12,11 @@ final class LiveVelocityLogic {
         return clampVelocity((int) Math.round(clampedDefault + (clampedRaw - clampedDefault) * blend));
     }
 
-    static int clampVelocity(final int velocity) {
+    public static int clampVelocity(final int velocity) {
         return Math.max(1, Math.min(127, velocity));
     }
 
-    static int clampSensitivity(final int sensitivityPercent) {
+    public static int clampSensitivity(final int sensitivityPercent) {
         return Math.max(0, Math.min(100, sensitivityPercent));
     }
 }

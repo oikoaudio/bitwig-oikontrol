@@ -6,11 +6,11 @@ import java.util.Arrays;
  * Pure chord inversion helper for chord-step editing.
  * Rotates the lowest note up an octave or the highest note down an octave while preserving sorted order.
  */
-final class ChordInversion {
+public final class ChordInversion {
     private ChordInversion() {
     }
 
-    static int[] rotate(final int[] notes, final int direction) {
+    public static int[] rotate(final int[] notes, final int direction) {
         final int[] sorted = Arrays.stream(notes).sorted().toArray();
         if (sorted.length <= 1) {
             return sorted;

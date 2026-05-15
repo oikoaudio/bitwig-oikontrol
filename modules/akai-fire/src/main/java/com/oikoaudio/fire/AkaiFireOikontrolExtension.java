@@ -2,6 +2,7 @@ package com.oikoaudio.fire;
 
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
@@ -177,9 +178,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     private enum DrumSubMode {
-        STANDARD(BiColorLightState.GREEN_FULL),
-        NESTED_RHYTHM(BiColorLightState.AMBER_FULL),
-        DRUM_PADS(BiColorLightState.RED_FULL);
+        STANDARD(ModeButtonLights.MODE_1),
+        NESTED_RHYTHM(ModeButtonLights.MODE_2),
+        DRUM_PADS(ModeButtonLights.MODE_3);
 
         private final BiColorLightState lightState;
 
@@ -269,7 +270,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
         drumPadPlayMode = new DrumPadPlayMode(this, noteRepeatHandler);
-        chordStepMode = new ChordStepMode(this, noteRepeatHandler);
+        chordStepMode = new ChordStepMode(this);
         melodicStepMode = new MelodicStepMode(this, noteRepeatHandler);
         fugueStepMode = new FugueStepMode(this);
         nestedRhythmMode = new NestedRhythmMode(this);
@@ -648,13 +649,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.NOTE_PLAY && notePlayMode != null) {
             return notePlayMode.getModeButtonLightState();
         }
-        if (modeState.activeMode() == Mode.CHORD_STEP && chordStepMode != null) {
-            return chordStepMode.getModeButtonLightState();
-        }
         return BiColorLightState.OFF;
     }
 
     private BiColorLightState getStepState() {
+        if (modeState.activeMode() == Mode.CHORD_STEP && chordStepMode != null) {
+            return chordStepMode.getModeButtonLightState();
+        }
         if (modeState.activeMode() == Mode.MELODIC_STEP && melodicStepMode != null) {
             return melodicStepMode.getModeButtonLightState();
         }
@@ -672,12 +673,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return BiColorLightState.OFF;
         }
         if (performMode != null && performMode.isTrackActionMode()) {
-            return BiColorLightState.RED_FULL;
+            return ModeButtonLights.MODE_3;
         }
         if (performMode != null && performMode.isSceneActionMode()) {
-            return BiColorLightState.AMBER_FULL;
+            return ModeButtonLights.MODE_2;
         }
-        return BiColorLightState.GREEN_FULL;
+        return ModeButtonLights.MODE_1;
     }
 
     private void dummyAction(final boolean pressed) {
@@ -1037,8 +1038,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return sharedPitchContext.getScaleDisplayName();
     }
 
+    public String getSharedShortScaleDisplayName() {
+        return sharedPitchContext.getShortScaleDisplayName();
+    }
+
     public MusicalScale getSharedMusicalScale() {
         return sharedPitchContext.getMusicalScale();
+    }
+
+    public SharedPitchContextController getSharedPitchContextController() {
+        return sharedPitchContext;
     }
 
     public SharedMusicalContext getSharedMusicalContext() {
@@ -1238,8 +1247,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(cycleSource, isDrumGridRoleAvailable());
         currentMainEncoderRole = nextRole;
         alternateMainEncoderRole = nextRole;
-        notifyAction("Encoder Role", nextRole);
-        return nextRole;
+        final String effectiveRole = getMainEncoderRolePreference();
+        notifyAction("Encoder Role", mainEncoderRoleDisplayName(effectiveRole));
+        return effectiveRole;
     }
 
     public String toggleMainEncoderRolePreference() {
@@ -1251,8 +1261,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 : normalizedAlternateRole)
                 : FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
         currentMainEncoderRole = nextRole;
-        notifyAction("Encoder Role", nextRole);
-        return nextRole;
+        final String effectiveRole = getMainEncoderRolePreference();
+        notifyAction("Encoder Role", mainEncoderRoleDisplayName(effectiveRole));
+        return effectiveRole;
     }
 
     private boolean isDrumGridRoleAvailable() {
@@ -1261,10 +1272,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private String resolveMainEncoderRoleForActiveMode(final String role) {
         final String normalizedRole = FireControlPreferences.normalizeMainEncoderRole(role);
+        if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)
+                && isDrumGridRoleAvailable()
+                && shouldAutoPinFirstDrumMachine()) {
+            return FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
+        }
         if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(normalizedRole) && !isDrumGridRoleAvailable()) {
             return FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
         }
         return normalizedRole;
+    }
+
+    private String mainEncoderRoleDisplayName(final String role) {
+        if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(role)) {
+            return "Grid Resolution";
+        }
+        return role;
     }
 
     public boolean isStepSeqPadAuditionEnabled() {
@@ -1327,7 +1350,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         suppressNextMelodicStepRelease = true;
         modeState.enterMelodicStepMode();
         switchActiveMode();
-        notifyAction("Mode", "Step");
+        notifyAction("Mode", "Melo Step");
     }
 
     public void enterFugueStepMode() {
@@ -1487,7 +1510,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case DRUM -> activeDrumSubMode.displayName();
             case NOTE_PLAY -> "Note";
             case CHORD_STEP -> "Chord Step";
-            case MELODIC_STEP -> "Melodic Step";
+            case MELODIC_STEP -> "Melo Step";
             case FUGUE_STEP -> "Fugue";
             case NESTED_RHYTHM -> "NestedRytm";
             case PERFORM -> "Perform";

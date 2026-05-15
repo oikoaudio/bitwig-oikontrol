@@ -66,6 +66,42 @@ public final class SharedPitchContextController {
         return context.getScaleDisplayName();
     }
 
+    public int getScaleCount() {
+        return scaleLibrary != null ? scaleLibrary.getMusicalScalesCount() : 0;
+    }
+
+    public String getShortScaleDisplayName() {
+        return switch (getScaleDisplayName()) {
+            case "Major" -> "Major";
+            case "Minor" -> "Minor";
+            case "Phrygian Dominant" -> "Phryg Dom";
+            case "Double Harmonic Major" -> "DH Maj";
+            case "Double Harmonic Minor" -> "DH Min";
+            case "Harmonic Major" -> "Harm Maj";
+            case "Harmonic Minor" -> "Harm Min";
+            case "Jazz Minor" -> "Jazz Min";
+            case "Overtone Scale" -> "Overtone";
+            case "Hungarian Minor" -> "Hung Min";
+            case "Ukranian Dorian" -> "Ukr Dor";
+            case "Super Locrian" -> "Sup Loc";
+            case "Half-diminished" -> "Half Dim";
+            case "Diminished WH" -> "Dim WH";
+            case "Diminished HW" -> "Dim HW";
+            case "Major Pentatonic" -> "Maj Pent";
+            case "Minor Pentatonic" -> "Min Pent";
+            case "Blues Major" -> "Bl Maj";
+            case "Blues Minor" -> "Bl Min";
+            case "Whole Tone" -> "Whole";
+            case "Major Triad" -> "Maj Tri";
+            case "Minor Triad" -> "Min Tri";
+            case "Bebop Major" -> "Bebop Maj";
+            case "Bebop Dorian" -> "Bebop Dor";
+            case "Bebop Mixolydian" -> "Bebop Mix";
+            case "Bebop Minor" -> "Bebop Min";
+            default -> getScaleDisplayName();
+        };
+    }
+
     public MusicalScale getMusicalScale() {
         if (scaleLibrary == null || scaleLibrary.getMusicalScalesCount() <= 0) {
             return null;
@@ -81,6 +117,47 @@ public final class SharedPitchContextController {
             }
         }
         return null;
+    }
+
+    public boolean isRootMidiNote(final int rootNote, final int midiNote) {
+        final MusicalScale scale = getMusicalScale();
+        return scale != null && scale.isRootMidiNote(rootNote, midiNote);
+    }
+
+    public boolean isMidiNoteInScale(final int rootNote, final int midiNote) {
+        final MusicalScale scale = getMusicalScale();
+        return scale != null && scale.isMidiNoteInScale(rootNote, midiNote);
+    }
+
+    public int nextScaleNote(final int currentNote, final int rootNote) {
+        int note = currentNote + 1;
+        while (note <= 127) {
+            if (isMidiNoteInScale(rootNote, note)) {
+                return note;
+            }
+            note++;
+        }
+        return -1;
+    }
+
+    public int transposeByScaleDegrees(final int midiNote, final int scaleDegrees) {
+        if (scaleDegrees == 0) {
+            return midiNote;
+        }
+        int note = midiNote;
+        int remaining = Math.abs(scaleDegrees);
+        final int direction = scaleDegrees > 0 ? 1 : -1;
+        while (remaining > 0) {
+            note += direction;
+            while (note >= 0 && note <= 127 && !isMidiNoteInScale(getRootNote(), note)) {
+                note += direction;
+            }
+            if (note < 0 || note > 127) {
+                return -1;
+            }
+            remaining--;
+        }
+        return note;
     }
 
     public SharedMusicalContext context() {
