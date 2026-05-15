@@ -59,6 +59,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final GridResolutionHandler resolutionHandler;
     private final ClipRowHandler clipHandler;
     private final RecurrenceEditor recurrenceEditor;
+    private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
     private final DrumPadHandler padHandler;
     private final SequencerEditButtonBinder editButtonBinder;
 
@@ -145,7 +146,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         padHandler = new DrumPadHandler(driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
         clipHandler = new ClipRowHandler(this);
-        clipHandler.bindClipRow(mainLayer, driver.getRgbButtons());
+        bindClipRowPads(driver);
         recurrenceEditor = new RecurrenceEditor(driver, this);
         editButtonBinder = new SequencerEditButtonBinder(mainLayer, shiftActive, new SequencerEditButtonBinder.EditFunctionFeedback() {
             @Override
@@ -253,6 +254,33 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     }
 
+    private void bindClipRowPads(final AkaiFireOikontrolExtension driver) {
+        final RgbButton[] rgbButtons = driver.getRgbButtons();
+        for (int i = 0; i < 16; i++) {
+            final int index = i;
+            rgbButtons[i].bindPressed(mainLayer, pressed -> handleClipRowPad(index, pressed),
+                    () -> getClipRowPadLight(index));
+        }
+    }
+
+    private void handleClipRowPad(final int index, final boolean pressed) {
+        if (isAnyStepHeld() && handleRecurrencePadPress(index, pressed)) {
+            return;
+        }
+        clipHandler.handlePadPress(index, pressed);
+    }
+
+    private RgbLigthState getClipRowPadLight(final int index) {
+        if (recurrencePads.shouldShowRow(isAnyStepHeld())) {
+            return recurrencePadLight(index);
+        }
+        return clipHandler.getPadLight(index);
+    }
+
+    private boolean isAnyStepHeld() {
+        return heldSteps.stream().findAny().isPresent();
+    }
+
     //TODO DOGGY
     private void initSequenceSection(final AkaiFireOikontrolExtension driver) {
         final RgbButton[] rgbButtons = driver.getRgbButtons();
@@ -268,6 +296,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         final boolean accentGesture = accentHandler.isHolding() || accentHandler.isActive();
         if (!pressed) {
             heldSteps.remove(index);
+            if (!isAnyStepHeld()) {
+                recurrencePads.clearHold();
+            }
             heldStepFineStarts.remove(index);
             if (copyHeld.get() || fixedLengthHeld.get()) {
                 // do nothing
@@ -285,6 +316,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
             addedSteps.remove(index);
         } else {
+            recurrencePads.beginHoldIfNeeded(isAnyStepHeld());
             heldSteps.add(index);
             primeHeldStepFineStart(index, note);
             if (fixedLengthHeld.get()) {
@@ -375,6 +407,51 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private RgbLigthState emptyNoteState(final int index) {
         return StepPadLightHelper.renderEmptyStep(index, playingStep);
+    }
+
+    private boolean handleRecurrencePadPress(final int padIndex, final boolean pressed) {
+        final List<NoteStep> targets = getHeldNotes();
+        if (targets.isEmpty()) {
+            return true;
+        }
+        final RecurrencePattern recurrence = RecurrencePattern.of(
+                targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask());
+        return recurrencePads.handlePadPress(padIndex, pressed, true, recurrence,
+                () -> markRecurrenceGestureConsumed(targets),
+                pad -> applyHeldRecurrence(targets, current -> current.toggledAt(pad)),
+                span -> applyHeldRecurrence(targets, current -> current.applySpanGesture(span)));
+    }
+
+    private void markRecurrenceGestureConsumed(final List<NoteStep> targets) {
+        registerModifiedSteps(targets);
+        targets.forEach(note -> gestureConsumedSteps.add(note.x()));
+    }
+
+    private void applyHeldRecurrence(final List<NoteStep> targets,
+                                     final java.util.function.UnaryOperator<RecurrencePattern> updater) {
+        if (targets.isEmpty()) {
+            return;
+        }
+        final RecurrencePattern updated = updater.apply(
+                RecurrencePattern.of(targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
+        for (final NoteStep note : targets) {
+            note.setRecurrence(updated.bitwigLength(), updated.bitwigMask());
+            modifiedSteps.add(note.x());
+            gestureConsumedSteps.add(note.x());
+        }
+        oled.valueInfo("Recurrence", updated.summary());
+        notifyPopup("Recurrence", updated.summary());
+    }
+
+    private RgbLigthState recurrencePadLight(final int padIndex) {
+        final List<NoteStep> targets = getHeldNotes();
+        if (targets.isEmpty()) {
+            return clipHandler.getPadLight(padIndex);
+        }
+        final NoteStep note = targets.get(0);
+        return recurrencePads.padLight(padIndex,
+                RecurrencePattern.of(note.recurrenceLength(), note.recurrenceMask()),
+                padHandler.getCurrentPadColor());
     }
 
     // Declare a field to hold the original (normal) step size.
@@ -1178,6 +1255,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         encoderLayer.deactivate();
         clearPatternButtonCallbacks();
         padHandler.disableNotePlaying();
+        recurrencePads.clearHold();
     }
 
     public void retrigger() {

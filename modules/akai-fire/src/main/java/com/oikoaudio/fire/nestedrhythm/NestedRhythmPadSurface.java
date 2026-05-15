@@ -3,6 +3,7 @@ package com.oikoaudio.fire.nestedrhythm;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
+import com.oikoaudio.fire.sequence.RecurrencePadInteraction;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 
@@ -31,6 +32,7 @@ final class NestedRhythmPadSurface {
     private final IntFunction<RgbLigthState> lastStepPadLight;
     private final Supplier<RgbLigthState> clipBaseColor;
     private final BiConsumer<String, String> applyEditablePattern;
+    private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
     private int selectedPulseIndex = -1;
     private int heldPulseIndex = -1;
     private int pressedHitIndex = -1;
@@ -77,6 +79,7 @@ final class NestedRhythmPadSurface {
         if (padIndex < VELOCITY_PAD_OFFSET) {
             if (!pressed) {
                 heldPulseIndex = -1;
+                recurrencePads.clearHold();
             } else {
                 holdPulseForStructurePad(padIndex - STRUCTURE_PAD_OFFSET);
             }
@@ -86,7 +89,7 @@ final class NestedRhythmPadSurface {
     }
 
     RgbLigthState getPadLight(final int padIndex) {
-        if (padIndex < CLIP_ROW_PAD_COUNT && hasHeldPulse()) {
+        if (padIndex < CLIP_ROW_PAD_COUNT && recurrencePads.shouldShowRow(hasHeldPulse())) {
             return recurrencePadLight(padIndex);
         }
         if (padIndex < CLIP_ROW_PAD_COUNT) {
@@ -174,6 +177,7 @@ final class NestedRhythmPadSurface {
             pressedHitIndex = -1;
             heldPulseConsumed = false;
             heldPulseIndex = -1;
+            recurrencePads.clearHold();
             return;
         }
         if (hitIndex >= pulses.size()) {
@@ -182,6 +186,7 @@ final class NestedRhythmPadSurface {
         heldPulseIndex = hitIndex;
         pressedHitIndex = hitIndex;
         heldPulseConsumed = false;
+        recurrencePads.beginHoldIfNeeded(false);
         showHeldPulse();
         if (shiftHeld.getAsBoolean()) {
             pulses.get(hitIndex).resetEdits();
@@ -204,6 +209,7 @@ final class NestedRhythmPadSurface {
             }
         }
         if (bestIndex >= 0) {
+            recurrencePads.beginHoldIfNeeded(hasHeldPulse());
             heldPulseIndex = bestIndex;
             showHeldPulse();
         }
@@ -221,15 +227,34 @@ final class NestedRhythmPadSurface {
     }
 
     private void handleRecurrencePadPress(final int padIndex, final boolean pressed) {
-        if (!pressed || padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN || !hasHeldPulse()) {
+        if (padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
             return;
         }
+        final RecurrencePattern recurrence = hasHeldPulse()
+                ? pulses.get(activePulseIndex()).effectiveRecurrence()
+                : RecurrencePattern.of(0, 0);
+        recurrencePads.handlePadPress(padIndex, pressed, hasHeldPulse(),
+                recurrence,
+                this::markHeldPulseConsumed,
+                this::toggleHeldPulseRecurrencePad,
+                this::applyHeldPulseRecurrenceSpan);
+    }
+
+    private void toggleHeldPulseRecurrencePad(final int padIndex) {
         final NestedRhythmEditablePulse pulse = pulses.get(activePulseIndex());
         final RecurrencePattern updated = pulse.effectiveRecurrence().toggledAt(padIndex);
         pulse.recurrenceLength = updated.length();
         pulse.recurrenceMask = updated.mask();
         pulse.recurrenceEdited = true;
-        heldPulseConsumed = true;
+        applyEditablePattern.accept("Recurrence", updated.summary());
+    }
+
+    private void applyHeldPulseRecurrenceSpan(final int span) {
+        final NestedRhythmEditablePulse pulse = pulses.get(activePulseIndex());
+        final RecurrencePattern updated = pulse.effectiveRecurrence().applySpanGesture(span);
+        pulse.recurrenceLength = updated.length();
+        pulse.recurrenceMask = updated.mask();
+        pulse.recurrenceEdited = true;
         applyEditablePattern.accept("Recurrence", updated.summary());
     }
 
@@ -241,15 +266,7 @@ final class NestedRhythmPadSurface {
             return RgbLigthState.OFF;
         }
         final NestedRhythmEditablePulse pulse = pulses.get(activePulseIndex());
-        final RecurrencePattern recurrence = pulse.effectiveRecurrence();
-        final int span = recurrence.effectiveSpan();
-        if (padIndex >= span) {
-            return RgbLigthState.OFF;
-        }
-        final int mask = recurrence.effectiveMask(span);
-        return ((mask >> padIndex) & 0x1) == 1
-                ? clipBaseColor.get().getBrightend()
-                : clipBaseColor.get().getDimmed();
+        return recurrencePads.padLight(padIndex, pulse.effectiveRecurrence(), clipBaseColor.get());
     }
 
     private RgbLigthState structurePadLight(final int bin) {

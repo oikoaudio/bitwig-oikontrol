@@ -51,6 +51,8 @@ import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
+import com.oikoaudio.fire.sequence.RecurrencePadInteraction;
+import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
@@ -162,6 +164,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
     private final Integer[] noteTranslationTable = new Integer[128];
     private final Set<Integer> heldStepPads = new HashSet<>();
+    private final RecurrencePadInteraction chordStepRecurrencePads = new RecurrencePadInteraction(true);
     private final Set<Integer> addedStepPads = new HashSet<>();
     private final Set<Integer> modifiedStepPads = new HashSet<>();
     private final Set<Integer> auditioningNotes = new HashSet<>();
@@ -1339,6 +1342,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void handleChordStepPadPress(final int padIndex, final boolean pressed, final int velocity) {
         if (padIndex < CLIP_ROW_PAD_COUNT) {
+            if (!heldStepPads.isEmpty() && handleChordStepRecurrencePadPress(padIndex, pressed)) {
+                return;
+            }
             clipHandler.handlePadPress(padIndex, pressed);
             return;
         }
@@ -1426,6 +1432,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                 showBlockedStepInfo();
                 return;
             }
+            chordStepRecurrencePads.beginHoldIfNeeded(!heldStepPads.isEmpty());
             heldStepPads.add(stepIndex);
             if (heldStepAnchor == null) {
                 heldStepAnchor = stepIndex;
@@ -1444,6 +1451,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             showHeldStepInfo(stepIndex);
         } else {
             heldStepPads.remove(stepIndex);
+            if (heldStepPads.isEmpty()) {
+                chordStepRecurrencePads.clearHold();
+            }
             heldBankFineStarts.remove(stepIndex);
             refreshHeldStepAnchor(stepIndex);
             if (modifiedStepPads.contains(stepIndex)) {
@@ -1469,6 +1479,38 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         } else {
             showCurrentChord();
         }
+    }
+
+    private boolean handleChordStepRecurrencePadPress(final int padIndex, final boolean pressed) {
+        final List<NoteStep> targets = chordStepRecurrenceTargets();
+        if (targets.isEmpty()) {
+            return true;
+        }
+        final RecurrencePattern recurrence = RecurrencePattern.of(
+                targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask());
+        return chordStepRecurrencePads.handlePadPress(padIndex, pressed, true, recurrence,
+                () -> modifiedStepPads.addAll(heldStepPads),
+                pad -> applyChordStepRecurrence(targets, recurrencePattern -> recurrencePattern.toggledAt(pad)),
+                span -> applyChordStepRecurrence(targets, recurrencePattern -> recurrencePattern.applySpanGesture(span)));
+    }
+
+    private List<NoteStep> chordStepRecurrenceTargets() {
+        return getHeldNotes();
+    }
+
+    private void applyChordStepRecurrence(final List<NoteStep> targets,
+                                          final java.util.function.UnaryOperator<RecurrencePattern> updater) {
+        if (targets.isEmpty()) {
+            return;
+        }
+        final RecurrencePattern updated = updater.apply(
+                RecurrencePattern.of(targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
+        for (final NoteStep note : targets) {
+            note.setRecurrence(updated.bitwigLength(), updated.bitwigMask());
+            modifiedStepPads.add(note.x());
+        }
+        oled.valueInfo("Recurrence", updated.summary());
+        driver.notifyPopup("Recurrence", updated.summary());
     }
 
     private void loadBuilderFromStep(final int stepIndex) {
@@ -2033,6 +2075,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private void enterCurrentStepSubMode() {
         releaseHeldLiveNotes();
         heldStepPads.clear();
+        chordStepRecurrencePads.clearHold();
         addedStepPads.clear();
         modifiedStepPads.clear();
         heldStepAnchor = null;
@@ -2056,6 +2099,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private void returnToLivePlay() {
         noteStepActive = false;
         heldStepPads.clear();
+        chordStepRecurrencePads.clearHold();
         addedStepPads.clear();
         modifiedStepPads.clear();
         heldStepAnchor = null;
@@ -3070,6 +3114,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private RgbLigthState getChordStepPadLight(final int padIndex) {
         if (padIndex < CLIP_ROW_PAD_COUNT) {
+            if (chordStepRecurrencePads.shouldShowRow(!heldStepPads.isEmpty())) {
+                return chordStepRecurrencePadLight(padIndex);
+            }
             return clipHandler.getPadLight(padIndex);
         }
         if (padIndex < STEP_PAD_OFFSET) {
@@ -3111,6 +3158,17 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                     : sustainedStepColor;
         }
         return StepPadLightHelper.renderEmptyStep(stepIndex, playingStep);
+    }
+
+    private RgbLigthState chordStepRecurrencePadLight(final int padIndex) {
+        final List<NoteStep> targets = chordStepRecurrenceTargets();
+        if (targets.isEmpty()) {
+            return clipHandler.getPadLight(padIndex);
+        }
+        final NoteStep note = targets.get(0);
+        return chordStepRecurrencePads.padLight(padIndex,
+                RecurrencePattern.of(note.recurrenceLength(), note.recurrenceMask()),
+                chordStepBaseColor != null ? chordStepBaseColor : OCCUPIED_STEP);
     }
 
     private RgbLigthState getBuilderSourcePadLight(final int padIndex) {
@@ -4384,6 +4442,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         currentStepSubMode = NoteStepSubMode.CHORD_STEP;
         builderSelectedNotes.clear();
         heldStepPads.clear();
+        chordStepRecurrencePads.clearHold();
         heldStepAnchor = null;
         selectedPresetStepIndex = null;
         chordStepPosition.setPage(0);
@@ -4420,6 +4479,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         notePlayController.deactivate(this::releaseHeldLiveNotes);
         builderSelectedNotes.clear();
         heldStepPads.clear();
+        chordStepRecurrencePads.clearHold();
         heldStepAnchor = null;
         selectedPresetStepIndex = null;
         liveModeControlLayer.deactivate();
