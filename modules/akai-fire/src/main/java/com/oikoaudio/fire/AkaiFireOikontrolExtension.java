@@ -1267,7 +1267,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private boolean isDrumGridRoleAvailable() {
-        return modeState.activeMode() == Mode.DRUM;
+        return modeState.activeMode() == Mode.DRUM && activeDrumSubMode == DrumSubMode.STANDARD;
     }
 
     private String resolveMainEncoderRoleForActiveMode(final String role) {
@@ -1386,7 +1386,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private boolean shouldAutoPinStandardDrumMode() {
         return modeState.activeMode() == Mode.DRUM
-                && (activeDrumSubMode == DrumSubMode.STANDARD || activeDrumSubMode == DrumSubMode.DRUM_PADS)
+                && activeDrumSubMode == DrumSubMode.STANDARD
                 && shouldAutoPinFirstDrumMachine();
     }
 

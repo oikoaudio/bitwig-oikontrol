@@ -20,4 +20,19 @@ final class NestedRhythmPlayStart {
                             final int amount) {
         return wrap(currentPlayStart + amount * beatStep(meterDenominator), loopLength);
     }
+
+    static double incrementByStep(final double currentPlayStart,
+                                  final double loopLength,
+                                  final double step,
+                                  final int amount) {
+        return wrap(currentPlayStart + amount * Math.max(0.0, step), loopLength);
+    }
+
+    static double snapToGrid(final double currentPlayStart,
+                             final double loopLength,
+                             final double step) {
+        final double normalizedStep = Math.max(beatStep(16), step);
+        final double wrapped = wrap(currentPlayStart, loopLength);
+        return wrap(Math.round(wrapped / normalizedStep) * normalizedStep, loopLength);
+    }
 }

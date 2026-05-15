@@ -176,7 +176,7 @@ Global `SELECT` turn chords:
 
 ### DRUM Mode
 
-`Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, the script focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, the sequencer follows the selected drum context.
+`Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, Drum XOX focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, Drum XOX follows the selected drum context.
 
 | Pad row | Role |
 | --- | --- |
@@ -224,6 +224,8 @@ Entering the mode never overwrites an existing clip. If there is no selected cli
 | Rows 2-3 | 32-bin projected rhythm view |
 | Row 4 | First 16 generated hits in hit order, shown by velocity with playhead highlight |
 
+If clip play start is shifted, the nearest visible projected-rhythm column is tinted blue across rows 2-3.
+
 The `Channel` encoder page is the primary Nested Rhythm surface: it changes the generator structure. `User 1` and `User 2` shape generated or held-hit expression, while `Mixer` remains the shared track-control page.
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
@@ -240,6 +242,9 @@ The `Channel` encoder page is the primary Nested Rhythm surface: it changes the 
 | `STEP` | Enter `Melodic Step mode` |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
+| `BANK LEFT/RIGHT` | Move clip play start |
+| `SHIFT + BANK LEFT/RIGHT` | Fine move clip play start |
+| `SHIFT + both BANK buttons` | Snap clip play start back to the nearest coarse grid position |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold `MUTE_2` + projected rhythm pad | Set last step within the 32-step edit view |
 | Hold projected rhythm pad | Hold the nearest generated hit for recurrence or expression editing |
@@ -344,9 +349,11 @@ Press `STEP SEQ` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to retu
 | Tap chord pad with no held step | Audition chord, if enabled |
 | `STEP SEQ` | Return to `Melodic Step` |
 | `PATTERN UP/DOWN` | Page visible chord-step window |
+| `BANK LEFT/RIGHT` | Move clip start |
+| `SHIFT + BANK LEFT/RIGHT` with no held steps | Fine move clip start |
+| `SHIFT + both BANK buttons` with no held steps | Snap clip start back to the nearest coarse grid position |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
-| `SHIFT + BANK LEFT/RIGHT` | Experimental micro-timing nudge for visible chord material |
 
 | Left-side button | Action |
 | --- | --- |
@@ -377,6 +384,8 @@ Press `STEP` from `Chord Step` to enter `Fugue`. `Fugue` treats MIDI channel 1 a
 | `PATTERN DOWN` | Reread channel 1 from the clip and rebuild derived lines |
 | Encoder turn on a derived-line page | Immediately rebuild that line with the new parameter |
 | Channel 1 pads and encoders | Edit the source/template line |
+
+When a sequencer clip start is shifted in `Chord Step`, `Nested Rhythm`, or `Fugue`, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.
 
 If you change channel 1 notes or expression directly in Bitwig, press `PATTERN DOWN` to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.
 
@@ -463,7 +472,7 @@ The melodic seed controls are grouped into their own `Generative control` prefer
 ### The wrong device is being controlled
 
 - Check the relevant auto-attach or pinning preferences.
-- In Fire `DRUM` mode, use `Follow Selection` to work on the currently selected drum track/device, or `Auto-select First Drum Machine` for a dedicated first-drum-machine workflow.
+- In Fire `Drum XOX`, use `Follow Selection` to work on the currently selected drum track/device, or `Auto-select First Drum Machine` for a dedicated first-drum-machine workflow.
 - Re-select the target track or device in Bitwig.
 - Re-enter the relevant mode or template after changing focus.
 

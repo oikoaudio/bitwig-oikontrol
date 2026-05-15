@@ -65,6 +65,7 @@ class ChordStepPadLightRendererTest {
                     () -> RgbLigthState.PURPLE,
                     () -> 32,
                     () -> -1,
+                    () -> -1,
                     step -> false,
                     step -> false,
                     step -> false);

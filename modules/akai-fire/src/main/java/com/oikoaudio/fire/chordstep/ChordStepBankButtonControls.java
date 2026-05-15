@@ -7,6 +7,9 @@ import java.util.Set;
  */
 public final class ChordStepBankButtonControls {
     private final Host host;
+    private boolean leftHeld = false;
+    private boolean rightHeld = false;
+    private boolean shiftSnapConsumed = false;
 
     public ChordStepBankButtonControls(final Host host) {
         this.host = host;
@@ -29,6 +32,10 @@ public final class ChordStepBankButtonControls {
             }
             return;
         }
+        if (host.isShiftHeld() && host.heldStepSnapshot().isEmpty()) {
+            handleShiftClipStartButton(pressed, amount);
+            return;
+        }
         if (pressed) {
             final Set<Integer> heldSteps = host.heldStepSnapshot();
             if (!heldSteps.isEmpty()) {
@@ -42,6 +49,32 @@ public final class ChordStepBankButtonControls {
             return;
         }
         host.clearPendingBankAction();
+    }
+
+    private void handleShiftClipStartButton(final boolean pressed, final int amount) {
+        if (pressed) {
+            setHeld(amount, true);
+            if (leftHeld && rightHeld) {
+                host.snapPlayStartToGrid();
+                shiftSnapConsumed = true;
+            }
+            return;
+        }
+        setHeld(amount, false);
+        if (!shiftSnapConsumed) {
+            host.adjustPlayStart(amount, true);
+        }
+        if (!leftHeld && !rightHeld) {
+            shiftSnapConsumed = false;
+        }
+    }
+
+    private void setHeld(final int amount, final boolean held) {
+        if (amount < 0) {
+            leftHeld = held;
+        } else {
+            rightHeld = held;
+        }
     }
 
     public interface Host {
@@ -62,6 +95,8 @@ public final class ChordStepBankButtonControls {
         void beginHeldFineNudge(int amount, Set<Integer> heldSteps);
 
         void adjustPlayStart(int amount, boolean fine);
+
+        void snapPlayStartToGrid();
 
         boolean completePendingFineNudge();
 
