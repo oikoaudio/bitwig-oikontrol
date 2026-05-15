@@ -86,6 +86,11 @@ public final class PadBankRowControlBindings {
                     public BiColorLightState bankLightState() {
                         return host.bankLightState();
                     }
+
+                    @Override
+                    public BiColorLightState bankLightState(final int amount) {
+                        return host.bankLightState(amount);
+                    }
                 });
         final BiColorButton[] rowButtons = {
                 driver.getButton(NoteAssign.MUTE_1),
@@ -118,6 +123,10 @@ public final class PadBankRowControlBindings {
         void handleBankButton(boolean pressed, int amount);
 
         BiColorLightState bankLightState();
+
+        default BiColorLightState bankLightState(final int amount) {
+            return bankLightState();
+        }
 
         void handleRowButton(int index, boolean pressed);
 

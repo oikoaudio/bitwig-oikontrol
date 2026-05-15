@@ -23,7 +23,7 @@ import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.control.RgbButton;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -118,6 +118,7 @@ public class PerformClipLauncherMode extends Layer {
     private final EncoderTouchResetHandler parameterResetHandler;
     private Layer currentEncoderLayer;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
+    private boolean duplicateHeld;
     private int blinkState;
     private int totalTrackCount = MAX_TRACKS;
     private int totalSceneCount = MAX_SCENES;
@@ -181,7 +182,6 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void initGrid() {
-        final RgbButton[] rgbButtons = driver.getRgbButtons();
         for (int sceneIndex = 0; sceneIndex < MAX_SCENES; sceneIndex++) {
             final Scene scene = trackBank.sceneBank().getScene(sceneIndex);
             scene.exists().markInterested();
@@ -243,11 +243,6 @@ public class PerformClipLauncherMode extends Layer {
                 slot.isRecording().addValueObserver(recording -> handleSlotRecordingChanged(column, row, recording));
                 slotColors[slotIndex] = ColorLookup.getColor(slot.color().get());
             }
-        }
-        for (int padIndex = 0; padIndex < rgbButtons.length; padIndex++) {
-            final int currentPad = padIndex;
-            rgbButtons[padIndex].bindPressed(this, pressed -> handlePadPressed(currentPad, pressed),
-                    () -> getPadState(currentPad));
         }
     }
 
@@ -444,16 +439,9 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void initButtons() {
-        final BiColorButton knobModeButton = driver.getButton(NoteAssign.KNOB_MODE);
-        knobModeButton.bindPressed(this, this::handleModeAdvance, this::modeLightState);
-
-        final BiColorButton bankLeft = driver.getButton(NoteAssign.BANK_L);
-        bankLeft.bindPressed(this, pressed -> handleTrackScroll(pressed, -1),
-                () -> canScrollBankLeftRight(-1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
-
-        final BiColorButton bankRight = driver.getButton(NoteAssign.BANK_R);
-        bankRight.bindPressed(this, pressed -> handleTrackScroll(pressed, 1),
-                () -> canScrollBankLeftRight(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+        new PadBankRowControlBindings(driver, this, performControlBindingsHost(),
+                new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
+                        this::handleModeAdvance, this::modeLightState)).bind();
 
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
         patternUp.bindPressed(this, pressed -> handleSceneScroll(pressed, -1),
@@ -462,44 +450,94 @@ public class PerformClipLauncherMode extends Layer {
         final BiColorButton patternDown = driver.getButton(NoteAssign.PATTERN_DOWN);
         patternDown.bindPressed(this, pressed -> handleSceneScroll(pressed, 1),
                 () -> canScrollScenes(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
-
-        final BiColorButton selectButton = driver.getButton(NoteAssign.MUTE_1);
-        bindModifierButton(selectButton, selectHeld, "Select", "Pad select", BiColorLightState.GREEN_FULL);
-
-        final BiColorButton duplicateButton = driver.getButton(NoteAssign.MUTE_2);
-        duplicateButton.bindPressed(this, this::handleDuplicatePressed,
-                () -> duplicateButton.isPressed() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF);
-
-        final BiColorButton copyButton = driver.getButton(NoteAssign.MUTE_3);
-        copyButton.bindPressed(this, pressed -> {
-            copyHeld.set(pressed);
-            if (!pressed) {
-                oled.clearScreenDelayed();
-                return;
-            }
-            final ClipLauncherSlot source = getSelectedVisibleSlot();
-            if (source == null || !source.exists().get() || !source.hasContent().get()) {
-                oled.valueInfo("Copy Clip", "Select source first");
-                return;
-            }
-            oled.valueInfo("Paste sel", "Pad target");
-        }, () -> copyButton.isPressed() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
-
-        final BiColorButton deleteButton = driver.getButton(NoteAssign.MUTE_4);
-        bindModifierButton(deleteButton, deleteHeld, "Delete", "Pad delete", BiColorLightState.RED_FULL);
     }
 
-    private void bindModifierButton(final BiColorButton button, final BooleanValueObject heldState,
-                                    final String functionName, final String detail,
-                                    final BiColorLightState activeColor) {
-        button.bindPressed(this, pressed -> {
-            heldState.set(pressed);
-            if (pressed) {
-                oled.valueInfo(functionName, detail);
-            } else {
-                oled.clearScreenDelayed();
+    private PadBankRowControlBindings.Host performControlBindingsHost() {
+        return new PadBankRowControlBindings.Host() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed) {
+                PerformClipLauncherMode.this.handlePadPressed(padIndex, pressed);
             }
-        }, () -> button.isPressed() ? activeColor : BiColorLightState.OFF);
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return PerformClipLauncherMode.this.getPadState(padIndex);
+            }
+
+            @Override
+            public void handleBankButton(final boolean pressed, final int amount) {
+                PerformClipLauncherMode.this.handleTrackScroll(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return canScrollBankLeftRight(-1) || canScrollBankLeftRight(1)
+                        ? BiColorLightState.AMBER_HALF
+                        : BiColorLightState.OFF;
+            }
+
+            @Override
+            public BiColorLightState bankLightState(final int amount) {
+                return canScrollBankLeftRight(amount) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+            }
+
+            @Override
+            public void handleRowButton(final int index, final boolean pressed) {
+                handlePadActionButton(index, pressed);
+            }
+
+            @Override
+            public BiColorLightState rowLightState(final int index) {
+                return padActionLightState(index);
+            }
+        };
+    }
+
+    private void handlePadActionButton(final int index, final boolean pressed) {
+        switch (index) {
+            case 0 -> handleModifierButton(selectHeld, "Select", "Pad select", pressed);
+            case 1 -> {
+                duplicateHeld = pressed;
+                handleDuplicatePressed(pressed);
+            }
+            case 2 -> handleCopyPressed(pressed);
+            case 3 -> handleModifierButton(deleteHeld, "Delete", "Pad delete", pressed);
+            default -> throw new IllegalArgumentException("Unsupported pad action button index: " + index);
+        }
+    }
+
+    private BiColorLightState padActionLightState(final int index) {
+        return switch (index) {
+            case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+            case 1 -> duplicateHeld ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+            case 3 -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+            default -> throw new IllegalArgumentException("Unsupported pad action button index: " + index);
+        };
+    }
+
+    private void handleModifierButton(final BooleanValueObject heldState, final String functionName,
+                                      final String detail, final boolean pressed) {
+        heldState.set(pressed);
+        if (pressed) {
+            oled.valueInfo(functionName, detail);
+        } else {
+            oled.clearScreenDelayed();
+        }
+    }
+
+    private void handleCopyPressed(final boolean pressed) {
+        copyHeld.set(pressed);
+        if (!pressed) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        final ClipLauncherSlot source = getSelectedVisibleSlot();
+        if (source == null || !source.exists().get() || !source.hasContent().get()) {
+            oled.valueInfo("Copy Clip", "Select source first");
+            return;
+        }
+        oled.valueInfo("Paste sel", "Pad target");
     }
 
     private void handlePadPressed(final int padIndex, final boolean pressed) {
