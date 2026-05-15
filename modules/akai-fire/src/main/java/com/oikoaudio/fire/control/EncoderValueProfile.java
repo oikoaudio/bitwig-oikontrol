@@ -34,6 +34,21 @@ public enum EncoderValueProfile {
     }
 
     public void adjustParameter(final Parameter parameter, final boolean fine, final int inc) {
+        final int discreteValueCount = parameter.discreteValueCount().get();
+        if (discreteValueCount > 1) {
+            parameter.value().setImmediately(steppedValueAfterIncrement(parameter.value().get(), discreteValueCount, inc));
+            return;
+        }
         adjustValue(parameter.value(), fine, inc);
+    }
+
+    static double steppedValueAfterIncrement(final double currentValue, final int discreteValueCount, final int inc) {
+        if (discreteValueCount <= 1 || inc == 0) {
+            return currentValue;
+        }
+        final int maxIndex = discreteValueCount - 1;
+        final int currentIndex = (int) Math.round(Math.max(0.0, Math.min(1.0, currentValue)) * maxIndex);
+        final int nextIndex = Math.max(0, Math.min(maxIndex, currentIndex + inc));
+        return (double) nextIndex / maxIndex;
     }
 }

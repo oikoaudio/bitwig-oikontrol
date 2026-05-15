@@ -12,11 +12,12 @@ import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
+import com.oikoaudio.fire.control.ModeButtonLights;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -31,29 +32,25 @@ import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
-import com.oikoaudio.fire.sequence.StepPadLightHelper;
-import com.oikoaudio.fire.sequence.StepSequencerEncoderHandler;
+import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
-import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.utils.PatternButtons;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class NestedRhythmMode extends Layer implements StepSequencerHost, SeqClipRowHost {
-    private static final int CLIP_ROW_PAD_COUNT = 16;
-    private static final int STRUCTURE_PAD_OFFSET = 16;
-    private static final int STRUCTURE_PAD_COUNT = 32;
-    private static final int VELOCITY_PAD_OFFSET = 48;
-    private static final int VELOCITY_PAD_COUNT = 16;
+    private static final int CLIP_ROW_PAD_COUNT = NestedRhythmPadSurface.CLIP_ROW_PAD_COUNT;
     private static final int MAX_BAR_COUNT = 4;
     private static final int CLIP_FINE_STEP_COUNT = NestedRhythmGenerator.maxFineStepsFor(MAX_BAR_COUNT, 16, 2);
     private static final double CLIP_STEP_SIZE = 1.0 / NestedRhythmGenerator.FINE_STEPS_PER_QUARTER;
     private static final int STEPPED_ENCODER_THRESHOLD = 5;
     private static final int STEPPED_ENCODER_FINE_THRESHOLD = 9;
+    private static final int CLIP_CREATE_GENERATE_DELAY_MS = 150;
     private static final RgbLigthState BASE_COLOR = new RgbLigthState(0, 90, 34, true);
     private static final int[] RATCHET_DIVISION_VALUES = {
             2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
@@ -71,27 +68,26 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final ClipLauncherSlotBank clipSlotBank;
     private final CursorRemoteControlsPage remoteControlsPage;
     private final ClipRowHandler clipHandler;
-    private final StepSequencerEncoderHandler encoderLayer;
+    private final NestedRhythmPadSurface padSurface;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final EncoderBankLayout encoderBankLayout;
     private final NestedRhythmGenerator generator = new NestedRhythmGenerator();
+    private final NestedRhythmClipWriter clipWriter;
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
-    private final Map<Integer, PendingPulseWrite> pendingPulseWrites = new java.util.HashMap<>();
-
-    private final List<EditablePulse> editablePulses = new ArrayList<>();
+    private final NestedRhythmEditablePattern editablePattern = new NestedRhythmEditablePattern();
+    private final List<NestedRhythmEditablePulse> editablePulses = editablePattern.pulses();
+    private final Map<Integer, Map<Integer, NoteStep>> observedNoteSteps = new HashMap<>();
     private boolean mainEncoderPressConsumed = false;
-    private int selectedPulseIndex = -1;
-    private int heldPulseIndex = -1;
-    private int pressedHitIndex = -1;
-    private boolean heldPulseConsumed = false;
     private int selectedClipSlotIndex = -1;
+    private int lastSelectedClipSlotIndex = -1;
     private boolean selectedClipHasContent = false;
+    private boolean nestedRhythmOwnsSelectedClip = false;
     private boolean clipLengthSyncSuppressed = false;
     private RgbLigthState selectedClipColor = BASE_COLOR;
-    private int playingFineStep = -1;
     private double density = 1.0;
     private double rate = 1.0;
     private double cluster = 0.0;
@@ -140,6 +136,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         this.cursorClip.setStepSize(CLIP_STEP_SIZE);
         this.cursorClip.scrollToKey(0);
         this.cursorClip.scrollToStep(0);
+        this.clipWriter = new NestedRhythmClipWriter(cursorClip, CLIP_STEP_SIZE);
         this.cursorClip.getLoopLength().markInterested();
         this.cursorClip.getPlayStart().markInterested();
         this.cursorClip.getLoopLength().addValueObserver(this::syncClipLengthFromBeats);
@@ -149,17 +146,24 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 "Nested Rhythm Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.remoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
         for (int i = 0; i < remoteControlsPage.getParameterCount(); i++) {
-            final Parameter parameter = remoteControlsPage.getParameter(i);
-            parameter.name().markInterested();
-            parameter.displayedValue().markInterested();
-            parameter.value().markInterested();
+            ParameterEncoderBinding.markInterested(remoteControlsPage.getParameter(i));
         }
         this.clipHandler = new ClipRowHandler(this);
-        bindPads();
-        bindButtons();
+        this.padSurface = new NestedRhythmPadSurface(
+                editablePulses,
+                clipHandler,
+                oled,
+                fixedLengthHeld::get,
+                driver::isGlobalShiftHeld,
+                this::totalFineStepCount,
+                this::setLastStep,
+                this::lastStepPadLight,
+                this::clipBaseColor,
+                this::applyEditablePattern);
+        new PadBankRowControlBindings(driver, this, nestedRhythmControlBindingsHost()).bind();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
-        this.encoderLayer = new StepSequencerEncoderHandler(this, driver);
+        this.encoderLayer = new StepSequencerEncoderLayer(this, driver);
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -178,7 +182,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : BiColorLightState.AMBER_FULL;
+        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : ModeButtonLights.MODE_2;
     }
 
     @Override
@@ -193,11 +197,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }, () -> BiColorLightState.AMBER_HALF);
         patternButtons.setDownCallback(pressed -> {
             if (pressed) {
-                generatePattern("Generate", summaryLabel());
+                generatePatternForced("Generate", summaryLabel());
             }
         }, () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
-        maybeGenerateOnEmptySelectedClip();
+        showNoClipIfNeeded();
     }
 
     @Override
@@ -211,61 +215,98 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         encoderLayer.deactivate();
     }
 
-    private void bindPads() {
-        final var pads = driver.getRgbButtons();
-        for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
-            pads[index].bindPressed(this, pressed -> handlePadPress(padIndex, pressed), () -> getPadLight(padIndex));
+    private PadBankRowControlBindings.Host nestedRhythmControlBindingsHost() {
+        return new PadBankRowControlBindings.Host() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed) {
+                NestedRhythmMode.this.handlePadPress(padIndex, pressed);
+            }
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return NestedRhythmMode.this.getPadLight(padIndex);
+            }
+
+            @Override
+            public void handleBankButton(final boolean pressed, final int amount) {
+                NestedRhythmMode.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return driver.isGlobalAltHeld() ? BiColorLightState.HALF : BiColorLightState.OFF;
+            }
+
+            @Override
+            public void handleRowButton(final int index, final boolean pressed) {
+                NestedRhythmMode.this.handleMuteButton(index, pressed);
+            }
+
+            @Override
+            public BiColorLightState rowLightState(final int index) {
+                return NestedRhythmMode.this.muteLightState(index);
+            }
+        };
+    }
+
+    private void handleMuteButton(final int index, final boolean pressed) {
+        switch (index) {
+            case 0 -> handleSelectButton(pressed);
+            case 1 -> handleFixedLengthButton(pressed);
+            case 2 -> handleCopyButton(pressed);
+            case 3 -> handleDeleteButton(pressed);
+            default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
         }
     }
 
-    private void bindButtons() {
-        driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> {
-            selectHeld.set(pressed);
-            if (pressed) {
-                oled.valueInfo("Select", "Clip row");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        }, () -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF);
+    private BiColorLightState muteLightState(final int index) {
+        return switch (index) {
+            case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 1 -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+            case 3 -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.RED_HALF;
+            default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        };
+    }
 
-        driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> {
-            fixedLengthHeld.set(pressed);
-            if (pressed) {
-                oled.valueInfo("Last Step", "Structure pad");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        }, () -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF);
+    private void handleSelectButton(final boolean pressed) {
+        selectHeld.set(pressed);
+        if (pressed) {
+            oled.valueInfo("Select", "Clip row");
+        } else {
+            oled.clearScreenDelayed();
+        }
+    }
 
-        driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> {
-            copyHeld.set(pressed);
-            if (pressed) {
-                oled.valueInfo("Copy", "Clip row");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        }, () -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
+    private void handleFixedLengthButton(final boolean pressed) {
+        fixedLengthHeld.set(pressed);
+        if (pressed) {
+            oled.valueInfo("Last Step", "Structure pad");
+        } else {
+            oled.clearScreenDelayed();
+        }
+    }
 
-        driver.getButton(NoteAssign.MUTE_4).bindPressed(this, pressed -> {
-            if (pressed && driver.isGlobalAltHeld()) {
-                clearPulseEdits();
-                return;
-            }
-            deleteHeld.set(pressed);
-            if (pressed) {
-                oled.valueInfo("Delete", "Clip / hit");
-            } else {
-                oled.clearScreenDelayed();
-            }
-        }, () -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.RED_HALF);
+    private void handleCopyButton(final boolean pressed) {
+        copyHeld.set(pressed);
+        if (pressed) {
+            oled.valueInfo("Copy", "Clip row");
+        } else {
+            oled.clearScreenDelayed();
+        }
+    }
 
-        final BiColorButton bankLeftButton = driver.getButton(NoteAssign.BANK_L);
-        bankLeftButton.bindPressed(this, pressed -> handleBankButton(pressed, -1),
-                () -> driver.isGlobalAltHeld() ? BiColorLightState.HALF : BiColorLightState.OFF);
-        final BiColorButton bankRightButton = driver.getButton(NoteAssign.BANK_R);
-        bankRightButton.bindPressed(this, pressed -> handleBankButton(pressed, 1),
-                () -> driver.isGlobalAltHeld() ? BiColorLightState.HALF : BiColorLightState.OFF);
+    private void handleDeleteButton(final boolean pressed) {
+        if (pressed && driver.isGlobalAltHeld()) {
+            clearPulseEdits();
+            return;
+        }
+        deleteHeld.set(pressed);
+        if (pressed) {
+            oled.valueInfo("Delete", "Clip / hit");
+        } else {
+            oled.clearScreenDelayed();
+        }
     }
 
     private void bindMainEncoder() {
@@ -282,88 +323,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
-        if (padIndex < CLIP_ROW_PAD_COUNT && hasHeldPulse()) {
-            handleRecurrencePadPress(padIndex, pressed);
-            return;
-        }
-        if (padIndex < CLIP_ROW_PAD_COUNT) {
-            clipHandler.handlePadPress(padIndex, pressed);
-            return;
-        }
-        if (fixedLengthHeld.get() && padIndex < VELOCITY_PAD_OFFSET) {
-            if (pressed) {
-                setLastStep(padIndex - STRUCTURE_PAD_OFFSET);
-            }
-            return;
-        }
-        if (padIndex < VELOCITY_PAD_OFFSET) {
-            if (!pressed) {
-                heldPulseIndex = -1;
-            } else {
-                holdPulseForStructurePad(padIndex - STRUCTURE_PAD_OFFSET);
-            }
-            return;
-        }
-        final int hitIndex = padIndex - VELOCITY_PAD_OFFSET;
-        if (!pressed) {
-            if (hitIndex == pressedHitIndex && !heldPulseConsumed && !driver.isGlobalShiftHeld()
-                    && hitIndex >= 0 && hitIndex < editablePulses.size()) {
-                final EditablePulse pulse = editablePulses.get(hitIndex);
-                pulse.enabled = !pulse.enabled;
-                applyEditablePattern("Hit", pulse.enabled ? "On" : "Off");
-            }
-            pressedHitIndex = -1;
-            heldPulseConsumed = false;
-            heldPulseIndex = -1;
-            return;
-        }
-        if (hitIndex >= editablePulses.size()) {
-            return;
-        }
-        heldPulseIndex = hitIndex;
-        pressedHitIndex = hitIndex;
-        heldPulseConsumed = false;
-        showHeldPulse();
-        if (driver.isGlobalShiftHeld()) {
-            editablePulses.get(hitIndex).resetEdits();
-            heldPulseConsumed = true;
-            applyEditablePattern("Hit", "Reset");
-        }
-    }
-
-    private void holdPulseForStructurePad(final int structurePad) {
-        final int bin = Math.max(0, Math.min(STRUCTURE_PAD_COUNT - 1, structurePad));
-        int bestIndex = -1;
-        int bestDistance = Integer.MAX_VALUE;
-        for (int index = 0; index < editablePulses.size(); index++) {
-            final EditablePulse pulse = editablePulses.get(index);
-            final int pulseBin = structureBinFor(pulse.fineStart);
-            final int distance = Math.abs(pulseBin - bin);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestIndex = index;
-            }
-        }
-        if (bestIndex >= 0) {
-            heldPulseIndex = bestIndex;
-            showHeldPulse();
-        }
+        padSurface.handlePadPress(padIndex, pressed);
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
-        if (padIndex < CLIP_ROW_PAD_COUNT && hasHeldPulse()) {
-            return recurrencePadLight(padIndex);
-        }
-        if (padIndex < CLIP_ROW_PAD_COUNT) {
-            return clipHandler.getPadLight(padIndex);
-        }
-        if (fixedLengthHeld.get() && padIndex < VELOCITY_PAD_OFFSET) {
-            return lastStepPadLight(padIndex - STRUCTURE_PAD_OFFSET);
-        }
-        if (padIndex < VELOCITY_PAD_OFFSET) {
-            return structurePadLight(padIndex - STRUCTURE_PAD_OFFSET);
-        }
-        return velocityPadLight(padIndex - VELOCITY_PAD_OFFSET);
+        return padSurface.getPadLight(padIndex);
     }
 
     private RgbLigthState lastStepPadLight(final int stepIndex) {
@@ -374,107 +338,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return stepIndex == lastStepIndex ? base.getBrightest() : base.getVeryDimmed();
     }
 
-    private RgbLigthState structurePadLight(final int bin) {
-        final EditablePulse pulse = strongestPulseInBin(bin);
-        final int playingBin = playingFineStep < 0 ? -1 : structureBinFor(playingFineStep);
-        if (pulse == null) {
-            return StepPadLightHelper.renderEmptyStep(bin, playingBin);
-        }
-        final RgbLigthState base = pulse.enabled
-                ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor())
-                : disabledPulseColor();
-        return playingBin == bin ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
-    }
-
-    private RgbLigthState velocityPadLight(final int hitIndex) {
-        if (hitIndex >= editablePulses.size()) {
-            return RgbLigthState.OFF;
-        }
-        final int playingHitIndex = playingPulseIndex();
-        final EditablePulse pulse = editablePulses.get(hitIndex);
-        final RgbLigthState base = pulse.enabled
-                ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor())
-                : disabledPulseColor();
-        return playingHitIndex == hitIndex ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
-    }
-
-    private EditablePulse strongestPulseInBin(final int bin) {
-        EditablePulse best = null;
-        for (final EditablePulse pulse : editablePulses) {
-            if (structureBinFor(pulse.fineStart) != bin) {
-                continue;
-            }
-            if (best == null || pulse.effectiveVelocity() > best.effectiveVelocity()) {
-                best = pulse;
-            }
-        }
-        return best;
-    }
-
-    private int structureBinFor(final int fineStart) {
-        final double normalized = fineStart / (double) Math.max(1, totalFineStepCount());
-        return Math.max(0, Math.min(STRUCTURE_PAD_COUNT - 1,
-                (int) Math.floor(normalized * STRUCTURE_PAD_COUNT)));
-    }
-
-    private int playingPulseIndex() {
-        if (playingFineStep < 0) {
-            return -1;
-        }
-        for (int index = 0; index < editablePulses.size(); index++) {
-            final EditablePulse pulse = editablePulses.get(index);
-            if (pulse.enabled && pulse.containsFineStep(playingFineStep, totalFineStepCount())) {
-                return index;
-            }
-        }
-        return -1;
-    }
-
-    private void showHeldPulse() {
-        if (heldPulseIndex < 0 || heldPulseIndex >= editablePulses.size()) {
-            oled.valueInfo("Hit", "None");
-            return;
-        }
-        final EditablePulse pulse = editablePulses.get(heldPulseIndex);
-        final RecurrencePattern recurrence = pulse.effectiveRecurrence();
-        oled.valueInfo("Hit %d".formatted(heldPulseIndex + 1),
-                "%s Vel %d Rec %s".formatted(pulse.roleLabel(), pulse.effectiveVelocity(), recurrence.summary()));
-    }
-
-    private void handleRecurrencePadPress(final int padIndex, final boolean pressed) {
-        if (!pressed || padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN || !hasHeldPulse()) {
-            return;
-        }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
-        final RecurrencePattern updated = pulse.effectiveRecurrence().toggledAt(padIndex);
-        pulse.recurrenceLength = updated.length();
-        pulse.recurrenceMask = updated.mask();
-        pulse.recurrenceEdited = true;
-        heldPulseConsumed = true;
-        applyEditablePattern("Recurrence", updated.summary());
-    }
-
-    private RgbLigthState recurrencePadLight(final int padIndex) {
-        if (!hasHeldPulse()) {
-            return clipHandler.getPadLight(padIndex);
-        }
-        if (padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
-            return RgbLigthState.OFF;
-        }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
-        final RecurrencePattern recurrence = pulse.effectiveRecurrence();
-        final int span = recurrence.effectiveSpan();
-        if (padIndex >= span) {
-            return RgbLigthState.OFF;
-        }
-        final int mask = recurrence.effectiveMask(span);
-        return ((mask >> padIndex) & 0x1) == 1
-                ? clipBaseColor().getBrightend()
-                : clipBaseColor().getDimmed();
-    }
-
     private void handlePlayingStep(final int fineStep) {
-        this.playingFineStep = fineStep >= 0 ? fineStep : -1;
+        padSurface.handlePlayingStep(fineStep);
     }
 
     private void handleMainEncoder(final int inc) {
@@ -569,24 +434,26 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!ensureClipAvailable()) {
             return;
         }
+        if (!canWriteSelectedClipFromContinuousControl()) {
+            return;
+        }
+        generatePatternInCurrentState(label, value);
+    }
+
+    private void generatePatternForced(final String label, final String value) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
         generatePatternInCurrentState(label, value);
     }
 
     private void generatePatternInCurrentState(final String label, final String value) {
-        final List<EditablePulse> previousPulses = List.copyOf(editablePulses);
-        final int previousSelectionFineStart = heldPulseIndex >= 0 && heldPulseIndex < editablePulses.size()
-                ? editablePulses.get(heldPulseIndex).fineStart
-                : -1;
+        final int previousSelectionFineStart = padSurface.heldPulseFineStart();
         final NestedRhythmPattern pattern = generator.generate(currentSettings());
-        editablePulses.clear();
-        for (final NestedRhythmPattern.PulseEvent event : pattern.events()) {
-            final EditablePulse pulse = new EditablePulse(event);
-            pulse.applyGeneratedRecurrence();
-            editablePulses.add(restoreLocalEdits(pulse, previousPulses));
-        }
-        selectedPulseIndex = findSelectedPulseIndex(previousSelectionFineStart);
-        heldPulseIndex = -1;
+        editablePattern.applyGeneratedPattern(pattern, expressionSettings(), totalFineStepCount());
+        padSurface.afterPatternRegenerated(previousSelectionFineStart, editablePattern);
         writeEditablePulses();
+        nestedRhythmOwnsSelectedClip = true;
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
     }
@@ -595,121 +462,56 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!ensureClipAvailable()) {
             return;
         }
+        if (!canWriteSelectedClipFromContinuousControl()) {
+            return;
+        }
         writeEditablePulses();
+        nestedRhythmOwnsSelectedClip = true;
         oled.valueInfo(label, value);
         driver.notifyPopup(label, value);
     }
 
     private void writeEditablePulses() {
         refreshClipCursor();
-        cursorClip.setStepSize(CLIP_STEP_SIZE);
-        pendingPulseWrites.clear();
-        cursorClip.clearSteps();
-        cursorClip.getLoopLength().set(loopLengthBeats());
-        final List<EditablePulse> active = editablePulses.stream()
-                .filter(pulse -> pulse.enabled)
-                .sorted(Comparator.comparingInt(pulse -> pulse.fineStart))
-                .toList();
-        for (final EditablePulse pulse : active) {
-            pendingPulseWrites.put(pulse.fineStart, PendingPulseWrite.fromPulse(pulse));
-            cursorClip.setStep(pulse.fineStart, pulse.midiNote,
-                    pulse.effectiveVelocity(), pulse.effectiveBeatDuration());
-        }
-    }
-
-    private void applyExpressionValues(final NoteStep step, final PendingPulseWrite pulse) {
-        step.setPressure(pulse.pressure());
-        step.setTimbre(pulse.timbre());
-        step.setTranspose(pulse.pitchExpression());
-        final double chance = Math.min(0.999, pulse.chance());
-        step.setChance(chance);
-        step.setIsChanceEnabled(chance < 0.999);
-        final RecurrencePattern recurrence = pulse.recurrence();
-        step.setRecurrence(recurrence.bitwigLength(), recurrence.bitwigMask());
+        clipWriter.write(editablePulses, expressionSettings(), loopLengthBeats());
     }
 
     private void handleNoteStepObject(final NoteStep noteStep) {
+        updateObservedNoteStep(noteStep);
+        clipWriter.handleNoteStepObject(noteStep);
+    }
+
+    private void updateObservedNoteStep(final NoteStep noteStep) {
+        final int x = noteStep.x();
+        final int y = noteStep.y();
+        final Map<Integer, NoteStep> notesAtStep = observedNoteSteps.computeIfAbsent(x, ignored -> new HashMap<>());
         if (noteStep.state() == NoteStep.State.Empty) {
-            return;
+            notesAtStep.remove(y);
+            if (notesAtStep.isEmpty()) {
+                observedNoteSteps.remove(x);
+            }
+        } else {
+            notesAtStep.put(y, noteStep);
         }
-        final PendingPulseWrite pending = pendingPulseWrites.get(noteStep.x());
-        if (pending == null || pending.midiNote() != noteStep.y()) {
-            return;
-        }
-        applyExpressionValues(noteStep, pending);
-        pendingPulseWrites.remove(noteStep.x());
+    }
+
+    private boolean hasObservedNotes() {
+        return observedNoteSteps.values().stream()
+                .flatMap(notes -> notes.values().stream())
+                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
     }
 
     private void clearPulseEdits() {
-        for (final EditablePulse pulse : editablePulses) {
-            pulse.resetEdits();
-        }
+        editablePattern.resetEdits();
         applyEditablePattern("Hits", "Reset");
     }
 
     private void refreshGeneratedRecurrenceDefaults() {
-        for (final EditablePulse pulse : editablePulses) {
-            if (!pulse.recurrenceEdited) {
-                pulse.applyGeneratedRecurrence();
-            }
-        }
-    }
-
-    private EditablePulse restoreLocalEdits(final EditablePulse current, final List<EditablePulse> previousPulses) {
-        final EditablePulse match = findOverlayMatch(current, previousPulses);
-        if (match != null) {
-            current.copyLocalEditsFrom(match);
-        }
-        return current;
-    }
-
-    private EditablePulse findOverlayMatch(final EditablePulse current, final List<EditablePulse> previousPulses) {
-        EditablePulse best = null;
-        int bestScore = Integer.MAX_VALUE;
-        for (final EditablePulse previous : previousPulses) {
-            final int score = matchScore(current, previous);
-            if (score < bestScore) {
-                bestScore = score;
-                best = previous;
-            }
-        }
-        return bestScore <= overlayMatchTolerance() ? best : null;
-    }
-
-    private int matchScore(final EditablePulse current, final EditablePulse previous) {
-        if (current.midiNote != previous.midiNote || current.role != previous.role) {
-            return Integer.MAX_VALUE;
-        }
-        final int fineStartDelta = Math.abs(current.fineStart - previous.fineStart);
-        final int orderDelta = Math.abs(current.order - previous.order);
-        return fineStartDelta + orderDelta * 16;
-    }
-
-    private int overlayMatchTolerance() {
-        return Math.max(24, totalFineStepCount() / 64);
-    }
-
-    private int findSelectedPulseIndex(final int previousSelectionFineStart) {
-        if (editablePulses.isEmpty()) {
-            return -1;
-        }
-        if (previousSelectionFineStart < 0) {
-            return Math.min(Math.max(selectedPulseIndex, 0), editablePulses.size() - 1);
-        }
-        int bestIndex = 0;
-        int bestDistance = Integer.MAX_VALUE;
-        for (int index = 0; index < editablePulses.size(); index++) {
-            final int distance = Math.abs(editablePulses.get(index).fineStart - previousSelectionFineStart);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestIndex = index;
-            }
-        }
-        return bestIndex;
+        editablePattern.refreshGeneratedRecurrenceDefaults(expressionSettings());
     }
 
     private int activePulseIndex() {
-        return heldPulseIndex >= 0 && heldPulseIndex < editablePulses.size() ? heldPulseIndex : -1;
+        return padSurface.activePulseIndex();
     }
 
     private NestedRhythmGenerator.Settings currentSettings() {
@@ -735,25 +537,26 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 densityDirection);
     }
 
-    private RgbLigthState colorForVelocity(final int velocity, final RgbLigthState base) {
-        if (velocity >= 112) {
-            return base.getBrightest();
-        }
-        if (velocity >= 96) {
-            return base.getBrightend();
-        }
-        if (velocity >= 78) {
-            return base;
-        }
-        return base.getDimmed();
+    private NestedRhythmExpressionSettings expressionSettings() {
+        return new NestedRhythmExpressionSettings(
+                pressureCenter,
+                pressureSpread,
+                pressureRotation,
+                timbreCenter,
+                timbreSpread,
+                timbreRotation,
+                pitchExpressionCenter,
+                pitchExpressionSpread,
+                pitchExpressionRotation,
+                chanceBaseline,
+                chancePlayProbability,
+                chanceRotation,
+                recurrenceDepth,
+                CLIP_STEP_SIZE);
     }
 
     private RgbLigthState clipBaseColor() {
         return selectedClipColor != null ? selectedClipColor : BASE_COLOR;
-    }
-
-    private RgbLigthState disabledPulseColor() {
-        return clipBaseColor().getVeryDimmed();
     }
 
     private String summaryLabel() {
@@ -853,7 +656,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator normal = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 final EncoderStepAccumulator altAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
@@ -866,7 +669,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     final int steps = accumulator.consume(inc);
                     if (steps != 0) {
                         if (hasHeldPulse()) {
-                            heldPulseConsumed = true;
+                            padSurface.markHeldPulseConsumed();
                         }
                         currentView.adjuster().accept(steps);
                     }
@@ -896,11 +699,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0 && hasHeldPulse()) {
-                        heldPulseConsumed = true;
+                        padSurface.markHeldPulseConsumed();
                     }
                     activeView(primary, alt, shift).adjuster().accept(inc);
                 });
@@ -926,12 +729,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator altAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0 && hasHeldPulse()) {
-                        heldPulseConsumed = true;
+                        padSurface.markHeldPulseConsumed();
                     }
                     if (driver.isGlobalAltHeld() && alt != null) {
                         final int steps = altAccumulator.consume(inc);
@@ -965,13 +768,13 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final EncoderStepAccumulator altAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 final EncoderStepAccumulator shiftAccumulator = new EncoderStepAccumulator(STEPPED_ENCODER_THRESHOLD);
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0 && hasHeldPulse()) {
-                        heldPulseConsumed = true;
+                        padSurface.markHeldPulseConsumed();
                     }
                     if (driver.isGlobalShiftHeld() && shift != null) {
                         final int steps = shiftAccumulator.consume(inc);
@@ -1025,11 +828,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0 && hasHeldPulse()) {
-                        heldPulseConsumed = true;
+                        padSurface.markHeldPulseConsumed();
                     }
                     adjuster.accept(inc);
                 });
@@ -1060,12 +863,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindThresholdedEncoder(layer, STEPPED_ENCODER_THRESHOLD, STEPPED_ENCODER_FINE_THRESHOLD,
                         driver::isGlobalShiftHeld, steps -> {
                             if (steps != 0 && hasHeldPulse()) {
-                                heldPulseConsumed = true;
+                                padSurface.markHeldPulseConsumed();
                             }
                             adjuster.accept(steps);
                         });
@@ -1381,7 +1184,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!hasHeldPulse() || amount == 0) {
             return;
         }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final NestedRhythmEditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.velocityOffset = Math.max(-48, Math.min(48, pulse.velocityOffset + amount * 2));
         applyEditablePattern("Hit Vel", Integer.toString(pulse.effectiveVelocity()));
     }
@@ -1390,7 +1193,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!hasHeldPulse() || amount == 0) {
             return;
         }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final NestedRhythmEditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.pressureOffset = clampSignedUnit(pulse.pressureOffset + amount * 0.05);
         applyEditablePattern("Pressure", pressurePrimaryLabel());
     }
@@ -1399,7 +1202,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!hasHeldPulse() || amount == 0) {
             return;
         }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final NestedRhythmEditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.timbreOffset = clampSignedUnit(pulse.timbreOffset + amount * 0.05);
         applyEditablePattern("Timbre", timbrePrimaryLabel());
     }
@@ -1408,7 +1211,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!hasHeldPulse() || amount == 0) {
             return;
         }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final NestedRhythmEditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.pitchExpressionOffset = clampPitchExpression(pulse.pitchExpressionOffset + amount);
         applyEditablePattern("Pitch Expr", pitchExpressionPrimaryLabel());
     }
@@ -1417,7 +1220,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         if (!hasHeldPulse() || amount == 0) {
             return;
         }
-        final EditablePulse pulse = editablePulses.get(activePulseIndex());
+        final NestedRhythmEditablePulse pulse = editablePulses.get(activePulseIndex());
         pulse.chanceOffset = clampSignedUnit(pulse.chanceOffset + amount * 0.05);
         applyEditablePattern("Chance", chancePrimaryLabel());
     }
@@ -1427,13 +1230,13 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return;
         }
         if (hasHeldPulse()) {
-            final EditablePulse pulse = editablePulses.get(activePulseIndex());
+            final NestedRhythmEditablePulse pulse = editablePulses.get(activePulseIndex());
             pulse.gateScale = clampGateScale(pulse.gateScale + amount * 0.05);
             applyEditablePattern("Hit Gate", "%.2f".formatted(pulse.gateScale));
             return;
         }
         final double nextGateScale = clampGateScale(globalGateScale() + amount * 0.05);
-        for (final EditablePulse pulse : editablePulses) {
+        for (final NestedRhythmEditablePulse pulse : editablePulses) {
             pulse.gateScale = nextGateScale;
         }
         applyEditablePattern("Gate All", "%.2f".formatted(nextGateScale));
@@ -1449,7 +1252,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         driver.setSharedOctave(Math.floorDiv(nextBaseNote, 12));
         if (!editablePulses.isEmpty()) {
             final int delta = nextBaseNote - previousBaseNote;
-            for (final EditablePulse pulse : editablePulses) {
+            for (final NestedRhythmEditablePulse pulse : editablePulses) {
                 pulse.midiNote = Math.max(0, Math.min(127, pulse.midiNote + delta));
             }
             applyEditablePattern("Pitch", pitchLabel());
@@ -1485,7 +1288,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public void bind(final StepSequencerEncoderHandler handler, final Layer layer, final TouchEncoder encoder,
+            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final Parameter parameter = switch (index) {
                     case 0 -> cursorTrack.volume();
@@ -1493,22 +1296,16 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     case 2 -> cursorTrack.sendBank().getItemAt(0);
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
-                parameter.name().markInterested();
-                parameter.displayedValue().markInterested();
-                parameter.value().markInterested();
-                encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
-                    EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
-                    oled.valueInfo(label, parameter.displayedValue().get());
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        oled.valueInfo(label, parameter.displayedValue().get());
-                    } else {
-                        oled.clearScreenDelayed();
-                    }
-                });
+                ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
+                        handler.touchResetControl(), mixerResetPolicy(index), oled::valueInfo, oled::clearScreenDelayed);
             }
         };
+    }
+
+    private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
+        return index == 0
+                ? ParameterEncoderBinding.ResetPolicy.NONE
+                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
     }
 
     private void ignoreEncoder(final int amount) {
@@ -1554,7 +1351,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String pressurePrimaryLabel() {
         return hasHeldPulse()
-                ? percentLabel(editablePulses.get(activePulseIndex()).effectivePressure())
+                ? percentLabel(editablePulses.get(activePulseIndex()).effectivePressure(expressionSettings()))
                 : pressureSpreadLabel();
     }
 
@@ -1572,7 +1369,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String timbrePrimaryLabel() {
         return hasHeldPulse()
-                ? signedPercentLabel(editablePulses.get(activePulseIndex()).effectiveTimbre())
+                ? signedPercentLabel(editablePulses.get(activePulseIndex()).effectiveTimbre(expressionSettings()))
                 : timbreSpreadLabel();
     }
 
@@ -1590,7 +1387,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String pitchExpressionPrimaryLabel() {
         return hasHeldPulse()
-                ? "%.0f st".formatted(editablePulses.get(activePulseIndex()).effectivePitchExpression())
+                ? "%.0f st".formatted(editablePulses.get(activePulseIndex()).effectivePitchExpression(expressionSettings()))
                 : pitchExpressionSpreadLabel();
     }
 
@@ -1608,7 +1405,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private String chancePrimaryLabel() {
         return hasHeldPulse()
-                ? percentLabel(editablePulses.get(activePulseIndex()).effectiveChance())
+                ? percentLabel(editablePulses.get(activePulseIndex()).effectiveChance(expressionSettings()))
                 : generatedChanceMinimumLabel();
     }
 
@@ -1621,8 +1418,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return chancePlayProbabilityLabel();
         }
         double minimum = 1.0;
-        for (final EditablePulse pulse : editablePulses) {
-            minimum = Math.min(minimum, pulse.effectiveChance());
+        final NestedRhythmExpressionSettings settings = expressionSettings();
+        for (final NestedRhythmEditablePulse pulse : editablePulses) {
+            minimum = Math.min(minimum, pulse.effectiveChance(settings));
         }
         return percentLabel(minimum);
     }
@@ -1759,7 +1557,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private boolean hasHeldPulse() {
-        return activePulseIndex() >= 0;
+        return padSurface.hasHeldPulse();
     }
 
     private String countLabel(final int count) {
@@ -1813,14 +1611,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return 1.0;
         }
         double sum = 0.0;
-        for (final EditablePulse pulse : editablePulses) {
+        for (final NestedRhythmEditablePulse pulse : editablePulses) {
             sum += pulse.gateScale;
         }
         return sum / editablePulses.size();
     }
 
     private boolean allGateScalesEqual(final double reference) {
-        for (final EditablePulse pulse : editablePulses) {
+        for (final NestedRhythmEditablePulse pulse : editablePulses) {
             if (Math.abs(pulse.gateScale - reference) > 0.0001) {
                 return false;
             }
@@ -1836,6 +1634,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private void refreshSelectedClipState() {
         final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, BASE_COLOR);
         selectedClipSlotIndex = state.slotIndex();
+        if (selectedClipSlotIndex != lastSelectedClipSlotIndex) {
+            observedNoteSteps.clear();
+            nestedRhythmOwnsSelectedClip = false;
+            lastSelectedClipSlotIndex = selectedClipSlotIndex;
+        }
         selectedClipHasContent = state.hasContent();
         selectedClipColor = state.color();
         syncClipLengthFromDaw();
@@ -1868,11 +1671,33 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         normalizeRatchetControls();
     }
 
-    private void maybeGenerateOnEmptySelectedClip() {
-        if (!cursorTrack.canHoldNoteData().get() || selectedClipSlotIndex < 0 || selectedClipHasContent) {
-            return;
+    private void showNoClipIfNeeded() {
+        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
+                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
+        if (failure != null) {
+            oled.valueInfo(failure.title(), failure.oledDetail());
+            driver.notifyPopup(failure.title(), failure.popupDetail());
         }
-        generatePattern("Generate", summaryLabel());
+    }
+
+    private boolean canWriteSelectedClipFromContinuousControl() {
+        if (nestedRhythmOwnsSelectedClip || !selectedClipHasContent && !hasObservedNotes()) {
+            return true;
+        }
+        oled.valueInfo("Clip Exists", "PTRN DOWN");
+        driver.notifyPopup("Clip Exists", "Press PATTERN DOWN to overwrite");
+        return false;
+    }
+
+    @Override
+    public void onClipCreated(final int index) {
+        nestedRhythmOwnsSelectedClip = true;
+        observedNoteSteps.clear();
+        driver.getHost().scheduleTask(() -> {
+            refreshClipCursor();
+            refreshSelectedClipState();
+            generatePatternForced("Generate", summaryLabel());
+        }, CLIP_CREATE_GENERATE_DELAY_MS);
     }
 
     private boolean ensureClipAvailable() {
@@ -2090,149 +1915,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         tupletDivisions = normalizeTupletDivisions(tupletDivisions);
     }
 
-    private final class EditablePulse {
-        private final int order;
-        private final int fineStart;
-        private final int baseDuration;
-        private int midiNote;
-        private final int baseVelocity;
-        private final NestedRhythmPattern.Role role;
-        private final double indispensability;
-        private int velocityOffset = 0;
-        private double gateScale = 1.0;
-        private double pressureOffset = 0.0;
-        private double timbreOffset = 0.0;
-        private double pitchExpressionOffset = 0.0;
-        private double chanceOffset = 0.0;
-        private int recurrenceLength = 0;
-        private int recurrenceMask = 0;
-        private boolean recurrenceEdited = false;
-        private boolean enabled = true;
-
-        private EditablePulse(final NestedRhythmPattern.PulseEvent event) {
-            this.order = event.order();
-            this.fineStart = event.fineStart();
-            this.baseDuration = event.duration();
-            this.midiNote = event.midiNote();
-            this.baseVelocity = event.velocity();
-            this.role = event.role();
-            this.indispensability = event.indispensability();
-        }
-
-        private int effectiveVelocity() {
-            return Math.max(1, Math.min(127, baseVelocity + velocityOffset));
-        }
-
-        private double effectivePressure() {
-            return clampUnit(NestedRhythmContourShaper.shapeUnitExpression(
-                    order, pressureCenter, pressureSpread, pressureRotation) + pressureOffset);
-        }
-
-        private double effectiveTimbre() {
-            return clampSignedUnit(NestedRhythmContourShaper.shapeSignedExpression(
-                    order, timbreCenter, timbreSpread, timbreRotation) + timbreOffset);
-        }
-
-        private double effectivePitchExpression() {
-            return clampPitchExpression(NestedRhythmContourShaper.shapePitchExpression(
-                    order, pitchExpressionCenter, pitchExpressionSpread, pitchExpressionRotation)
-                    + pitchExpressionOffset);
-        }
-
-        private double effectiveChance() {
-            return clampUnit(NestedRhythmContourShaper.shapeChance(
-                    order, role, indispensability, chanceBaseline, chancePlayProbability, chanceRotation)
-                    + chanceOffset);
-        }
-
-        private RecurrencePattern effectiveRecurrence() {
-            return RecurrencePattern.of(recurrenceLength, recurrenceMask);
-        }
-
-        private void applyGeneratedRecurrence() {
-            final RecurrencePattern recurrence = NestedRhythmContourShaper.generatedRecurrence(
-                    order, role, indispensability, recurrenceDepth);
-            recurrenceLength = recurrence.length();
-            recurrenceMask = recurrence.mask();
-        }
-
-        private double effectiveDuration() {
-            return Math.max(1.0, baseDuration * gateScale);
-        }
-
-        private double effectiveBeatDuration() {
-            return effectiveDuration() * CLIP_STEP_SIZE;
-        }
-
-        private boolean containsFineStep(final int fineStep, final int clipFineSteps) {
-            final int duration = Math.max(1, (int) Math.round(effectiveDuration()));
-            final int end = Math.floorMod(fineStart + duration, clipFineSteps);
-            if (duration >= clipFineSteps) {
-                return true;
-            }
-            if (fineStart < end) {
-                return fineStep >= fineStart && fineStep < end;
-            }
-            return fineStep >= fineStart || fineStep < end;
-        }
-
-        private void resetEdits() {
-            velocityOffset = 0;
-            gateScale = 1.0;
-            pressureOffset = 0.0;
-            timbreOffset = 0.0;
-            pitchExpressionOffset = 0.0;
-            chanceOffset = 0.0;
-            recurrenceLength = 0;
-            recurrenceMask = 0;
-            recurrenceEdited = false;
-            enabled = true;
-        }
-
-        private void copyLocalEditsFrom(final EditablePulse other) {
-            velocityOffset = other.velocityOffset;
-            gateScale = other.gateScale;
-            pressureOffset = other.pressureOffset;
-            timbreOffset = other.timbreOffset;
-            pitchExpressionOffset = other.pitchExpressionOffset;
-            chanceOffset = other.chanceOffset;
-            recurrenceLength = other.recurrenceLength;
-            recurrenceMask = other.recurrenceMask;
-            recurrenceEdited = other.recurrenceEdited;
-            enabled = other.enabled;
-        }
-
-        private String roleLabel() {
-            return switch (role) {
-                case PRIMARY_ANCHOR -> "Anchor";
-                case SECONDARY_ANCHOR -> "Support";
-                case TUPLET_LEAD -> "Tuplet Lead";
-                case TUPLET_INTERIOR -> "Tuplet";
-                case RATCHET_LEAD -> "Ratchet Lead";
-                case RATCHET_INTERIOR -> "Ratchet";
-                case PICKUP -> "Pickup";
-            };
-        }
-    }
-
     private record ModifierEncoderView(String label, java.util.function.Supplier<String> valueSupplier,
                                        java.util.function.IntConsumer adjuster) {
     }
 
-    private record PendingPulseWrite(int midiNote,
-                                     double pressure,
-                                     double timbre,
-                                     double pitchExpression,
-                                     double chance,
-                                     RecurrencePattern recurrence) {
-        private static PendingPulseWrite fromPulse(final EditablePulse pulse) {
-            return new PendingPulseWrite(
-                    pulse.midiNote,
-                    pulse.effectivePressure(),
-                    pulse.effectiveTimbre(),
-                    pulse.effectivePitchExpression(),
-                    pulse.effectiveChance(),
-                    pulse.effectiveRecurrence());
-        }
-    }
 }

@@ -280,7 +280,7 @@
       </table>
       <p>Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.</p>
       <p>Hold <code>MUTE_3</code> and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.</p>
-      <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; the OLED shows the lower-left note as <code>Pad Low</code>, for example <code>C1</code>. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: default velocity. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
+      <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; the OLED shows the lower-left note as <code>Pad Low</code>, for example <code>C1</code>. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: velocity center. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
       <table>
         <thead><tr><th>Encoder page</th><th>Encoders</th></tr></thead>
         <tbody>
@@ -292,7 +292,7 @@
       </table>
       <h3>Nested Rhythm mode</h3>
       <p><code>Nested Rhythm</code> is the second <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>
-      <p>If the selected clip slot is empty when you enter the mode, Nested Rhythm generates its default starter pattern once.</p>
+      <p>Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press <code>PATTERN DOWN</code> to overwrite and claim the clip for Nested Rhythm editing.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -352,7 +352,7 @@
       <table>
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Mod</td><td>Pitch Gliss</td><td>Velocity sensitivity / <code>SHIFT</code>: Default velocity</td><td>Shared scale / <code>ALT</code>: Shared root key / <code>SHIFT</code>: local layout</td></tr>
+          <tr><td><code>Channel</code></td><td>Mod</td><td>Pitch Gliss</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Shared scale / <code>ALT</code>: Shared root key / <code>SHIFT</code>: local layout</td></tr>
           <tr><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr><td><code>User 1</code></td><td>Aftertouch</td><td>Pressure</td><td>Timbre</td><td>Pitch expression</td></tr>
           <tr><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
@@ -397,7 +397,7 @@
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
           <tr><td><code>Channel</code></td><td>Engine / <code>ALT</code>: subtype</td><td>Density</td><td>Pitch-pool octave / <code>ALT</code>: shared root</td><td>Mutation type / <code>ALT</code>: strength</td></tr>
-          <tr><td><code>Mixer</code></td><td>Halve / double length</td><td>Swivel / mirror-double</td><td>Reverse</td><td>Invert down / up</td></tr>
+          <tr><td><code>Mixer</code></td><td>Halve / double length</td><td>Swivel / Mirror x2</td><td>Reverse</td><td>Invert down / up</td></tr>
           <tr><td><code>User 1</code></td><td>Engine macro</td><td>Tension</td><td>Legato</td><td>Recurrence span helper</td></tr>
           <tr><td><code>User 2</code></td><td>Selected or held step octave</td><td>Gate</td><td>Velocity</td><td>Articulation</td></tr>
       </tbody>
@@ -443,7 +443,7 @@
       <table>
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Velocity sensitivity / <code>SHIFT</code>: default velocity</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: shared root</td></tr>
+          <tr><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: shared root</td></tr>
           <tr><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr><td><code>User 1</code></td><td>Note velocity edit</td><td>Note chance edit</td><td>Recurrence-oriented note editing</td><td>Recurrence-oriented note editing</td></tr>
           <tr><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>

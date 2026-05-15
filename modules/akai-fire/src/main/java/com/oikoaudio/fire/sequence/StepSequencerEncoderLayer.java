@@ -9,6 +9,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.EncoderTurnBehavior;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -18,11 +19,11 @@ import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 
 /**
- * Shared encoder-page controller for step-sequencer-style modes.
+ * Shared encoder-page layer for step-sequencer-style modes.
  * It manages encoder bank switching, touch gestures, OLED feedback, and the wiring between encoder
  * slots and note or mixer parameters.
  */
-public class StepSequencerEncoderHandler extends Layer {
+public class StepSequencerEncoderLayer extends Layer {
     private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
@@ -61,7 +62,7 @@ public class StepSequencerEncoderHandler extends Layer {
 		void set(NoteStep step, int value);
 	}
 
-	public StepSequencerEncoderHandler(final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
+	public StepSequencerEncoderLayer(final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
 		super(driver.getLayers(), "Encoder_layer");
 		this.parent = host;
         this.driver = driver;
@@ -147,6 +148,25 @@ public class StepSequencerEncoderHandler extends Layer {
 
     public void endTouchReset(final int slotIndex) {
         touchResetHandler.endTouchReset(slotIndex);
+    }
+
+    public ParameterEncoderBinding.TouchResetControl touchResetControl() {
+        return new ParameterEncoderBinding.TouchResetControl() {
+            @Override
+            public void begin(final int encoderIndex, final Runnable resetAction) {
+                beginTouchReset(encoderIndex, resetAction);
+            }
+
+            @Override
+            public void markAdjusted(final int encoderIndex, final int units) {
+                recordTouchAdjustment(encoderIndex, units);
+            }
+
+            @Override
+            public void end(final int encoderIndex) {
+                endTouchReset(encoderIndex);
+            }
+        };
     }
 
     public void showAccessorTouchValue(final NoteStepAccess accessor) {
@@ -238,6 +258,7 @@ public class StepSequencerEncoderHandler extends Layer {
 				handleIncDouble(inc, accessor, notes, note, first);
 			}
 		}
+        parent.registerModifiedSteps(notes);
 	}
 
 	private NoteOccurrence incrementOccurence(final int inc, final NoteStep note) {

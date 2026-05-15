@@ -7,6 +7,8 @@ import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.ModeButtonLights;
+import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -91,14 +93,15 @@ public final class FugueStepMode extends Layer {
         this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
 
-        bindPads();
-        bindButtons();
+        new PadBankRowControlBindings(driver, this, fugueStepControlBindingsHost(),
+                new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
+                        this::handleEncoderModeButton, this::encoderModeLight)).bind();
         bindEncoders();
         bindMainEncoder();
     }
 
     public BiColorLightState getModeButtonLightState() {
-        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : BiColorLightState.RED_FULL;
+        return driver.isGlobalAltHeld() ? driver.getStepFillLightState() : ModeButtonLights.MODE_3;
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -129,38 +132,53 @@ public final class FugueStepMode extends Layer {
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
     }
 
-    private void bindPads() {
-        final var pads = driver.getRgbButtons();
-        for (int index = 0; index < pads.length; index++) {
-            final int padIndex = index;
-            pads[index].bindPressed(this, pressed -> handlePadPress(padIndex, pressed), () -> getPadLight(padIndex));
-        }
+    private PadBankRowControlBindings.Host fugueStepControlBindingsHost() {
+        return new PadBankRowControlBindings.Host() {
+            @Override
+            public void handlePadPress(final int padIndex, final boolean pressed) {
+                FugueStepMode.this.handlePadPress(padIndex, pressed);
+            }
+
+            @Override
+            public RgbLigthState padLight(final int padIndex) {
+                return FugueStepMode.this.getPadLight(padIndex);
+            }
+
+            @Override
+            public void handleBankButton(final boolean pressed, final int amount) {
+                FugueStepMode.this.handleBankButton(pressed, amount);
+            }
+
+            @Override
+            public BiColorLightState bankLightState() {
+                return BiColorLightState.HALF;
+            }
+
+            @Override
+            public void handleRowButton(final int index, final boolean pressed) {
+                toggleLineEnabled(index, pressed);
+            }
+
+            @Override
+            public BiColorLightState rowLightState(final int index) {
+                return FugueStepMode.this.lineLight(index);
+            }
+        };
     }
 
-    private void bindButtons() {
-        driver.getButton(NoteAssign.KNOB_MODE).bindPressed(this, this::handleEncoderModeButton, this::encoderModeLight);
-        driver.getButton(NoteAssign.BANK_L).bindPressed(this, pressed -> {
-            if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    halveClipLength();
-                } else {
-                    adjustStartOffset(activeLineIndex(), -1);
-                }
+    private void handleBankButton(final boolean pressed, final int amount) {
+        if (!pressed) {
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            if (amount < 0) {
+                halveClipLength();
+            } else {
+                doubleClipLength();
             }
-        }, () -> BiColorLightState.HALF);
-        driver.getButton(NoteAssign.BANK_R).bindPressed(this, pressed -> {
-            if (pressed) {
-                if (driver.isGlobalAltHeld()) {
-                    doubleClipLength();
-                } else {
-                    adjustStartOffset(activeLineIndex(), 1);
-                }
-            }
-        }, () -> BiColorLightState.HALF);
-        driver.getButton(NoteAssign.MUTE_1).bindPressed(this, pressed -> toggleLineEnabled(0, pressed), () -> lineLight(0));
-        driver.getButton(NoteAssign.MUTE_2).bindPressed(this, pressed -> toggleLineEnabled(1, pressed), () -> lineLight(1));
-        driver.getButton(NoteAssign.MUTE_3).bindPressed(this, pressed -> toggleLineEnabled(2, pressed), () -> lineLight(2));
-        driver.getButton(NoteAssign.MUTE_4).bindPressed(this, pressed -> toggleLineEnabled(3, pressed), () -> lineLight(3));
+            return;
+        }
+        adjustStartOffset(activeLineIndex(), amount);
     }
 
     private void bindEncoders() {
