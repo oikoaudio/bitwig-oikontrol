@@ -15,8 +15,22 @@ public final class PadMatrixBindings {
         }
     }
 
+    public static void bindPressed(final Layer layer, final RgbButton[] pads, final PressHost host) {
+        for (int index = 0; index < pads.length; index++) {
+            final int padIndex = index;
+            pads[index].bindPressed(layer, pressed -> host.handlePadPress(padIndex, pressed),
+                    () -> host.padLight(padIndex));
+        }
+    }
+
     public interface Host {
         void handlePadPress(int padIndex, boolean pressed, int velocity);
+
+        RgbLigthState padLight(int padIndex);
+    }
+
+    public interface PressHost {
+        void handlePadPress(int padIndex, boolean pressed);
 
         RgbLigthState padLight(int padIndex);
     }
