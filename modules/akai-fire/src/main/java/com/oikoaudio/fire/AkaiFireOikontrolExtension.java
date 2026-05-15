@@ -1037,8 +1037,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return sharedPitchContext.getScaleDisplayName();
     }
 
+    public String getSharedShortScaleDisplayName() {
+        return sharedPitchContext.getShortScaleDisplayName();
+    }
+
     public MusicalScale getSharedMusicalScale() {
         return sharedPitchContext.getMusicalScale();
+    }
+
+    public SharedPitchContextController getSharedPitchContextController() {
+        return sharedPitchContext;
     }
 
     public SharedMusicalContext getSharedMusicalContext() {

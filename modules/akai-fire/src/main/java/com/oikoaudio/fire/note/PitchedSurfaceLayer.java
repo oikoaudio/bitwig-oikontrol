@@ -20,7 +20,6 @@ import com.bitwig.extension.controller.api.SettableRangedValue;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.MusicalScale;
-import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.bitwig.extensions.framework.values.Midi;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
@@ -52,6 +51,7 @@ import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -158,7 +158,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     private final NoteInput noteInput;
     private final PatternButtons patternButtons;
     private final NoteRepeatHandler noteRepeatHandler;
-    private final MusicalScaleLibrary scaleLibrary = MusicalScaleLibrary.getInstance();
+    private final SharedPitchContextController pitchContext;
     private final Integer[] noteTranslationTable = new Integer[128];
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
     private final ChordStepPadController chordStepPadController;
@@ -327,6 +327,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
                                   final boolean drumPadsOnly) {
         super(driver.getLayers(), layerName);
         this.driver = driver;
+        this.pitchContext = driver.getSharedPitchContextController();
         this.drumPadsOnly = drumPadsOnly;
         this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();
@@ -539,7 +540,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
 
     private void applyDefaultLayoutPreference() {
         inKey = false;
-        if (driver.getSharedScaleIndex() < 1) {
+        if (pitchContext.getScaleIndex() < 1) {
             driver.setSharedScaleIndex(1);
         }
     }
@@ -2447,8 +2448,8 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return;
         }
         final int minScale = liveScaleMinIndex();
-        final int nextScale = driver.getSharedScaleIndex() + amount;
-        if (nextScale < minScale || nextScale >= scaleLibrary.getMusicalScalesCount()) {
+        final int nextScale = pitchContext.getScaleIndex() + amount;
+        if (nextScale < minScale || nextScale >= pitchContext.getScaleCount()) {
             return;
         }
         applyLayoutChange(() -> driver.setSharedScaleIndex(nextScale));
@@ -3056,7 +3057,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
         final int builderRoot = Math.floorMod(firstVisibleNote, 12);
         for (int padIndex = 0; padIndex < CHORD_SOURCE_PAD_COUNT; padIndex++) {
             final int midiNote = getBuilderRenderedNoteMidiForPad(padIndex);
-            if (midiNote >= 0 && getScale().isRootMidiNote(builderRoot, midiNote)) {
+            if (midiNote >= 0 && pitchContext.isRootMidiNote(builderRoot, midiNote)) {
                 chordSelection.addBuilderNote(midiNote);
                 return;
             }
@@ -3137,9 +3138,9 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             base = RgbLigthState.OFF;
         } else {
             final NoteGridLayout.PadRole role;
-            if (getScale().isRootMidiNote(builderRoot, midiNote)) {
+            if (pitchContext.isRootMidiNote(builderRoot, midiNote)) {
                 role = NoteGridLayout.PadRole.ROOT;
-            } else if (getScale().isMidiNoteInScale(builderRoot, midiNote)) {
+            } else if (pitchContext.isMidiNoteInScale(builderRoot, midiNote)) {
                 role = NoteGridLayout.PadRole.IN_SCALE;
             } else {
                 role = NoteGridLayout.PadRole.OUT_OF_SCALE;
@@ -3193,9 +3194,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private MusicalScale getScale() {
-        final int scaleCount = scaleLibrary.getMusicalScalesCount();
-        final int safeIndex = Math.max(0, Math.min(scaleCount - 1, driver.getSharedScaleIndex()));
-        return scaleLibrary.getMusicalScale(safeIndex);
+        return pitchContext.getMusicalScale();
     }
 
     public MusicalScale getCurrentScale() {
@@ -3203,35 +3202,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private String getScaleDisplayName() {
-        return switch (getScale().getName()) {
-            case "Major" -> "Major";
-            case "Minor" -> "Minor";
-            case "Phrygian Dominant" -> "Phryg Dom";
-            case "Double Harmonic Major" -> "DH Maj";
-            case "Double Harmonic Minor" -> "DH Min";
-            case "Harmonic Major" -> "Harm Maj";
-            case "Harmonic Minor" -> "Harm Min";
-            case "Jazz Minor" -> "Jazz Min";
-            case "Overtone Scale" -> "Overtone";
-            case "Hungarian Minor" -> "Hung Min";
-            case "Ukranian Dorian" -> "Ukr Dor";
-            case "Super Locrian" -> "Sup Loc";
-            case "Half-diminished" -> "Half Dim";
-            case "Diminished WH" -> "Dim WH";
-            case "Diminished HW" -> "Dim HW";
-            case "Major Pentatonic" -> "Maj Pent";
-            case "Minor Pentatonic" -> "Min Pent";
-            case "Blues Major" -> "Bl Maj";
-            case "Blues Minor" -> "Bl Min";
-            case "Whole Tone" -> "Whole";
-            case "Major Triad" -> "Maj Tri";
-            case "Minor Triad" -> "Min Tri";
-            case "Bebop Major" -> "Bebop Maj";
-            case "Bebop Dorian" -> "Bebop Dor";
-            case "Bebop Mixolydian" -> "Bebop Mix";
-            case "Bebop Minor" -> "Bebop Min";
-            default -> getScale().getName();
-        };
+        return pitchContext.getShortScaleDisplayName();
     }
 
     public String getCurrentScaleDisplayName() {
@@ -3239,7 +3210,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private int getRootNote() {
-        return driver.getSharedRootNote();
+        return pitchContext.getRootNote();
     }
 
     public int getCurrentRootNoteClass() {
@@ -3247,7 +3218,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private int getOctave() {
-        return driver.getSharedOctave();
+        return pitchContext.getOctave();
     }
 
     public int getCurrentOctave() {
@@ -3255,7 +3226,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     public int getCurrentBaseMidiNote() {
-        return driver.getSharedBaseMidiNote();
+        return pitchContext.getBaseMidiNote();
     }
 
     private int liveScaleMinIndex() {
@@ -3282,14 +3253,7 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private int nextBuilderScaleNote(final int currentNote, final int builderRoot) {
-        int note = currentNote + 1;
-        while (note <= 127) {
-            if (getScale().isMidiNoteInScale(builderRoot, note)) {
-                return note;
-            }
-            note++;
-        }
-        return -1;
+        return pitchContext.nextScaleNote(currentNote, builderRoot);
     }
 
     private int applyLivePitchOffset(final int midiNote) {
@@ -3300,30 +3264,10 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
             return midiNote;
         }
         if (livePitchGlissMode == LivePitchGlissMode.SCALE_DEGREE) {
-            return transposeByScaleDegrees(midiNote, liveScaleDegreeGlissOffset);
+            return pitchContext.transposeByScaleDegrees(midiNote, liveScaleDegreeGlissOffset);
         }
         final int shifted = midiNote + getLivePitchOffset();
         return shifted >= 0 && shifted <= 127 ? shifted : -1;
-    }
-
-    private int transposeByScaleDegrees(final int midiNote, final int scaleDegrees) {
-        if (scaleDegrees == 0) {
-            return midiNote;
-        }
-        int note = midiNote;
-        int remaining = Math.abs(scaleDegrees);
-        final int direction = scaleDegrees > 0 ? 1 : -1;
-        while (remaining > 0) {
-            note += direction;
-            while (note >= 0 && note <= 127 && !getScale().isMidiNoteInScale(getRootNote(), note)) {
-                note += direction;
-            }
-            if (note < 0 || note > 127) {
-                return -1;
-            }
-            remaining--;
-        }
-        return note;
     }
 
     private void clearTranslation() {
