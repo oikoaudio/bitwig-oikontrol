@@ -18,9 +18,22 @@ class MelodicStepPatternStateTest {
 
         assertFalse(state.currentPattern().step(4).active());
         assertEquals(64, state.currentPattern().step(4).pitch());
-        assertFalse(state.basePattern().step(5).active());
+        assertTrue(state.basePattern().step(5).active());
         assertEquals(67, state.basePattern().step(5).pitch());
         assertEquals(8, state.loopSteps());
+    }
+
+    @Test
+    void observedEmptyStepDoesNotRemoveBaseStepNeededForFill() {
+        final MelodicStepPatternState state = new MelodicStepPatternState(16);
+        state.setCurrentPattern(MelodicPattern.empty(16));
+        state.setBasePattern(MelodicPattern.empty(16).withStep(activeStep(5, 67)));
+
+        state.applyObservedPattern(MelodicPattern.empty(16));
+
+        final MelodicPattern.Step restored = state.restoreGeneratedStepOrDefault(5, () -> activeStep(5, 60));
+        assertTrue(restored.active());
+        assertEquals(67, restored.pitch());
     }
 
     @Test

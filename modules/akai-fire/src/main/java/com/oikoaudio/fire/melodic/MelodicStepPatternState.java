@@ -39,8 +39,8 @@ final class MelodicStepPatternState {
     }
 
     void applyObservedPattern(final MelodicPattern observed) {
-        currentPattern = mergeObservedWithLatent(observed, currentPattern);
-        basePattern = mergeObservedWithLatent(observed, basePattern);
+        currentPattern = mergeObservedWithLatent(observed, currentPattern, false);
+        basePattern = mergeObservedWithLatent(observed, basePattern, true);
     }
 
     MelodicPattern.Step ensureStep(final int stepIndex, final Supplier<MelodicPattern.Step> defaultStepSupplier) {
@@ -73,7 +73,8 @@ final class MelodicStepPatternState {
     }
 
     private MelodicPattern mergeObservedWithLatent(final MelodicPattern observed,
-                                                  final MelodicPattern latentSource) {
+                                                  final MelodicPattern latentSource,
+                                                  final boolean preserveLatentActivity) {
         final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
         for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
             final MelodicPattern.Step observedStep = observed.step(i);
@@ -83,7 +84,7 @@ final class MelodicStepPatternState {
             }
             final MelodicPattern.Step latentStep = latentSource.step(i);
             if (latentStep.pitch() != null) {
-                steps.add(latentStep.withIndex(i).withActive(false));
+                steps.add(latentStep.withIndex(i).withActive(preserveLatentActivity && latentStep.active()));
             } else {
                 steps.add(observedStep);
             }
