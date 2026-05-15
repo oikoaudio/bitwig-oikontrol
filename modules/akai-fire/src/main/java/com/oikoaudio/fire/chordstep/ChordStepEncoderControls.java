@@ -316,6 +316,7 @@ final class ChordStepEncoderControls {
                 parameter.name().markInterested();
                 parameter.displayedValue().markInterested();
                 parameter.value().markInterested();
+                parameter.discreteValueCount().markInterested();
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld,
                         ContinuousEncoderScaler.Profile.STRONG,
                         inc -> adjustMixerParameter(parameter, label, inc));

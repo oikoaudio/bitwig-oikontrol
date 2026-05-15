@@ -288,6 +288,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             parameter.name().markInterested();
             parameter.displayedValue().markInterested();
             parameter.value().markInterested();
+            parameter.discreteValueCount().markInterested();
         }
 
         for (int i = 0; i < noteTranslationTable.length; i++) {
@@ -549,6 +550,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             parameter.name().markInterested();
             parameter.displayedValue().markInterested();
             parameter.value().markInterested();
+            parameter.discreteValueCount().markInterested();
         }
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;

@@ -1168,6 +1168,7 @@ public class PerformClipLauncherMode extends Layer {
         parameter.name().markInterested();
         parameter.displayedValue().markInterested();
         parameter.value().markInterested();
+        parameter.discreteValueCount().markInterested();
     }
 
     private void markPageParametersInterested(final CursorRemoteControlsPage page) {

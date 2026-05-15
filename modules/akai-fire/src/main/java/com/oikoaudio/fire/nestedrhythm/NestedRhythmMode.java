@@ -148,6 +148,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             parameter.name().markInterested();
             parameter.displayedValue().markInterested();
             parameter.value().markInterested();
+            parameter.discreteValueCount().markInterested();
         }
         this.clipHandler = new ClipRowHandler(this);
         this.padSurface = new NestedRhythmPadSurface(
@@ -1300,6 +1301,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 parameter.name().markInterested();
                 parameter.displayedValue().markInterested();
                 parameter.value().markInterested();
+                parameter.discreteValueCount().markInterested();
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
                     EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
                     oled.valueInfo(label, parameter.displayedValue().get());

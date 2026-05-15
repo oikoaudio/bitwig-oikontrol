@@ -181,6 +181,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             parameter.name().markInterested();
             parameter.displayedValue().markInterested();
             parameter.value().markInterested();
+            parameter.discreteValueCount().markInterested();
         }
         observeSelectedClip();
         this.clipHandler = new ClipRowHandler(this);
@@ -2284,6 +2285,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 parameter.name().markInterested();
                 parameter.displayedValue().markInterested();
                 parameter.value().markInterested();
+                parameter.discreteValueCount().markInterested();
                 encoder.bindContinuousEncoder(layer, driver::isGlobalShiftHeld, inc -> {
                     EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
                     oled.valueInfo(label, parameter.displayedValue().get());
