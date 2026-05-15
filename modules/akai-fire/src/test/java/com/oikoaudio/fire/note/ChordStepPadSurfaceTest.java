@@ -230,11 +230,184 @@ class ChordStepPadSurfaceTest {
         assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(5, false));
     }
 
+    @Test
+    void workflowAddsAndKeepsNewStep() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+        final FakeStepCallbacks callbacks = new FakeStepCallbacks();
+        callbacks.hasStepStartNote = false;
+
+        surface.handleStepPadPress(2, true, 100, callbacks);
+
+        assertEquals(List.of(2), callbacks.assignedSteps);
+        assertTrue(surface.hasHeldStep(2));
+
+        callbacks.hasStepStartNote = true;
+        surface.handleStepPadPress(2, false, 0, callbacks);
+
+        assertEquals(List.of(), callbacks.clearedSteps);
+        assertFalse(surface.hasHeldStep(2));
+    }
+
+    @Test
+    void workflowClearsPlainExistingStepOnRelease() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+        final FakeStepCallbacks callbacks = new FakeStepCallbacks();
+        callbacks.hasStepStartNote = true;
+
+        surface.handleStepPadPress(2, true, 100, callbacks);
+        surface.handleStepPadPress(2, false, 0, callbacks);
+
+        assertEquals(List.of(2), callbacks.clearedSteps);
+    }
+
+    @Test
+    void workflowConsumesModifierPressOnRelease() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+        final FakeStepCallbacks callbacks = new FakeStepCallbacks();
+        callbacks.selectHeld = true;
+
+        surface.handleStepPadPress(2, true, 100, callbacks);
+        surface.handleStepPadPress(2, false, 0, callbacks);
+
+        assertEquals(List.of(2), callbacks.selectedSteps);
+        assertEquals(List.of(), callbacks.clearedSteps);
+    }
+
+    @Test
+    void workflowExtendsHeldRangeThroughCallbacks() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+        final FakeStepCallbacks callbacks = new FakeStepCallbacks();
+        callbacks.hasStepStartNote = true;
+
+        surface.handleStepPadPress(2, true, 100, callbacks);
+        surface.handleStepPadPress(5, true, 100, callbacks);
+
+        assertEquals(List.of("2-5"), callbacks.extendedRanges);
+        assertTrue(surface.hasHeldStep(5));
+        assertTrue(surface.consumeModifiedStep(2));
+        assertTrue(surface.consumeModifiedStep(5));
+    }
+
     private static NoteStep note(final int x, final int recurrenceLength, final int recurrenceMask) {
         final NoteStep note = mock(NoteStep.class);
         when(note.x()).thenReturn(x);
         when(note.recurrenceLength()).thenReturn(recurrenceLength);
         when(note.recurrenceMask()).thenReturn(recurrenceMask);
         return note;
+    }
+
+    private static final class FakeStepCallbacks implements ChordStepPadSurface.StepPadCallbacks {
+        private boolean ensureSelected = true;
+        private boolean accentGesture;
+        private boolean selectHeld;
+        private boolean fixedLengthHeld;
+        private boolean copyHeld;
+        private boolean deleteHeld;
+        private boolean builderFamily;
+        private boolean hasStepStartNote;
+        private boolean canExtend = true;
+        private final List<Integer> assignedSteps = new ArrayList<>();
+        private final List<Integer> selectedSteps = new ArrayList<>();
+        private final List<Integer> clearedSteps = new ArrayList<>();
+        private final List<String> extendedRanges = new ArrayList<>();
+
+        @Override
+        public boolean ensureSelectedNoteClipSlot() {
+            return ensureSelected;
+        }
+
+        @Override
+        public boolean isAccentGestureActive() {
+            return accentGesture;
+        }
+
+        @Override
+        public void toggleAccentForStep(final int stepIndex) {
+        }
+
+        @Override
+        public boolean isSelectHeld() {
+            return selectHeld;
+        }
+
+        @Override
+        public boolean isFixedLengthHeld() {
+            return fixedLengthHeld;
+        }
+
+        @Override
+        public boolean isCopyHeld() {
+            return copyHeld;
+        }
+
+        @Override
+        public boolean isDeleteHeld() {
+            return deleteHeld;
+        }
+
+        @Override
+        public void handleSelectStep(final int stepIndex) {
+            selectedSteps.add(stepIndex);
+        }
+
+        @Override
+        public void setLastStep(final int stepIndex) {
+        }
+
+        @Override
+        public void pasteCurrentChordToStep(final int stepIndex) {
+        }
+
+        @Override
+        public void clearChordStep(final int stepIndex) {
+            clearedSteps.add(stepIndex);
+        }
+
+        @Override
+        public boolean isBuilderFamily() {
+            return builderFamily;
+        }
+
+        @Override
+        public boolean canExtendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+            return canExtend;
+        }
+
+        @Override
+        public boolean extendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+            extendedRanges.add(anchorStepIndex + "-" + targetStepIndex);
+            return true;
+        }
+
+        @Override
+        public void showExtendedStepInfo(final int anchorStepIndex, final int targetStepIndex) {
+        }
+
+        @Override
+        public void showBlockedStepInfo() {
+        }
+
+        @Override
+        public boolean hasStepStartNote(final int stepIndex) {
+            return hasStepStartNote;
+        }
+
+        @Override
+        public boolean assignSelectedChordToStep(final int stepIndex, final int velocity) {
+            assignedSteps.add(stepIndex);
+            return true;
+        }
+
+        @Override
+        public void loadBuilderFromStep(final int stepIndex) {
+        }
+
+        @Override
+        public void showHeldStepInfo(final int stepIndex) {
+        }
+
+        @Override
+        public void removeHeldBankFineStart(final int stepIndex) {
+        }
     }
 }

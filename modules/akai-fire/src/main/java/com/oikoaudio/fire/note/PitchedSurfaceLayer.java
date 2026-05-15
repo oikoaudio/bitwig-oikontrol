@@ -1380,125 +1380,120 @@ public abstract class PitchedSurfaceLayer extends Layer implements StepSequencer
     }
 
     private void handleChordStepStepPadPress(final int stepIndex, final boolean pressed, final int velocity) {
-        final boolean accentGesture = chordAccentState.isHeld() || chordAccentState.isActive();
-        if (pressed && !ensureSelectedNoteClipSlot()) {
-            return;
-        }
-        if (accentGesture) {
-            if (pressed) {
-                toggleChordAccentForStep(stepIndex);
-            }
-            return;
-        }
-        if (!pressed && chordStepPadSurface.consumeModifierHandledStep(stepIndex)) {
-            return;
-        }
-        if (pressed) {
-            final ChordStepPadSurface.ModifierPressAction modifierAction = chordStepPadSurface.modifierPressAction(
-                    chordStepController.isSelectHeld(), chordStepController.isFixedLengthHeld(),
-                    chordStepController.isCopyHeld(), chordStepController.isDeleteHeld());
-            if (handleChordStepModifierPressAction(stepIndex, modifierAction)) {
-                return;
-            }
-            final Integer heldStepAnchor = chordStepPadSurface.heldStepAnchor();
-            final boolean canExtendFromAnchor = heldStepAnchor != null
-                    && heldStepAnchor != stepIndex
-                    && chordStepPadSurface.hasHeldStep(heldStepAnchor)
-                    && canExtendHeldChordRange(heldStepAnchor, stepIndex);
-            final ChordStepPadSurface.RangePressAction rangeAction = chordStepPadSurface.rangePressAction(stepIndex,
-                    canExtendFromAnchor);
-            if (handleChordStepRangePressAction(stepIndex, heldStepAnchor, rangeAction)) {
-                return;
-            }
-            final ChordStepPadSurface.StepPressAction stepAction = chordStepPadSurface.stepPressAction(stepIndex,
-                    hasStepStartNote(stepIndex), isBuilderFamily());
-            if (!handleChordStepNormalPressAction(stepIndex, velocity, stepAction)) {
-                return;
-            }
-            showHeldStepInfo(stepIndex);
-        } else {
-            final ChordStepPadSurface.StepReleaseAction releaseAction = chordStepPadSurface.stepReleaseAction(
-                    stepIndex, hasStepStartNote(stepIndex));
-            heldBankFineStarts.remove(stepIndex);
-            handleChordStepReleaseAction(stepIndex, releaseAction);
-        }
+        chordStepPadSurface.handleStepPadPress(stepIndex, pressed, velocity, chordStepPadCallbacks());
     }
 
-    private boolean handleChordStepNormalPressAction(final int stepIndex,
-                                                     final int velocity,
-                                                     final ChordStepPadSurface.StepPressAction action) {
-        switch (action) {
-            case HOLD_EXISTING -> {
-                return true;
+    private ChordStepPadSurface.StepPadCallbacks chordStepPadCallbacks() {
+        return new ChordStepPadSurface.StepPadCallbacks() {
+            @Override
+            public boolean ensureSelectedNoteClipSlot() {
+                return PitchedSurfaceLayer.this.ensureSelectedNoteClipSlot();
             }
-            case ADD_STEP -> {
-                final boolean assigned = assignSelectedChordToSteps(Collections.singleton(stepIndex), velocity);
-                if (!assigned) {
-                    chordStepPadSurface.cancelStepPress(stepIndex);
-                    return false;
-                }
-                chordStepPadSurface.markAddedStep(stepIndex);
-                return true;
-            }
-            case LOAD_BUILDER -> {
-                loadBuilderFromStep(stepIndex);
-                return true;
-            }
-        }
-        return true;
-    }
 
-    private void handleChordStepReleaseAction(final int stepIndex,
-                                              final ChordStepPadSurface.StepReleaseAction action) {
-        switch (action) {
-            case NONE -> {
+            @Override
+            public boolean isAccentGestureActive() {
+                return chordAccentState.isHeld() || chordAccentState.isActive();
             }
-            case CLEAR_STEP -> clearChordStep(stepIndex);
-        }
-    }
 
-    private boolean handleChordStepRangePressAction(final int stepIndex,
-                                                    final Integer heldStepAnchor,
-                                                    final ChordStepPadSurface.RangePressAction action) {
-        switch (action) {
-            case NONE -> {
-                return false;
+            @Override
+            public void toggleAccentForStep(final int stepIndex) {
+                PitchedSurfaceLayer.this.toggleChordAccentForStep(stepIndex);
             }
-            case EXTEND -> {
-                if (heldStepAnchor == null || !extendHeldChordRange(heldStepAnchor, stepIndex)) {
-                    return false;
-                }
-                chordStepPadSurface.markRangeExtended(stepIndex);
-                showExtendedStepInfo(heldStepAnchor, stepIndex);
-                return true;
-            }
-            case BLOCK -> {
-                showBlockedStepInfo();
-                return true;
-            }
-        }
-        return false;
-    }
 
-    private boolean handleChordStepModifierPressAction(final int stepIndex,
-                                                       final ChordStepPadSurface.ModifierPressAction action) {
-        switch (action) {
-            case NONE -> {
-                return false;
+            @Override
+            public boolean isSelectHeld() {
+                return chordStepController.isSelectHeld();
             }
-            case SELECT -> {
+
+            @Override
+            public boolean isFixedLengthHeld() {
+                return chordStepController.isFixedLengthHeld();
+            }
+
+            @Override
+            public boolean isCopyHeld() {
+                return chordStepController.isCopyHeld();
+            }
+
+            @Override
+            public boolean isDeleteHeld() {
+                return chordStepController.isDeleteHeld();
+            }
+
+            @Override
+            public void handleSelectStep(final int stepIndex) {
                 if (isBuilderFamily()) {
                     loadBuilderFromStep(stepIndex);
                 } else {
                     selectPresetStep(stepIndex);
                 }
             }
-            case FIXED_LENGTH -> setLastStep(stepIndex);
-            case COPY -> pasteCurrentChordToStep(stepIndex);
-            case DELETE -> clearChordStep(stepIndex);
-        }
-        chordStepPadSurface.markModifierHandledStep(stepIndex);
-        return true;
+
+            @Override
+            public void setLastStep(final int stepIndex) {
+                PitchedSurfaceLayer.this.setLastStep(stepIndex);
+            }
+
+            @Override
+            public void pasteCurrentChordToStep(final int stepIndex) {
+                PitchedSurfaceLayer.this.pasteCurrentChordToStep(stepIndex);
+            }
+
+            @Override
+            public void clearChordStep(final int stepIndex) {
+                PitchedSurfaceLayer.this.clearChordStep(stepIndex);
+            }
+
+            @Override
+            public boolean isBuilderFamily() {
+                return PitchedSurfaceLayer.this.isBuilderFamily();
+            }
+
+            @Override
+            public boolean canExtendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+                return PitchedSurfaceLayer.this.canExtendHeldChordRange(anchorStepIndex, targetStepIndex);
+            }
+
+            @Override
+            public boolean extendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+                return PitchedSurfaceLayer.this.extendHeldChordRange(anchorStepIndex, targetStepIndex);
+            }
+
+            @Override
+            public void showExtendedStepInfo(final int anchorStepIndex, final int targetStepIndex) {
+                PitchedSurfaceLayer.this.showExtendedStepInfo(anchorStepIndex, targetStepIndex);
+            }
+
+            @Override
+            public void showBlockedStepInfo() {
+                PitchedSurfaceLayer.this.showBlockedStepInfo();
+            }
+
+            @Override
+            public boolean hasStepStartNote(final int stepIndex) {
+                return PitchedSurfaceLayer.this.hasStepStartNote(stepIndex);
+            }
+
+            @Override
+            public boolean assignSelectedChordToStep(final int stepIndex, final int velocity) {
+                return assignSelectedChordToSteps(Collections.singleton(stepIndex), velocity);
+            }
+
+            @Override
+            public void loadBuilderFromStep(final int stepIndex) {
+                PitchedSurfaceLayer.this.loadBuilderFromStep(stepIndex);
+            }
+
+            @Override
+            public void showHeldStepInfo(final int stepIndex) {
+                PitchedSurfaceLayer.this.showHeldStepInfo(stepIndex);
+            }
+
+            @Override
+            public void removeHeldBankFineStart(final int stepIndex) {
+                heldBankFineStarts.remove(stepIndex);
+            }
+        };
     }
 
     private void handleBuilderSourcePadPress(final int padIndex, final boolean pressed) {
