@@ -3,6 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.note.ChordBank;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 
 import java.util.List;
 import java.util.function.IntFunction;
@@ -14,6 +15,7 @@ import java.util.function.Supplier;
  * Owns chord-step pad RGB projection for clip-row, chord-source, and step pads.
  */
 public final class ChordStepPadLightRenderer {
+    private static final int PAD_COLUMNS = 16;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
     private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
@@ -30,6 +32,7 @@ public final class ChordStepPadLightRenderer {
     private final Supplier<RgbLigthState> occupiedStepColor;
     private final IntSupplier availableSteps;
     private final IntSupplier playingStep;
+    private final IntSupplier shiftedClipStartColumn;
     private final IntPredicate occupiedStep;
     private final IntPredicate accentedStep;
     private final IntPredicate sustainedStep;
@@ -42,6 +45,7 @@ public final class ChordStepPadLightRenderer {
                                      final Supplier<RgbLigthState> occupiedStepColor,
                                      final IntSupplier availableSteps,
                                      final IntSupplier playingStep,
+                                     final IntSupplier shiftedClipStartColumn,
                                      final IntPredicate occupiedStep,
                                      final IntPredicate accentedStep,
                                      final IntPredicate sustainedStep) {
@@ -53,6 +57,7 @@ public final class ChordStepPadLightRenderer {
         this.occupiedStepColor = occupiedStepColor;
         this.availableSteps = availableSteps;
         this.playingStep = playingStep;
+        this.shiftedClipStartColumn = shiftedClipStartColumn;
         this.occupiedStep = occupiedStep;
         this.accentedStep = accentedStep;
         this.sustainedStep = sustainedStep;
@@ -124,9 +129,10 @@ public final class ChordStepPadLightRenderer {
     private RgbLigthState stepPadLight(final int stepIndex) {
         final boolean occupied = occupiedStep.test(stepIndex);
         final RgbLigthState occupiedColor = occupiedStepColor.get();
-        return surface.stepPadLight(
+        final int visibleSteps = availableSteps.getAsInt();
+        final RgbLigthState base = surface.stepPadLight(
                 stepIndex,
-                availableSteps.getAsInt(),
+                visibleSteps,
                 occupied,
                 occupied && accentedStep.test(stepIndex),
                 !occupied && sustainedStep.test(stepIndex),
@@ -134,6 +140,10 @@ public final class ChordStepPadLightRenderer {
                 occupiedColor,
                 occupiedColor.getVeryDimmed(),
                 HELD_STEP);
+        return StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, visibleSteps)
+                ? StepPadLightHelper.renderClipStartColumnOverlay(
+                        Math.floorMod(stepIndex, PAD_COLUMNS), shiftedClipStartColumn.getAsInt(), base)
+                : base;
     }
 
     private RgbLigthState familyColor(final String family) {

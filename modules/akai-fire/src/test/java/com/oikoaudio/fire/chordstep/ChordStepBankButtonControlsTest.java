@@ -34,15 +34,31 @@ class ChordStepBankButtonControlsTest {
     }
 
     @Test
-    void pressWithoutHeldStepsAdjustsPlayStart() {
+    void releaseShiftPressWithoutHeldStepsAdjustsPlayStartFine() {
         final Host host = new Host();
         host.shift = true;
         final ChordStepBankButtonControls controls = new ChordStepBankButtonControls(host);
 
         controls.handlePressed(true, 1, true);
+        controls.handlePressed(false, 1, true);
 
         assertEquals(1, host.playStartAmount);
         assertTrue(host.playStartFine);
+    }
+
+    @Test
+    void shiftBothBankButtonsSnapsPlayStartInsteadOfFineNudging() {
+        final Host host = new Host();
+        host.shift = true;
+        final ChordStepBankButtonControls controls = new ChordStepBankButtonControls(host);
+
+        controls.handlePressed(true, -1, true);
+        controls.handlePressed(true, 1, true);
+        controls.handlePressed(false, -1, true);
+        controls.handlePressed(false, 1, true);
+
+        assertEquals(1, host.snapPlayStartCount);
+        assertEquals(0, host.playStartAmount);
     }
 
     @Test
@@ -80,6 +96,7 @@ class ChordStepBankButtonControlsTest {
         private Set<Integer> nudgeSteps = Set.of();
         private int playStartAmount;
         private boolean playStartFine;
+        private int snapPlayStartCount;
         private int completePendingCount;
         private int clearPendingCount;
 
@@ -128,6 +145,11 @@ class ChordStepBankButtonControlsTest {
         public void adjustPlayStart(final int amount, final boolean fine) {
             playStartAmount = amount;
             playStartFine = fine;
+        }
+
+        @Override
+        public void snapPlayStartToGrid() {
+            snapPlayStartCount++;
         }
 
         @Override

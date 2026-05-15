@@ -313,7 +313,7 @@
       </tbody>
       </table>
       <h3>DRUM Mode</h3>
-      <p><code>Drum XOX</code> is the default sequencer-oriented workflow for a Drum Machine. Press <code>DRUM</code> again to cycle through <code>Nested Rhythm</code> and <code>Drum Pads</code>. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, the script focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, the sequencer follows the selected drum context.</p>
+      <p><code>Drum XOX</code> is the default sequencer-oriented workflow for a Drum Machine. Press <code>DRUM</code> again to cycle through <code>Nested Rhythm</code> and <code>Drum Pads</code>. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, Drum XOX focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, Drum XOX follows the selected drum context.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -362,6 +362,7 @@
           <tr><td>Row 4</td><td>First 16 generated hits in hit order, shown by velocity with playhead highlight</td></tr>
       </tbody>
       </table>
+      <p>If clip play start is shifted, the nearest visible projected-rhythm column is tinted blue across rows 2-3.</p>
       <p>The <code>Channel</code> encoder page is the primary Nested Rhythm surface: it changes the generator structure. <code>User 1</code> and <code>User 2</code> shape generated or held-hit expression, while <code>Mixer</code> remains the shared track-control page.</p>
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
@@ -380,6 +381,9 @@
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step mode</code></td></tr>
           <tr><td><code>PATTERN UP</code> or <code>ALT + MUTE_4</code></td><td>Reset hit edits for the selected clip</td></tr>
           <tr><td><code>PATTERN DOWN</code></td><td>Generate current nested rhythm into the selected clip</td></tr>
+          <tr><td><code>BANK LEFT/RIGHT</code></td><td>Move clip play start</td></tr>
+          <tr><td><code>SHIFT + BANK LEFT/RIGHT</code></td><td>Fine move clip play start</td></tr>
+          <tr><td><code>SHIFT + both BANK buttons</code></td><td>Snap clip play start back to the nearest coarse grid position</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
           <tr><td>Hold <code>MUTE_2</code> + projected rhythm pad</td><td>Set last step within the 32-step edit view</td></tr>
           <tr><td>Hold projected rhythm pad</td><td>Hold the nearest generated hit for recurrence or expression editing</td></tr>
@@ -486,9 +490,11 @@
           <tr><td>Tap chord pad with no held step</td><td>Audition chord, if enabled</td></tr>
           <tr><td><code>STEP SEQ</code></td><td>Return to <code>Melodic Step</code></td></tr>
           <tr><td><code>PATTERN UP/DOWN</code></td><td>Page visible chord-step window</td></tr>
+          <tr><td><code>BANK LEFT/RIGHT</code></td><td>Move clip start</td></tr>
+          <tr><td><code>SHIFT + BANK LEFT/RIGHT</code> with no held steps</td><td>Fine move clip start</td></tr>
+          <tr><td><code>SHIFT + both BANK buttons</code> with no held steps</td><td>Snap clip start back to the nearest coarse grid position</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
           <tr><td>Hold step(s) + <code>BANK LEFT/RIGHT</code></td><td>Experimental micro-timing nudge for held chord material</td></tr>
-          <tr><td><code>SHIFT + BANK LEFT/RIGHT</code></td><td>Experimental micro-timing nudge for visible chord material</td></tr>
       </tbody>
       </table>
       <table class="control-map">
@@ -523,6 +529,7 @@
           <tr><td>Channel 1 pads and encoders</td><td>Edit the source/template line</td></tr>
       </tbody>
       </table>
+      <p>When a sequencer clip start is shifted in <code>Chord Step</code>, <code>Nested Rhythm</code>, or <code>Fugue</code>, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.</p>
       <p>If you change channel 1 notes or expression directly in Bitwig, press <code>PATTERN DOWN</code> to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.</p>
       <p>For immediate derived-line feedback, change source expression from the controller instead. Controller-owned edits update the clip and regenerate from the controller's current source state.</p>
       <h3>PERFORM mode</h3>
@@ -597,7 +604,7 @@
       <h3>The wrong device is being controlled</h3>
       <ul>
         <li>Check the relevant auto-attach or pinning preferences.</li>
-        <li>In Fire <code>DRUM</code> mode, use <code>Follow Selection</code> to work on the currently selected drum track/device, or <code>Auto-select First Drum Machine</code> for a dedicated first-drum-machine workflow.</li>
+        <li>In Fire <code>Drum XOX</code>, use <code>Follow Selection</code> to work on the currently selected drum track/device, or <code>Auto-select First Drum Machine</code> for a dedicated first-drum-machine workflow.</li>
         <li>Re-select the target track or device in Bitwig.</li>
         <li>Re-enter the relevant mode or template after changing focus.</li>
       </ul>

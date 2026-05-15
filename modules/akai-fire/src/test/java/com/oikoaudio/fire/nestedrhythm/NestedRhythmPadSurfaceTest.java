@@ -45,8 +45,22 @@ class NestedRhythmPadSurfaceTest {
         assertEquals(1, surface.playingPulseIndex());
     }
 
+    @Test
+    void shiftedClipStartColumnOverlaysEmptyStructurePads() {
+        final NestedRhythmPadSurface surface = surface(new ArrayList<>(), 1680, 0);
+
+        assertEquals(new RgbLigthState(30, 0, 127, true),
+                surface.getPadLight(NestedRhythmPadSurface.STRUCTURE_PAD_OFFSET));
+    }
+
     private static NestedRhythmPadSurface surface(final List<NestedRhythmEditablePulse> pulses,
                                                  final int totalFineStepCount) {
+        return surface(pulses, totalFineStepCount, -1);
+    }
+
+    private static NestedRhythmPadSurface surface(final List<NestedRhythmEditablePulse> pulses,
+                                                 final int totalFineStepCount,
+                                                 final int shiftedClipStartColumn) {
         return new NestedRhythmPadSurface(
                 pulses,
                 null,
@@ -54,6 +68,7 @@ class NestedRhythmPadSurfaceTest {
                 () -> false,
                 () -> false,
                 () -> totalFineStepCount,
+                () -> shiftedClipStartColumn,
                 ignored -> { },
                 ignored -> RgbLigthState.OFF,
                 () -> new RgbLigthState(0, 90, 34, true),

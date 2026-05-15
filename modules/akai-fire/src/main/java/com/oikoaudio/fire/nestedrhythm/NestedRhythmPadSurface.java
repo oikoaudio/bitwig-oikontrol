@@ -28,6 +28,7 @@ final class NestedRhythmPadSurface {
     private final BooleanSupplier fixedLengthHeld;
     private final BooleanSupplier shiftHeld;
     private final IntSupplier totalFineStepCount;
+    private final IntSupplier shiftedClipStartColumn;
     private final IntConsumer setLastStep;
     private final IntFunction<RgbLigthState> lastStepPadLight;
     private final Supplier<RgbLigthState> clipBaseColor;
@@ -45,6 +46,7 @@ final class NestedRhythmPadSurface {
                            final BooleanSupplier fixedLengthHeld,
                            final BooleanSupplier shiftHeld,
                            final IntSupplier totalFineStepCount,
+                           final IntSupplier shiftedClipStartColumn,
                            final IntConsumer setLastStep,
                            final IntFunction<RgbLigthState> lastStepPadLight,
                            final Supplier<RgbLigthState> clipBaseColor,
@@ -55,6 +57,7 @@ final class NestedRhythmPadSurface {
         this.fixedLengthHeld = fixedLengthHeld;
         this.shiftHeld = shiftHeld;
         this.totalFineStepCount = totalFineStepCount;
+        this.shiftedClipStartColumn = shiftedClipStartColumn;
         this.setLastStep = setLastStep;
         this.lastStepPadLight = lastStepPadLight;
         this.clipBaseColor = clipBaseColor;
@@ -272,13 +275,17 @@ final class NestedRhythmPadSurface {
     private RgbLigthState structurePadLight(final int bin) {
         final NestedRhythmEditablePulse pulse = strongestPulseInBin(bin);
         final int playingBin = playingFineStep < 0 ? -1 : structureBinFor(playingFineStep);
+        final RgbLigthState base;
         if (pulse == null) {
-            return StepPadLightHelper.renderEmptyStep(bin, playingBin);
+            base = StepPadLightHelper.renderEmptyStep(bin, playingBin);
+        } else {
+            base = pulse.enabled
+                    ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor.get())
+                    : disabledPulseColor();
         }
-        final RgbLigthState base = pulse.enabled
-                ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor.get())
-                : disabledPulseColor();
-        return playingBin == bin ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
+        final RgbLigthState withPlayhead = playingBin == bin ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
+        return StepPadLightHelper.renderClipStartColumnOverlay(
+                Math.floorMod(bin, CLIP_ROW_PAD_COUNT), shiftedClipStartColumn.getAsInt(), withPlayhead);
     }
 
     private RgbLigthState velocityPadLight(final int hitIndex) {

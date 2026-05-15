@@ -212,6 +212,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 this::getChordOccupiedStepColor,
                 chordStepClips.position()::getAvailableSteps,
                 () -> playingStep,
+                this::shiftedClipStartColumn,
                 this::hasVisibleStepContent,
                 stepIndex -> hasVisibleStepContent(stepIndex) && isChordStepAccented(stepIndex),
                 this::isChordStepSustained);
@@ -724,6 +725,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
+            public void snapPlayStartToGrid() {
+                chordStepClipNavigation.snapPlayStartToGrid(ChordStepMode.this::ensureSelectedNoteClipSlot);
+            }
+
+            @Override
             public boolean completePendingFineNudge() {
                 return fineNudgeController.completePendingNudge();
             }
@@ -984,6 +990,16 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return;
         }
         this.playingStep = localPlayingStep;
+    }
+
+    private int shiftedClipStartColumn() {
+        return StepPadLightHelper.nearestVisibleColumnForShiftedClipStart(
+                chordStepClips.noteClip().getPlayStart().get(),
+                chordStepClips.noteClip().getLoopLength().get(),
+                STEP_LENGTH,
+                chordStepOffset(),
+                chordStepClips.position().getAvailableSteps(),
+                CLIP_ROW_PAD_COUNT);
     }
 
     private void invertCurrentChord(final int direction) {

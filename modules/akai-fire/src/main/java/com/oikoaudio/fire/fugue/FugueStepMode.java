@@ -17,6 +17,7 @@ import com.oikoaudio.fire.melodic.MelodicPattern;
 import com.oikoaudio.fire.melodic.MelodicRenderer;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.utils.PatternButtons;
 
 import java.util.Comparator;
@@ -595,7 +596,10 @@ public final class FugueStepMode extends Layer {
         final RgbLigthState color = line == activeLineIndex() ? LINE_COLORS[line].getBrightend() : LINE_COLORS[line];
         final RgbLigthState rendered = MelodicRenderer.stepLight(bucketStep(pattern, column), false, inLoop, playing,
                 column, color);
-        return lineEnabled[line] ? rendered : rendered.getVeryDimmed();
+        final RgbLigthState lineLight = lineEnabled[line] ? rendered : rendered.getVeryDimmed();
+        return inLoop
+                ? StepPadLightHelper.renderClipStartColumnOverlay(column, shiftedClipStartColumn(), lineLight)
+                : lineLight;
     }
 
     private MelodicPattern.Step bucketStep(final FuguePattern pattern, final int column) {
@@ -630,6 +634,11 @@ public final class FugueStepMode extends Layer {
             return -1;
         }
         return Math.max(0, Math.min(PAD_COLUMNS - 1, playingStep * PAD_COLUMNS / loopSteps));
+    }
+
+    private int shiftedClipStartColumn() {
+        return StepPadLightHelper.nearestColumnForShiftedClipStart(
+                cursorClip.getPlayStart().get(), currentLoopSteps() * STEP_LENGTH, PAD_COLUMNS);
     }
 
     private void setClipPlayStart(final int startStep) {

@@ -96,6 +96,19 @@ public final class ChordStepClipNavigation {
         popupFeedback.notify(title, value);
     }
 
+    public void snapPlayStartToGrid(final ClipSlotAvailability availability) {
+        if (!availability.ensureSelectedNoteClipSlot()) {
+            return;
+        }
+        final double loopLength = Math.max(STEP_LENGTH, clip.getLoopLength().get());
+        final double current = wrapBeatTime(clip.getPlayStart().get(), loopLength);
+        final double next = wrapBeatTime(Math.round(current / STEP_LENGTH) * STEP_LENGTH, loopLength);
+        clip.getPlayStart().set(next);
+        final String value = formatPlayStart(next);
+        oled.valueInfo("Clip Start Snap", value);
+        popupFeedback.notify("Clip Start Snap", value);
+    }
+
     public String pageLabel(final String detail) {
         return "Chord %d/%d".formatted(position.getCurrentPage() + 1, pageCount()) + "\n" + detail;
     }

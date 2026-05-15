@@ -32,6 +32,7 @@ import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
@@ -87,6 +88,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private boolean selectedClipHasContent = false;
     private boolean nestedRhythmOwnsSelectedClip = false;
     private boolean clipLengthSyncSuppressed = false;
+    private boolean bankLeftHeld = false;
+    private boolean bankRightHeld = false;
+    private boolean shiftBankSnapConsumed = false;
     private RgbLigthState selectedClipColor = BASE_COLOR;
     private double density = 1.0;
     private double rate = 1.0;
@@ -156,6 +160,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 fixedLengthHeld::get,
                 driver::isGlobalShiftHeld,
                 this::totalFineStepCount,
+                this::shiftedClipStartColumn,
                 this::setLastStep,
                 this::lastStepPadLight,
                 this::clipBaseColor,
@@ -212,6 +217,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         fixedLengthHeld.set(false);
         copyHeld.set(false);
         deleteHeld.set(false);
+        clearBankChordState();
         encoderLayer.deactivate();
     }
 
@@ -234,7 +240,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
             @Override
             public BiColorLightState bankLightState() {
-                return driver.isGlobalAltHeld() ? BiColorLightState.HALF : BiColorLightState.OFF;
+                return BiColorLightState.HALF;
             }
 
             @Override
@@ -316,10 +322,50 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void handleBankButton(final boolean pressed, final int direction) {
-        if (!pressed || !driver.isGlobalAltHeld()) {
+        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+            handleShiftBankButton(pressed, direction);
             return;
         }
-        adjustRelativeClipLength(direction);
+        if (!pressed) {
+            return;
+        }
+        if (driver.isGlobalAltHeld()) {
+            adjustRelativeClipLength(direction);
+            return;
+        }
+        adjustPlayStart(direction, driver.isGlobalShiftHeld());
+    }
+
+    private void handleShiftBankButton(final boolean pressed, final int direction) {
+        if (pressed) {
+            setBankHeld(direction, true);
+            if (bankLeftHeld && bankRightHeld) {
+                snapPlayStartToGrid();
+                shiftBankSnapConsumed = true;
+            }
+            return;
+        }
+        setBankHeld(direction, false);
+        if (!shiftBankSnapConsumed) {
+            adjustPlayStart(direction, true);
+        }
+        if (!bankLeftHeld && !bankRightHeld) {
+            shiftBankSnapConsumed = false;
+        }
+    }
+
+    private void setBankHeld(final int direction, final boolean held) {
+        if (direction < 0) {
+            bankLeftHeld = held;
+        } else {
+            bankRightHeld = held;
+        }
+    }
+
+    private void clearBankChordState() {
+        bankLeftHeld = false;
+        bankRightHeld = false;
+        shiftBankSnapConsumed = false;
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed) {
@@ -340,6 +386,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private void handlePlayingStep(final int fineStep) {
         padSurface.handlePlayingStep(fineStep);
+    }
+
+    private int shiftedClipStartColumn() {
+        return StepPadLightHelper.nearestColumnForShiftedClipStart(
+                cursorClip.getPlayStart().get(), loopLengthBeats(), NestedRhythmPadSurface.CLIP_ROW_PAD_COUNT);
     }
 
     private void handleMainEncoder(final int inc) {
@@ -560,13 +611,38 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private String summaryLabel() {
-        final String tuplet = tupletTargets == 0
-                ? "No Tuplet"
-                : "T%d x%d".formatted(tupletTargets, tupletDivisions);
-        final String ratchet = ratchetTargets == 0
-                ? "No Ratchet"
-                : "R%d x%d".formatted(ratchetTargets, ratchetDivisions);
-        return "%s / %s / %s x%d".formatted(tuplet, ratchet, meterLabel(), clipBarCount);
+        return summaryLabel(
+                tupletTargets,
+                tupletDivisions,
+                ratchetTargets,
+                ratchetDivisions,
+                cluster,
+                meterLabel(),
+                clipBarCount);
+    }
+
+    static String summaryLabel(final int tupletTargets,
+                               final int tupletDivisions,
+                               final int ratchetTargets,
+                               final int ratchetDivisions,
+                               final double cluster,
+                               final String meterLabel,
+                               final int clipBarCount) {
+        final List<String> parts = new ArrayList<>();
+        if (tupletTargets > 0) {
+            parts.add("T%dx%d".formatted(tupletTargets, tupletDivisions));
+        }
+        if (ratchetTargets > 0) {
+            parts.add("R%dx%d".formatted(ratchetTargets, ratchetDivisions));
+        }
+        if (cluster > 0.0001) {
+            parts.add("C%d%%".formatted((int) Math.round(cluster * 100.0)));
+        }
+        if (parts.isEmpty()) {
+            parts.add("Base");
+        }
+        parts.add(clipBarCount == 1 ? meterLabel : "%sx%d".formatted(meterLabel, clipBarCount));
+        return String.join("/", parts);
     }
 
     private EncoderBankLayout createEncoderBankLayout() {
@@ -1140,15 +1216,39 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void adjustPlayStart(final int amount) {
+        adjustPlayStart(amount, false);
+    }
+
+    private void adjustPlayStart(final int amount, final boolean fine) {
         if (amount == 0 || !ensureClipAvailable()) {
             return;
         }
         refreshClipCursor();
-        final double next = NestedRhythmPlayStart.increment(
-                cursorClip.getPlayStart().get(), loopLengthBeats(), meterDenominator(), amount);
+        final double next = fine
+                ? NestedRhythmPlayStart.incrementByStep(
+                        cursorClip.getPlayStart().get(), loopLengthBeats(), CLIP_STEP_SIZE, amount)
+                : NestedRhythmPlayStart.increment(
+                        cursorClip.getPlayStart().get(), loopLengthBeats(), meterDenominator(), amount);
         cursorClip.getPlayStart().set(next);
-        oled.valueInfo("Play Start", playStartLabel());
-        driver.notifyPopup("Play Start", playStartLabel());
+        final String label = fine ? "Play Start Fine" : "Play Start";
+        final String value = playStartLabel(next);
+        oled.valueInfo(label, value);
+        driver.notifyPopup(label, value);
+    }
+
+    private void snapPlayStartToGrid() {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        refreshClipCursor();
+        final double next = NestedRhythmPlayStart.snapToGrid(
+                cursorClip.getPlayStart().get(),
+                loopLengthBeats(),
+                NestedRhythmPlayStart.beatStep(meterDenominator()));
+        cursorClip.getPlayStart().set(next);
+        final String value = playStartLabel(next);
+        oled.valueInfo("Play Start Snap", value);
+        driver.notifyPopup("Play Start Snap", value);
     }
 
     private void adjustChancePrimary(final int amount) {
@@ -1476,10 +1576,19 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private String playStartLabel() {
         final double step = NestedRhythmPlayStart.beatStep(meterDenominator());
         final double playStart = NestedRhythmPlayStart.wrap(cursorClip.getPlayStart().get(), loopLengthBeats());
+        return playStartLabel(playStart, step);
+    }
+
+    private String playStartLabel(final double beatTime) {
+        return playStartLabel(NestedRhythmPlayStart.wrap(beatTime, loopLengthBeats()),
+                NestedRhythmPlayStart.beatStep(meterDenominator()));
+    }
+
+    private String playStartLabel(final double playStart, final double step) {
         final double beatIndexDouble = playStart / step;
         final int beatIndex = (int) Math.round(beatIndexDouble);
         if (Math.abs(beatIndexDouble - beatIndex) > 0.0001) {
-            return "%.2f".formatted(playStart);
+            return "%.3f".formatted(playStart);
         }
         final int barIndex = beatIndex / meterNumerator();
         final int beatInBar = beatIndex % meterNumerator();
