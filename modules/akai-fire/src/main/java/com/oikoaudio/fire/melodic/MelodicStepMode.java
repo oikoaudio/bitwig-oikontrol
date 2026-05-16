@@ -339,6 +339,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         oled.clearScreenDelayed();
     }
 
+    public boolean hasHeldSteps() {
+        return padSurface.hasHeldSteps();
+    }
+
     private void togglePitchPoolPad(final int padIndex, final Integer heldStep) {
         final int pitch = pitchPoolPitch(padIndex);
         if (pitch < 0) {

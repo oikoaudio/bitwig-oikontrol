@@ -412,12 +412,20 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private void handleStepSeqPressed(final boolean pressed) {
         if (noteStepActive) {
-            chordStepSurface.handleStepButton(pressed);
+            handleStepButton(pressed);
             return;
         }
         if (pressed) {
             driver.enterMelodicStepMode();
         }
+    }
+
+    public void handleStepButton(final boolean pressed) {
+        chordStepSurface.handleStepButton(pressed);
+    }
+
+    public boolean hasHeldSteps() {
+        return chordStepPadSurface.hasHeldSteps();
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
