@@ -10,6 +10,7 @@ import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.Project;
 import com.bitwig.extension.controller.api.Scene;
 import com.bitwig.extension.controller.api.SettableRangedValue;
+import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extensions.framework.Layer;
@@ -109,6 +110,7 @@ public class PerformClipLauncherMode extends Layer {
 
     private final RgbLigthState[] slotColors = new RgbLigthState[MAX_TRACKS * MAX_SCENES];
     private final RgbLigthState[] sceneColors = new RgbLigthState[MAX_SCENES];
+    private final RgbLigthState[] trackColors = new RgbLigthState[MAX_TRACKS];
     private final String[] trackNames = new String[MAX_TRACKS];
     private final String[] sceneNames = new String[MAX_SCENES];
     private final boolean[] selectedVisibleTracks = new boolean[MAX_TRACKS];
@@ -145,9 +147,11 @@ public class PerformClipLauncherMode extends Layer {
                 : PerformLayout.vertical();
         final ControllerHost host = driver.getHost();
         this.oled = driver.getOled();
-        this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES);
+        this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES, true);
         this.cursorTrack = driver.getViewControl().getCursorTrack();
         this.project = host.getProject();
+        this.project.hasSoloedTracks().markInterested();
+        this.project.hasMutedTracks().markInterested();
         this.projectRemoteControls = project.getRootTrackGroup().createCursorRemoteControlsPage(8);
         this.trackRemoteControls = cursorTrack.createCursorRemoteControlsPage(8);
         final PinnableCursorDevice primaryDevice = driver.getViewControl().getPrimaryDevice();
@@ -198,6 +202,7 @@ public class PerformClipLauncherMode extends Layer {
             final Track track = trackBank.getItemAt(trackIndex);
             track.exists().markInterested();
             track.name().markInterested();
+            track.color().markInterested();
             track.arm().markInterested();
             track.mute().markInterested();
             track.solo().markInterested();
@@ -206,7 +211,9 @@ public class PerformClipLauncherMode extends Layer {
             track.isQueuedForStop().markInterested();
             final int column = trackIndex;
             track.name().addValueObserver(name -> trackNames[column] = name);
+            track.color().addValueObserver((r, g, b) -> trackColors[column] = ColorLookup.getColor(r, g, b));
             trackNames[column] = track.name().get();
+            trackColors[column] = ColorLookup.getColor(track.color().get());
             track.addIsSelectedInMixerObserver(selected -> {
                 selectedVisibleTracks[column] = selected;
                 if (selected) {
@@ -289,6 +296,7 @@ public class PerformClipLauncherMode extends Layer {
         trackActionMode = !trackActionMode;
         if (trackActionMode) {
             sceneActionMode = false;
+            clearClipModifierButtons();
         }
         if (trackActionMode) {
             showTrackActionInfo();
@@ -323,7 +331,7 @@ public class PerformClipLauncherMode extends Layer {
 
     public String activePageLabel() {
         if (trackActionMode) {
-            return "Tracks";
+            return "Mix";
         }
         if (sceneActionMode) {
             return "Scene Launch";
@@ -441,14 +449,26 @@ public class PerformClipLauncherMode extends Layer {
         new PadBankRowControlBindings(driver, this, performControlBindingsHost(),
                 new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
                         this::handleModeAdvance, this::modeLightState)).bind();
+        bindMixStatusLights();
 
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
-        patternUp.bindPressed(this, pressed -> handleSceneScroll(pressed, -1),
-                () -> canScrollScenes(-1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+        patternUp.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, -1),
+                () -> patternSceneNavigationLightState(trackActionMode, canScrollScenes(-1)));
 
         final BiColorButton patternDown = driver.getButton(NoteAssign.PATTERN_DOWN);
-        patternDown.bindPressed(this, pressed -> handleSceneScroll(pressed, 1),
-                () -> canScrollScenes(1) ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF);
+        patternDown.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, 1),
+                () -> patternSceneNavigationLightState(trackActionMode, canScrollScenes(1)));
+    }
+
+    private void bindMixStatusLights() {
+        final MultiStateHardwareLight[] stateLights = driver.getStateLights();
+        for (int index = 0; index < stateLights.length; index++) {
+            final int lightIndex = index;
+            bindLightState(() -> mixStatusLightState(trackActionMode,
+                    project.hasSoloedTracks().get(),
+                    project.hasMutedTracks().get(),
+                    lightIndex), stateLights[lightIndex]);
+        }
     }
 
     private PadBankRowControlBindings.Host performControlBindingsHost() {
@@ -493,6 +513,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handlePadActionButton(final int index, final boolean pressed) {
+        if (trackActionMode) {
+            handleMixFunctionButton(index, pressed);
+            return;
+        }
         switch (index) {
             case 0 -> handleModifierButton(selectHeld, "Select", "Pad select", pressed);
             case 1 -> {
@@ -505,7 +529,38 @@ public class PerformClipLauncherMode extends Layer {
         }
     }
 
+    private void handleMixFunctionButton(final int index, final boolean pressed) {
+        if (!pressed) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        switch (index) {
+            case 0 -> driver.goToArrangementStartOrLoopStart();
+            case 1 -> {
+                if (project.hasSoloedTracks().get()) {
+                    project.unsoloAll();
+                    oled.valueInfo("Mix Solo", "Cleared");
+                } else {
+                    oled.valueInfo("Mix Solo", "None");
+                }
+            }
+            case 2 -> {
+                if (project.hasMutedTracks().get()) {
+                    project.unmuteAll();
+                    oled.valueInfo("Mix Mute", "Cleared");
+                } else {
+                    oled.valueInfo("Mix Mute", "None");
+                }
+            }
+            case 3 -> driver.goToArrangementEndOrLoopEnd();
+            default -> throw new IllegalArgumentException("Unsupported mix function button index: " + index);
+        }
+    }
+
     private BiColorLightState padActionLightState(final int index) {
+        if (trackActionMode) {
+            return mixStatusLightState(true, project.hasSoloedTracks().get(), project.hasMutedTracks().get(), index);
+        }
         return switch (index) {
             case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
             case 1 -> duplicateHeld ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
@@ -513,6 +568,13 @@ public class PerformClipLauncherMode extends Layer {
             case 3 -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
             default -> throw new IllegalArgumentException("Unsupported pad action button index: " + index);
         };
+    }
+
+    private void clearClipModifierButtons() {
+        selectHeld.set(false);
+        copyHeld.set(false);
+        deleteHeld.set(false);
+        duplicateHeld = false;
     }
 
     private void handleModifierButton(final BooleanValueObject heldState, final String functionName,
@@ -583,23 +645,23 @@ public class PerformClipLauncherMode extends Layer {
             case SELECT -> {
                 if (isAltHeld()) {
                     track.stop();
-                    oled.valueInfo("Track Stop", trackLabel);
+                    oled.valueInfo("Mix Stop", trackLabel);
                     return;
                 }
                 track.selectInEditor();
-                oled.valueInfo("Track Select", trackLabel);
+                oled.valueInfo("Mix Select", trackLabel);
             }
             case SOLO -> {
                 track.solo().toggle(false);
-                oled.valueInfo(track.solo().get() ? "Track Solo" : "Track Unsolo", trackLabel);
+                oled.valueInfo(track.solo().get() ? "Mix Solo" : "Mix Unsolo", trackLabel);
             }
             case MUTE -> {
                 track.mute().toggle();
-                oled.valueInfo(track.mute().get() ? "Track Mute" : "Track Unmute", trackLabel);
+                oled.valueInfo(track.mute().get() ? "Mix Mute" : "Mix Unmute", trackLabel);
             }
             case ARM -> {
                 track.arm().toggle();
-                oled.valueInfo(track.arm().get() ? "Track Arm" : "Track Disarm", trackLabel);
+                oled.valueInfo(track.arm().get() ? "Mix Arm" : "Mix Disarm", trackLabel);
             }
         }
     }
@@ -874,8 +936,15 @@ public class PerformClipLauncherMode extends Layer {
         final int next = clamp(current + (direction * increment), 0, maxTrackOffset());
         if (next != current) {
             trackBank.scrollPosition().set(next);
-            oled.valueInfo("Perform Tracks", offsetLabel(next, totalTrackCount, visibleTrackCount()));
+            oled.valueInfo("Launcher Tracks", offsetLabel(next, totalTrackCount, visibleTrackCount()));
         }
+    }
+
+    private void handlePatternSceneScroll(final boolean pressed, final int direction) {
+        if (trackActionMode) {
+            return;
+        }
+        handleSceneScroll(pressed, direction);
     }
 
     private void handleSceneScroll(final boolean pressed, final int direction) {
@@ -887,7 +956,7 @@ public class PerformClipLauncherMode extends Layer {
         final int next = clamp(current + (direction * increment), 0, maxSceneOffset());
         if (next != current) {
             trackBank.sceneBank().scrollPosition().set(next);
-            oled.valueInfo("Perform Scenes", offsetLabel(next, totalSceneCount, visibleSceneCount()));
+            oled.valueInfo("Launcher Scenes", offsetLabel(next, totalSceneCount, visibleSceneCount()));
         }
     }
 
@@ -929,6 +998,8 @@ public class PerformClipLauncherMode extends Layer {
             driver.adjustGrooveShuffleAmount(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(mainEncoderRole)) {
+            driver.adjustPlaybackStartPositionByGrid(inc);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
             oled.valueInfo("Note Repeat", "Unavailable");
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
@@ -979,6 +1050,12 @@ public class PerformClipLauncherMode extends Layer {
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Play Start", "Grid step");
             } else {
                 oled.clearScreenDelayed();
             }
@@ -1116,7 +1193,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showTrackActionInfo() {
-        oled.detailInfo("Track Controls", "1: %s / ALT Stop\n2: %s\n3: %s\n4: %s".formatted(
+        oled.detailInfo("Mix", "Rows: %s/%s/%s/%s\nM1 Start  M2 SoloClr\nM3 MuteClr  M4 End".formatted(
                 TrackActionRow.SELECT.label,
                 TrackActionRow.SOLO.label,
                 TrackActionRow.MUTE.label,
@@ -1444,20 +1521,52 @@ public class PerformClipLauncherMode extends Layer {
             return RgbLigthState.OFF;
         }
         final Track track = trackAddress.track();
-        final RgbLigthState baseColor = actionRow.color;
+        final RgbLigthState baseColor = actionRow == TrackActionRow.SELECT
+                ? trackColor(trackAddress.sourceIndex())
+                : actionRow.color;
         return switch (actionRow) {
             case SELECT -> {
                 if (track.isQueuedForStop().get()) {
                     yield blinkFast(baseColor.getBrightest(), baseColor.getDimmed());
                 }
-                yield isTrackSelected(trackAddress)
-                        ? baseColor.getBrightest()
-                        : track.isStopped().get() ? baseColor.getDimmed() : baseColor;
+                yield mixSelectPadColor(baseColor, isTrackSelected(trackAddress), track.isStopped().get());
             }
             case SOLO -> track.solo().get() ? baseColor.getBrightest() : baseColor.getDimmed();
             case MUTE -> track.mute().get() ? baseColor.getBrightest() : baseColor.getDimmed();
             case ARM -> track.arm().get() ? baseColor : baseColor.getDimmed();
         };
+    }
+
+    static RgbLigthState mixSelectPadColor(final RgbLigthState trackColor, final boolean selected,
+                                           final boolean stopped) {
+        if (selected) {
+            return trackColor.getBrightest();
+        }
+        return stopped ? trackColor.getDimmed() : trackColor;
+    }
+
+    static BiColorLightState mixStatusLightState(final boolean trackActionMode,
+                                                 final boolean hasSoloedTracks,
+                                                 final boolean hasMutedTracks,
+                                                 final int index) {
+        return switch (index) {
+            case 0, 3 -> BiColorLightState.OFF;
+            case 1 -> trackActionMode && hasSoloedTracks ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+            case 2 -> trackActionMode && hasMutedTracks ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+            default -> throw new IllegalArgumentException("Unsupported mix status light index: " + index);
+        };
+    }
+
+    static BiColorLightState patternSceneNavigationLightState(final boolean trackActionMode,
+                                                              final boolean canScrollScenes) {
+        return !trackActionMode && canScrollScenes ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+    }
+
+    private RgbLigthState trackColor(final int sourceTrackIndex) {
+        final RgbLigthState color = sourceTrackIndex >= 0 && sourceTrackIndex < trackColors.length
+                ? trackColors[sourceTrackIndex]
+                : null;
+        return color == null || RgbLigthState.OFF.equals(color) ? TrackActionRow.SELECT.color : color;
     }
 
     private boolean isTrackSelected(final TrackAddress trackAddress) {

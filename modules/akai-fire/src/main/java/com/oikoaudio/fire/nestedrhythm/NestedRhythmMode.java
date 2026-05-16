@@ -412,6 +412,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             driver.adjustGrooveShuffleAmount(inc, fine);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(mainEncoderRole)) {
+            driver.adjustPlaybackStartPositionByGrid(inc);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
             oled.valueInfo("Note Repeat", "Nested only");
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
@@ -461,6 +463,12 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
             if (pressed) {
                 driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(mainEncoderRole)) {
+            if (pressed) {
+                oled.valueInfo("Play Start", "Grid step");
             } else {
                 oled.clearScreenDelayed();
             }

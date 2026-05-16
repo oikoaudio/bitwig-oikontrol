@@ -34,6 +34,8 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT,
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_PLAYBACK_START,
+                FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_PLAYBACK_START));
         assertEquals(FireControlPreferences.MAIN_ENCODER_DRUM_GRID,
                 FireControlPreferences.normalizeMainEncoderRole(FireControlPreferences.MAIN_ENCODER_DRUM_GRID));
         assertEquals(FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED,
@@ -48,8 +50,10 @@ class FireControlPreferencesTest {
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TEMPO));
         assertEquals(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT));
-        assertEquals(FireControlPreferences.MAIN_ENCODER_DRUM_GRID,
+        assertEquals(FireControlPreferences.MAIN_ENCODER_PLAYBACK_START,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_DRUM_GRID,
+                FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_PLAYBACK_START));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_DRUM_GRID));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
@@ -60,9 +64,12 @@ class FireControlPreferencesTest {
 
     @Test
     void skipsDrumGridWhenCyclingAlternateMainEncoderRolesOutsideDrumMode() {
-        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+        assertEquals(FireControlPreferences.MAIN_ENCODER_PLAYBACK_START,
                 FireControlPreferences.nextAlternateMainEncoderRole(
                         FireControlPreferences.MAIN_ENCODER_TRACK_SELECT, false));
+        assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
+                FireControlPreferences.nextAlternateMainEncoderRole(
+                        FireControlPreferences.MAIN_ENCODER_PLAYBACK_START, false));
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE,
                 FireControlPreferences.nextAlternateMainEncoderRole(
                         FireControlPreferences.MAIN_ENCODER_DRUM_GRID, false));

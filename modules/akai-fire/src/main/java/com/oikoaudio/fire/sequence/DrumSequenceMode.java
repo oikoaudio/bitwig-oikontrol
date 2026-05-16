@@ -638,6 +638,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             driver.adjustGrooveShuffleAmount(inc, fine);
         } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
             driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
+        } else if (FireControlPreferences.MAIN_ENCODER_PLAYBACK_START.equals(mainEncoderRole)) {
+            driver.adjustPlaybackStartPositionByGrid(inc);
         } else if (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(mainEncoderRole)) {
             driver.adjustMainCursorParameter(inc, fine);
         }
@@ -841,6 +843,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         } else if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(mainEncoderRole)) {
             if (press) {
                 driver.showSelectedTrackInfo(false);
+            } else {
+                oled.clearScreenDelayed();
+            }
+        } else if (FireControlPreferences.MAIN_ENCODER_PLAYBACK_START.equals(mainEncoderRole)) {
+            if (press) {
+                oled.valueInfo("Play Start", "Grid step");
             } else {
                 oled.clearScreenDelayed();
             }

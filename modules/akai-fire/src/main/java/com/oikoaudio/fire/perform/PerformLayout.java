@@ -70,8 +70,8 @@ final class PerformLayout {
     }
 
     private enum Orientation {
-        VERTICAL("PerformV"),
-        HORIZONTAL("PerformH");
+        VERTICAL("LauncherV"),
+        HORIZONTAL("LauncherH");
 
         private final String label;
 

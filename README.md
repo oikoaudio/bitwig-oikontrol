@@ -43,7 +43,7 @@ The Fire script is built around the controller's four main mode buttons.
 - **`DRUM`** - standard x0x drum sequencing, plus `Nested Rhythm` for generated, layered rhythm patterns.
 - **`NOTE`** - live note input with isomorphic and harmonic pad layouts.
 - **`STEP`** - `Melodic Step`, `Chord Step`, and `Fugue` workflows for generated melodies, in-scale chord construction, and transformed melodic lines.
-- **`PERFORM`** - vertical or horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` track-action page.
+- **`PERFORM`** - vertical or horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` Mix page.
 - **`SHIFT + BROWSER`** - a held global settings overlay for shared `Root Key`, `Scale`, and `Octave`.
 
 Many Fire modes share a common musical context, so changing the root, scale, or octave can reshape live note input, generated melodic material, and chord-oriented workflows together.

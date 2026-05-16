@@ -174,6 +174,7 @@ Global `SELECT` turn chords:
 | `Tempo` | Adjust project tempo | None |
 | `Note Repeat` | Select repeat division; `Off` disables repeat | Active repeat control |
 | `Track Select` | Previous / next track | Hold while turning to jump by visible pages |
+| `Playback Start` | Move the playback start by the current arranger grid resolution | None |
 | `Drum Grid` | Drum-step grid resolution | `DRUM` mode only |
 
 ### DRUM Mode
@@ -429,11 +430,11 @@ If you change channel 1 notes or expression directly in Bitwig, press `PATTERN D
 
 For immediate derived-line feedback, change source expression from the controller instead. Controller-owned edits update the clip and regenerate from the controller's current source state.
 
-### PERFORM mode
+### Launcher mode (`PERFORM`)
 
-`PERFORM` is the 16x4 clip-launch and performance surface. Filled slots select and launch. Empty slots create a new clip using `Default Clip Length`, then launch.
+`PERFORM` opens the 16x4 launcher surface. Filled slots select and launch. Empty slots create a new clip using `Default Clip Length`, then launch.
 
-`Perform Clip Launcher Layout` chooses whether the mode starts as `PerformV` or `PerformH`. `ALT + PERFORM` still toggles the layout for the current session.
+`Perform Clip Launcher Layout` chooses whether the mode starts as `LauncherV` or `LauncherH`. `ALT + PERFORM` still toggles the layout for the current session.
 
 | Control | Action |
 | --- | --- |
@@ -447,16 +448,16 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + BANK LEFT/RIGHT` | Scroll tracks by one |
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
-| `KNOB MODE` | Cycle Perform encoder pages |
-| `PERFORM` while in Perform | Toggle clip launcher / Scene Launch pad page |
+| `KNOB MODE` | Cycle Launcher encoder pages |
+| `PERFORM` while in Launcher | Toggle launcher / Scene Launch pad page |
 | `ALT + PERFORM` | Toggle vertical/horizontal launcher layout |
-| `SHIFT + PERFORM` | Toggle latched track-control pad page |
+| `SHIFT + PERFORM` | Toggle latched Mix pad page |
 
-Track-control page rows are select, solo, mute, and arm for the 16 visible tracks. On the select row, hold `ALT` and press a pad to stop that track. `KNOB MODE` still cycles the Perform encoder pages while the track-control pad page is active.
+The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. On the select row, hold `ALT` and press a pad to stop that track. While the Mix page is active, `MUTE_1` jumps to the loop start or project start, `MUTE_2` and its nearby status LED light when any track is soloed and clear all solos, `MUTE_3` and its nearby status LED light when any track is muted and clear all mutes, and `MUTE_4` jumps to the loop end or zooms the arranger to the full project and jumps to the project end. `PATTERN UP/DOWN` are inactive on Mix, since scenes are not visible there. `KNOB MODE` still cycles the Launcher encoder pages while the Mix pad page is active.
 
 Hold `REC` and press a pad to target recording directly into that visible slot. For fixed `Default Clip Length` values, the script sets Bitwig's clip launcher post-record action to play the recorded clip after that length. If `Default Clip Length` is set to `Off`, recording continues until manually stopped without post-processing. If it is set to `Round`, recording continues until manually stopped, then the recorded clip loop length is rounded to the nearest whole bar. Press `REC` again to end an `Off` or `Round` launcher recording and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
-The `Scene Launch` page keeps the same encoder and navigation controls as Perform. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
+The `Scene Launch` page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 
 On `Scene Launch`, `BANK LEFT/RIGHT` also scrolls the visible scene window, with `SHIFT + BANK LEFT/RIGHT` scrolling by one scene.
 

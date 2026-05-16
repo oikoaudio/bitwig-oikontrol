@@ -2,6 +2,15 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## Unreleased
+
+- Akai Fire Perform now uses a flat track bank for launcher and Mix pages, so expanded group children appear in the visible track window.
+- `SHIFT + PERFORM` is now presented as the Mix page, and its track-select pads use the corresponding Bitwig track colors.
+- The Mix page `MUTE_1`-`MUTE_4` buttons now jump to arrangement boundaries and clear project solo/mute states instead of acting as clip modifiers.
+- The Mix page status LEDs near `MUTE_2` and `MUTE_3` now mirror the project solo/mute indicators.
+- `PATTERN UP/DOWN` no longer scroll scenes while Mix is active, and launcher orientation labels are now `LauncherV`/`LauncherH`.
+- Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
+
 ## [2.14.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.0...oikontrol-v2.14.1) (2026-05-16)
 
 
