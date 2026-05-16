@@ -7,8 +7,11 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ### Bug Fixes
 
-* **fire:** update step accents, drum pad paging, and docs ([0c1e994](https://github.com/oikoaudio/bitwig-oikontrol/commit/0c1e9945c9f36183fd77e74d9ccf5ef01a84b5a9))
-* **fire:** update step accents, drum pad paging, and docs ([646372a](https://github.com/oikoaudio/bitwig-oikontrol/commit/646372ade9e15ade6ffbea5422891cc6207ff8bb))
+Akai Fire control and documentation polish:
+
+- `STEP` now toggles accent for held step pads in Melodic Step and Chord Step, without requiring `SHIFT`.
+- Drum Pads now use `PATTERN UP/DOWN` to move through Drum Machine pad pages.
+- The user guide and bundled help have been refreshed for current Akai Fire controls, harmonic note input, chord families, melodic generators, Nested Rhythm, and Fugue. ([646372a](https://github.com/oikoaudio/bitwig-oikontrol/commit/646372ade9e15ade6ffbea5422891cc6207ff8bb))
 
 ## [2.14.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.13.2...oikontrol-v2.14.0) (2026-05-15)
 
