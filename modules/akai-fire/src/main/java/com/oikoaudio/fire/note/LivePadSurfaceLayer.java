@@ -33,6 +33,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
+import com.oikoaudio.fire.utils.PatternButtons;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 
@@ -1134,6 +1135,36 @@ public abstract class LivePadSurfaceLayer extends Layer {
         adjustOctave(amount);
     }
 
+    private void activateDrumPadPatternButtons() {
+        final PatternButtons patternButtons = driver.getPatternButtons();
+        if (patternButtons == null) {
+            return;
+        }
+        patternButtons.setUpCallback(pressed -> {
+            if (pressed) {
+                scrollDrumMachineWindow(DRUM_MACHINE_SCROLL_COARSE_STEPS);
+            }
+        }, () -> canScrollDrumMachineWindow(DRUM_MACHINE_SCROLL_COARSE_STEPS)
+                ? BiColorLightState.AMBER_HALF
+                : BiColorLightState.OFF);
+        patternButtons.setDownCallback(pressed -> {
+            if (pressed) {
+                scrollDrumMachineWindow(-DRUM_MACHINE_SCROLL_COARSE_STEPS);
+            }
+        }, () -> canScrollDrumMachineWindow(-DRUM_MACHINE_SCROLL_COARSE_STEPS)
+                ? BiColorLightState.AMBER_HALF
+                : BiColorLightState.OFF);
+    }
+
+    private void clearDrumPadPatternButtons() {
+        final PatternButtons patternButtons = driver.getPatternButtons();
+        if (patternButtons == null) {
+            return;
+        }
+        patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
+        patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
+    }
+
     private void handleLiveModeAdvance(final boolean pressed) {
         notePlayController.handleModeAdvance(pressed, false);
         if (pressed) {
@@ -1336,6 +1367,15 @@ public abstract class LivePadSurfaceLayer extends Layer {
         drumMachineScrollPosition = nextPosition;
         liveDrumPadBank.scrollPosition().set(nextPosition);
         showDrumMachineWindowInfo();
+    }
+
+    private boolean canScrollDrumMachineWindow(final int amount) {
+        if (amount == 0) {
+            return false;
+        }
+        final int nextPosition = Math.max(0,
+                Math.min(MAX_DRUM_MACHINE_SCROLL_POSITION, drumMachineScrollPosition + amount));
+        return nextPosition != drumMachineScrollPosition;
     }
 
     private void showDrumMachineWindowInfo() {
@@ -1825,6 +1865,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 liveDrumPadBank.scrollPosition().set(DEFAULT_DRUM_MACHINE_LOW_NOTE);
             }
         }
+        if (drumPadsOnly) {
+            activateDrumPadPatternButtons();
+        }
         applyLiveVelocity();
         applyLayout();
         showState("Mode");
@@ -1836,6 +1879,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
         notePlayController.deactivate(this::releaseHeldLiveNotes);
         liveModeControlLayer.deactivate();
         clearTranslation();
+        if (drumPadsOnly) {
+            clearDrumPadPatternButtons();
+        }
     }
 
     private static NoteLiveEncoderModeControls.LayerHandle liveEncoderLayer(final Layer layer) {

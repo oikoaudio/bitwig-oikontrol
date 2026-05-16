@@ -849,6 +849,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 suppressNextMelodicStepRelease = false;
                 return;
             }
+            if (!isGlobalShiftHeld() && !isGlobalAltHeld() && melodicStepMode.hasHeldSteps()) {
+                melodicStepMode.handleStepButton(pressed);
+                return;
+            }
             if (!isGlobalShiftHeld() && !isGlobalAltHeld()) {
                 if (pressed) {
                     modeState.activateChordStep();
@@ -861,6 +865,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (modeState.activeMode() == Mode.CHORD_STEP) {
+            if (!isGlobalShiftHeld() && !isGlobalAltHeld() && chordStepMode.hasHeldSteps()) {
+                chordStepMode.handleStepButton(pressed);
+                return;
+            }
             if (!pressed || isGlobalAltHeld()) {
                 return;
             }
