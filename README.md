@@ -1,68 +1,89 @@
 # Bitwig Oikontrol
 
-Bitwig Oikontrol is a pair of controller extensions for Bitwig Studio v5.3+:
+Opinionated controller extensions for Bitwig Studio, focused on turning MIDI controllers into expressive composition and performance surfaces.
 
-- Novation Launch Control XL Mk2
-- Akai Fire
+Oikontrol currently supports:
 
-> [!NB]
-> These controller scripts are under active development. Behavior, mappings, and mode workflows may change between versions, and some functions are still in flux.
+- **Akai Fire**
+- **Novation Launch Control XL Mk2**
 
-Semantic versioning:
-`major`.`minor`.`tick`
+The Akai Fire script is the main instrument-like surface. It brings together drum sequencing, melodic generators, chord-step sequencing, harmonic note input, fugue-style transformations, clip launching, and performance controls around the Fire's pads, encoders, OLED, and mode buttons.
 
-`major` - new controller extension, or overhaul of core functionality
+The Launch Control XL script adds user-template pages for drum machine control, arp performance, and remote-control access to the Bitwig factory template.
 
-`minor` - new mode or changes to a mode within a controller
+Oikontrol is maintained primarily by its author and shaped around Bitwig composition and performance workflows. It is stable enough to use, but still actively evolving as the controller designs are refined.
 
-`tick` - bug fixes and minor additions
+## What You Get
 
-## For users
+- **Hands-on Bitwig control** for Akai Fire and Launch Control XL Mk2.
+- **Akai Fire OLED and optional on-screen feedback** for most mode parameters.
+- **Shared musical context** with global root key, scale, and octave controls.
+- **Drum sequencing** with x0x-style entry, micro-timing, recurrence, velocity, and page navigation.
+- **Nested Rhythm** generation for layered rhythmic structures and editable generated pulses.
+- **Live note input** with isomorphic and harmonic layouts for scale-aware playing, a playable pitch and modulation controls.
+- **Melodic Step, Chord Step, and Fugue modes** to generate phrases, rythmical modal chord entry, and contrapunctal transformations.
+- **Clip launching and performance workflows** with scene launching, clip management, track actions, and device pinning.
+- **Launch Control XL user templates** for drum machine control, a Richie Hawtin-style arp workflow, and multi remote-page access.
 
-- User guide source: [doc/user-guide.md](doc/user-guide.md)
-- Inside Bitwig, press the `?` symbol to open the bundled HTML documentation.
+## Quick Install
 
-High-level controller summary:
-
-- **Launch Control XL (Mk2)** keeps the Bitwig factory-template workflow intact, while adding user-templates for drum machine control, the Richie Hawtin / Eric Ahrens arp workflow from `rhbitwig` and a mode targeting 6-7 remote pages in one view.
-
-- **Akai Fire** provides OLED and optional on-screen feedback for most parameters, shared root/scale/octave control, step micro-timing, configurable device pinning, and a broader multi-workflow surface built around the Fire’s mode buttons:
-
-`DRUM` - standard x0x drum sequencing, plus a `Nested Rhythm` generative sequencer for layered rhythmic structures
-
-`NOTE` - two live note input modes with isomorphic and harmonic layouts
-
-`STEP` - `Melodic Step`, `Chord Step` and `Fugue` workflows for generated melodic sequencing and chord-based step entry
-
-`PERFORM` - vertical/horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` track-action page
-
-`SHIFT + BROWSER` - a held global settings overlay for shared `Root Key`, `Scale`, and `Octave`
-
-## Documentation
-
-- `doc/user-guide.md`: canonical user guide source for both controllers
-- `CHANGES.md`: release notes and running changelog
-
-## Quick install
-
-1. Download the prebuilt `Oikontrol.bwextension` artifact from the releases section
-2. Copy the resulting file into Bitwig’s user extensions folder:
+1. Download the prebuilt `Oikontrol.bwextension` artifact from the [releases page](https://github.com/oikoaudio/bitwig-oikontrol/releases).
+2. Copy the file into Bitwig's user extensions folder:
    - Linux: `~/Bitwig Studio/Extensions/`
    - macOS: `~/Documents/Bitwig Studio/Extensions/`
    - Windows: `~/Documents/Bitwig Studio/Extensions/`
 3. Open Bitwig `Settings` -> `Controllers`, add the controller, and select `Fire Oikontrol` or `LCXL Oikontrol`.
 
-## For developers
+Inside Bitwig, press the `?` symbol from the controller extension to open the bundled HTML documentation.
+
+## Akai Fire Workflows
+
+The Fire script is built around the controller's four main mode buttons.
+
+- **`DRUM`** - standard x0x drum sequencing, plus `Nested Rhythm` for generated, layered rhythm patterns.
+- **`NOTE`** - live note input with isomorphic and harmonic pad layouts.
+- **`STEP`** - `Melodic Step`, `Chord Step`, and `Fugue` workflows for generated melodies, in-scale chord construction, and transformed melodic lines.
+- **`PERFORM`** - vertical or horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` track-action page.
+- **`SHIFT + BROWSER`** - a held global settings overlay for shared `Root Key`, `Scale`, and `Octave`.
+
+Many Fire modes share a common musical context, so changing the root, scale, or octave can reshape live note input, generated melodic material, and chord-oriented workflows together.
+
+## Launch Control XL Workflows
+
+The Launch Control XL extension starts from Bitwig's original factory-template behavior and extends it with additional user-template pages.
+
+- **Factory-style control** remains available for the familiar mixer and device workflow.
+- **Drum machine control** gives direct access to common drum-machine parameters.
+- **Arp performance control** adapts the Richie Hawtin / Eric Ahrens `rhbitwig` workflow.
+- **Remote-page control** targets 6-7 remote pages in one view, depending on the device layout.
+
+## Documentation
+
+- [doc/user-guide.md](doc/user-guide.md): canonical user guide source for both controllers.
+- `CHANGES.md`: release notes and running changelog.
+- Bundled HTML documentation is generated from the user guide and shipped inside the extension.
+
+## Versioning
+
+Oikontrol uses:
+
+`major`.`minor`.`tick`
+
+- `major` - a new controller extension, or an overhaul of core functionality.
+- `minor` - a new mode, or significant changes to a mode within a controller.
+- `tick` - bug fixes, documentation updates, and minor additions.
+
+## For Developers
 
 ### Requirements
 
-- **Java:** built and tested with JDK 21.
-- **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in 6.0 (tested beta 12)
-- **Controllers:** Novation Launch Control XL Mk2, Akai Fire
+- **Java:** built and tested with JDK 21.
+- **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in Bitwig Studio 6.0; beta 12 has been tested.
+- **Controllers:** Novation Launch Control XL Mk2 and Akai Fire.
 
-### Building & testing
+### Building And Testing
 
-All sources, including the Bitwig framework helpers, live inside this repository. 
+All sources, including the Bitwig framework helpers, live inside this repository.
 
 If you use [`just`](https://github.com/casey/just), the common tasks are:
 
@@ -78,13 +99,15 @@ just artifacts
 
 The `Justfile` defaults `GRADLE_USER_HOME` to `/tmp/gradle-home`, which works well in WSL and avoids polluting the home directory during wrapper downloads.
 
+You can also build directly with Gradle:
+
 ```bash
 cd /path/to/bitwig-oikontrol
 ./gradlew clean build --no-daemon \
   -Dorg.gradle.java.home="$JAVA_HOME"
 ```
 
-The built controller artifacts are placed under each module’s `build/libs` directory, for example `modules/akai-fire/build/libs`. Unit tests are located in `src/test/java`. `NoteInputConfiguratorTest` is an example of using Mockito to (thinly) mock Bitwig APIs.
+The built controller artifacts are placed under each module's `build/libs` directory. Unit tests live under `src/test/java`; `NoteInputConfiguratorTest` is an example of using Mockito to thinly mock Bitwig APIs.
 
 Module-specific Gradle commands:
 
@@ -97,26 +120,26 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :modules:launchcontrol:jar --no-daem
 ```
 
 Current artifact names:
-- `modules/oikontrol/build/libs/Oikontrol.bwextension` contains both controller extensions
-- `modules/akai-fire/build/libs/FireOikontrol.bwextension`
-- `modules/launchcontrol/build/libs/LCXLOikontrol.bwextension`
 
-### Developer documentation
+- `modules/oikontrol/build/libs/Oikontrol.bwextension` contains both controller extensions.
+- `modules/akai-fire/build/libs/FireOikontrol.bwextension`.
+- `modules/launchcontrol/build/libs/LCXLOikontrol.bwextension`.
 
-- `CONTRIBUTING.md`: contribution workflow and Conventional Commit guidance
-- Architectural Decision Records under `doc/adr/`, for example `0000-use-adrs.md` and `0001-architecture-summary.md`
-- `vscode-debug.md`: how to attach VS Code’s debugger to Bitwig (JDWP) for inspection while running the extension
+### Developer Documentation
+
+- `CONTRIBUTING.md`: contribution workflow and Conventional Commit guidance.
+- `doc/adr/`: Architectural Decision Records, including `0000-use-adrs.md` and `0001-architecture-summary.md`.
+- `doc/dev/`: active implementation notes, experiments, and workflow documentation.
+- `vscode-debug.md`: how to attach VS Code's debugger to Bitwig with JDWP while running the extension.
 
 ## Attribution
 
-- Based on Bitwig’s original Launch Control XL controller script (MIT License) from
-  [bitwig-extensions](https://github.com/bitwig/bitwig-extensions). The helper packages
-  (`com.bitwig.extensions.framework`, `…controllers.novation.common`, `…util`) remain under Bitwig’s MIT terms.
+- Based on Bitwig's original Launch Control XL controller script, licensed under the MIT License, from [bitwig-extensions](https://github.com/bitwig/bitwig-extensions). The helper packages (`com.bitwig.extensions.framework`, `...controllers.novation.common`, `...util`) remain under Bitwig's MIT terms.
 
-- The LCXL Arp workflow on User Template 8 is adapted from Richie Hawtin and Eric Ahrens’ [rhbitwig](https://github.com/ericahrens/rhbitwig) project (also MIT).
+- The LCXL Arp workflow on User Template 8 is adapted from Richie Hawtin and Eric Ahrens' [rhbitwig](https://github.com/ericahrens/rhbitwig) project, also MIT licensed.
 
-- The Akai Fire extension started as fork of the drum sequencer in [rhbitwig](https://github.com/ericahrens/rhbitwig) by Richie Hawtin and Eric Ahrens (MIT license).
+- The Akai Fire extension started as a fork of the drum sequencer in [rhbitwig](https://github.com/ericahrens/rhbitwig) by Richie Hawtin and Eric Ahrens, MIT licensed.
 
-- Fine-grid step nudging is based on Wim Van den Borre's Akai Fire Nudger work [https://github.com/wimvandenborre/AkaiFireNudger/], adapted and developed further here for the sequencer workflows.
+- Fine-grid step nudging is based on Wim Van den Borre's [Akai Fire Nudger](https://github.com/wimvandenborre/AkaiFireNudger/), adapted and developed further here for the sequencer workflows.
 
 Please keep these acknowledgements if you redistribute or build on this project.
