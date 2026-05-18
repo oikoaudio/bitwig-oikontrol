@@ -57,7 +57,6 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
-    private static final int DEFAULT_LIVE_VELOCITY = 100;
     private static final int DEFAULT_DRUM_MACHINE_LOW_NOTE = 36;
     private static final int MAX_DRUM_MACHINE_SCROLL_POSITION = MAX_MIDI_VALUE - DrumMachinePadLayout.PAD_WINDOW_SIZE + 1;
     private static final long TOUCH_RESET_HOLD_MS = 750L;
@@ -147,8 +146,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean mainEncoderPressConsumed = false;
     private final boolean drumPadsOnly;
     private LiveNoteSubMode liveNoteSubMode = LiveNoteSubMode.MELODIC;
-    private final VelocitySettings liveVelocity = new VelocitySettings(DEFAULT_LIVE_VELOCITY, MIN_VELOCITY,
-            MAX_MIDI_VALUE, 100);
+    private final VelocitySettings liveVelocity;
     private int livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
     private int liveScaleDegreeGlissOffset = 0;
     private LivePitchGlissMode livePitchGlissMode = LivePitchGlissMode.FIFTH_OCTAVE;
@@ -192,6 +190,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         super(driver.getLayers(), layerName);
         this.driver = driver;
         this.pitchContext = driver.getSharedPitchContextController();
+        this.liveVelocity = driver.getSharedVelocitySettings();
         this.drumPadsOnly = drumPadsOnly;
         this.liveNoteSubMode = drumPadsOnly ? LiveNoteSubMode.DRUM_PADS : LiveNoteSubMode.MELODIC;
         this.oled = driver.getOled();

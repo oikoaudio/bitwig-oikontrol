@@ -275,24 +275,22 @@
           <tr><td><code>SHIFT + DRUM</code></td><td>Tap tempo</td></tr>
           <tr><td><code>SHIFT + NOTE</code></td><td>Toggle record quantization, restoring the previous grid or <code>1/16</code></td></tr>
           <tr><td><code>BROWSER</code></td><td>Open or close Bitwig popup browser</td></tr>
-          <tr><td><code>SHIFT + BROWSER</code></td><td>Hold global settings overlay</td></tr>
+          <tr><td><code>SHIFT + BROWSER</code></td><td>Latch or close global settings overlay</td></tr>
           <tr><td><code>ALT + BROWSER</code></td><td>Open browser after the current device / insertion context</td></tr>
           <tr><td><code>SHIFT + ALT + BROWSER</code></td><td>Open browser before the current device / insertion context</td></tr>
       </tbody>
       </table>
       <p>When the popup browser is open, <code>SELECT</code> turn moves through results, <code>SELECT</code> press commits the selected result, and <code>BROWSER</code> closes the browser.</p>
       <h3>Global settings overlay</h3>
-      <p>Hold <code>SHIFT + BROWSER</code> to edit shared settings from the four encoders.</p>
+      <p>Press <code>SHIFT + BROWSER</code> to latch the global settings overlay. Press <code>SHIFT + BROWSER</code> again, press <code>BROWSER</code>, or press a plain mode button from the latched overlay to close it. Press <code>KNOB MODE</code> to switch between settings pages.</p>
       <table>
-        <thead><tr><th>Encoder</th><th>Setting</th></tr></thead>
+        <thead><tr><th>Page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Channel</code></td><td>Shared root key</td></tr>
-          <tr><td><code>Mixer</code></td><td>Shared scale</td></tr>
-          <tr><td><code>User 1</code></td><td>Shared octave</td></tr>
-          <tr><td><code>User 2</code></td><td><code>ClipRecLen</code>: launcher recording length</td></tr>
+          <tr><td><code>Pitch</code></td><td>Shared root key</td><td>Shared scale</td><td>Shared octave</td><td><code>ClipLen</code>: launcher recording length</td></tr>
+          <tr><td><code>Input</code></td><td>Global velocity sensitivity</td><td>Global velocity center</td><td>Pad brightness</td><td>Pad saturation</td></tr>
       </tbody>
       </table>
-      <p>The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad while holding <code>SHIFT + BROWSER</code> to toggle <code>Show deactivated tracks</code>; the same persistent option is available in the controller preferences and defaults to off.</p>
+      <p>The <code>Input</code> velocity settings are shared by live <code>NOTE</code>, <code>Drum Pads</code>, and <code>Chord Step</code> input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle <code>Show deactivated tracks</code>; the same persistent option is available in the controller preferences and defaults to off.</p>
       <h3>Main SELECT encoder</h3>
       <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
       <p>Global <code>SELECT</code> turn chords:</p>
@@ -433,7 +431,7 @@
         <tbody>
           <tr class="encoder-primary"><td><code>Channel</code></td><td>Mod</td><td>Pitch bend</td><td>Pitch Gliss / <code>ALT</code>: gliss mode</td><td>Shared scale / <code>ALT</code>: shared root key / <code>SHIFT</code>: local layout</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
-          <tr class="encoder-expression"><td><code>User 1</code></td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Aftertouch</td><td>Timbre</td><td>Pitch expression</td></tr>
+          <tr class="encoder-expression"><td><code>User 1</code></td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Aftertouch</td><td>Timbre</td><td>Pitch expression</td></tr>
           <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
       </tbody>
       </table>
@@ -539,7 +537,7 @@
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: invert chord</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: invert chord</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Note velocity</td><td>Pressure</td><td>Timbre</td><td>Pitch</td></tr>
           <tr class="encoder-expression"><td><code>User 2</code></td><td>Note length</td><td>Chance</td><td>Velocity spread</td><td>Repeats</td></tr>

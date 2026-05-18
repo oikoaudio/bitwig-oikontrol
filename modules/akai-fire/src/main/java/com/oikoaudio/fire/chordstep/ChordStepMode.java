@@ -58,8 +58,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private static final int AUDITION_VELOCITY = 96;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
-    private static final int MIN_VELOCITY = 1;
-    private static final int STANDARD_CHORD_VELOCITY = ChordStepAccentEditor.STANDARD_VELOCITY;
     private static final int ACCENTED_CHORD_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
@@ -85,8 +83,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
     private final ChordStepAuditionController chordStepAudition;
-    private final VelocitySettings chordStepVelocity = new VelocitySettings(STANDARD_CHORD_VELOCITY, MIN_VELOCITY,
-            ACCENTED_CHORD_VELOCITY - 1, 100);
+    private final VelocitySettings chordStepVelocity;
     private final ChordStepVisibleClipCache visibleClipCache = new ChordStepVisibleClipCache(STEP_COUNT);
     private final ChordStepFineNudgeState<ChordStepEventIndex.Event> fineNudgeState = new ChordStepFineNudgeState<>();
     private final ChordStepFineNudgeController<ChordStepEventIndex.Event> fineNudgeController;
@@ -116,6 +113,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.driver = driver;
         this.pitchContext = driver.getSharedPitchContextController();
         this.oled = driver.getOled();
+        this.chordStepVelocity = driver.getSharedVelocitySettings();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
         final ChordStepStepButtonControls chordStepStepButtonControls = new ChordStepStepButtonControls(
                 chordStepAccentControls, chordStepStepButtonHost());

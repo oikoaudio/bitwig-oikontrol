@@ -135,7 +135,7 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `SHIFT + DRUM` | Tap tempo |
 | `SHIFT + NOTE` | Toggle record quantization, restoring the previous grid or `1/16` |
 | `BROWSER` | Open or close Bitwig popup browser |
-| `SHIFT + BROWSER` | Hold global settings overlay |
+| `SHIFT + BROWSER` | Latch or close global settings overlay |
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
@@ -143,16 +143,14 @@ When the popup browser is open, `SELECT` turn moves through results, `SELECT` pr
 
 ### Global settings overlay
 
-Hold `SHIFT + BROWSER` to edit shared settings from the four encoders.
+Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BROWSER` again, press `BROWSER`, or press a plain mode button from the latched overlay to close it. Press `KNOB MODE` to switch between settings pages.
 
-| Encoder | Setting |
-| --- | --- |
-| `Channel` | Shared root key |
-| `Mixer` | Shared scale |
-| `User 1` | Shared octave |
-| `User 2` | `ClipRecLen`: launcher recording length |
+| Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Pitch` | Shared root key | Shared scale | Shared octave | `ClipLen`: launcher recording length |
+| `Input` | Global velocity sensitivity | Global velocity center | Pad brightness | Pad saturation |
 
-The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad while holding `SHIFT + BROWSER` to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
+The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
 ### Main SELECT encoder
 
@@ -297,7 +295,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | --- | --- | --- | --- | --- |
 | `Channel` | Mod | Pitch bend | Pitch Gliss / `ALT`: gliss mode | Shared scale / `ALT`: shared root key / `SHIFT`: local layout |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
-| `User 1` | Velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Timbre | Pitch expression |
+| `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 #### Harmonic input
@@ -398,7 +396,7 @@ Press `STEP` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to return t
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave / `ALT`: shared root | Velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: invert chord |
+| `Channel` | Chord octave / `ALT`: shared root | Global velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: invert chord |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity | Pressure | Timbre | Pitch |
 | `User 2` | Note length | Chance | Velocity spread | Repeats |
