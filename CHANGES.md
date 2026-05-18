@@ -16,6 +16,27 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
 - `SHIFT + NOTE` now toggles Bitwig record quantization off and back to the previous grid, defaulting to `1/16`.
 
+## [2.15.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.1...oikontrol-v2.15.0) (2026-05-18)
+
+
+### Features
+
+* add Akai Fire OLED meters ([f91820d](https://github.com/oikoaudio/bitwig-oikontrol/commit/f91820da0eb93b3424a26f6786233a58e4dc1dab))
+* add Akai Fire startup mode preference ([d8e385d](https://github.com/oikoaudio/bitwig-oikontrol/commit/d8e385d097c6c2dcc85c6172503d8fdab6e828b5))
+* improve Akai Fire Mix and launcher controls ([3d4e184](https://github.com/oikoaudio/bitwig-oikontrol/commit/3d4e1846d029c4db5af48adeddddd846fb296a58))
+* improve Akai Fire Mix, Launcher, and OLED meters ([8c5ad43](https://github.com/oikoaudio/bitwig-oikontrol/commit/8c5ad433f8f53d032f8da26ee3d44bc8f2f515b7))
+* toggle Akai Fire record quantization ([de5823a](https://github.com/oikoaudio/bitwig-oikontrol/commit/de5823a44d55bea8de1e1efbbaa2491f5d2a9faa))
+
+
+### Bug Fixes
+
+* align Drum mixer OLED meters ([a1fd662](https://github.com/oikoaudio/bitwig-oikontrol/commit/a1fd662b397e78890d08729e6bd76cc10ccc12cb))
+
+
+### Performance Improvements
+
+* send Akai Fire OLED graphics by changed page ([828282f](https://github.com/oikoaudio/bitwig-oikontrol/commit/828282fece7e29007e4561255f69e29522120eb3))
+
 ## [2.14.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.0...oikontrol-v2.14.1) (2026-05-16)
 
 
