@@ -96,7 +96,6 @@ public final class FireControlPreferences {
             MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT,
             MAIN_ENCODER_TRACK_SELECT,
-            MAIN_ENCODER_PLAYBACK_START,
             MAIN_ENCODER_DRUM_GRID
     };
     public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
@@ -246,9 +245,9 @@ public final class FireControlPreferences {
             return MAIN_ENCODER_TRACK_SELECT;
         }
         if (MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)) {
-            return MAIN_ENCODER_PLAYBACK_START;
+            return includeDrumGrid ? MAIN_ENCODER_DRUM_GRID : MAIN_ENCODER_SHUFFLE;
         }
-        if (MAIN_ENCODER_PLAYBACK_START.equals(normalizedRole)) {
+        if (MAIN_ENCODER_PLAYBACK_START.equals(currentRole)) {
             return includeDrumGrid ? MAIN_ENCODER_DRUM_GRID : MAIN_ENCODER_SHUFFLE;
         }
         return MAIN_ENCODER_SHUFFLE;

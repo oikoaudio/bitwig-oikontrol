@@ -135,7 +135,7 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `SHIFT + DRUM` | Tap tempo |
 | `SHIFT + NOTE` | Toggle record quantization, restoring the previous grid or `1/16` |
 | `BROWSER` | Open or close Bitwig popup browser |
-| `SHIFT + BROWSER` | Hold global settings overlay |
+| `SHIFT + BROWSER` | Latch or close global settings overlay |
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
@@ -143,16 +143,15 @@ When the popup browser is open, `SELECT` turn moves through results, `SELECT` pr
 
 ### Global settings overlay
 
-Hold `SHIFT + BROWSER` to edit shared settings from the four encoders.
+Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BROWSER` again, press `BROWSER`, or press a plain mode button from the latched overlay to close it. Press `KNOB MODE` to switch between settings pages.
 
-| Encoder | Setting |
-| --- | --- |
-| `Channel` | Shared root key |
-| `Mixer` | Shared scale |
-| `User 1` | Shared octave |
-| `User 2` | `ClipRecLen`: launcher recording length |
+| Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
+| --- | --- | --- | --- | --- |
+| `Pitch` | Shared root key | Shared scale | Shared octave | `ClipLen`: launcher recording length |
+| `Input` | Global velocity sensitivity | Global velocity center | Pad brightness | Pad saturation |
+| `Pins` | Pin track | Pin device | Pin clip | -- |
 
-The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad while holding `SHIFT + BROWSER` to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
+On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
 ### Main SELECT encoder
 
@@ -163,6 +162,7 @@ Global `SELECT` turn chords:
 
 | Control | Action |
 | --- | --- |
+| Hold `SHIFT` + turn `SELECT` | Move the playback start by the current arranger grid resolution |
 | Hold `PATTERN` + turn `SELECT` | Move the play position by the current meter's beat unit |
 | Hold `SHIFT + PATTERN` + turn `SELECT` | Move the play position by fine 1/16-beat steps |
 | Hold `ALT` + turn `SELECT` | Zoom the arranger/detail timeline horizontally |
@@ -175,7 +175,6 @@ Global `SELECT` turn chords:
 | `Tempo` | Adjust project tempo | None |
 | `Note Repeat` | Select repeat division; `Off` disables repeat | Active repeat control |
 | `Track Select` | Previous / next track | Hold while turning to jump by visible pages |
-| `Playback Start` | Move the playback start by the current arranger grid resolution | None |
 | `Drum Grid` | Drum-step grid resolution | `DRUM` mode only |
 
 ### DRUM Mode
@@ -219,7 +218,7 @@ Hold one or more step pads, then use the timing gestures to move those held note
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 
-In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
+In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this, while `ALT + BANK LEFT/RIGHT` still undo/redo Bitwig project history. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
 ### Nested Rhythm mode
 
@@ -287,6 +286,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `ALT + NOTE` | Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input |
 | `STEP` | Enter `Melodic Step`; press again for `Chord Step` |
 | `BANK LEFT/RIGHT` | Shared octave down / up |
+| `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
 | `MUTE_3` | Note Repeat toggle |
@@ -296,7 +296,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | --- | --- | --- | --- | --- |
 | `Channel` | Mod | Pitch bend | Pitch Gliss / `ALT`: gliss mode | Shared scale / `ALT`: shared root key / `SHIFT`: local layout |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
-| `User 1` | Velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Timbre | Pitch expression |
+| `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 #### Harmonic input
@@ -397,7 +397,7 @@ Press `STEP` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to return t
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave / `ALT`: shared root | Velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: invert chord |
+| `Channel` | Chord octave / `ALT`: shared root | Global velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: invert chord |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity | Pressure | Timbre | Pitch |
 | `User 2` | Note length | Chance | Velocity spread | Repeats |
@@ -449,6 +449,7 @@ For immediate derived-line feedback, change source expression from the controlle
 | `MUTE_4` + pad | Delete |
 | `BANK LEFT/RIGHT` | Scroll tracks by visible page |
 | `SHIFT + BANK LEFT/RIGHT` | Scroll tracks by one |
+| `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Launcher encoder pages |
@@ -560,7 +561,6 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`
-- `SELECT Encoder`
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`
