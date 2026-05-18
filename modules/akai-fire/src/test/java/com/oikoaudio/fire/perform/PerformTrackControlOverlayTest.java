@@ -53,26 +53,34 @@ class PerformTrackControlOverlayTest {
     @Test
     void patternSceneNavigationIsUnlitInMix() {
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, 1, true));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 1, false));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, 1, false));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, -1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 1, true));
-        assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, 1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, -1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, -1, true));
     }
 
     @Test
-    void mixDevicePadsMapRowsToFirstFourTrackDevices() {
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(0));
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(15));
-        assertEquals(1, PerformClipLauncherMode.mixDeviceIndexForPad(16));
-        assertEquals(2, PerformClipLauncherMode.mixDeviceIndexForPad(32));
-        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForPad(48));
+    void mixDevicePadsMapRowsToPagedTrackDevices() {
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(0, 0));
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(15, 0));
+        assertEquals(1, PerformClipLauncherMode.mixDeviceIndexForPad(16, 0));
+        assertEquals(2, PerformClipLauncherMode.mixDeviceIndexForPad(32, 0));
+        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForPad(48, 0));
+        assertEquals(4, PerformClipLauncherMode.mixDeviceIndexForPad(0, 1));
+        assertEquals(5, PerformClipLauncherMode.mixDeviceIndexForPad(16, 1));
+        assertEquals(6, PerformClipLauncherMode.mixDeviceIndexForPad(32, 1));
+        assertEquals(7, PerformClipLauncherMode.mixDeviceIndexForPad(48, 1));
     }
 
     @Test
