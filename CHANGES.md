@@ -20,6 +20,23 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - `SHIFT + BROWSER` now latches the global settings overlay, with `KNOB MODE` switching to a second page for shared input velocity feel and pad color response.
 - The Fire global settings overlay now has a `Pins` page for clamped track, device, and clip pin on/off controls.
 
+## [2.16.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.15.0...oikontrol-v2.16.0) (2026-05-18)
+
+
+### Features
+
+* add Akai Fire Mix device view ([aacef6c](https://github.com/oikoaudio/bitwig-oikontrol/commit/aacef6c70efd571d54a24ae40cc84ee3dec4a8cd))
+* add Fire global pin settings ([7d0d9eb](https://github.com/oikoaudio/bitwig-oikontrol/commit/7d0d9eb8324c01855bfe08328c5e90601c5ecbeb))
+* add shift select playback-start shortcut ([b0a3a7b](https://github.com/oikoaudio/bitwig-oikontrol/commit/b0a3a7b29dec169d72678795c862273906964f04))
+* add undo redo bank gesture ([c3c62f4](https://github.com/oikoaudio/bitwig-oikontrol/commit/c3c62f46c76872db7e5075dd4f3ee0a00c77e237))
+* improve Akai Fire global controls ([9481e48](https://github.com/oikoaudio/bitwig-oikontrol/commit/9481e486a5ace0c45245b475c97d5bdabb3cd353))
+* latch Fire global settings overlay ([629ef69](https://github.com/oikoaudio/bitwig-oikontrol/commit/629ef69c04ce41fa98f3c888ad1b75c97589fb38))
+
+
+### Bug Fixes
+
+* tune playback-start grid jumps ([8fef568](https://github.com/oikoaudio/bitwig-oikontrol/commit/8fef5681738ca767f64c8f249c10cc75169b12e6))
+
 ## [2.15.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.1...oikontrol-v2.15.0) (2026-05-18)
 
 
