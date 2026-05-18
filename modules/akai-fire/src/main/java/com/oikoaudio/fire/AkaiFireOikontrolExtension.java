@@ -66,6 +66,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public static final String MAIN_ENCODER_PLAYBACK_START_ROLE = FireControlPreferences.MAIN_ENCODER_PLAYBACK_START;
     public static final String MAIN_ENCODER_DRUM_GRID_ROLE = FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
     private static final String ACTION_JUMP_TO_END_OF_ARRANGEMENT = "jump_to_end_of_arrangement";
+    private static final String RECORD_QUANTIZATION_OFF = "OFF";
+    private static final String RECORD_QUANTIZATION_DEFAULT_ON = "1/16";
     private static final double[] ARRANGER_GRID_ZOOM_LIMITS = {
             8.8, 27.94, 279.11, 661.61, 1176.20, 2091.03, 4956.52, 8811.59,
             20886.75, 37132.00, 66012.45, 156473.96, 278175.93, 600000.0, 800000.0
@@ -165,6 +167,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private boolean globalSettingsOverlayActive = false;
+    private String lastRecordQuantizationGrid = RECORD_QUANTIZATION_DEFAULT_ON;
     private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
     private int transportTimeSignatureDenominator = 4;
@@ -251,6 +254,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         browserResultsCursor.exists().markInterested();
         browserResultsCursor.isSelected().markInterested();
         browserResultsCursor.name().markInterested();
+        application.recordQuantizationGrid().markInterested();
+        application.recordQuantizationGrid().addValueObserver(this::handleRecordQuantizationChanged);
 
         layers = new Layers(this);
         midiIn = host.getMidiInPort(0);
@@ -857,6 +862,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
+        if (isGlobalShiftHeld()) {
+            toggleRecordQuantization();
+            return;
+        }
         if (modeState.activeMode() == Mode.NOTE_PLAY && isGlobalAltHeld()) {
             notePlayMode.toggleLiveLayoutShortcut();
             return;
@@ -879,6 +888,32 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         notePlayMode.cycleNoteSubMode();
         notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+    }
+
+    private void handleRecordQuantizationChanged(final String value) {
+        if (value != null && !RECORD_QUANTIZATION_OFF.equals(value)) {
+            lastRecordQuantizationGrid = value;
+        }
+    }
+
+    private void toggleRecordQuantization() {
+        final SettableEnumValue recordQuantization = application.recordQuantizationGrid();
+        final String current = recordQuantization.get();
+        if (RECORD_QUANTIZATION_OFF.equals(current)) {
+            final String next = normalizeRecordQuantizationGrid(lastRecordQuantizationGrid);
+            recordQuantization.set(next);
+            notifyAction("Record Quant", next);
+        } else {
+            handleRecordQuantizationChanged(current);
+            recordQuantization.set(RECORD_QUANTIZATION_OFF);
+            notifyAction("Record Quant", "Off");
+        }
+    }
+
+    private String normalizeRecordQuantizationGrid(final String value) {
+        return value == null || value.isBlank() || RECORD_QUANTIZATION_OFF.equals(value)
+                ? RECORD_QUANTIZATION_DEFAULT_ON
+                : value;
     }
 
     private void handleStepPressed(final boolean pressed) {

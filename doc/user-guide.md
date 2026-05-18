@@ -133,6 +133,7 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub |
 | `SHIFT + DRUM` | Tap tempo |
+| `SHIFT + NOTE` | Toggle record quantization, restoring the previous grid or `1/16` |
 | `BROWSER` | Open or close Bitwig popup browser |
 | `SHIFT + BROWSER` | Hold global settings overlay |
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
