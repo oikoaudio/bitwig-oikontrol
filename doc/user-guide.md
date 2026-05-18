@@ -548,6 +548,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Clip Launch Quantization`
 - `Perform Clip Launcher Layout`
 - `Default Clip Length`
+- `Startup Mode`
 - `SELECT Encoder Startup`
 - `Default Root Key`
 - `Default Scale`
@@ -563,6 +564,8 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`
 - `On-screen action notifications`
+
+`Startup Mode` chooses the first active Akai Fire page when the extension starts. The available startup pages are `Note`, `Harmony`, `Drum XOX`, `Launcher`, and `Mix`.
 
 `Pad Brightness` and `Pad Saturation` interact with the Bitwig track colors used by `DRUM` and `PERFORM`, so the same settings can read differently across different project palettes.
 

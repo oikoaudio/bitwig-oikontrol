@@ -573,7 +573,7 @@ public class DrumPadHandler {
         resetSelectedPadMeterText();
     }
 
-    private void showMixerValue(final String title, final String value) {
+    public void showMixerValue(final String title, final String value) {
         if (mixerEncoderFooterVisible) {
             clearRowsAboveMixerEncoderFooter();
             selectedPadMeterTextInitialized = false;

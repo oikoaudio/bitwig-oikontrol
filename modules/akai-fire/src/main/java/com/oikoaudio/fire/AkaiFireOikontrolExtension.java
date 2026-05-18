@@ -133,6 +133,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue clipLaunchQuantizationPref;
     private SettableEnumValue performClipLauncherLayoutPref;
     private SettableEnumValue defaultClipLengthPref;
+    private SettableEnumValue startupModePref;
     private SettableEnumValue mainEncoderStartupPref;
     private SettableEnumValue euclidScopePref;
     private SettableEnumValue drumPinModePref;
@@ -287,6 +288,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         fugueStepMode = new FugueStepMode(this);
         nestedRhythmMode = new NestedRhythmMode(this);
         performMode = new PerformClipLauncherMode(this);
+        applyStartupModePreference();
         initGlobalSettingsOverlay();
         oled.setIdleAction(this::showIdleOledInfo);
         midiOut.sendSysex(DEV_INQ);
@@ -355,6 +357,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.DEFAULT_CLIP_LENGTHS,
                 FireControlPreferences.CLIP_LENGTH_2_BARS);
         defaultClipLengthPref.markInterested();
+
+        startupModePref = preferences.getEnumSetting("Startup Mode",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.STARTUP_MODES,
+                FireControlPreferences.STARTUP_MODE_NOTE);
+        startupModePref.markInterested();
 
         mainEncoderStartupPref = preferences.getEnumSetting("SELECT Encoder Startup",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -797,10 +805,23 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public void notifyAction(final String title, final String value) {
-        oled.valueInfo(title, value);
+        if (!showModeAwareActionInfo(title, value)) {
+            oled.valueInfo(title, value);
+        }
         if (screenNotificationsPref != null && screenNotificationsPref.get()) {
             host.showPopupNotification(title + ": " + value);
         }
+    }
+
+    private boolean showModeAwareActionInfo(final String title, final String value) {
+        if (modeState.activeMode() == Mode.PERFORM && performMode != null
+                && performMode.showGlobalActionInfo(title, value)) {
+            return true;
+        }
+        return modeState.activeMode() == Mode.DRUM
+                && activeDrumSubMode == DrumSubMode.STANDARD
+                && drumSequenceMode != null
+                && drumSequenceMode.showGlobalActionInfo(title, value);
     }
 
     public void notifyPopup(final String title, final String value) {
@@ -1137,6 +1158,25 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isEncoderTouchResetEnabled() {
         return encoderTouchResetEnabled;
+    }
+
+    private void applyStartupModePreference() {
+        final String startupMode = FireControlPreferences.normalizeStartupMode(startupModePref == null
+                ? FireControlPreferences.STARTUP_MODE_NOTE
+                : startupModePref.get());
+        if (performMode != null) {
+            performMode.setTrackActionMode(FireControlPreferences.STARTUP_MODE_MIX.equals(startupMode));
+        }
+        switch (startupMode) {
+            case FireControlPreferences.STARTUP_MODE_HARMONY -> modeState.activateChordStep();
+            case FireControlPreferences.STARTUP_MODE_DRUM_XOX -> {
+                activeDrumSubMode = DrumSubMode.STANDARD;
+                modeState.activateDrum();
+            }
+            case FireControlPreferences.STARTUP_MODE_LAUNCHER, FireControlPreferences.STARTUP_MODE_MIX ->
+                    modeState.activatePerform();
+            default -> modeState.activateNotePlay();
+        }
     }
 
     private void switchActiveMode() {

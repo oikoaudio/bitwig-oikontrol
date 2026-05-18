@@ -70,6 +70,19 @@ public final class FireControlPreferences {
             CLIP_LENGTH_ROUND_NEAREST_BAR
     };
 
+    public static final String STARTUP_MODE_NOTE = "Note";
+    public static final String STARTUP_MODE_HARMONY = "Harmony";
+    public static final String STARTUP_MODE_DRUM_XOX = "Drum XOX";
+    public static final String STARTUP_MODE_LAUNCHER = "Launcher";
+    public static final String STARTUP_MODE_MIX = "Mix";
+    public static final String[] STARTUP_MODES = {
+            STARTUP_MODE_NOTE,
+            STARTUP_MODE_HARMONY,
+            STARTUP_MODE_DRUM_XOX,
+            STARTUP_MODE_LAUNCHER,
+            STARTUP_MODE_MIX
+    };
+
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
@@ -206,6 +219,15 @@ public final class FireControlPreferences {
             }
         }
         return MAIN_ENCODER_LAST_TOUCHED;
+    }
+
+    public static String normalizeStartupMode(final String preferenceValue) {
+        for (final String value : STARTUP_MODES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return STARTUP_MODE_NOTE;
     }
 
     public static String nextAlternateMainEncoderRole(final String currentRole) {

@@ -43,6 +43,22 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesStartupModePreferenceValues() {
+        assertEquals(FireControlPreferences.STARTUP_MODE_NOTE,
+                FireControlPreferences.normalizeStartupMode(FireControlPreferences.STARTUP_MODE_NOTE));
+        assertEquals(FireControlPreferences.STARTUP_MODE_HARMONY,
+                FireControlPreferences.normalizeStartupMode(FireControlPreferences.STARTUP_MODE_HARMONY));
+        assertEquals(FireControlPreferences.STARTUP_MODE_DRUM_XOX,
+                FireControlPreferences.normalizeStartupMode(FireControlPreferences.STARTUP_MODE_DRUM_XOX));
+        assertEquals(FireControlPreferences.STARTUP_MODE_LAUNCHER,
+                FireControlPreferences.normalizeStartupMode(FireControlPreferences.STARTUP_MODE_LAUNCHER));
+        assertEquals(FireControlPreferences.STARTUP_MODE_MIX,
+                FireControlPreferences.normalizeStartupMode(FireControlPreferences.STARTUP_MODE_MIX));
+        assertEquals(FireControlPreferences.STARTUP_MODE_NOTE,
+                FireControlPreferences.normalizeStartupMode("unexpected"));
+    }
+
+    @Test
     void cyclesAlternateMainEncoderRolesWithoutLastTouched() {
         assertEquals(FireControlPreferences.MAIN_ENCODER_TEMPO,
                 FireControlPreferences.nextAlternateMainEncoderRole(FireControlPreferences.MAIN_ENCODER_SHUFFLE));

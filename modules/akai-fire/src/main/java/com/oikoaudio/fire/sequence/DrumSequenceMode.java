@@ -888,6 +888,15 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return true;
     }
 
+    public boolean showGlobalActionInfo(final String title, final String value) {
+        if (!shouldShowDrumMeters() || encoderLayer.getEncoderMode() != EncoderMode.MIXER) {
+            return false;
+        }
+        suppressDrumMeterDisplay();
+        padHandler.showMixerValue(title, value);
+        return true;
+    }
+
     public void suppressDrumMeterDisplay() {
         drumMeterDisplayActive = false;
         drumMeterSuppressedUntilMs = System.currentTimeMillis() + METER_DISPLAY_SUPPRESS_MS;

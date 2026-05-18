@@ -90,6 +90,7 @@ public class PerformClipLauncherMode extends Layer {
     private static final long METER_MODE_INFO_SUPPRESS_MS = 1200;
     private static final String SELECTED_TRACK_METER_LEGEND = "Peak        | RMS";
     private static final String MIXER_ENCODER_FOOTER = "Vol  Pan  S1  S2";
+    private static final String BLANK_TEXT_ROW = "                    ";
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
     private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
     private static final boolean[][] SETTINGS_LOGO = {
@@ -316,6 +317,14 @@ public class PerformClipLauncherMode extends Layer {
 
     public boolean isTrackActionMode() {
         return trackActionMode;
+    }
+
+    public void setTrackActionMode(final boolean enabled) {
+        trackActionMode = enabled;
+        if (enabled) {
+            sceneActionMode = false;
+            clearClipModifierButtons();
+        }
     }
 
     public void toggleTrackActionMode() {
@@ -1347,6 +1356,15 @@ public class PerformClipLauncherMode extends Layer {
         oled.valueInfoNoClear(title, value);
     }
 
+    public boolean showGlobalActionInfo(final String title, final String value) {
+        if (!active || encoderMode != EncoderMode.MIXER) {
+            return false;
+        }
+        suppressMixMeterDisplay();
+        showValueInfo(title, value);
+        return true;
+    }
+
     private boolean shouldPreserveMixerEncoderFooter() {
         return active && encoderMode == EncoderMode.MIXER && mixerEncoderFooterVisible
                 && !sceneActionMode && !isSettingsHeld();
@@ -1361,8 +1379,12 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void clearRowsAboveMixerEncoderFooter() {
+        oled.sendString(2, OledDisplay.TextJustification.LEFT, 0, BLANK_TEXT_ROW);
+        oled.sendString(2, OledDisplay.TextJustification.LEFT, 1, BLANK_TEXT_ROW);
+        oled.sendString(3, OledDisplay.TextJustification.LEFT, 2, BLANK_TEXT_ROW);
+        oled.sendString(2, OledDisplay.TextJustification.LEFT, 4, BLANK_TEXT_ROW);
         for (int row = 0; row < 7; row++) {
-            oled.sendString(0, OledDisplay.TextJustification.LEFT, row, "");
+            oled.sendString(0, OledDisplay.TextJustification.LEFT, row, BLANK_TEXT_ROW);
         }
     }
 

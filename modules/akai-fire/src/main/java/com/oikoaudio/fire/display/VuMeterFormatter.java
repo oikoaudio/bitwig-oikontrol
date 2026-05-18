@@ -16,7 +16,9 @@ public final class VuMeterFormatter {
     }
 
     public static String meterPairLine(final int peakValue, final int rmsValue) {
-        final String line = "%s | %s".formatted(meterValueShort(peakValue), meterValueShort(rmsValue));
+        final String peak = meterValueShort(peakValue);
+        final String separator = peak.length() >= 5 ? "| " : " | ";
+        final String line = peak + separator + meterValueShort(rmsValue);
         return line.length() <= 20 ? line : line.replace(" | ", "|");
     }
 

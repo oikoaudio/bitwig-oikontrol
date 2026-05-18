@@ -13,6 +13,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Drum XOX now shows visible Drum Machine pad-chain RMS meters as vertical bars on the idle OLED, with selected-pad Peak/RMS max/current values on the Mixer encoder page.
 - Akai Fire OLED graphics now send only changed 8-pixel pages, allowing meter displays to refresh about every 100 ms without full-frame redraws, and bar meters show a slowly decaying held-peak marker plus a bottom dash for muted lanes.
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
+- Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
 
 ## [2.14.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.0...oikontrol-v2.14.1) (2026-05-16)
 

@@ -31,4 +31,9 @@ class VuMeterFormatterTest {
     void meterPairLineFitsOledTextWidth() {
         assertEquals("+0.0 | -6.0", VuMeterFormatter.meterPairLine(127, 64));
     }
+
+    @Test
+    void meterPairLineDropsPaddingAfterDoubleDigitPeakValues() {
+        assertEquals("-16.1| -6.0", VuMeterFormatter.meterPairLine(20, 64));
+    }
 }
