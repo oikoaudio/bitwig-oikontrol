@@ -4,6 +4,8 @@ import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.Device;
+import com.bitwig.extension.controller.api.DeviceBank;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
@@ -82,6 +84,7 @@ public class PerformClipLauncherMode extends Layer {
     private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int MAX_TRACKS = 16;
     private static final int MAX_SCENES = 16;
+    private static final int MIX_DEVICE_ROWS = 4;
     private static final int SCENE_ROW = 0;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
@@ -121,6 +124,8 @@ public class PerformClipLauncherMode extends Layer {
     private final RgbLigthState[] sceneColors = new RgbLigthState[MAX_SCENES];
     private final RgbLigthState[] trackColors = new RgbLigthState[MAX_TRACKS];
     private final String[] trackNames = new String[MAX_TRACKS];
+    private final DeviceBank[] trackDeviceBanks = new DeviceBank[MAX_TRACKS];
+    private final String[][] trackDeviceNames = new String[MAX_TRACKS][MIX_DEVICE_ROWS];
     private final String[] sceneNames = new String[MAX_SCENES];
     private final int[] trackPeakMeters = new int[MAX_TRACKS];
     private final int[] trackRmsMeters = new int[MAX_TRACKS];
@@ -132,6 +137,7 @@ public class PerformClipLauncherMode extends Layer {
     private final EncoderTouchResetHandler parameterResetHandler;
     private Layer currentEncoderLayer;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
+    private EncoderMode encoderModeBeforeMixDeviceMode;
     private boolean duplicateHeld;
     private int blinkState;
     private int totalTrackCount = MAX_TRACKS;
@@ -152,6 +158,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean manualRecordingWasRecording = false;
     private boolean manualRecordingShouldRound = false;
     private boolean trackActionMode = false;
+    private boolean mixDeviceToggleMode = false;
     private boolean sceneActionMode = false;
     private boolean active = false;
     private boolean mixMeterDisplayActive = false;
@@ -176,8 +183,8 @@ public class PerformClipLauncherMode extends Layer {
         this.project.hasMutedTracks().markInterested();
         this.projectRemoteControls = project.getRootTrackGroup().createCursorRemoteControlsPage(8);
         this.trackRemoteControls = cursorTrack.createCursorRemoteControlsPage(8);
-        final PinnableCursorDevice primaryDevice = driver.getViewControl().getPrimaryDevice();
-        this.deviceRemoteControls = primaryDevice.createCursorRemoteControlsPage(8);
+        final PinnableCursorDevice selectedDevice = driver.getViewControl().getSelectedDevice();
+        this.deviceRemoteControls = selectedDevice.createCursorRemoteControlsPage(8);
         this.performCursorClip = cursorTrack.createLauncherCursorClip("PERFORM_CURSOR", "PERFORM_CURSOR", 64, 128);
 
         this.channelLayer = new Layer(driver.getLayers(), "PERFORM_ENC_CHANNEL");
@@ -253,6 +260,17 @@ public class PerformClipLauncherMode extends Layer {
             });
             track.addVuMeterObserver(VuMeterFormatter.RANGE, -1, true, value -> handlePeakMeterChanged(column, value));
             track.addVuMeterObserver(VuMeterFormatter.RANGE, -1, false, value -> handleRmsMeterChanged(column, value));
+            final DeviceBank deviceBank = track.createDeviceBank(MIX_DEVICE_ROWS);
+            trackDeviceBanks[column] = deviceBank;
+            for (int deviceIndex = 0; deviceIndex < MIX_DEVICE_ROWS; deviceIndex++) {
+                final Device device = deviceBank.getItemAt(deviceIndex);
+                final int row = deviceIndex;
+                device.exists().markInterested();
+                device.name().markInterested();
+                device.isEnabled().markInterested();
+                device.name().addValueObserver(name -> trackDeviceNames[column][row] = name);
+                trackDeviceNames[column][row] = device.name().get();
+            }
 
             for (int sceneIndex = 0; sceneIndex < MAX_SCENES; sceneIndex++) {
                 final int slotIndex = toSlotIndex(trackIndex, sceneIndex);
@@ -320,6 +338,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public void setTrackActionMode(final boolean enabled) {
+        if (!enabled) {
+            leaveMixDeviceMode();
+        } else {
+            encoderModeBeforeMixDeviceMode = null;
+        }
         trackActionMode = enabled;
         if (enabled) {
             sceneActionMode = false;
@@ -328,7 +351,13 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public void toggleTrackActionMode() {
-        trackActionMode = !trackActionMode;
+        final boolean enabled = !trackActionMode;
+        if (!enabled) {
+            leaveMixDeviceMode();
+        } else {
+            encoderModeBeforeMixDeviceMode = null;
+        }
+        trackActionMode = enabled;
         if (trackActionMode) {
             sceneActionMode = false;
             clearClipModifierButtons();
@@ -366,7 +395,7 @@ public class PerformClipLauncherMode extends Layer {
 
     public String activePageLabel() {
         if (trackActionMode) {
-            return "Mix";
+            return mixDeviceToggleMode ? "Mix Devices" : "Mix";
         }
         if (sceneActionMode) {
             return "Scene Launch";
@@ -488,11 +517,11 @@ public class PerformClipLauncherMode extends Layer {
 
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
         patternUp.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, -1),
-                () -> patternSceneNavigationLightState(trackActionMode, canScrollScenes(-1)));
+                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, -1, canScrollScenes(-1)));
 
         final BiColorButton patternDown = driver.getButton(NoteAssign.PATTERN_DOWN);
         patternDown.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, 1),
-                () -> patternSceneNavigationLightState(trackActionMode, canScrollScenes(1)));
+                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, 1, canScrollScenes(1)));
     }
 
     private void bindMixStatusLights() {
@@ -665,6 +694,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handleTrackActionPadPressed(final int padIndex, final boolean pressed) {
+        if (mixDeviceToggleMode) {
+            handleMixDevicePadPressed(padIndex, pressed);
+            return;
+        }
         if (!pressed) {
             return;
         }
@@ -704,6 +737,36 @@ public class PerformClipLauncherMode extends Layer {
                 showValueInfo(track.arm().get() ? "Mix Arm" : "Mix Disarm", trackLabel);
             }
         }
+    }
+
+    private void handleMixDevicePadPressed(final int padIndex, final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        final int deviceIndex = mixDeviceIndexForPad(padIndex);
+        if (deviceIndex < 0) {
+            return;
+        }
+        final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
+        final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
+        if (trackAddress == null) {
+            return;
+        }
+        final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
+        if (device == null || !device.exists().get()) {
+            showValueInfo("Mix Device", "No device");
+            return;
+        }
+        selectMeterTrack(trackAddress.sourceIndex(), true);
+        if (isAltHeld()) {
+            final boolean enabled = !device.isEnabled().get();
+            device.isEnabled().set(enabled);
+            showValueInfo(mixDeviceActionTitle(true, enabled), mixDeviceName(trackAddress, deviceIndex));
+            return;
+        }
+        trackAddress.track().selectInMixer();
+        device.selectInEditor();
+        showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()), mixDeviceName(trackAddress, deviceIndex));
     }
 
     private void handleSceneActionPadPressed(final int padIndex, final boolean pressed) {
@@ -985,9 +1048,40 @@ public class PerformClipLauncherMode extends Layer {
 
     private void handlePatternSceneScroll(final boolean pressed, final int direction) {
         if (trackActionMode) {
+            if (pressed) {
+                if (direction > 0 && !mixDeviceToggleMode) {
+                    setMixDeviceMode(true);
+                } else if (direction < 0 && mixDeviceToggleMode) {
+                    setMixDeviceMode(false);
+                }
+            }
             return;
         }
         handleSceneScroll(pressed, direction);
+    }
+
+    private void setMixDeviceMode(final boolean enabled) {
+        if (enabled == mixDeviceToggleMode) {
+            return;
+        }
+        suppressMixMeterDisplay();
+        if (enabled) {
+            encoderModeBeforeMixDeviceMode = encoderMode;
+            switchEncoderMode(EncoderMode.USER_2, false);
+        } else {
+            leaveMixDeviceMode();
+        }
+        mixDeviceToggleMode = enabled;
+        showTrackActionInfo();
+        oled.clearScreenDelayed();
+    }
+
+    private void leaveMixDeviceMode() {
+        if (encoderModeBeforeMixDeviceMode != null) {
+            switchEncoderMode(encoderModeBeforeMixDeviceMode, false);
+            encoderModeBeforeMixDeviceMode = null;
+        }
+        mixDeviceToggleMode = false;
     }
 
     private void handleSceneScroll(final boolean pressed, final int direction) {
@@ -1176,16 +1270,22 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void switchMode(final EncoderMode newMode) {
+        switchEncoderMode(newMode, true);
+    }
+
+    private void switchEncoderMode(final EncoderMode newMode, final boolean showInfo) {
         encoderMode = newMode;
         resetSelectedTrackMeterText();
         currentEncoderLayer.deactivate();
         currentEncoderLayer = modeMapping.get(newMode);
         applyEncoderStepSizes();
         currentEncoderLayer.activate();
-        if (isSettingsHeld()) {
-            showOverview();
-        } else {
-            showCurrentModeInfo();
+        if (showInfo) {
+            if (isSettingsHeld()) {
+                showOverview();
+            } else {
+                showCurrentModeInfo();
+            }
         }
         oled.clearScreenDelayed();
     }
@@ -1243,7 +1343,14 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showTrackActionInfo() {
-        showTransientDetailInfo("Mix", "Rows: %s/%s/%s/%s\nM1 Start  M2 SoloClr\nM3 MuteClr  M4 End".formatted(
+        if (mixDeviceToggleMode) {
+            showTransientDetailInfo("Mix Devices",
+                    "Rows: Device 1-4\nPad: Select  ALT: On/Off\nPattern Up: Mix",
+                    METER_MODE_INFO_SUPPRESS_MS);
+            return;
+        }
+        showTransientDetailInfo("Mix",
+                "Rows: %s/%s/%s/%s\nPattern Down: Devices\nM1 Start  M2 SoloClr\nM3 MuteClr  M4 End".formatted(
                 TrackActionRow.SELECT.label,
                 TrackActionRow.SOLO.label,
                 TrackActionRow.MUTE.label,
@@ -1688,7 +1795,7 @@ public class PerformClipLauncherMode extends Layer {
             return settingsLogoState(padIndex);
         }
         if (trackActionMode) {
-            return getTrackActionPadState(padIndex);
+            return mixDeviceToggleMode ? getMixDevicePadState(padIndex) : getTrackActionPadState(padIndex);
         }
         if (sceneActionMode) {
             return getSceneActionPadState(padIndex);
@@ -1802,12 +1909,45 @@ public class PerformClipLauncherMode extends Layer {
         };
     }
 
+    private RgbLigthState getMixDevicePadState(final int padIndex) {
+        final int deviceIndex = mixDeviceIndexForPad(padIndex);
+        if (deviceIndex < 0) {
+            return RgbLigthState.OFF;
+        }
+        final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
+        final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
+        if (trackAddress == null) {
+            return RgbLigthState.OFF;
+        }
+        final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
+        if (device == null || !device.exists().get()) {
+            return RgbLigthState.OFF;
+        }
+        return mixDevicePadColor(trackColor(trackAddress.sourceIndex()), device.isEnabled().get());
+    }
+
     static RgbLigthState mixSelectPadColor(final RgbLigthState trackColor, final boolean selected,
                                            final boolean stopped) {
         if (selected) {
             return trackColor.getBrightest();
         }
         return stopped ? trackColor.getDimmed() : trackColor;
+    }
+
+    static int mixDeviceIndexForPad(final int padIndex) {
+        final int row = padIndex / PerformLayout.PAD_COLUMNS;
+        return row >= 0 && row < MIX_DEVICE_ROWS ? row : -1;
+    }
+
+    static RgbLigthState mixDevicePadColor(final RgbLigthState trackColor, final boolean enabled) {
+        return enabled ? trackColor.getBrightest() : trackColor.getDimmed();
+    }
+
+    static String mixDeviceActionTitle(final boolean altHeld, final boolean enabled) {
+        if (!altHeld) {
+            return "Device Select";
+        }
+        return enabled ? "Device On" : "Device Off";
     }
 
     static BiColorLightState mixStatusLightState(final boolean trackActionMode,
@@ -1823,8 +1963,19 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     static BiColorLightState patternSceneNavigationLightState(final boolean trackActionMode,
+                                                              final boolean mixDeviceToggleMode,
+                                                              final int direction,
                                                               final boolean canScrollScenes) {
-        return !trackActionMode && canScrollScenes ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+        if (trackActionMode) {
+            if (direction > 0) {
+                return mixDeviceToggleMode ? BiColorLightState.OFF : BiColorLightState.AMBER_HALF;
+            }
+            if (direction < 0) {
+                return mixDeviceToggleMode ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+            }
+            return BiColorLightState.OFF;
+        }
+        return canScrollScenes ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
     }
 
     private RgbLigthState trackColor(final int sourceTrackIndex) {
@@ -1882,6 +2033,20 @@ public class PerformClipLauncherMode extends Layer {
 
     private String trackLabel(final TrackAddress trackAddress) {
         return nameOrFallback(trackNames[trackAddress.sourceIndex()], "Track " + (trackAddress.absoluteIndex() + 1));
+    }
+
+    private String mixDeviceName(final TrackAddress trackAddress, final int deviceIndex) {
+        return nameOrFallback(trackDeviceNames[trackAddress.sourceIndex()][deviceIndex],
+                "Device " + (deviceIndex + 1));
+    }
+
+    private Device mixDevice(final int sourceTrackIndex, final int deviceIndex) {
+        if (sourceTrackIndex < 0 || sourceTrackIndex >= trackDeviceBanks.length
+                || deviceIndex < 0 || deviceIndex >= MIX_DEVICE_ROWS) {
+            return null;
+        }
+        final DeviceBank deviceBank = trackDeviceBanks[sourceTrackIndex];
+        return deviceBank == null ? null : deviceBank.getItemAt(deviceIndex);
     }
 
     private void handleRmsMeterChanged(final int sourceTrackIndex, final int value) {
