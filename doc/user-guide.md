@@ -181,7 +181,7 @@ Global `SELECT` turn chords:
 
 `Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, Drum XOX focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, Drum XOX follows the selected drum context.
 
-When Drum XOX is idle, the OLED shows vertical RMS meters for the 16 visible Drum Machine pad chains.
+When Drum XOX is idle, the OLED shows vertical RMS meters for the 16 visible Drum Machine pad chains. On the `Mixer` encoder page, it instead shows selected-pad maximum peak/RMS on the first large row and current peak/RMS on the second large row.
 
 | Pad row | Role |
 | --- | --- |

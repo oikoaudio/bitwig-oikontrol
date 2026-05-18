@@ -34,7 +34,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
-    private static final int METER_REFRESH_TICKS = 5;
+    private static final int METER_REFRESH_TICKS = 2;
     private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
 
     private final OledDisplay oled;
@@ -882,7 +882,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (!shouldShowDrumMeters()) {
             return false;
         }
-        padHandler.showDrumPadMeterDisplay();
+        showDrumMeterDisplay();
         drumMeterDisplayActive = true;
         lastMeterDisplayBlink = blinkState;
         return true;
@@ -893,6 +893,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         drumMeterSuppressedUntilMs = System.currentTimeMillis() + METER_DISPLAY_SUPPRESS_MS;
     }
 
+    @Override
+    public void handleEncoderModeChanged(final EncoderMode mode) {
+        drumMeterDisplayActive = false;
+        padHandler.resetSelectedPadMeterDisplay();
+    }
+
     private void refreshDrumMetersIfVisible(final int blinkTicks) {
         if (!shouldShowDrumMeters()) {
             drumMeterDisplayActive = false;
@@ -901,9 +907,18 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (System.currentTimeMillis() < drumMeterSuppressedUntilMs) {
             return;
         }
-        if (drumMeterDisplayActive && blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
-            padHandler.showDrumPadMeterDisplay();
+        if (!drumMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
+            showDrumMeterDisplay();
+            drumMeterDisplayActive = true;
             lastMeterDisplayBlink = blinkTicks;
+        }
+    }
+
+    private void showDrumMeterDisplay() {
+        if (encoderLayer.getEncoderMode() == EncoderMode.MIXER) {
+            padHandler.showSelectedPadMeterDisplay();
+        } else {
+            padHandler.showDrumPadMeterDisplay();
         }
     }
 
@@ -1234,6 +1249,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     protected void onActivate() {
         active = true;
         suppressDrumMeterDisplay();
+        padHandler.resetSelectedPadMeterDisplay();
         currentLayer = mainLayer;
         bindPatternButtons(driver);
         mainLayer.activate();
@@ -1250,6 +1266,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     protected void onDeactivate() {
         active = false;
         drumMeterDisplayActive = false;
+        padHandler.resetSelectedPadMeterDisplay();
         currentLayer.deactivate();
         shiftLayer.deactivate();
         encoderLayer.deactivate();
@@ -1455,6 +1472,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     if (padHandler.adjustMixerParameter(index, inc)) {
                         padHandler.showMixerDisplay(index, name);
                     } else {
+                        suppressDrumMeterDisplay();
                         oled.valueInfo("Mixer", "Select Pad");
                     }
                 });
@@ -1462,6 +1480,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     if (touched) {
                         padHandler.showMixerDisplay(index, name);
                     } else {
+                        suppressDrumMeterDisplay();
                         oled.clearScreenDelayed();
                     }
                 });

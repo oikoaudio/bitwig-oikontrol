@@ -15,6 +15,11 @@ public final class VuMeterFormatter {
         return formatDb(value, false);
     }
 
+    public static String meterPairLine(final int peakValue, final int rmsValue) {
+        final String line = "%s | %s".formatted(meterValueShort(peakValue), meterValueShort(rmsValue));
+        return line.length() <= 20 ? line : line.replace(" | ", "|");
+    }
+
     public static String formatDb(final int value, final boolean includeUnit) {
         final double db = valueToDb(value);
         final String suffix = includeUnit ? " dB" : "";

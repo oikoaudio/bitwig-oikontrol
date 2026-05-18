@@ -26,4 +26,9 @@ class VuMeterFormatterTest {
         assertEquals(20, VuMeterFormatter.meterHeight(64, 40));
         assertEquals(40, VuMeterFormatter.meterHeight(999, 40));
     }
+
+    @Test
+    void meterPairLineFitsOledTextWidth() {
+        assertEquals("+0.0 | -6.0", VuMeterFormatter.meterPairLine(127, 64));
+    }
 }

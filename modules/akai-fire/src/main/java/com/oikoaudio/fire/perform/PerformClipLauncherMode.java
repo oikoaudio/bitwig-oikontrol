@@ -84,7 +84,7 @@ public class PerformClipLauncherMode extends Layer {
     private static final int SCENE_ROW = 0;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
-    private static final int METER_REFRESH_TICKS = 5;
+    private static final int METER_REFRESH_TICKS = 2;
     private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
     private static final long METER_MODE_INFO_SUPPRESS_MS = 1200;
     private static final String SELECTED_TRACK_METER_LEGEND = "Peak        | RMS";
@@ -1275,16 +1275,9 @@ public class PerformClipLauncherMode extends Layer {
             selectedTrackMeterTextInitialized = true;
         }
         oled.sendString(2, OledDisplay.TextJustification.LEFT, 1,
-                meterPairLine(maxPeak, maxRms));
+                VuMeterFormatter.meterPairLine(maxPeak, maxRms));
         oled.sendString(2, OledDisplay.TextJustification.LEFT, 4,
-                meterPairLine(currentPeak, currentRms));
-    }
-
-    private static String meterPairLine(final int peakValue, final int rmsValue) {
-        final String line = "%s | %s".formatted(
-                VuMeterFormatter.meterValueShort(peakValue),
-                VuMeterFormatter.meterValueShort(rmsValue));
-        return line.length() <= 20 ? line : line.replace(" | ", "|");
+                VuMeterFormatter.meterPairLine(currentPeak, currentRms));
     }
 
     private int[] visibleTrackMeterValues() {

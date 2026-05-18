@@ -32,6 +32,8 @@ public class DrumPadHandler {
     private static final int DRUM_PAD_BUTTON_OFFSET = 16;
     private static final int PAD_NOTE_BASE = 0x36;
     private static final int VISIBLE_PAD_COUNT = 16;
+    private static final String SELECTED_PAD_METER_LEGEND = "Peak        | RMS";
+    private static final String MIXER_ENCODER_FOOTER = "Vol  Pan  S1  S2";
 
     final DrumSequenceMode parent;
     private final AkaiFireOikontrolExtension driver;
@@ -58,12 +60,18 @@ public class DrumPadHandler {
     private final Integer[] notesToDrumTable = new Integer[128];
     private final int[] notesToPadsTable = new int[128];
     private final int[] padNotes = new int[16];
+    private final int[] padPeakMeters = new int[16];
     private final int[] padRmsMeters = new int[16];
     private final DisplayTarget displayTarget;
     private final DisplayInfo padDisplayInfo;
     private final Set<Layer> parameterBoundLayers = new HashSet<>();
     private final Set<Layer> macroBoundLayers = new HashSet<>();
     private final Set<Layer> macroShiftBoundLayers = new HashSet<>();
+    private int selectedMeterPadIndex = -1;
+    private int selectedPadPeakMax = 0;
+    private int selectedPadRmsMax = 0;
+    private boolean selectedPadMeterTextInitialized = false;
+    private boolean mixerEncoderFooterVisible = false;
 
     public DrumPadHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
                       final Layer muteLayer, final Layer soloLayer, final NoteRepeatHandler noteRepeatHandler) {
@@ -94,7 +102,8 @@ public class DrumPadHandler {
             final DrumPad drumPad = control.getDrumPadBank().getItemAt(i);
             final PadContainer pad = new PadContainer(this, i, drumPad, playing[i]);
             final int padIndex = i;
-            drumPad.addVuMeterObserver(VuMeterFormatter.RANGE, -1, false, value -> padRmsMeters[padIndex] = value);
+            drumPad.addVuMeterObserver(VuMeterFormatter.RANGE, -1, true, value -> handlePeakMeterChanged(padIndex, value));
+            drumPad.addVuMeterObserver(VuMeterFormatter.RANGE, -1, false, value -> handleRmsMeterChanged(padIndex, value));
 
             bindMain(button, mainLayer, pad);
             button.bind(muteLayer, () -> {
@@ -129,6 +138,20 @@ public class DrumPadHandler {
     private void bindMain(final RgbButton button, final Layer mainLayer, final PadContainer pad) {
         pads.add(pad);
         button.bindPressed(mainLayer, p -> handlePadSelection(pad, p), pad::getColor);
+    }
+
+    private void handlePeakMeterChanged(final int padIndex, final int value) {
+        padPeakMeters[padIndex] = value;
+        if (padIndex == selectedMeterPadIndex) {
+            selectedPadPeakMax = Math.max(selectedPadPeakMax, value);
+        }
+    }
+
+    private void handleRmsMeterChanged(final int padIndex, final int value) {
+        padRmsMeters[padIndex] = value;
+        if (padIndex == selectedMeterPadIndex) {
+            selectedPadRmsMax = Math.max(selectedPadRmsMax, value);
+        }
     }
 
     RgbLigthState trackColor() {
@@ -244,6 +267,7 @@ public class DrumPadHandler {
         selectedPad = pad;
         focusOnSelectedPad();
         selectedPadIndex = pad.getIndex();
+        selectMeterPad(selectedPadIndex, true);
 
         displayTarget.setFocusIndex(selectedPadIndex);
         displayTarget.setName(selectedPad.getName());
@@ -486,16 +510,97 @@ public class DrumPadHandler {
     }
 
     public void showMixerDisplay(final int typeIndex, final String fallbackLabel) {
+        parent.suppressDrumMeterDisplay();
         if (selectedPad == null) {
-            parent.getOled().valueInfo("Mixer", "Select Pad");
+            showMixerValue("Mixer", "Select Pad");
             return;
         }
-        parent.getOled().valueInfo(selectedPad.mixerName(typeIndex, fallbackLabel),
+        showMixerValue(selectedPad.mixerName(typeIndex, fallbackLabel),
                 selectedPad.mixerDisplayedValue(typeIndex));
     }
 
     public void showDrumPadMeterDisplay() {
+        resetSelectedPadMeterText();
         parent.getOled().sendImage(OledMeterRenderer.verticalMeters(padRmsMeters, VISIBLE_PAD_COUNT));
+    }
+
+    public void showSelectedPadMeterDisplay() {
+        if (selectedPad == null || selectedPadIndex < 0 || selectedPadIndex >= VISIBLE_PAD_COUNT) {
+            resetSelectedPadMeterText();
+            parent.getOled().clearScreen();
+            parent.getOled().detailInfo("Mixer", "Select Pad");
+            return;
+        }
+        selectMeterPad(selectedPadIndex, false);
+        final int currentPeak = padPeakMeters[selectedMeterPadIndex];
+        final int currentRms = padRmsMeters[selectedMeterPadIndex];
+        if (!selectedPadMeterTextInitialized) {
+            clearSelectedPadMeterRows();
+            parent.getOled().sendString(0, TextJustification.LEFT, 0, SELECTED_PAD_METER_LEGEND);
+            paintMixerEncoderFooter();
+            selectedPadMeterTextInitialized = true;
+        }
+        parent.getOled().sendString(2, TextJustification.LEFT, 1,
+                VuMeterFormatter.meterPairLine(selectedPadPeakMax, selectedPadRmsMax));
+        parent.getOled().sendString(2, TextJustification.LEFT, 4,
+                VuMeterFormatter.meterPairLine(currentPeak, currentRms));
+    }
+
+    public void resetSelectedPadMeterDisplay() {
+        resetSelectedPadMeterText();
+    }
+
+    private void showMixerValue(final String title, final String value) {
+        if (mixerEncoderFooterVisible) {
+            clearRowsAboveMixerEncoderFooter();
+            selectedPadMeterTextInitialized = false;
+            paintMixerEncoderFooter();
+        } else {
+            resetSelectedPadMeterText();
+            parent.getOled().clearScreen();
+        }
+        parent.getOled().valueInfoNoClear(title, value);
+    }
+
+    private void clearSelectedPadMeterRows() {
+        if (mixerEncoderFooterVisible) {
+            clearRowsAboveMixerEncoderFooter();
+            return;
+        }
+        parent.getOled().clearScreen();
+    }
+
+    private void clearRowsAboveMixerEncoderFooter() {
+        parent.getOled().sendString(2, TextJustification.LEFT, 0, "                    ");
+        parent.getOled().sendString(2, TextJustification.LEFT, 1, "                    ");
+        parent.getOled().sendString(3, TextJustification.LEFT, 2, "                    ");
+        parent.getOled().sendString(2, TextJustification.LEFT, 4, "                    ");
+        for (int row = 0; row < 7; row++) {
+            parent.getOled().sendString(0, TextJustification.LEFT, row, "                    ");
+        }
+    }
+
+    private void paintMixerEncoderFooter() {
+        parent.getOled().sendString(0, TextJustification.LEFT, 7, MIXER_ENCODER_FOOTER);
+        mixerEncoderFooterVisible = true;
+    }
+
+    private void resetSelectedPadMeterText() {
+        selectedPadMeterTextInitialized = false;
+        mixerEncoderFooterVisible = false;
+    }
+
+    private void selectMeterPad(final int padIndex, final boolean resetMax) {
+        if (padIndex < 0 || padIndex >= VISIBLE_PAD_COUNT) {
+            return;
+        }
+        final boolean changed = padIndex != selectedMeterPadIndex;
+        selectedMeterPadIndex = padIndex;
+        if (resetMax || changed) {
+            selectedPadPeakMax = padPeakMeters[padIndex];
+            selectedPadRmsMax = padRmsMeters[padIndex];
+            selectedPadMeterTextInitialized = false;
+        }
     }
 
     public void bindPadParameters(final Layer layer) {
