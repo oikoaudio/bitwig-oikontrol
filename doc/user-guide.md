@@ -219,7 +219,7 @@ Hold one or more step pads, then use the timing gestures to move those held note
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 
-In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
+In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this, while `ALT + BANK LEFT/RIGHT` still undo/redo Bitwig project history. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
 ### Nested Rhythm mode
 
@@ -287,6 +287,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `ALT + NOTE` | Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input |
 | `STEP` | Enter `Melodic Step`; press again for `Chord Step` |
 | `BANK LEFT/RIGHT` | Shared octave down / up |
+| `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
 | `MUTE_3` | Note Repeat toggle |
@@ -449,6 +450,7 @@ For immediate derived-line feedback, change source expression from the controlle
 | `MUTE_4` + pad | Delete |
 | `BANK LEFT/RIGHT` | Scroll tracks by visible page |
 | `SHIFT + BANK LEFT/RIGHT` | Scroll tracks by one |
+| `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Launcher encoder pages |

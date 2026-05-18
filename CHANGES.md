@@ -16,6 +16,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
 - Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
 - `SHIFT + NOTE` now toggles Bitwig record quantization off and back to the previous grid, defaulting to `1/16`.
+- `ALT + BANK LEFT/RIGHT` now triggers Bitwig undo/redo in Launcher, Mix, Note, Harmonic, and Drum Pads modes.
 
 ## [2.15.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.1...oikontrol-v2.15.0) (2026-05-18)
 

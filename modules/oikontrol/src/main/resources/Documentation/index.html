@@ -359,7 +359,7 @@
       </table>
       <p>Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.</p>
       <p>Hold <code>MUTE_3</code> and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.</p>
-      <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; <code>BANK LEFT/RIGHT</code> reminds you to use Pattern for this. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: velocity center. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
+      <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; <code>BANK LEFT/RIGHT</code> reminds you to use Pattern for this, while <code>ALT + BANK LEFT/RIGHT</code> still undo/redo Bitwig project history. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: velocity center. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
       <h3>Nested Rhythm mode</h3>
       <p><code>Nested Rhythm</code> is the second <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>
       <p>Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press <code>PATTERN DOWN</code> to overwrite and claim the clip for Nested Rhythm editing.</p>
@@ -421,6 +421,7 @@
           <tr><td><code>ALT + NOTE</code></td><td>Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input</td></tr>
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code>; press again for <code>Chord Step</code></td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Shared octave down / up</td></tr>
+          <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Undo / redo Bitwig project history</td></tr>
           <tr><td><code>MUTE_1</code></td><td>Sustain</td></tr>
           <tr><td><code>MUTE_2</code></td><td>Sostenuto</td></tr>
           <tr><td><code>MUTE_3</code></td><td>Note Repeat toggle</td></tr>
@@ -586,6 +587,7 @@
           <tr><td><code>MUTE_4</code> + pad</td><td>Delete</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Scroll tracks by visible page</td></tr>
           <tr><td><code>SHIFT + BANK LEFT/RIGHT</code></td><td>Scroll tracks by one</td></tr>
+          <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Undo / redo Bitwig project history</td></tr>
           <tr><td><code>PATTERN UP/DOWN</code></td><td>Scroll scenes by visible page</td></tr>
           <tr><td><code>SHIFT + PATTERN UP/DOWN</code></td><td>Scroll scenes by one</td></tr>
           <tr><td><code>KNOB MODE</code></td><td>Cycle Launcher encoder pages</td></tr>

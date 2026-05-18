@@ -1027,6 +1027,9 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handleTrackScroll(final boolean pressed, final int direction) {
+        if (driver.handleGlobalUndoRedoBankButton(pressed, direction)) {
+            return;
+        }
         if (pressed) {
             suppressMixMeterDisplay();
         }

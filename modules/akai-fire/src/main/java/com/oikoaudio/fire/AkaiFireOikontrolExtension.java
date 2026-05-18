@@ -5,6 +5,7 @@ import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.control.UndoRedoBankButtonHandler;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.fugue.FugueStepMode;
@@ -239,6 +240,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         focusedParameter.displayedValue().markInterested();
         focusedParameter.value().markInterested();
         application = host.createApplication();
+        application.canUndo().markInterested();
+        application.canRedo().markInterested();
         arranger = host.createArranger();
         detailEditor = host.createDetailEditor();
         groove = host.createGroove();
@@ -1956,6 +1959,30 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public boolean isGlobalShiftHeld() {
         final BiColorButton button = getButton(NoteAssign.SHIFT);
         return button != null ? button.isPressed() : shiftActive.get();
+    }
+
+    public boolean handleGlobalUndoRedoBankButton(final boolean pressed, final int amount) {
+        final UndoRedoBankButtonHandler.Action action =
+                UndoRedoBankButtonHandler.actionFor(pressed, amount, isGlobalAltHeld());
+        if (action == UndoRedoBankButtonHandler.Action.NONE) {
+            return false;
+        }
+        if (action == UndoRedoBankButtonHandler.Action.UNDO) {
+            if (application.canUndo().get()) {
+                application.undo();
+                notifyAction("Undo", "Project");
+            } else {
+                notifyAction("Undo", "None");
+            }
+            return true;
+        }
+        if (application.canRedo().get()) {
+            application.redo();
+            notifyAction("Redo", "Project");
+        } else {
+            notifyAction("Redo", "None");
+        }
+        return true;
     }
 
     public void refreshGlobalSettingsOverlayState() {

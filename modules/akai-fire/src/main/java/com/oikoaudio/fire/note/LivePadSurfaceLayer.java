@@ -1125,6 +1125,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {
+        if (driver.handleGlobalUndoRedoBankButton(pressed, amount)) {
+            return;
+        }
         if (!pressed) {
             return;
         }
