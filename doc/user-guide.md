@@ -162,6 +162,7 @@ Global `SELECT` turn chords:
 
 | Control | Action |
 | --- | --- |
+| Hold `SHIFT` + turn `SELECT` | Move the playback start by the current arranger grid resolution |
 | Hold `PATTERN` + turn `SELECT` | Move the play position by the current meter's beat unit |
 | Hold `SHIFT + PATTERN` + turn `SELECT` | Move the play position by fine 1/16-beat steps |
 | Hold `ALT` + turn `SELECT` | Zoom the arranger/detail timeline horizontally |
@@ -174,7 +175,6 @@ Global `SELECT` turn chords:
 | `Tempo` | Adjust project tempo | None |
 | `Note Repeat` | Select repeat division; `Off` disables repeat | Active repeat control |
 | `Track Select` | Previous / next track | Hold while turning to jump by visible pages |
-| `Playback Start` | Move the playback start by the current arranger grid resolution | None |
 | `Drum Grid` | Drum-step grid resolution | `DRUM` mode only |
 
 ### DRUM Mode
@@ -561,7 +561,6 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`
-- `SELECT Encoder`
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`

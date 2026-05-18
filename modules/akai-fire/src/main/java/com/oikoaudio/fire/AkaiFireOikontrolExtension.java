@@ -2294,21 +2294,38 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean handleMainEncoderGlobalChord(final int inc) {
-        if (inc == 0 || isPopupBrowserActive()) {
-            return false;
-        }
-        if (patternPressed) {
-            patternGestureConsumed = true;
-            adjustTransportPositionByGrid(inc, isGlobalShiftHeld());
-            return true;
-        }
-        if (isGlobalAltHeld()) {
-            if (isGlobalShiftHeld()) {
-                zoomTimelineVertically(inc);
-            } else {
-                zoomTimelineHorizontally(inc);
+        final MainEncoderGlobalChord.Action action = MainEncoderGlobalChord.resolve(
+                inc,
+                isPopupBrowserActive(),
+                patternPressed,
+                isGlobalShiftHeld(),
+                isGlobalAltHeld());
+        switch (action) {
+            case PLAYBACK_START_GRID -> {
+                adjustPlaybackStartPositionByGrid(inc);
+                return true;
             }
-            return true;
+            case PLAY_POSITION_GRID -> {
+                patternGestureConsumed = true;
+                adjustTransportPositionByGrid(inc, false);
+                return true;
+            }
+            case PLAY_POSITION_FINE -> {
+                patternGestureConsumed = true;
+                adjustTransportPositionByGrid(inc, true);
+                return true;
+            }
+            case TIMELINE_ZOOM_HORIZONTAL -> {
+                zoomTimelineHorizontally(inc);
+                return true;
+            }
+            case TIMELINE_ZOOM_VERTICAL -> {
+                zoomTimelineVertically(inc);
+                return true;
+            }
+            case NONE -> {
+                return false;
+            }
         }
         return false;
     }
