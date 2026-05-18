@@ -53,11 +53,41 @@ class PerformTrackControlOverlayTest {
     @Test
     void patternSceneNavigationIsUnlitInMix() {
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 1, true));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 1, false));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, -1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, -1, true));
+    }
+
+    @Test
+    void mixDevicePadsMapRowsToFirstFourTrackDevices() {
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(0));
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(15));
+        assertEquals(1, PerformClipLauncherMode.mixDeviceIndexForPad(16));
+        assertEquals(2, PerformClipLauncherMode.mixDeviceIndexForPad(32));
+        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForPad(48));
+    }
+
+    @Test
+    void mixDevicePadColorShowsEnabledState() {
+        final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
+
+        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixDevicePadColor(trackColor, true));
+        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false));
+    }
+
+    @Test
+    void mixDevicePadActionTitlesDistinguishSelectFromAltToggle() {
+        assertEquals("Device Select", PerformClipLauncherMode.mixDeviceActionTitle(false, true));
+        assertEquals("Device On", PerformClipLauncherMode.mixDeviceActionTitle(true, true));
+        assertEquals("Device Off", PerformClipLauncherMode.mixDeviceActionTitle(true, false));
     }
 
 }

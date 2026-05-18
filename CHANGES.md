@@ -8,7 +8,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - `SHIFT + PERFORM` is now presented as the Mix page, and its track-select pads use the corresponding Bitwig track colors.
 - The Mix page `MUTE_1`-`MUTE_4` buttons now jump to arrangement boundaries and clear project solo/mute states instead of acting as clip modifiers.
 - The Mix page status LEDs near `MUTE_2` and `MUTE_3` now mirror the project solo/mute indicators.
-- `PATTERN UP/DOWN` no longer scroll scenes while Mix is active, and launcher orientation labels are now `LauncherV`/`LauncherH`.
+- The Akai Fire Mix page now uses `PATTERN DOWN` / `PATTERN UP` to enter and leave a device-centered view of the first four devices on each visible track, with plain pads selecting devices and showing device names on the OLED, `ALT + pad` toggling bypass, and encoders focusing selected-device remotes while the view is active.
+- Mix no longer uses `PATTERN UP/DOWN` for scene scrolling, and launcher orientation labels are now `LauncherV`/`LauncherH`.
 - Launcher and Mix OLED idle screens now show visible-track RMS meters as vertical bars, and the Mix page's Mixer encoder page shows selected-track RMS and peak max/current values.
 - Drum XOX now shows visible Drum Machine pad-chain RMS meters as vertical bars on the idle OLED, with selected-pad Peak/RMS max/current values on the Mixer encoder page.
 - Akai Fire OLED graphics now send only changed 8-pixel pages, allowing meter displays to refresh about every 100 ms without full-frame redraws, and bar meters show a slowly decaying held-peak marker plus a bottom dash for muted lanes.
