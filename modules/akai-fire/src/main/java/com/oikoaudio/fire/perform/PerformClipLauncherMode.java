@@ -2,6 +2,7 @@ package com.oikoaudio.fire.perform;
 
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.Device;
@@ -108,9 +109,11 @@ public class PerformClipLauncherMode extends Layer {
     private final OledDisplay oled;
     private final TrackBank trackBank;
     private final CursorTrack cursorTrack;
+    private final CursorTrack remoteCursorTrack;
     private final CursorRemoteControlsPage projectRemoteControls;
     private final CursorRemoteControlsPage trackRemoteControls;
     private final CursorRemoteControlsPage deviceRemoteControls;
+    private final PinnableCursorDevice remoteCursorDevice;
     private final Project project;
     private final PinnableCursorClip performCursorClip;
 
@@ -146,6 +149,8 @@ public class PerformClipLauncherMode extends Layer {
     private int selectedSceneIndex = -1;
     private int selectedMeterSourceIndex = -1;
     private int selectedMeterAbsoluteIndex = -1;
+    private int selectedRemoteTrackIndex = -1;
+    private int selectedRemoteDeviceIndex = -1;
     private int selectedTrackRmsMax = 0;
     private int selectedTrackPeakMax = 0;
     private int lastMeterDisplayBlink = Integer.MIN_VALUE;
@@ -178,13 +183,29 @@ public class PerformClipLauncherMode extends Layer {
         this.oled = driver.getOled();
         this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES, true);
         this.cursorTrack = driver.getViewControl().getCursorTrack();
+        this.remoteCursorTrack = host.createCursorTrack("PERFORM_REMOTE_TRACK", "Perform Remote Track", 8, 0, true);
         this.project = host.getProject();
         this.project.hasSoloedTracks().markInterested();
         this.project.hasMutedTracks().markInterested();
         this.projectRemoteControls = project.getRootTrackGroup().createCursorRemoteControlsPage(8);
-        this.trackRemoteControls = cursorTrack.createCursorRemoteControlsPage(8);
-        final PinnableCursorDevice selectedDevice = driver.getViewControl().getSelectedDevice();
-        this.deviceRemoteControls = selectedDevice.createCursorRemoteControlsPage(8);
+        this.remoteCursorTrack.position().markInterested();
+        this.trackRemoteControls = remoteCursorTrack.createCursorRemoteControlsPage(8);
+        this.remoteCursorDevice = remoteCursorTrack.createCursorDevice("PERFORM_REMOTE_DEVICE", "Perform Remote Device",
+                8, CursorDeviceFollowMode.FOLLOW_SELECTION);
+        this.remoteCursorDevice.exists().markInterested();
+        this.remoteCursorDevice.position().markInterested();
+        this.remoteCursorTrack.position().addValueObserver(position -> selectedRemoteTrackIndex = position);
+        this.remoteCursorDevice.position().addValueObserver(position -> selectedRemoteDeviceIndex = position);
+        this.remoteCursorDevice.exists().addValueObserver(exists -> {
+            if (!exists) {
+                selectedRemoteDeviceIndex = -1;
+            }
+        });
+        this.selectedRemoteTrackIndex = this.remoteCursorTrack.position().get();
+        this.selectedRemoteDeviceIndex = this.remoteCursorDevice.exists().get()
+                ? this.remoteCursorDevice.position().get()
+                : -1;
+        this.deviceRemoteControls = this.remoteCursorDevice.createCursorRemoteControlsPage(8);
         this.performCursorClip = cursorTrack.createLauncherCursorClip("PERFORM_CURSOR", "PERFORM_CURSOR", 64, 128);
 
         this.channelLayer = new Layer(driver.getLayers(), "PERFORM_ENC_CHANNEL");
@@ -765,6 +786,10 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         trackAddress.track().selectInMixer();
+        trackAddress.track().selectInEditor();
+        remoteCursorDevice.selectDevice(device);
+        selectedRemoteTrackIndex = trackAddress.absoluteIndex();
+        selectedRemoteDeviceIndex = deviceIndex;
         device.selectInEditor();
         showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()), mixDeviceName(trackAddress, deviceIndex));
     }
@@ -1926,7 +1951,8 @@ public class PerformClipLauncherMode extends Layer {
         if (device == null || !device.exists().get()) {
             return RgbLigthState.OFF;
         }
-        return mixDevicePadColor(trackColor(trackAddress.sourceIndex()), device.isEnabled().get());
+        return mixDevicePadColor(trackColor(trackAddress.sourceIndex()), device.isEnabled().get(),
+                isMixDeviceSelected(trackAddress, deviceIndex));
     }
 
     static RgbLigthState mixSelectPadColor(final RgbLigthState trackColor, final boolean selected,
@@ -1942,8 +1968,15 @@ public class PerformClipLauncherMode extends Layer {
         return row >= 0 && row < MIX_DEVICE_ROWS ? row : -1;
     }
 
-    static RgbLigthState mixDevicePadColor(final RgbLigthState trackColor, final boolean enabled) {
-        return enabled ? trackColor.getBrightest() : trackColor.getDimmed();
+    static RgbLigthState mixDevicePadColor(final RgbLigthState trackColor, final boolean enabled,
+                                           final boolean selected) {
+        if (selected && enabled) {
+            return trackColor.getBrightest();
+        }
+        if (selected) {
+            return trackColor.getSoftDimmed();
+        }
+        return enabled ? trackColor : trackColor.getDimmed();
     }
 
     static String mixDeviceActionTitle(final boolean altHeld, final boolean enabled) {
@@ -1990,6 +2023,12 @@ public class PerformClipLauncherMode extends Layer {
 
     private boolean isTrackSelected(final TrackAddress trackAddress) {
         return selectedVisibleTracks[trackAddress.sourceIndex()];
+    }
+
+    private boolean isMixDeviceSelected(final TrackAddress trackAddress, final int deviceIndex) {
+        return remoteCursorDevice.exists().get()
+                && selectedRemoteTrackIndex == trackAddress.absoluteIndex()
+                && selectedRemoteDeviceIndex == deviceIndex;
     }
 
     private RgbLigthState settingsLogoState(final int padIndex) {

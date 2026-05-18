@@ -79,8 +79,10 @@ class PerformTrackControlOverlayTest {
     void mixDevicePadColorShowsEnabledState() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 
-        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixDevicePadColor(trackColor, true));
-        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false));
+        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixDevicePadColor(trackColor, true, true));
+        assertEquals(trackColor, PerformClipLauncherMode.mixDevicePadColor(trackColor, true, false));
+        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false, false));
+        assertEquals(trackColor.getSoftDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false, true));
     }
 
     @Test
