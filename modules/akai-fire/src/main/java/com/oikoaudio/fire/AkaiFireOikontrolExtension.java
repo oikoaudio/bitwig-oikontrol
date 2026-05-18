@@ -74,17 +74,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final String ACTION_JUMP_TO_END_OF_ARRANGEMENT = "jump_to_end_of_arrangement";
     private static final String RECORD_QUANTIZATION_OFF = "OFF";
     private static final String RECORD_QUANTIZATION_DEFAULT_ON = "1/16";
-    private static final double[] ARRANGER_GRID_ZOOM_LIMITS = {
-            8.8, 27.94, 279.11, 661.61, 1176.20, 2091.03, 4956.52, 8811.59,
-            20886.75, 37132.00, 66012.45, 156473.96, 278175.93, 600000.0, 800000.0
-    };
-    private static final double[] ARRANGER_GRID_STEPS = {
-            1.0, 1.0 / 4.0, 1.0 / 16.0, 1.0 / 32.0, 1.0 / 64.0, 1.0 / 128.0,
-            1.0 / 256.0, 1.0 / 512.0, 1.0 / 1024.0, 1.0 / 2048.0,
-            1.0 / 4096.0, 1.0 / 8192.0, 1.0 / 16384.0, 1.0 / 32768.0,
-            1.0 / 65536.0
-    };
-
     private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
     private Application application;
@@ -1492,19 +1481,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private double currentArrangementGridResolution() {
         if (arranger == null || !arranger.getHorizontalScrollbarModel().isZoomable()) {
-            return Math.max(0.125, 4.0 / Math.max(1, transportTimeSignatureDenominator));
+            return ArrangerGridStep.fallbackBeatStep(transportTimeSignatureDenominator);
         }
         final double contentPerPixel = arranger.getHorizontalScrollbarModel().getContentPerPixel().get();
-        if (contentPerPixel <= 0.0) {
-            return Math.max(0.125, 4.0 / Math.max(1, transportTimeSignatureDenominator));
-        }
-        final double inverseContentPerPixel = 1.0 / contentPerPixel;
-        for (int i = 0; i < ARRANGER_GRID_ZOOM_LIMITS.length; i++) {
-            if (inverseContentPerPixel < ARRANGER_GRID_ZOOM_LIMITS[i]) {
-                return ARRANGER_GRID_STEPS[i];
-            }
-        }
-        return ARRANGER_GRID_STEPS[ARRANGER_GRID_STEPS.length - 1];
+        return ArrangerGridStep.fromContentPerPixel(
+                contentPerPixel,
+                transportTimeSignatureNumerator,
+                transportTimeSignatureDenominator);
     }
 
     public boolean isStepSeqPadAuditionEnabled() {
