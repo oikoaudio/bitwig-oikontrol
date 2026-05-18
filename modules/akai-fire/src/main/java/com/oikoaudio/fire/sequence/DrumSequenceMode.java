@@ -34,6 +34,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
+    private static final int METER_REFRESH_TICKS = 5;
+    private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
 
     private final OledDisplay oled;
 
@@ -98,6 +100,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private double defaultTimbre = 0.0;
     private final EncoderBankLayout encoderBankLayout;
     private boolean selectedClipHasContent = false;
+    private boolean active = false;
+    private boolean drumMeterDisplayActive = false;
+    private int lastMeterDisplayBlink = Integer.MIN_VALUE;
+    private long drumMeterSuppressedUntilMs = 0;
 
     public DrumSequenceMode(final AkaiFireOikontrolExtension driver, final NoteRepeatHandler noteRepeatHandler) {
 
@@ -623,6 +629,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         driver.markMainEncoderTurned();
+        suppressDrumMeterDisplay();
         if (driver.handleMainEncoderGlobalChord(inc)) {
             return;
         }
@@ -802,6 +809,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             driver.routeBrowserMainEncoderPress(press);
             return;
         }
+        suppressDrumMeterDisplay();
         driver.setMainEncoderPressed(press);
         if (press && isAltHeld()) {
             mainEncoderPressConsumed = true;
@@ -867,6 +875,41 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         blinkState = blinkTicks;
         if (clipHandler != null)
         clipHandler.notifyBlink(blinkTicks);
+        refreshDrumMetersIfVisible(blinkTicks);
+    }
+
+    public boolean showIdleInfoIfNeeded() {
+        if (!shouldShowDrumMeters()) {
+            return false;
+        }
+        padHandler.showDrumPadMeterDisplay();
+        drumMeterDisplayActive = true;
+        lastMeterDisplayBlink = blinkState;
+        return true;
+    }
+
+    public void suppressDrumMeterDisplay() {
+        drumMeterDisplayActive = false;
+        drumMeterSuppressedUntilMs = System.currentTimeMillis() + METER_DISPLAY_SUPPRESS_MS;
+    }
+
+    private void refreshDrumMetersIfVisible(final int blinkTicks) {
+        if (!shouldShowDrumMeters()) {
+            drumMeterDisplayActive = false;
+            return;
+        }
+        if (System.currentTimeMillis() < drumMeterSuppressedUntilMs) {
+            return;
+        }
+        if (drumMeterDisplayActive && blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
+            padHandler.showDrumPadMeterDisplay();
+            lastMeterDisplayBlink = blinkTicks;
+        }
+    }
+
+    private boolean shouldShowDrumMeters() {
+        return active && !shiftActive.get() && !muteMode.get() && !soloMode.get()
+                && !selectHeld.get() && !copyHeld.get() && !deleteHeld.get();
     }
 
     public OledDisplay getOled() {
@@ -1189,6 +1232,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @Override
     protected void onActivate() {
+        active = true;
+        suppressDrumMeterDisplay();
         currentLayer = mainLayer;
         bindPatternButtons(driver);
         mainLayer.activate();
@@ -1203,6 +1248,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @Override
     protected void onDeactivate() {
+        active = false;
+        drumMeterDisplayActive = false;
         currentLayer.deactivate();
         shiftLayer.deactivate();
         encoderLayer.deactivate();

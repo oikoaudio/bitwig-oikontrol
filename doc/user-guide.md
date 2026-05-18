@@ -181,6 +181,8 @@ Global `SELECT` turn chords:
 
 `Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, Drum XOX focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, Drum XOX follows the selected drum context.
 
+When Drum XOX is idle, the OLED shows vertical RMS meters for the 16 visible Drum Machine pad chains.
+
 | Pad row | Role |
 | --- | --- |
 | Row 1 | Clip slots |
@@ -454,6 +456,8 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + PERFORM` | Toggle latched Mix pad page |
 
 The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. On the select row, hold `ALT` and press a pad to stop that track. While the Mix page is active, `MUTE_1` jumps to the loop start or project start, `MUTE_2` and its nearby status LED light when any track is soloed and clear all solos, `MUTE_3` and its nearby status LED light when any track is muted and clear all mutes, and `MUTE_4` jumps to the loop end or zooms the arranger to the full project and jumps to the project end. `PATTERN UP/DOWN` are inactive on Mix, since scenes are not visible there. `KNOB MODE` still cycles the Launcher encoder pages while the Mix pad page is active.
+
+When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
 
 Hold `REC` and press a pad to target recording directly into that visible slot. For fixed `Default Clip Length` values, the script sets Bitwig's clip launcher post-record action to play the recorded clip after that length. If `Default Clip Length` is set to `Off`, recording continues until manually stopped without post-processing. If it is set to `Round`, recording continues until manually stopped, then the recorded clip loop length is rounded to the nearest whole bar. Press `REC` again to end an `Off` or `Round` launcher recording and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 

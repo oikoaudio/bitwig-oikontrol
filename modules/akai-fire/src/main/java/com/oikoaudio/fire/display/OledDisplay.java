@@ -98,6 +98,7 @@ public class OledDisplay {
 	}
 
 	public void detailInfo(final String title, final String lines) {
+		clearScreen();
 		final String[] line = lines.split("\\n");
 		sendString(1, TextJustification.CENTER, 0, title);
 		for (int i = 0; i < 7; i++) {
@@ -107,6 +108,7 @@ public class OledDisplay {
 	}
 
 	public void lineInfo(final String title, final String lines) {
+		clearScreen();
 		final String[] line = lines.split("\\n");
 		sendString(2, TextJustification.CENTER, 0, title);
 		for (int i = 0; i < 3; i++) {
@@ -190,6 +192,11 @@ public class OledDisplay {
 	}
 
 	public void valueInfo(final String title, final String value) {
+		clearScreen();
+		valueInfoNoClear(title, value);
+	}
+
+	public void valueInfoNoClear(final String title, final String value) {
 		sendString(2, TextJustification.CENTER, 0, title);
 		sendString(3, TextJustification.CENTER, 2, value);
 		sendString(5, TextJustification.CENTER, 5, "");

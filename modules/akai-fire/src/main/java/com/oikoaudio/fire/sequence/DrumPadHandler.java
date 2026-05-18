@@ -7,7 +7,9 @@ import com.oikoaudio.fire.ViewCursorControl;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.DisplayTarget;
+import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay.TextJustification;
+import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteAction.Type;
@@ -29,6 +31,7 @@ import java.util.Set;
 public class DrumPadHandler {
     private static final int DRUM_PAD_BUTTON_OFFSET = 16;
     private static final int PAD_NOTE_BASE = 0x36;
+    private static final int VISIBLE_PAD_COUNT = 16;
 
     final DrumSequenceMode parent;
     private final AkaiFireOikontrolExtension driver;
@@ -55,6 +58,7 @@ public class DrumPadHandler {
     private final Integer[] notesToDrumTable = new Integer[128];
     private final int[] notesToPadsTable = new int[128];
     private final int[] padNotes = new int[16];
+    private final int[] padRmsMeters = new int[16];
     private final DisplayTarget displayTarget;
     private final DisplayInfo padDisplayInfo;
     private final Set<Layer> parameterBoundLayers = new HashSet<>();
@@ -85,9 +89,12 @@ public class DrumPadHandler {
         displayTarget = new DisplayTarget(parent.getOled());
 
         final RgbButton[] rgbButtons = driver.getRgbButtons();
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < VISIBLE_PAD_COUNT; i++) {
             final RgbButton button = rgbButtons[i + DRUM_PAD_BUTTON_OFFSET];
-            final PadContainer pad = new PadContainer(this, i, control.getDrumPadBank().getItemAt(i), playing[i]);
+            final DrumPad drumPad = control.getDrumPadBank().getItemAt(i);
+            final PadContainer pad = new PadContainer(this, i, drumPad, playing[i]);
+            final int padIndex = i;
+            drumPad.addVuMeterObserver(VuMeterFormatter.RANGE, -1, false, value -> padRmsMeters[padIndex] = value);
 
             bindMain(button, mainLayer, pad);
             button.bind(muteLayer, () -> {
@@ -132,6 +139,9 @@ public class DrumPadHandler {
     }
 
     private void handlePadSelection(final PadContainer pad, final boolean pressed) {
+        if (pressed) {
+            parent.suppressDrumMeterDisplay();
+        }
         if (!pressed) {
             padsHeld.remove(pad.index);
         } else {
@@ -398,6 +408,7 @@ public class DrumPadHandler {
         if (!pressed) {
             return;
         }
+        parent.suppressDrumMeterDisplay();
         if (parent.isShiftHeld()) {
             padBank.scrollBy(4);
         } else {
@@ -409,6 +420,7 @@ public class DrumPadHandler {
         if (!pressed) {
             return;
         }
+        parent.suppressDrumMeterDisplay();
         if (parent.isShiftHeld()) {
 
             padBank.scrollBy(-4);
@@ -480,6 +492,10 @@ public class DrumPadHandler {
         }
         parent.getOled().valueInfo(selectedPad.mixerName(typeIndex, fallbackLabel),
                 selectedPad.mixerDisplayedValue(typeIndex));
+    }
+
+    public void showDrumPadMeterDisplay() {
+        parent.getOled().sendImage(OledMeterRenderer.verticalMeters(padRmsMeters, VISIBLE_PAD_COUNT));
     }
 
     public void bindPadParameters(final Layer layer) {

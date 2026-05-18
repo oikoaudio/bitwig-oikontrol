@@ -1604,6 +1604,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showIdleOledInfo() {
+        if (modeState.activeMode() == Mode.PERFORM && performMode != null && performMode.showIdleInfoIfNeeded()) {
+            return;
+        }
+        if (modeState.activeMode() == Mode.DRUM
+                && activeDrumSubMode == DrumSubMode.STANDARD
+                && drumSequenceMode != null
+                && drumSequenceMode.showIdleInfoIfNeeded()) {
+            return;
+        }
         final Parameter parameter = getLastClickedParameter();
         if (parameter != null) {
             oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());

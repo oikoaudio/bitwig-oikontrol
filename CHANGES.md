@@ -9,6 +9,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - The Mix page `MUTE_1`-`MUTE_4` buttons now jump to arrangement boundaries and clear project solo/mute states instead of acting as clip modifiers.
 - The Mix page status LEDs near `MUTE_2` and `MUTE_3` now mirror the project solo/mute indicators.
 - `PATTERN UP/DOWN` no longer scroll scenes while Mix is active, and launcher orientation labels are now `LauncherV`/`LauncherH`.
+- Launcher and Mix OLED idle screens now show visible-track RMS meters as vertical bars, and the Mix page's Mixer encoder page shows selected-track RMS and peak max/current values.
+- Drum XOX now shows visible Drum Machine pad-chain RMS meters as vertical bars on the idle OLED.
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
 
 ## [2.14.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.0...oikontrol-v2.14.1) (2026-05-16)

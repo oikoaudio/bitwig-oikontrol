@@ -59,4 +59,5 @@ class PerformTrackControlOverlayTest {
         assertEquals(BiColorLightState.OFF,
                 PerformClipLauncherMode.patternSceneNavigationLightState(true, true));
     }
+
 }
