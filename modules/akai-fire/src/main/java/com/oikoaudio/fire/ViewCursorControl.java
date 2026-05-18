@@ -6,6 +6,7 @@ import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.DeviceBank;
 import com.bitwig.extension.controller.api.DeviceMatcher;
 import com.bitwig.extension.controller.api.DrumPadBank;
+import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.oikoaudio.fire.values.SpecialDevices;
@@ -16,6 +17,7 @@ public class ViewCursorControl {
 	private final DeviceBank deviceBank;
 	private final PinnableCursorDevice primaryDevice;
 	private final PinnableCursorDevice selectedDevice;
+	private final PinnableCursorClip selectedClip;
 	private final DeviceBank drumBank;
 	private final DrumPadBank drumPadBank;
 	private final TrackBank trackBank;
@@ -68,7 +70,11 @@ public class ViewCursorControl {
 		selectedDevice = cursorTrack.createCursorDevice("selecteddevice", "Selected Device", 8,
 				CursorDeviceFollowMode.FOLLOW_SELECTION);
 		selectedDevice.exists().markInterested();
+		selectedDevice.isPinned().markInterested();
 		selectedDevice.isWindowOpen().markInterested();
+		selectedClip = cursorTrack.createLauncherCursorClip("VIEW_SELECTED_CLIP", "Selected Clip", 64, 128);
+		selectedClip.exists().markInterested();
+		selectedClip.isPinned().markInterested();
 		final DeviceMatcher drumMatcher = host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
 		drumBank = cursorTrack.createDeviceBank(1);
 		drumBank.setDeviceMatcher(drumMatcher);
@@ -109,6 +115,10 @@ public class ViewCursorControl {
 
 	public PinnableCursorDevice getSelectedDevice() {
 		return selectedDevice;
+	}
+
+	public PinnableCursorClip getSelectedClip() {
+		return selectedClip;
 	}
 
 	public DeviceBank getDrumBank() {

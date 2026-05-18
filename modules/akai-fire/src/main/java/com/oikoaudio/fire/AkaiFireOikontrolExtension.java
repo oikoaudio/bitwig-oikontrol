@@ -1821,6 +1821,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         globalSettingsOverlayActive = true;
+        releaseAutoPinnedDrumContext(true);
         drumSequenceMode.deactivate();
         notePlayMode.deactivate();
         drumPadPlayMode.deactivate();
@@ -1890,6 +1891,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showGlobalSettingsOverview() {
+        if (globalSettingsEncoderMode == EncoderMode.USER_1) {
+            oled.detailInfo("Global Settings",
+                    "Page: %s\n1: Pin Track %s\n2: Pin Device %s\n3: Pin Clip %s\n4: --".formatted(
+                            globalSettingsPageLabel(),
+                            pinStateLabel(viewControl.getCursorTrack().isPinned().get()),
+                            pinOverviewLabel(viewControl.getSelectedDevice().isPinned().get(),
+                                    viewControl.getSelectedDevice().exists().get()),
+                            pinOverviewLabel(viewControl.getSelectedClip().isPinned().get(),
+                                    viewControl.getSelectedClip().exists().get())));
+            return;
+        }
         if (globalSettingsEncoderMode == EncoderMode.MIXER) {
             oled.detailInfo("Global Settings",
                     "Page: %s\n1: Vel Sens %d%%\n2: Vel Ctr %d\n3: Pad Bright %s\n4: Pad Sat %s".formatted(
@@ -1916,6 +1928,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (globalSettingsEncoderMode == EncoderMode.MIXER) {
             adjustGlobalInputSettings(encoderIndex, inc);
+            return;
+        }
+        if (globalSettingsEncoderMode == EncoderMode.USER_1) {
+            adjustGlobalPinSettings(encoderIndex, inc);
             return;
         }
         if (encoderIndex == 0) {
@@ -1949,6 +1965,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (globalSettingsEncoderMode == EncoderMode.MIXER) {
             showGlobalInputSetting(encoderIndex);
+            return;
+        }
+        if (globalSettingsEncoderMode == EncoderMode.USER_1) {
+            showGlobalPinSetting(encoderIndex);
             return;
         }
         if (encoderIndex == 0) {
@@ -1989,6 +2009,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         globalSettingsEncoderMode = globalSettingsEncoderMode == EncoderMode.CHANNEL
                 ? EncoderMode.MIXER
+                : globalSettingsEncoderMode == EncoderMode.MIXER
+                ? EncoderMode.USER_1
                 : EncoderMode.CHANNEL;
         for (final EncoderStepAccumulator accumulator : globalSettingsAccumulators) {
             accumulator.reset();
@@ -2002,7 +2024,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private String globalSettingsPageLabel() {
-        return globalSettingsEncoderMode == EncoderMode.MIXER ? "Input" : "Pitch";
+        return switch (globalSettingsEncoderMode) {
+            case MIXER -> "Input";
+            case USER_1 -> "Pins";
+            default -> "Pitch";
+        };
     }
 
     private void adjustGlobalInputSettings(final int encoderIndex, final int inc) {
@@ -2028,6 +2054,67 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         showGlobalSettingsOverview();
+    }
+
+    private void adjustGlobalPinSettings(final int encoderIndex, final int inc) {
+        if (encoderIndex == 0) {
+            applyPinEncoder("Pin Track", viewControl.getCursorTrack().isPinned(), true, inc);
+            return;
+        }
+        if (encoderIndex == 1) {
+            applyPinEncoder("Pin Device", viewControl.getSelectedDevice().isPinned(),
+                    viewControl.getSelectedDevice().exists().get(), inc);
+            return;
+        }
+        if (encoderIndex == 2) {
+            applyPinEncoder("Pin Clip", viewControl.getSelectedClip().isPinned(),
+                    viewControl.getSelectedClip().exists().get(), inc);
+            return;
+        }
+        showGlobalSettingsOverview();
+    }
+
+    private void showGlobalPinSetting(final int encoderIndex) {
+        if (encoderIndex == 0) {
+            oled.valueInfo("Pin Track", pinStateLabel(viewControl.getCursorTrack().isPinned().get()));
+            return;
+        }
+        if (encoderIndex == 1) {
+            showPinInfo("Pin Device", viewControl.getSelectedDevice().isPinned().get(),
+                    viewControl.getSelectedDevice().exists().get());
+            return;
+        }
+        if (encoderIndex == 2) {
+            showPinInfo("Pin Clip", viewControl.getSelectedClip().isPinned().get(),
+                    viewControl.getSelectedClip().exists().get());
+            return;
+        }
+        showGlobalSettingsOverview();
+    }
+
+    private void applyPinEncoder(final String label,
+                                 final SettableBooleanValue pinValue,
+                                 final boolean targetExists,
+                                 final int inc) {
+        if (!targetExists) {
+            oled.valueInfo(label, "No Target");
+            return;
+        }
+        final boolean targetPinned = inc > 0;
+        pinValue.set(targetPinned);
+        oled.valueInfo(label, pinStateLabel(targetPinned));
+    }
+
+    private void showPinInfo(final String label, final boolean pinned, final boolean targetExists) {
+        oled.valueInfo(label, targetExists ? pinStateLabel(pinned) : "No Target");
+    }
+
+    private String pinOverviewLabel(final boolean pinned, final boolean targetExists) {
+        return targetExists ? pinStateLabel(pinned) : "--";
+    }
+
+    private String pinStateLabel(final boolean pinned) {
+        return pinned ? "On" : "Off";
     }
 
     private void showGlobalInputSetting(final int encoderIndex) {

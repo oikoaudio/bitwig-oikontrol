@@ -149,8 +149,9 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 | --- | --- | --- | --- | --- |
 | `Pitch` | Shared root key | Shared scale | Shared octave | `ClipLen`: launcher recording length |
 | `Input` | Global velocity sensitivity | Global velocity center | Pad brightness | Pad saturation |
+| `Pins` | Pin track | Pin device | Pin clip | -- |
 
-The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
+On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
 ### Main SELECT encoder
 
