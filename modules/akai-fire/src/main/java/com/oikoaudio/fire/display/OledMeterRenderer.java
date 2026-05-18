@@ -15,6 +15,15 @@ public final class OledMeterRenderer {
     }
 
     public static int[] verticalMeters(final int[] values, final int count) {
+        return verticalMeters(values, null, null, count);
+    }
+
+    public static int[] verticalMeters(final int[] values, final int[] peakMarkers, final int count) {
+        return verticalMeters(values, peakMarkers, null, count);
+    }
+
+    public static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
+                                       final int count) {
         final int visibleCount = Math.max(0, Math.min(count, values.length));
         final int[] image = new int[IMAGE_BYTES];
         if (visibleCount == 0) {
@@ -30,10 +39,19 @@ public final class OledMeterRenderer {
             final int bottom = HEIGHT - 1 - BOTTOM_MARGIN;
             final int height = VuMeterFormatter.meterHeight(values[index], maxHeight);
             final int top = bottom - height + 1;
+            final boolean mutedLane = muted != null && index < muted.length && muted[index];
 
-            drawRect(image, left, TOP_MARGIN, right, bottom, false);
-            if (height > 0) {
-                fillRect(image, left + 1, Math.max(TOP_MARGIN + 1, top), right - 1, bottom - 1);
+            if (mutedLane) {
+                drawHorizontalLine(image, left, right, bottom);
+            } else if (height > 0) {
+                fillRect(image, left, Math.max(TOP_MARGIN, top), right, bottom);
+            }
+            if (!mutedLane && peakMarkers != null && index < peakMarkers.length) {
+                final int markerHeight = VuMeterFormatter.meterHeight(peakMarkers[index], maxHeight);
+                if (markerHeight > 0) {
+                    final int markerY = Math.max(TOP_MARGIN, bottom - markerHeight + 1);
+                    drawHorizontalLine(image, left, right, markerY);
+                }
             }
         }
         return image;
@@ -48,6 +66,12 @@ public final class OledMeterRenderer {
             for (int x = Math.max(0, left); x <= Math.min(WIDTH - 1, right); x++) {
                 setPixel(image, x, y);
             }
+        }
+    }
+
+    static void drawHorizontalLine(final int[] image, final int left, final int right, final int y) {
+        for (int x = Math.max(0, left); x <= Math.min(WIDTH - 1, right); x++) {
+            setPixel(image, x, y);
         }
     }
 

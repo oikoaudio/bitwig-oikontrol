@@ -34,7 +34,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
-    private static final int METER_REFRESH_TICKS = 2;
+    private static final int METER_REFRESH_TICKS = 1;
     private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
 
     private final OledDisplay oled;

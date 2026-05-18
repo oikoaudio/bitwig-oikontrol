@@ -10,6 +10,7 @@ import com.oikoaudio.fire.display.DisplayTarget;
 import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay.TextJustification;
 import com.oikoaudio.fire.display.VuMeterFormatter;
+import com.oikoaudio.fire.display.VuMeterPeakHold;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.NoteAction.Type;
@@ -62,6 +63,7 @@ public class DrumPadHandler {
     private final int[] padNotes = new int[16];
     private final int[] padPeakMeters = new int[16];
     private final int[] padRmsMeters = new int[16];
+    private final VuMeterPeakHold padPeakHoldMeters = new VuMeterPeakHold(16);
     private final DisplayTarget displayTarget;
     private final DisplayInfo padDisplayInfo;
     private final Set<Layer> parameterBoundLayers = new HashSet<>();
@@ -142,6 +144,7 @@ public class DrumPadHandler {
 
     private void handlePeakMeterChanged(final int padIndex, final int value) {
         padPeakMeters[padIndex] = value;
+        padPeakHoldMeters.update(padIndex, value);
         if (padIndex == selectedMeterPadIndex) {
             selectedPadPeakMax = Math.max(selectedPadPeakMax, value);
         }
@@ -521,7 +524,27 @@ public class DrumPadHandler {
 
     public void showDrumPadMeterDisplay() {
         resetSelectedPadMeterText();
-        parent.getOled().sendImage(OledMeterRenderer.verticalMeters(padRmsMeters, VISIBLE_PAD_COUNT));
+        padPeakHoldMeters.decay();
+        parent.getOled().sendImage(OledMeterRenderer.verticalMeters(padRmsMeters, padPeakHoldValues(), padMutedValues(),
+                VISIBLE_PAD_COUNT));
+    }
+
+    private int[] padPeakHoldValues() {
+        final int[] values = new int[VISIBLE_PAD_COUNT];
+        for (int i = 0; i < VISIBLE_PAD_COUNT; i++) {
+            values[i] = padPeakHoldMeters.valueAt(i);
+        }
+        return values;
+    }
+
+    private boolean[] padMutedValues() {
+        final boolean[] values = new boolean[VISIBLE_PAD_COUNT];
+        for (final PadContainer pad : pads) {
+            if (pad.index >= 0 && pad.index < VISIBLE_PAD_COUNT) {
+                values[pad.index] = pad.pad.mute().get() || pad.pad.isMutedBySolo().get();
+            }
+        }
+        return values;
     }
 
     public void showSelectedPadMeterDisplay() {

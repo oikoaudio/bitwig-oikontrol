@@ -80,6 +80,7 @@ class PadContainer {
 
         pad.mute().markInterested();
         pad.solo().markInterested();
+        pad.isMutedBySolo().markInterested();
         pad.name().markInterested();
         pad.addIsSelectedInEditorObserver(selected -> handlePadSelection(index, selected));
         pad.exists().addValueObserver(exists -> this.exists = exists);

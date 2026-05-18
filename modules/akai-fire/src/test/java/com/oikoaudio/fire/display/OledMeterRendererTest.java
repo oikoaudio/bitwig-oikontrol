@@ -9,11 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OledMeterRendererTest {
 
     @Test
-    void verticalMetersDrawBarOutlinesEvenForSilence() {
+    void verticalMetersStayBlankForSilence() {
         final int[] image = OledMeterRenderer.verticalMeters(new int[]{0, 0}, 2);
 
-        assertFalse(OledMeterRenderer.isBlank(image));
-        assertEquals(1, OledMeterRenderer.pixel(image, 1, 2));
+        assertTrue(OledMeterRenderer.isBlank(image));
     }
 
     @Test
@@ -22,6 +21,23 @@ class OledMeterRendererTest {
 
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 4));
+    }
+
+    @Test
+    void verticalMetersDrawPeakMarkerAboveCurrentValue() {
+        final int[] image = OledMeterRenderer.verticalMeters(new int[]{32}, new int[]{127}, 1);
+
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 2));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 20));
+    }
+
+    @Test
+    void mutedMetersDrawOnlyBottomDash() {
+        final int[] image = OledMeterRenderer.verticalMeters(new int[]{127}, new int[]{127}, new boolean[]{true}, 1);
+
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 20));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 2));
     }
 
     @Test

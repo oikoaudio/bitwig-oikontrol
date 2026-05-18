@@ -30,6 +30,7 @@ import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.display.VuMeterFormatter;
+import com.oikoaudio.fire.display.VuMeterPeakHold;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -84,7 +85,7 @@ public class PerformClipLauncherMode extends Layer {
     private static final int SCENE_ROW = 0;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
-    private static final int METER_REFRESH_TICKS = 2;
+    private static final int METER_REFRESH_TICKS = 1;
     private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
     private static final long METER_MODE_INFO_SUPPRESS_MS = 1200;
     private static final String SELECTED_TRACK_METER_LEGEND = "Peak        | RMS";
@@ -122,6 +123,7 @@ public class PerformClipLauncherMode extends Layer {
     private final String[] sceneNames = new String[MAX_SCENES];
     private final int[] trackPeakMeters = new int[MAX_TRACKS];
     private final int[] trackRmsMeters = new int[MAX_TRACKS];
+    private final VuMeterPeakHold trackPeakHoldMeters = new VuMeterPeakHold(MAX_TRACKS);
     private final boolean[] selectedVisibleTracks = new boolean[MAX_TRACKS];
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
@@ -225,6 +227,7 @@ public class PerformClipLauncherMode extends Layer {
             track.arm().markInterested();
             track.mute().markInterested();
             track.solo().markInterested();
+            track.isMutedBySolo().markInterested();
             track.isActivated().markInterested();
             track.isStopped().markInterested();
             track.isQueuedForStop().markInterested();
@@ -1248,7 +1251,9 @@ public class PerformClipLauncherMode extends Layer {
 
     private void showVisibleTrackMeterDisplay() {
         resetSelectedTrackMeterText();
-        oled.sendImage(OledMeterRenderer.verticalMeters(visibleTrackMeterValues(), visibleTrackCount()));
+        trackPeakHoldMeters.decay();
+        oled.sendImage(OledMeterRenderer.verticalMeters(visibleTrackMeterValues(), visibleTrackPeakHoldValues(),
+                visibleTrackMutedValues(), visibleTrackCount()));
     }
 
     private void showSelectedTrackMeterDisplay() {
@@ -1285,6 +1290,24 @@ public class PerformClipLauncherMode extends Layer {
         for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
             final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
             values[visibleTrackIndex] = trackAddress == null ? 0 : trackRmsMeters[trackAddress.sourceIndex()];
+        }
+        return values;
+    }
+
+    private int[] visibleTrackPeakHoldValues() {
+        final int[] values = new int[visibleTrackCount()];
+        for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
+            final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
+            values[visibleTrackIndex] = trackAddress == null ? 0 : trackPeakHoldMeters.valueAt(trackAddress.sourceIndex());
+        }
+        return values;
+    }
+
+    private boolean[] visibleTrackMutedValues() {
+        final boolean[] values = new boolean[visibleTrackCount()];
+        for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
+            final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
+            values[visibleTrackIndex] = trackAddress != null && isMutedForMeter(trackAddress.track());
         }
         return values;
     }
@@ -1849,6 +1872,7 @@ public class PerformClipLauncherMode extends Layer {
 
     private void handlePeakMeterChanged(final int sourceTrackIndex, final int value) {
         trackPeakMeters[sourceTrackIndex] = value;
+        trackPeakHoldMeters.update(sourceTrackIndex, value);
         if (sourceTrackIndex == selectedMeterSourceIndex
                 && trackBank.scrollPosition().get() + sourceTrackIndex == selectedMeterAbsoluteIndex) {
             selectedTrackPeakMax = Math.max(selectedTrackPeakMax, value);
@@ -1996,6 +2020,10 @@ public class PerformClipLauncherMode extends Layer {
 
     private boolean isControllableTrack(final Track track) {
         return track != null && track.exists().get() && (driver.showDeactivatedTracks() || track.isActivated().get());
+    }
+
+    private boolean isMutedForMeter(final Track track) {
+        return track.mute().get() || track.isMutedBySolo().get();
     }
 
     private static int clamp(final int value, final int min, final int max) {
