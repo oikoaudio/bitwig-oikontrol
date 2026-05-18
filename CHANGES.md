@@ -2,6 +2,20 @@
 
 This document now tracks intentional modifications made to the `bitwig-oikontrol` project.
 
+## Unreleased
+
+- Akai Fire Perform now uses a flat track bank for launcher and Mix pages, so expanded group children appear in the visible track window.
+- `SHIFT + PERFORM` is now presented as the Mix page, and its track-select pads use the corresponding Bitwig track colors.
+- The Mix page `MUTE_1`-`MUTE_4` buttons now jump to arrangement boundaries and clear project solo/mute states instead of acting as clip modifiers.
+- The Mix page status LEDs near `MUTE_2` and `MUTE_3` now mirror the project solo/mute indicators.
+- `PATTERN UP/DOWN` no longer scroll scenes while Mix is active, and launcher orientation labels are now `LauncherV`/`LauncherH`.
+- Launcher and Mix OLED idle screens now show visible-track RMS meters as vertical bars, and the Mix page's Mixer encoder page shows selected-track RMS and peak max/current values.
+- Drum XOX now shows visible Drum Machine pad-chain RMS meters as vertical bars on the idle OLED, with selected-pad Peak/RMS max/current values on the Mixer encoder page.
+- Akai Fire OLED graphics now send only changed 8-pixel pages, allowing meter displays to refresh about every 100 ms without full-frame redraws, and bar meters show a slowly decaying held-peak marker plus a bottom dash for muted lanes.
+- Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
+- Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
+- `SHIFT + NOTE` now toggles Bitwig record quantization off and back to the previous grid, defaulting to `1/16`.
+
 ## [2.14.1](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.0...oikontrol-v2.14.1) (2026-05-16)
 
 

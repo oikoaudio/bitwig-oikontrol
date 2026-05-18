@@ -61,4 +61,7 @@ public interface StepSequencerHost {
     default String getModeInfo(final EncoderMode mode) {
         return getEncoderBankLayout().bank(mode).modeInfo();
     }
+
+    default void handleEncoderModeChanged(final EncoderMode mode) {
+    }
 }

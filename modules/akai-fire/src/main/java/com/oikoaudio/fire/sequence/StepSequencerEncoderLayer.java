@@ -206,6 +206,7 @@ public class StepSequencerEncoderLayer extends Layer {
 		currentLayer = modeMapping.get(encoderMode);
 		currentLayer.activate();
 		applyResolution(encoderMode);
+		parent.handleEncoderModeChanged(encoderMode);
 		oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
 		oled.clearScreenDelayed();
 	}

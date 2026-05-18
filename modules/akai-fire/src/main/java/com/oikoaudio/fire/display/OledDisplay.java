@@ -7,6 +7,7 @@ import static com.oikoaudio.fire.AkaiFireOikontrolExtension.SE_EN;
 import static com.oikoaudio.fire.AkaiFireOikontrolExtension.SE_OLED_RGB;
 import static com.oikoaudio.fire.AkaiFireOikontrolExtension.SE_ST;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.oikoaudio.fire.SysExUtil;
@@ -15,12 +16,19 @@ import com.bitwig.extension.controller.api.MidiOut;
 public class OledDisplay {
 	private static final int GENERAL_BAR_WIDTH = 126;
 	private static final long CLEAR_DELAY_MS = 3000;
+	private static final long GRAPHICS_KEEPALIVE_MS = 3000;
+	private static final int OLED_PAGE_COUNT = 8;
+	private static final int OLED_PAGE_WIDTH = 128;
+	private static final int OLED_IMAGE_BYTES = OLED_PAGE_COUNT * OLED_PAGE_WIDTH;
 	private final byte[] oledBar = new byte[] { SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, 0x09, 0x00, 0x08, //
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, SE_EN };
 	private final byte[] oledCmd = new byte[] { SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, SE_OLED_RGB, 00 };
 	private final byte[] oledPack = new byte[] { SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, 0x0E };
 
 	private final MidiOut midiOut;
+	private final int[][] imagePageCache = new int[OLED_PAGE_COUNT][OLED_PAGE_WIDTH];
+	private final boolean[] imagePageValid = new boolean[OLED_PAGE_COUNT];
+	private final long[] imagePageLastSentMs = new long[OLED_PAGE_COUNT];
 	private boolean inGraphicsMode = false;
 	private long clearTask = -1;
 	private long logoBlock;
@@ -68,6 +76,43 @@ public class OledDisplay {
 	}
 
 	public void sendImageData(final int[] imageData) {
+		if (imageData.length != OLED_IMAGE_BYTES) {
+			sendImagePages(imageData, 0, OLED_PAGE_COUNT - 1);
+			invalidateImageCache();
+			return;
+		}
+
+		final long now = System.currentTimeMillis();
+		for (int page = 0; page < OLED_PAGE_COUNT; page++) {
+			final int offset = page * OLED_PAGE_WIDTH;
+			if (imagePageValid[page]
+					&& pageMatches(imageData, offset, imagePageCache[page])
+					&& now - imagePageLastSentMs[page] < GRAPHICS_KEEPALIVE_MS) {
+				continue;
+			}
+			sendImagePage(imageData, page);
+			System.arraycopy(imageData, offset, imagePageCache[page], 0, OLED_PAGE_WIDTH);
+			imagePageValid[page] = true;
+			imagePageLastSentMs[page] = now;
+		}
+	}
+
+	private boolean pageMatches(final int[] imageData, final int offset, final int[] cachedPage) {
+		for (int i = 0; i < OLED_PAGE_WIDTH; i++) {
+			if (imageData[offset + i] != cachedPage[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private void sendImagePage(final int[] imageData, final int page) {
+		final int offset = page * OLED_PAGE_WIDTH;
+		final int[] pageData = Arrays.copyOfRange(imageData, offset, offset + OLED_PAGE_WIDTH);
+		sendImagePages(pageData, page, page);
+	}
+
+	private void sendImagePages(final int[] imageData, final int startPage, final int endPage) {
 		final byte[] bytelist = SysExUtil.toBytePack(imageData);
 		final int datalen = bytelist.length + 4;
 		final byte[] sysex = new byte[oledPack.length + bytelist.length + 7];
@@ -76,12 +121,16 @@ public class OledDisplay {
 		System.arraycopy(bytelist, 0, sysex, 11, bytelist.length);
 		sysex[5] = (byte) (datalen >> 7 & 0x7F);
 		sysex[6] = (byte) (datalen & 0x7F);
-		sysex[7] = (byte) 0;
-		sysex[8] = (byte) 7;
+		sysex[7] = (byte) startPage;
+		sysex[8] = (byte) endPage;
 		sysex[9] = (byte) 0;
 		sysex[10] = (byte) 127;
 		sysex[sysex.length - 1] = SE_EN;
 		midiOut.sendSysex(sysex);
+	}
+
+	private void invalidateImageCache() {
+		Arrays.fill(imagePageValid, false);
 	}
 
 	public void showBar(final boolean outline, final int width, final int height, final Fill foreground,
@@ -95,9 +144,11 @@ public class OledDisplay {
 		oledBar[13] = (byte) start;
 		oledBar[14] = (byte) end;
 		midiOut.sendSysex(oledBar);
+		invalidateImageCache();
 	}
 
 	public void detailInfo(final String title, final String lines) {
+		clearScreen();
 		final String[] line = lines.split("\\n");
 		sendString(1, TextJustification.CENTER, 0, title);
 		for (int i = 0; i < 7; i++) {
@@ -107,6 +158,7 @@ public class OledDisplay {
 	}
 
 	public void lineInfo(final String title, final String lines) {
+		clearScreen();
 		final String[] line = lines.split("\\n");
 		sendString(2, TextJustification.CENTER, 0, title);
 		for (int i = 0; i < 3; i++) {
@@ -190,6 +242,11 @@ public class OledDisplay {
 	}
 
 	public void valueInfo(final String title, final String value) {
+		clearScreen();
+		valueInfoNoClear(title, value);
+	}
+
+	public void valueInfoNoClear(final String title, final String value) {
 		sendString(2, TextJustification.CENTER, 0, title);
 		sendString(3, TextJustification.CENTER, 2, value);
 		sendString(5, TextJustification.CENTER, 5, "");
@@ -267,6 +324,8 @@ public class OledDisplay {
 			sysex[10 + i] = (byte) fitText.charAt(i);
 		}
 		midiOut.sendSysex(sysex);
+		invalidateImageCache();
+		inGraphicsMode = false;
 		clearTask = -1;
 	}
 

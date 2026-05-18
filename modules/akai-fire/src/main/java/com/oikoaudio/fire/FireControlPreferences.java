@@ -70,11 +70,25 @@ public final class FireControlPreferences {
             CLIP_LENGTH_ROUND_NEAREST_BAR
     };
 
+    public static final String STARTUP_MODE_NOTE = "Note";
+    public static final String STARTUP_MODE_HARMONY = "Harmony";
+    public static final String STARTUP_MODE_DRUM_XOX = "Drum XOX";
+    public static final String STARTUP_MODE_LAUNCHER = "Launcher";
+    public static final String STARTUP_MODE_MIX = "Mix";
+    public static final String[] STARTUP_MODES = {
+            STARTUP_MODE_NOTE,
+            STARTUP_MODE_HARMONY,
+            STARTUP_MODE_DRUM_XOX,
+            STARTUP_MODE_LAUNCHER,
+            STARTUP_MODE_MIX
+    };
+
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
     public static final String MAIN_ENCODER_SHUFFLE = "Shuffle";
     public static final String MAIN_ENCODER_TEMPO = "Tempo";
     public static final String MAIN_ENCODER_NOTE_REPEAT = "Note Repeat";
     public static final String MAIN_ENCODER_TRACK_SELECT = "Track Select";
+    public static final String MAIN_ENCODER_PLAYBACK_START = "Playback Start";
     public static final String MAIN_ENCODER_DRUM_GRID = "Drum Grid";
     public static final String[] MAIN_ENCODER_ROLES = {
             MAIN_ENCODER_LAST_TOUCHED,
@@ -82,6 +96,7 @@ public final class FireControlPreferences {
             MAIN_ENCODER_TEMPO,
             MAIN_ENCODER_NOTE_REPEAT,
             MAIN_ENCODER_TRACK_SELECT,
+            MAIN_ENCODER_PLAYBACK_START,
             MAIN_ENCODER_DRUM_GRID
     };
     public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
@@ -206,6 +221,15 @@ public final class FireControlPreferences {
         return MAIN_ENCODER_LAST_TOUCHED;
     }
 
+    public static String normalizeStartupMode(final String preferenceValue) {
+        for (final String value : STARTUP_MODES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return STARTUP_MODE_NOTE;
+    }
+
     public static String nextAlternateMainEncoderRole(final String currentRole) {
         return nextAlternateMainEncoderRole(currentRole, true);
     }
@@ -222,6 +246,9 @@ public final class FireControlPreferences {
             return MAIN_ENCODER_TRACK_SELECT;
         }
         if (MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)) {
+            return MAIN_ENCODER_PLAYBACK_START;
+        }
+        if (MAIN_ENCODER_PLAYBACK_START.equals(normalizedRole)) {
             return includeDrumGrid ? MAIN_ENCODER_DRUM_GRID : MAIN_ENCODER_SHUFFLE;
         }
         return MAIN_ENCODER_SHUFFLE;

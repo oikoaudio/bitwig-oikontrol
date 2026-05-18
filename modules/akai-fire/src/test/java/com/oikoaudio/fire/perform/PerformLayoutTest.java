@@ -10,7 +10,7 @@ class PerformLayoutTest {
     void verticalLayoutMapsPadsByColumnThenRow() {
         final PerformLayout layout = PerformLayout.vertical();
 
-        assertEquals("PerformV", layout.label());
+        assertEquals("LauncherV", layout.label());
         assertEquals(16, layout.visibleTrackCount());
         assertEquals(4, layout.visibleSceneCount());
         assertEquals(3, layout.visibleTrackIndexForPad(19));
@@ -22,7 +22,7 @@ class PerformLayoutTest {
     void horizontalLayoutMapsPadsByRowThenColumn() {
         final PerformLayout layout = PerformLayout.vertical().toggle();
 
-        assertEquals("PerformH", layout.label());
+        assertEquals("LauncherH", layout.label());
         assertEquals(4, layout.visibleTrackCount());
         assertEquals(16, layout.visibleSceneCount());
         assertEquals(1, layout.visibleTrackIndexForPad(19));
