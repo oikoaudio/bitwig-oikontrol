@@ -55,6 +55,11 @@ public final class FireControlPreferences {
     public static final String CLIP_LENGTH_OFF = "Off";
     public static final String CLIP_LENGTH_ROUND_NEAREST_BAR = "Round";
     private static final String CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY = "Round to nearest bar";
+    public static final String LAUNCHER_RECORD_LENGTH_MANUAL = "Manual";
+    public static final String LAUNCHER_RECORD_LENGTH_FIXED_1_BAR = "Fixed: 1 bar";
+    public static final String LAUNCHER_RECORD_LENGTH_FIXED_2_BARS = "Fixed: 2 bars";
+    public static final String LAUNCHER_RECORD_LENGTH_FIXED_4_BARS = "Fixed: 4 bars";
+    public static final String LAUNCHER_RECORD_LENGTH_FIXED_8_BARS = "Fixed: 8 bars";
     public static final String PERFORM_LAYOUT_VERTICAL = "Vertical";
     public static final String PERFORM_LAYOUT_HORIZONTAL = "Horizontal";
     public static final String[] PERFORM_LAYOUTS = {
@@ -62,11 +67,17 @@ public final class FireControlPreferences {
             PERFORM_LAYOUT_HORIZONTAL
     };
     public static final String[] DEFAULT_CLIP_LENGTHS = {
-            CLIP_LENGTH_OFF,
             CLIP_LENGTH_1_BAR,
             CLIP_LENGTH_2_BARS,
             CLIP_LENGTH_4_BARS,
-            CLIP_LENGTH_8_BARS,
+            CLIP_LENGTH_8_BARS
+    };
+    public static final String[] LAUNCHER_RECORD_LENGTHS = {
+            LAUNCHER_RECORD_LENGTH_MANUAL,
+            LAUNCHER_RECORD_LENGTH_FIXED_1_BAR,
+            LAUNCHER_RECORD_LENGTH_FIXED_2_BARS,
+            LAUNCHER_RECORD_LENGTH_FIXED_4_BARS,
+            LAUNCHER_RECORD_LENGTH_FIXED_8_BARS,
             CLIP_LENGTH_ROUND_NEAREST_BAR
     };
 
@@ -359,15 +370,39 @@ public final class FireControlPreferences {
     }
 
     public static String normalizeDefaultClipLength(final String preferenceValue) {
-        if (CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY.equals(preferenceValue)) {
-            return CLIP_LENGTH_ROUND_NEAREST_BAR;
-        }
         for (final String value : DEFAULT_CLIP_LENGTHS) {
             if (value.equals(preferenceValue)) {
                 return value;
             }
         }
         return CLIP_LENGTH_2_BARS;
+    }
+
+    public static String normalizeLauncherRecordLength(final String preferenceValue) {
+        if (CLIP_LENGTH_OFF.equals(preferenceValue)) {
+            return LAUNCHER_RECORD_LENGTH_MANUAL;
+        }
+        if (CLIP_LENGTH_1_BAR.equals(preferenceValue)) {
+            return LAUNCHER_RECORD_LENGTH_FIXED_1_BAR;
+        }
+        if (CLIP_LENGTH_2_BARS.equals(preferenceValue)) {
+            return LAUNCHER_RECORD_LENGTH_FIXED_2_BARS;
+        }
+        if (CLIP_LENGTH_4_BARS.equals(preferenceValue)) {
+            return LAUNCHER_RECORD_LENGTH_FIXED_4_BARS;
+        }
+        if (CLIP_LENGTH_8_BARS.equals(preferenceValue)) {
+            return LAUNCHER_RECORD_LENGTH_FIXED_8_BARS;
+        }
+        if (CLIP_LENGTH_ROUND_NEAREST_BAR_LEGACY.equals(preferenceValue)) {
+            return CLIP_LENGTH_ROUND_NEAREST_BAR;
+        }
+        for (final String value : LAUNCHER_RECORD_LENGTHS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return LAUNCHER_RECORD_LENGTH_FIXED_2_BARS;
     }
 
     public static String normalizePerformLayout(final String preferenceValue) {
@@ -388,12 +423,21 @@ public final class FireControlPreferences {
         };
     }
 
-    public static boolean isRoundToNearestBarClipLength(final String preferenceValue) {
-        return CLIP_LENGTH_ROUND_NEAREST_BAR.equals(normalizeDefaultClipLength(preferenceValue));
+    public static double toLauncherRecordLengthBeats(final String preferenceValue) {
+        return switch (normalizeLauncherRecordLength(preferenceValue)) {
+            case LAUNCHER_RECORD_LENGTH_FIXED_1_BAR -> 4.0;
+            case LAUNCHER_RECORD_LENGTH_FIXED_4_BARS -> 16.0;
+            case LAUNCHER_RECORD_LENGTH_FIXED_8_BARS -> 32.0;
+            default -> 8.0;
+        };
     }
 
-    public static boolean isOffClipLength(final String preferenceValue) {
-        return CLIP_LENGTH_OFF.equals(normalizeDefaultClipLength(preferenceValue));
+    public static boolean isRoundLauncherRecordLength(final String preferenceValue) {
+        return CLIP_LENGTH_ROUND_NEAREST_BAR.equals(normalizeLauncherRecordLength(preferenceValue));
+    }
+
+    public static boolean isManualLauncherRecordLength(final String preferenceValue) {
+        return LAUNCHER_RECORD_LENGTH_MANUAL.equals(normalizeLauncherRecordLength(preferenceValue));
     }
 
     public static boolean shouldAutoPinFirstDrumMachine(final String preferenceValue) {

@@ -158,8 +158,9 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 
 | Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Pitch` | Shared root key | Shared scale | Shared octave | `ClipLen`: launcher recording length |
+| `Pitch` | Shared root key | Shared scale | Shared octave | -- |
 | `Input` | Global velocity sensitivity | Global velocity center | Pad brightness | Pad saturation |
+| `Clip` | `Create`: default empty-clip length | `Record`: launcher record length | -- | -- |
 | `Pins` | Pin track | Pin device | Pin clip | -- |
 
 On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
@@ -452,7 +453,7 @@ For immediate derived-line feedback, change source expression from the controlle
 
 | Control | Action |
 | --- | --- |
-| `REC` + pad | Record into the targeted launcher slot using `Default Clip Length` |
+| `REC` + pad | Record into the targeted launcher slot using `Launcher Record Length` |
 | `PATTERN + REC` | Record the selected track into the next free launcher slot |
 | `MUTE_1` + pad | Select without launching |
 | `MUTE_2` | Double selected visible clip length |
@@ -478,7 +479,7 @@ The Birds-Eye page is for large launcher sets. Each pad represents one launcher 
 
 When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
 
-Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. For fixed `Default Clip Length` values, the script sets Bitwig's clip launcher post-record action to play the recorded clip after that length. If `Default Clip Length` is set to `Off`, recording continues until manually stopped without post-processing. If it is set to `Round`, recording continues until manually stopped, then the recorded clip loop length is rounded to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. `Default Clip Length` controls empty clip creation and is always a fixed length. `Launcher Record Length` controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, `Manual` records until stopped without post-processing, and `Round` records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 
@@ -567,6 +568,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Clip Launch Quantization`
 - `Perform Clip Launcher Layout`
 - `Default Clip Length`
+- `Launcher Record Length`
 - `Startup Mode`
 - `SELECT Encoder Startup`
 - `Default Root Key`
