@@ -197,4 +197,23 @@ class PerformTrackControlOverlayTest {
                 PerformClipLauncherMode.birdsEyePadColor(true, true));
     }
 
+    @Test
+    void deviceLayerMixerPadColorsFollowLayerRows() {
+        final RgbLigthState layerColor = new RgbLigthState(12, 80, 44, true);
+
+        assertEquals(layerColor, PerformClipLauncherMode.deviceLayerPadColorForPad(0, layerColor, false, false, true));
+        assertEquals(new RgbLigthState(96, 96, 0, true),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(16, layerColor, true, false, true));
+        assertEquals(RgbLigthState.OFF,
+                PerformClipLauncherMode.deviceLayerPadColorForPad(16, layerColor, false, false, true));
+        assertEquals(new RgbLigthState(110, 48, 0, true),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(32, layerColor, false, true, true));
+        assertEquals(new RgbLigthState(110, 0, 0, true),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(48, layerColor, false, false, true));
+        assertEquals(new RgbLigthState(110, 0, 0, true).getSoftDimmed(),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(48, layerColor, false, false, false));
+        assertEquals(layerColor.getSoftDimmed(),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(0, layerColor, false, false, false));
+    }
+
 }
