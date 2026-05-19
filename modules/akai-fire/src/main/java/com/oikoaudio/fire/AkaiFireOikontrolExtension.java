@@ -1972,6 +1972,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             showGlobalSettingsOverview();
             return;
         }
+        if (handleGlobalSettingsResetTouch(encoderIndex)) {
+            return;
+        }
         if (globalSettingsEncoderMode == EncoderMode.MIXER) {
             showGlobalInputSetting(encoderIndex);
             return;
@@ -1997,6 +2000,79 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         showGlobalSettingsOverview();
+    }
+
+    private boolean handleGlobalSettingsResetTouch(final int encoderIndex) {
+        return switch (globalSettingsEncoderMode) {
+            case MIXER -> handleGlobalInputResetTouch(encoderIndex);
+            case USER_1 -> handleGlobalPinResetTouch(encoderIndex);
+            default -> handleGlobalPitchResetTouch(encoderIndex);
+        };
+    }
+
+    private boolean handleGlobalPitchResetTouch(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> handleKnobModeEncoderReset(true, true, "Root", "No reset",
+                    () -> sharedPitchContext.setRootNote(getDefaultRootKeyPreference()),
+                    () -> oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote())));
+            case 1 -> handleKnobModeEncoderReset(true, true, "Scale", "No reset",
+                    () -> sharedPitchContext.setScaleIndex(defaultScaleIndex()),
+                    () -> oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName()));
+            case 2 -> handleKnobModeEncoderReset(true, true, "Octave", "No reset",
+                    () -> sharedPitchContext.setOctave(getDefaultNoteInputOctavePreference()),
+                    () -> oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave())));
+            case 3 -> handleKnobModeEncoderReset(true, defaultClipLengthPref != null, "ClipLen", "No reset",
+                    () -> defaultClipLengthPref.set(FireControlPreferences.CLIP_LENGTH_2_BARS),
+                    () -> oled.valueInfo("ClipLen", defaultClipLengthLabel()));
+            default -> false;
+        };
+    }
+
+    private int defaultScaleIndex() {
+        return sharedPitchContext.resolveDefaultScaleIndex(getDefaultScalePreference());
+    }
+
+    private boolean handleGlobalInputResetTouch(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> handleKnobModeEncoderReset(true, true, "Velocity Sens", "No reset",
+                    () -> sharedVelocitySettings.setSensitivity(getDefaultVelocitySensitivityPreference()),
+                    () -> oled.valueInfo("Velocity Sens", sharedVelocitySettings.sensitivity() + "%"));
+            case 1 -> handleKnobModeEncoderReset(true, true, "Velocity Ctr", "No reset",
+                    () -> sharedVelocitySettings.setCenterVelocity(GLOBAL_VELOCITY_CENTER_DEFAULT),
+                    () -> oled.valueInfo("Velocity Ctr", Integer.toString(sharedVelocitySettings.centerVelocity())));
+            case 2 -> handleKnobModeEncoderReset(true, padBrightnessPref != null, "Pad Bright", "No reset",
+                    () -> {
+                        padBrightnessPref.setRaw(FireControlPreferences.PAD_BRIGHTNESS_DEFAULT);
+                        padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
+                    },
+                    () -> oled.valueInfo("Pad Bright", padBrightnessLabel()));
+            case 3 -> handleKnobModeEncoderReset(true, padSaturationPref != null, "Pad Sat", "No reset",
+                    () -> {
+                        padSaturationPref.setRaw(FireControlPreferences.PAD_SATURATION_DEFAULT);
+                        padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
+                    },
+                    () -> oled.valueInfo("Pad Sat", padSaturationLabel()));
+            default -> false;
+        };
+    }
+
+    private boolean handleGlobalPinResetTouch(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> handleKnobModeEncoderReset(true, true, "Pin Track", "No reset",
+                    () -> viewControl.getCursorTrack().isPinned().set(false),
+                    () -> oled.valueInfo("Pin Track", pinStateLabel(viewControl.getCursorTrack().isPinned().get())));
+            case 1 -> handleKnobModeEncoderReset(true, viewControl.getSelectedDevice().exists().get(),
+                    "Pin Device", "No reset",
+                    () -> viewControl.getSelectedDevice().isPinned().set(false),
+                    () -> showPinInfo("Pin Device", viewControl.getSelectedDevice().isPinned().get(),
+                            viewControl.getSelectedDevice().exists().get()));
+            case 2 -> handleKnobModeEncoderReset(true, viewControl.getSelectedClip().exists().get(),
+                    "Pin Clip", "No reset",
+                    () -> viewControl.getSelectedClip().isPinned().set(false),
+                    () -> showPinInfo("Pin Clip", viewControl.getSelectedClip().isPinned().get(),
+                            viewControl.getSelectedClip().exists().get()));
+            default -> handleKnobModeEncoderReset(true, false, "Pins", "No reset", () -> { }, this::showGlobalSettingsOverview);
+        };
     }
 
     private void handleGlobalSettingsPad(final int padIndex, final boolean pressed) {
@@ -2604,11 +2680,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         knobModeGestureConsumed = true;
         final RemotePageTarget target = currentRemotePageTarget();
         if (target == null || target.page() == null) {
-            oled.valueInfo("Remote Page", "No remotes here");
+            oled.valueInfo("Remote Page", "No remotes");
             oled.clearScreenDelayed();
+            suppressTransientOledOverlays();
             return true;
         }
         showRemotePageNavigation(target, direction);
+        suppressTransientOledOverlays();
         return true;
     }
 
@@ -2618,8 +2696,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                                               final String unavailableDetail,
                                               final Runnable resetAction,
                                               final Runnable showAction) {
-        return ParameterEncoderBinding.handleExplicitResetTouch(touched, knobModeEncoderResetControl(), resettable,
+        final boolean handled = ParameterEncoderBinding.handleExplicitResetTouch(touched, knobModeEncoderResetControl(), resettable,
                 fallbackLabel, unavailableDetail, resetAction, showAction, oled::valueInfo);
+        if (handled) {
+            suppressTransientOledOverlays();
+        }
+        return handled;
     }
 
     public ParameterEncoderBinding.ExplicitResetControl knobModeEncoderResetControl() {
@@ -2653,6 +2735,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return remotePageNavigationLightState(page.selectedPageIndex().get(), page.pageCount().getAsInt(), direction);
     }
 
+    private void suppressTransientOledOverlays() {
+        if (modeState.activeMode() == Mode.PERFORM && performMode != null) {
+            performMode.suppressMixMeterDisplay();
+            return;
+        }
+        if (modeState.activeMode() == Mode.DRUM
+                && activeDrumSubMode == DrumSubMode.STANDARD
+                && drumSequenceMode != null) {
+            drumSequenceMode.suppressDrumMeterDisplay();
+        }
+    }
+
     private RemotePageTarget currentRemotePageTarget() {
         return switch (modeState.activeMode()) {
             case NOTE_PLAY -> notePlayMode == null ? null : notePlayMode.currentRemotePageTarget();
@@ -2678,15 +2772,20 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final int pageCount = page.pageCount().getAsInt();
         final String title = target.label() + " Page";
         if (pageCount <= 1) {
-            oled.valueInfo(title, "No other pages");
+            oled.valueInfo(title, "Page 1/1");
             oled.clearScreenDelayed();
             return;
         }
         final int currentPage = page.selectedPageIndex().get();
         final int nextPage = remotePageIndexAfterTurn(currentPage, pageCount, direction);
-        if (nextPage != currentPage) {
-            page.selectedPageIndex().set(nextPage);
+        if (nextPage == currentPage) {
+            oled.valueInfo(title, direction < 0 ? "First page" : "Last page");
+            oled.sendString(0, OledDisplay.TextJustification.RIGHT, 7,
+                    remotePageCountLabel(currentPage, pageCount));
+            oled.clearScreenDelayed();
+            return;
         }
+        page.selectedPageIndex().set(nextPage);
         oled.valueInfo(title, remotePageName(page, nextPage));
         oled.sendString(0, OledDisplay.TextJustification.RIGHT, 7, remotePageCountLabel(nextPage, pageCount));
         oled.clearScreenDelayed();

@@ -349,7 +349,7 @@ public class StepSequencerEncoderLayer extends Layer {
 
 	private void handleTouch(final int slotIndex, final boolean touched, final NoteStepAccess accessor) {
         if (touched) {
-            if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(), "No reset here",
+            if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(), "No reset",
                     () -> resetAccessorToDefault(accessor), () -> showTouchPress(accessor))) {
                 return;
             }

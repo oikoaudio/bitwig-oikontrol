@@ -15,7 +15,7 @@ import com.bitwig.extension.controller.api.MidiOut;
 
 public class OledDisplay {
 	private static final int GENERAL_BAR_WIDTH = 126;
-	private static final long CLEAR_DELAY_MS = 3000;
+	private static final long CLEAR_DELAY_MS = 4000;
 	private static final long GRAPHICS_KEEPALIVE_MS = 3000;
 	private static final int OLED_PAGE_COUNT = 8;
 	private static final int OLED_PAGE_WIDTH = 128;

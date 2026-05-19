@@ -35,7 +35,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
     private static final int METER_REFRESH_TICKS = 1;
-    private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
+    private static final long METER_DISPLAY_SUPPRESS_MS = 4500;
 
     private final OledDisplay oled;
 
@@ -768,7 +768,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (touched) {
             if (getExpressionTargetNotes().isEmpty()) {
                 if (driver.handleKnobModeEncoderReset(true, resetDefault != null, accessor.getName(),
-                        "No reset here", () -> {
+                        "No reset", () -> {
                             if (resetDefault != null) {
                                 resetDefault.run();
                             }
@@ -784,7 +784,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 showDefault.run();
                 return;
             }
-            if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(), "No reset here",
+            if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(), "No reset",
                     () -> handler.resetAccessorToDefault(accessor), () -> handler.showAccessorTouchValue(accessor))) {
                 return;
             }
@@ -1499,6 +1499,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
+                        if (driver.handleKnobModeEncoderReset(true, index != 0 && padHandler.hasSelectedPad(),
+                                name, index == 0 ? "No reset" : "Select Pad",
+                                () -> padHandler.resetMixerParameter(index),
+                                () -> padHandler.showMixerDisplay(index, name))) {
+                            return;
+                        }
                         padHandler.showMixerDisplay(index, name);
                     } else {
                         suppressDrumMeterDisplay();
@@ -1579,7 +1585,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void handleUser2Touch(final StepSequencerEncoderLayer handler, final boolean touched, final int index) {
         if (touched) {
-            if (driver.handleKnobModeEncoderReset(true, true, infoForIndex(index), "No reset here",
+            if (driver.handleKnobModeEncoderReset(true, true, infoForIndex(index), "No reset",
                     () -> resetEuclidEncoder(index),
                     () -> oled.valueInfo(infoForIndex(index), valueForIndex(index)))) {
                 return;

@@ -247,7 +247,7 @@ final class ChordStepEncoderControls {
                     if (touched) {
                         final boolean rootContext = driver.isGlobalAltHeld();
                         if (driver.handleKnobModeEncoderReset(true, true, rootContext ? "Root" : "Octave",
-                                "No reset here", () -> {
+                                "No reset", () -> {
                                     (rootContext ? chordRootEncoder : chordOctaveEncoder).reset();
                                     if (rootContext) {
                                         host.resetChordRoot();
@@ -307,7 +307,7 @@ final class ChordStepEncoderControls {
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        if (driver.handleKnobModeEncoderReset(true, true, "Velocity", "No reset here",
+                        if (driver.handleKnobModeEncoderReset(true, true, "Velocity", "No reset",
                                 host::resetChordVelocityTargets, host::showChordVelocityInfo)) {
                             return;
                         }
@@ -376,7 +376,7 @@ final class ChordStepEncoderControls {
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        if (driver.handleKnobModeEncoderReset(true, true, "Chord", "No reset here", () -> {
+                        if (driver.handleKnobModeEncoderReset(true, true, "Chord", "No reset", () -> {
                             accumulator.reset();
                             resetAction.run();
                         }, showInfo)) {
@@ -422,7 +422,7 @@ final class ChordStepEncoderControls {
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         if (driver.isGlobalShiftHeld()) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset here",
+                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset",
                                     () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
                                 return;
                             }
@@ -431,7 +431,7 @@ final class ChordStepEncoderControls {
                             return;
                         }
                         if (driver.isGlobalAltHeld()) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Invert", "No reset here",
+                            if (driver.handleKnobModeEncoderReset(true, false, "Invert", "No reset",
                                     () -> { }, () -> oled.valueInfo("Invert", "Turn encoder"))) {
                                 return;
                             }
@@ -439,7 +439,7 @@ final class ChordStepEncoderControls {
                             oled.valueInfo("Invert", "Turn encoder");
                             return;
                         }
-                        if (driver.handleKnobModeEncoderReset(true, true, "Interpret", "No reset here",
+                        if (driver.handleKnobModeEncoderReset(true, true, "Interpret", "No reset",
                                 host::resetChordInterpretation, host::showChordInterpretationInfo)) {
                             return;
                         }

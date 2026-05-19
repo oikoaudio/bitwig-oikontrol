@@ -343,14 +343,135 @@ public final class FugueStepMode extends Layer {
             return;
         }
         if (templatePadEdit != null) {
+            if (handleTemplatePadEditReset(encoderIndex)) {
+                return;
+            }
             showTemplatePadEditEncoderValue(encoderIndex);
             return;
         }
         if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
+            if (handleSourceLineReset(encoderIndex)) {
+                return;
+            }
             showTemplateEncoderValue(encoderIndex);
             return;
         }
+        if (handleDerivedLineReset(activeLineIndex(), encoderIndex)) {
+            return;
+        }
         showDerivedLineEncoderValue(activeLineIndex(), encoderIndex);
+    }
+
+    private boolean handleTemplatePadEditReset(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> driver.handleKnobModeEncoderReset(true, true, "Template Vel", "No reset",
+                    () -> writeTemplatePadEditNote(templatePadEdit.withVelocity(96).withChanged(true)),
+                    () -> showTemplatePadEditEncoderValue(encoderIndex));
+            case 1 -> driver.handleKnobModeEncoderReset(true, true, "Template Chc", "No reset",
+                    () -> writeTemplatePadEditNote(templatePadEdit.withChance(1.0).withChanged(true)),
+                    () -> showTemplatePadEditEncoderValue(encoderIndex));
+            case 2 -> driver.handleKnobModeEncoderReset(true, true, "Template Gate", "No reset",
+                    () -> writeTemplatePadEditNote(templatePadEdit.withDuration(STEP_LENGTH * 2).withChanged(true)),
+                    () -> showTemplatePadEditEncoderValue(encoderIndex));
+            case 3 -> driver.handleKnobModeEncoderReset(true, true, "Template Pitch", "No reset",
+                    () -> {
+                        final TemplatePadEdit edit = templatePadEdit;
+                        if (edit.existed) {
+                            cursorClip.clearStep(FugueClipAdapter.SOURCE_CHANNEL, edit.step, edit.pitch);
+                            removeCachedSourceNote(edit.step, edit.pitch);
+                        }
+                        writeTemplatePadEditNote(edit.withPitch(defaultTemplatePitch()).withChanged(true));
+                    },
+                    () -> showTemplatePadEditEncoderValue(encoderIndex));
+            default -> false;
+        };
+    }
+
+    private boolean handleSourceLineReset(final int encoderIndex) {
+        if (driver.isGlobalAltHeld()) {
+            return switch (encoderIndex) {
+                case 0 -> driver.handleKnobModeEncoderReset(true, true, "Line 1 Vel", "No reset",
+                        () -> {
+                            lineSettings[FugueClipAdapter.SOURCE_CHANNEL] =
+                                    lineSettings[FugueClipAdapter.SOURCE_CHANNEL].withVelocityOffset(0);
+                            refreshSourceCacheFromClip();
+                        }, () -> showTemplateEncoderValue(encoderIndex));
+                case 1 -> driver.handleKnobModeEncoderReset(true, true, "Line 1 Chc", "No reset",
+                        () -> {
+                            lineSettings[FugueClipAdapter.SOURCE_CHANNEL] =
+                                    lineSettings[FugueClipAdapter.SOURCE_CHANNEL].withChancePercent(100);
+                            applySourceChancePercent();
+                        }, () -> showTemplateEncoderValue(encoderIndex));
+                case 2 -> driver.handleKnobModeEncoderReset(true, true, "Line 1 Gate", "No reset",
+                        () -> {
+                            final int previousGatePercent =
+                                    lineSettings[FugueClipAdapter.SOURCE_CHANNEL].gatePercent();
+                            lineSettings[FugueClipAdapter.SOURCE_CHANNEL] =
+                                    lineSettings[FugueClipAdapter.SOURCE_CHANNEL].withGatePercent(100);
+                            applySourceGateScale(previousGatePercent);
+                        }, () -> showTemplateEncoderValue(encoderIndex));
+                case 3 -> driver.handleKnobModeEncoderReset(true, true, "Clip Start", "No reset",
+                        () -> setClipPlayStart(0), () -> showTemplateEncoderValue(encoderIndex));
+                default -> false;
+            };
+        }
+        return switch (encoderIndex) {
+            case 0 -> driver.handleKnobModeEncoderReset(true, true, "Root", "No reset",
+                    () -> driver.setSharedRootNote(0), () -> showTemplateEncoderValue(encoderIndex));
+            case 1 -> driver.handleKnobModeEncoderReset(true, true, "Scale", "No reset",
+                    () -> driver.setSharedScaleIndex(1), () -> showTemplateEncoderValue(encoderIndex));
+            case 2 -> driver.handleKnobModeEncoderReset(true, true, "Clip Length", "No reset",
+                    () -> setClipLoopSteps(DEFAULT_LOOP_STEPS), () -> showTemplateEncoderValue(encoderIndex));
+            case 3 -> driver.handleKnobModeEncoderReset(true, true, "Clip Start", "No reset",
+                    () -> setClipPlayStart(0), () -> showTemplateEncoderValue(encoderIndex));
+            default -> false;
+        };
+    }
+
+    private boolean handleDerivedLineReset(final int line, final int encoderIndex) {
+        if (driver.isGlobalAltHeld()) {
+            return switch (encoderIndex) {
+                case 0 -> resetDerivedLineSetting(line, encoderIndex, "Velocity",
+                        lineSettings[line].withVelocityOffset(0));
+                case 1 -> resetDerivedLineSetting(line, encoderIndex, "Chance",
+                        lineSettings[line].withChancePercent(100));
+                case 2 -> resetDerivedLineSetting(line, encoderIndex, "Gate",
+                        lineSettings[line].withGatePercent(100));
+                case 3 -> resetDerivedLineSetting(line, encoderIndex, "Interval",
+                        lineSettings[line].withPitchDegreeOffset(linePresets[line].settings().pitchDegreeOffset()));
+                default -> false;
+            };
+        }
+        if (driver.isGlobalShiftHeld() && encoderIndex == 0) {
+            return driver.handleKnobModeEncoderReset(true, true, lineLabel(line) + " Preset", "No reset",
+                    () -> {
+                        linePresets[line] = FuguePreset.INIT;
+                        lineSettings[line] = FugueLineSettings.init();
+                        regenerateDerivedLine(line, "Preset", linePresets[line].label());
+                    },
+                    () -> showDerivedLineEncoderValue(line, encoderIndex));
+        }
+        return switch (encoderIndex) {
+            case 0 -> resetDerivedLineSetting(line, encoderIndex, "Direction",
+                    lineSettings[line].withDirection(linePresets[line].settings().direction()));
+            case 1 -> resetDerivedLineSetting(line, encoderIndex, "Tempo",
+                    lineSettings[line].withSpeed(linePresets[line].settings().speed()));
+            case 2 -> resetDerivedLineSetting(line, encoderIndex, "Start",
+                    lineSettings[line].withStartOffset(0));
+            case 3 -> resetDerivedLineSetting(line, encoderIndex, "Interval",
+                    lineSettings[line].withPitchDegreeOffset(linePresets[line].settings().pitchDegreeOffset()));
+            default -> false;
+        };
+    }
+
+    private boolean resetDerivedLineSetting(final int line, final int encoderIndex, final String title,
+                                            final FugueLineSettings settings) {
+        return driver.handleKnobModeEncoderReset(true, true, title, "No reset",
+                () -> {
+                    lineSettings[line] = settings;
+                    regenerateDerivedLine(line, title, "Reset");
+                },
+                () -> showDerivedLineEncoderValue(line, encoderIndex));
     }
 
     private void showTemplatePadEditEncoderValue(final int encoderIndex) {
@@ -912,6 +1033,20 @@ public final class FugueStepMode extends Layer {
         }
         oled.valueInfo(lineLabel(line) + " " + title, value);
         oled.clearScreenDelayed();
+    }
+
+    private void regenerateDerivedLine(final int line, final String title, final String value) {
+        if (line > 0) {
+            regenerateLine(line);
+        }
+        oled.valueInfo(lineLabel(line) + " " + title, value);
+        oled.clearScreenDelayed();
+    }
+
+    private void setClipLoopSteps(final int newLoopSteps) {
+        cursorClip.getLoopLength().set(newLoopSteps * STEP_LENGTH);
+        loopSteps = newLoopSteps;
+        hostRebuildAfterClipLengthChange("Clip Length", formatSteps(newLoopSteps));
     }
 
     private void adjustTemplateRoot(final int inc) {

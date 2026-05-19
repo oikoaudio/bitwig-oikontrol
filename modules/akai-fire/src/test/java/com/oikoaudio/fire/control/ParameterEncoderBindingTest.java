@@ -16,7 +16,7 @@ class ParameterEncoderBindingTest {
         final List<String> events = new ArrayList<>();
 
         final boolean handled = ParameterEncoderBinding.handleExplicitResetTouch(true, resetControl, true,
-                "Pan", "No reset here", () -> events.add("reset"), () -> events.add("show"),
+                "Pan", "No reset", () -> events.add("reset"), () -> events.add("show"),
                 (title, value) -> events.add(title + ":" + value));
 
         assertTrue(handled);
@@ -29,11 +29,11 @@ class ParameterEncoderBindingTest {
         final List<String> events = new ArrayList<>();
 
         final boolean handled = ParameterEncoderBinding.handleExplicitResetTouch(true, resetControl, false,
-                "Volume", "No reset here", () -> events.add("reset"), () -> events.add("show"),
+                "Volume", "No reset", () -> events.add("reset"), () -> events.add("show"),
                 (title, value) -> events.add(title + ":" + value));
 
         assertTrue(handled);
-        assertEquals(List.of("consume", "Volume:No reset here"), eventsWithConsume(resetControl, events));
+        assertEquals(List.of("consume", "Volume:No reset"), eventsWithConsume(resetControl, events));
     }
 
     @Test
@@ -42,7 +42,7 @@ class ParameterEncoderBindingTest {
         final List<String> events = new ArrayList<>();
 
         final boolean handled = ParameterEncoderBinding.handleExplicitResetTouch(true, resetControl, true,
-                "Pan", "No reset here", () -> events.add("reset"), () -> events.add("show"),
+                "Pan", "No reset", () -> events.add("reset"), () -> events.add("show"),
                 (title, value) -> events.add(title + ":" + value));
 
         assertFalse(handled);

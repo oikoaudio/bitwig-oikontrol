@@ -94,7 +94,7 @@ public class PerformClipLauncherMode extends Layer {
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
     private static final int METER_REFRESH_TICKS = 1;
-    private static final long METER_DISPLAY_SUPPRESS_MS = 3000;
+    private static final long METER_DISPLAY_SUPPRESS_MS = 4500;
     private static final long METER_MODE_INFO_SUPPRESS_MS = 1200;
     private static final String SELECTED_TRACK_METER_LEGEND = "Peak        | RMS";
     private static final String MIXER_ENCODER_FOOTER = "Vol  Pan  S1  S2";
@@ -1841,7 +1841,7 @@ public class PerformClipLauncherMode extends Layer {
         oled.clearScreenDelayed();
     }
 
-    private void suppressMixMeterDisplay() {
+    public void suppressMixMeterDisplay() {
         suppressMixMeterDisplay(METER_DISPLAY_SUPPRESS_MS);
     }
 
@@ -1864,7 +1864,7 @@ public class PerformClipLauncherMode extends Layer {
                                             final String fallbackLabel, final boolean touched) {
         if (touched) {
             if (driver.handleKnobModeEncoderReset(true, ParameterEncoderBinding.isMapped(parameter),
-                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset here" : "Unmapped",
+                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset" : "Unmapped",
                     parameter::reset,
                     () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showTransientValueInfo))) {
                 return;

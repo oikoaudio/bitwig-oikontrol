@@ -243,7 +243,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 () -> noteRepeatHandler.getNoteRepeatActive().get(),
                 oled::valueInfo);
         this.liveControls = new NoteLiveControlSurface(livePerformanceControls, liveEncoderControls,
-                encoderTouchResetHandler, oled::valueInfo, oled::detailInfo, oled::clearScreenDelayed);
+                encoderTouchResetHandler, oled::valueInfo, oled::detailInfo, oled::clearScreenDelayed,
+                driver.knobModeEncoderResetControl());
         this.livePadPerformer = new NoteLivePadPerformer(
                 new NoteLivePadPerformer.MidiOut() {
                     @Override
@@ -446,6 +447,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     adjustLiveModulation(inc);
                 });
         encoders[0].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(0, touched,
+                !isDrumMachineLiveMode(), "No reset",
                 () -> {
                     if (isDrumMachineLiveMode()) {
                         showDrumMachineLayoutInfo();
@@ -484,6 +486,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
         encoders[2].bindEncoder(liveChannelLayer, this::handleLivePitchGlissEncoder);
         encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
+                !isDrumMachineLiveMode() && !driver.isGlobalAltHeld(), "No reset",
                 () -> {
                     if (isDrumMachineLiveMode()) {
                         oled.valueInfo("Drum Pads", "--");
@@ -500,6 +503,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
         encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
         encoders[3].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(3, touched,
+                !isDrumMachineLiveMode(), "No reset",
                 () -> {
                     if (isDrumMachineLiveMode()) {
                         oled.valueInfo("Drum Pads", "--");
@@ -568,8 +572,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
                     });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
-                if (touched) {
+                    if (touched) {
                     if (isHarmonicLiveMode()) {
+                        if (handleHarmonicMixerReset(index)) {
+                            return;
+                        }
                         showHarmonicMixerInfo(index);
                     } else {
                         handleLiveMixerParameterTouch(index, parameter, fallbackLabel, true);
@@ -588,7 +595,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             if (driver.handleKnobModeEncoderReset(true,
                     ParameterEncoderBinding.isMapped(parameter)
                             && resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE,
-                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset here" : "Unmapped",
+                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset" : "Unmapped",
                     () -> resetPolicy.reset(parameter),
                     () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo))) {
                 return;
@@ -630,6 +637,27 @@ public abstract class LivePadSurfaceLayer extends Layer {
             case 3 -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
             default -> oled.clearScreenDelayed();
         }
+    }
+
+    private boolean handleHarmonicMixerReset(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> driver.handleKnobModeEncoderReset(true, true, "Notes", "No reset",
+                    () -> retuneLivePads(() -> harmonicNoteCountIndex = 2),
+                    () -> oled.valueInfo("Notes", harmonicNoteCountDisplay()));
+            case 1 -> driver.handleKnobModeEncoderReset(true, true, "Octaves", "No reset",
+                    () -> retuneLivePads(() -> harmonicOctaveSpan = 1),
+                    () -> oled.valueInfo("Octaves", Integer.toString(harmonicOctaveSpan)));
+            case 2 -> driver.handleKnobModeEncoderReset(true, true, "Bass Grid", "No reset",
+                    () -> retuneLivePads(() -> harmonicBassColumns = true),
+                    () -> oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off"));
+            case 3 -> driver.handleKnobModeEncoderReset(true, true, "Pitch Gliss", "No reset",
+                    () -> retuneLivePads(() -> {
+                        livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
+                        liveScaleDegreeGlissOffset = 0;
+                    }),
+                    () -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay()));
+            default -> false;
+        };
     }
 
     private void bindResettableLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final int encoderIndex,
@@ -933,6 +961,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
         livePitchBendTouched = touched;
         cancelLivePitchBendReturn();
         if (touched) {
+            if (driver.handleKnobModeEncoderReset(true, !isDrumMachineLiveMode(), "Pitch Bend", "No reset",
+                    () -> {
+                        livePitchBend = DEFAULT_LIVE_PITCH_BEND;
+                        liveExpressionControls.setTransientPitchBendValue(livePitchBend);
+                    },
+                    () -> oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND)))) {
+                return;
+            }
             oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
             return;
         }

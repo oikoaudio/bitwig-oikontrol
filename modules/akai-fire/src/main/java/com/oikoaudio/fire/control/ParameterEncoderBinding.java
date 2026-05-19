@@ -87,7 +87,7 @@ public final class ParameterEncoderBinding {
                                          final ExplicitResetControl explicitReset,
                                          final ValueDisplay display) {
         if (handleExplicitResetTouch(true, explicitReset, isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
-                fallbackLabel, isMapped(parameter) ? "No reset here" : "Unmapped",
+                fallbackLabel, isMapped(parameter) ? "No reset" : "Unmapped",
                 () -> resetPolicy.reset(parameter),
                 () -> showValue(parameter, fallbackLabel, display),
                 display)) {
