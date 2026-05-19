@@ -1952,6 +1952,7 @@ public class PerformClipLauncherMode extends Layer {
 
     private void suppressMixMeterDisplay(final long suppressMs) {
         mixMeterDisplayActive = false;
+        resetSelectedTrackMeterText();
         mixMeterSuppressedUntilMs = System.currentTimeMillis() + suppressMs;
     }
 
