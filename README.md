@@ -21,17 +21,17 @@ Download the latest prebuilt extension:
 
 Older versions and release notes are available on the [releases page](https://github.com/oikoaudio/bitwig-oikontrol/releases).
 
-## What You Get
+## Highlights
 
-- **Hands-on Bitwig control** for Akai Fire and Launch Control XL Mk2.
-- **Akai Fire OLED and optional on-screen feedback** for most mode parameters.
-- **Shared musical context** with global root key, scale, and octave controls.
-- **Drum sequencing** with x0x-style entry, micro-timing, recurrence, velocity, and page navigation.
-- **Nested Rhythm** generation for layered rhythmic structures and editable generated pulses.
-- **Live note input** with isomorphic and harmonic layouts for scale-aware playing, a playable pitch and modulation controls.
-- **Melodic Step, Chord Step, and Fugue modes** to generate phrases, rythmical modal chord entry, and contrapunctal transformations.
-- **Clip launching and performance workflows** with scene launching, clip management, track actions, and device pinning.
-- **Launch Control XL user templates** for drum machine control, a Richie Hawtin-style arp workflow, and multi remote-page access.
+Oikontrol includes several opinionated workflows that go beyond basic mixer, transport, and device control:
+
+- **Expressive note performance:** scale-aware pad layouts, harmonic input, and pitch/mod-style performance controls with snapback behavior.
+- **Generative sequencing:** Nested Rhythm, Melodic Step generators, Chord Step, and Fugue transformations for creating and reshaping musical material from the controller.
+- **Deep drum editing:** x0x sequencing with micro-timing, recurrence, velocity, and page navigation.
+- **Quick gain staging:** peak/RMS meter readouts, max-level tracking, and quick max reset help set levels directly from the hardware.
+- **OLED-guided control:** mode parameters and transient action feedback are shown directly on the Akai Fire OLED.
+- **Performance device control:** the Perform Mix page can select devices, toggle device rows, open device windows, and navigate remote pages from the grid.
+- **Controller-first launcher recording:** quick recording shortcuts with separate clip creation and launcher record length settings.
 
 ## Quick Install
 
