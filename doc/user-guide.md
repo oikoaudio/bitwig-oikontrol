@@ -147,6 +147,8 @@ When `KNOB MODE + PATTERN UP/DOWN` changes a remote page, the OLED shows the tar
 
 Hold `KNOB MODE` and tap an encoder to reset the value under that encoder. The OLED reports `No reset here` or `Unmapped` when the current encoder slot cannot reset, and the `KNOB MODE` tap is not treated as an encoder-page cycle.
 
+When `Encoder touch reset` is enabled, touching and holding a resettable encoder also resets that value after a short hold. The explicit `KNOB MODE + touch encoder` chord is available separately as a deliberate reset gesture.
+
 ### Global settings overlay
 
 Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BROWSER` again, press `BROWSER`, or press a plain mode button from the latched overlay to close it. Press `KNOB MODE` to switch between settings pages.
@@ -571,7 +573,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Melodic Fixed Seed`
 - `Pad Brightness`
 - `Pad Saturation`
-- `Encoder touch reset`
+- `Encoder touch reset`: enables the touch-and-hold reset gesture on resettable encoders
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`
