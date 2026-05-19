@@ -23,6 +23,36 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.17.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.16.0...oikontrol-v2.17.0) (2026-05-19)
+
+
+### Features
+
+* add explicit encoder reset defaults ([a26a007](https://github.com/oikoaudio/bitwig-oikontrol/commit/a26a0074e569c62307a57050df06fa2581bdfd1d))
+* add knob mode encoder page and reset chords ([a5eb8bd](https://github.com/oikoaudio/bitwig-oikontrol/commit/a5eb8bdca7245e7a81f7cdfa761f3e15a7f5841b))
+* add paged perform mix device controls ([cf3925a](https://github.com/oikoaudio/bitwig-oikontrol/commit/cf3925a1e8da0cd29bfdee3c0c5660fc3fbef2b7))
+* add perform birds-eye navigation ([a55d36e](https://github.com/oikoaudio/bitwig-oikontrol/commit/a55d36e65d5bbfe00d26be61971f8fa006fc813e))
+* add perform device layer mixer page ([ad8597e](https://github.com/oikoaudio/bitwig-oikontrol/commit/ad8597edb921728e7debeb73d9b0c7d2005822c7))
+* add perform device row toggles ([64911fd](https://github.com/oikoaudio/bitwig-oikontrol/commit/64911fd9ee8dcb4d33fac9c1fd4d8bc9f1d6cdeb))
+* add quick launcher clip recording chord ([f6d4225](https://github.com/oikoaudio/bitwig-oikontrol/commit/f6d4225720d18bcc24826cca5c47d3ef650d87ac))
+* add screen message hold preference ([aca60ce](https://github.com/oikoaudio/bitwig-oikontrol/commit/aca60ce38b8b8d87fc75fd3e97d49026123a386f))
+* improve Akai Fire perform and launcher workflows ([3e81f7d](https://github.com/oikoaudio/bitwig-oikontrol/commit/3e81f7d6280e6186d6ad3e93f6703ed04da6621a))
+* navigate perform device remote pages ([18fe6d4](https://github.com/oikoaudio/bitwig-oikontrol/commit/18fe6d4d10fb444b25c99e51fa164e4436fc7611))
+* remember perform mix device selections ([e8d4665](https://github.com/oikoaudio/bitwig-oikontrol/commit/e8d4665a207417a86c8628100dbc3fa65f032f30))
+* route browser transport controls ([eb08bda](https://github.com/oikoaudio/bitwig-oikontrol/commit/eb08bda28108d4168e9f019a0f23c425d5b2ac5f))
+* split clip create and record length settings ([280e721](https://github.com/oikoaudio/bitwig-oikontrol/commit/280e721b188ceaa6b9fee885648634678cc3fe40))
+* toggle perform device windows from grid ([072a10f](https://github.com/oikoaudio/bitwig-oikontrol/commit/072a10f677541a626024e9a6ff0021e21dd666e0))
+
+
+### Bug Fixes
+
+* improve mix device overview selection feedback ([4c52947](https://github.com/oikoaudio/bitwig-oikontrol/commit/4c529479e5fa29fe95db3df3b2194ee405f4eec5))
+* invalidate perform meter oled on suppression ([65b4c77](https://github.com/oikoaudio/bitwig-oikontrol/commit/65b4c77831f6323a24c58b7851521bb866adec21))
+* keep transient oled actions readable ([20163d6](https://github.com/oikoaudio/bitwig-oikontrol/commit/20163d63f78f3396e6e9351972ff4f7ca3fe930d))
+* let mode buttons exit birds eye ([5d3e04f](https://github.com/oikoaudio/bitwig-oikontrol/commit/5d3e04f383812ce010e1cd82359084dffc0e3b18))
+* make quick launcher recording mode-independent ([c2db182](https://github.com/oikoaudio/bitwig-oikontrol/commit/c2db182253518e9824ad159c1b2813a3f01f42ec))
+* route track select oled through perform display ([a418cd4](https://github.com/oikoaudio/bitwig-oikontrol/commit/a418cd4e6475a481847014be12ac5a086bc2e6e7))
+
 ## [2.16.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.15.0...oikontrol-v2.16.0) (2026-05-18)
 
 
