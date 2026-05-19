@@ -53,21 +53,29 @@ class PerformTrackControlOverlayTest {
     @Test
     void patternSceneNavigationIsUnlitInMix() {
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, false, 0, 0, 1, true));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, 1, false));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, false, 0, 0, 1, false));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, false, 0, 0, -1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, false, 0, 0, 1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, false, 0, 0, 1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, false, 0, 0, -1, true));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, false, 0, 0, 1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, false, 0, 0, -1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 0, 3, -1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 0, 3, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 2, 3, -1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 2, 3, 1, true));
     }
 
     @Test

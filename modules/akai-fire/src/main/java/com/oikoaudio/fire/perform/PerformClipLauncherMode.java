@@ -541,13 +541,15 @@ public class PerformClipLauncherMode extends Layer {
 
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
         patternUp.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, -1),
-                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex, -1,
-                        canScrollScenes(-1)));
+                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
+                        isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
+                        deviceRemoteControls.pageCount().getAsInt(), -1, canScrollScenes(-1)));
 
         final BiColorButton patternDown = driver.getButton(NoteAssign.PATTERN_DOWN);
         patternDown.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, 1),
-                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex, 1,
-                        canScrollScenes(1)));
+                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
+                        isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
+                        deviceRemoteControls.pageCount().getAsInt(), 1, canScrollScenes(1)));
     }
 
     private void bindMixStatusLights() {
@@ -1082,6 +1084,10 @@ public class PerformClipLauncherMode extends Layer {
     private void handlePatternSceneScroll(final boolean pressed, final int direction) {
         if (trackActionMode) {
             if (pressed) {
+                if (mixDeviceToggleMode && isAltHeld()) {
+                    handleRemotePageNavigation(direction);
+                    return;
+                }
                 if (direction > 0) {
                     if (!mixDeviceToggleMode) {
                         setMixDeviceMode(true);
@@ -2039,9 +2045,15 @@ public class PerformClipLauncherMode extends Layer {
     static BiColorLightState patternSceneNavigationLightState(final boolean trackActionMode,
                                                               final boolean mixDeviceToggleMode,
                                                               final int mixDevicePageIndex,
+                                                              final boolean altHeld,
+                                                              final int remotePageIndex,
+                                                              final int remotePageCount,
                                                               final int direction,
                                                               final boolean canScrollScenes) {
         if (trackActionMode) {
+            if (mixDeviceToggleMode && altHeld) {
+                return remotePageNavigationLightState(remotePageIndex, remotePageCount, direction);
+            }
             if (direction > 0) {
                 return mixDeviceToggleMode && mixDevicePageIndex >= MIX_DEVICE_PAGE_COUNT - 1
                         ? BiColorLightState.OFF
@@ -2053,6 +2065,21 @@ public class PerformClipLauncherMode extends Layer {
             return BiColorLightState.OFF;
         }
         return canScrollScenes ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+    }
+
+    static BiColorLightState remotePageNavigationLightState(final int currentPage,
+                                                            final int pageCount,
+                                                            final int direction) {
+        if (pageCount <= 0) {
+            return BiColorLightState.OFF;
+        }
+        if (direction < 0) {
+            return currentPage > 0 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+        }
+        if (direction > 0) {
+            return currentPage < pageCount - 1 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+        }
+        return BiColorLightState.OFF;
     }
 
     private RgbLigthState trackColor(final int sourceTrackIndex) {
