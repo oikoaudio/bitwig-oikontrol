@@ -13,6 +13,14 @@ The Launch Control XL script adds user-template pages for drum machine control, 
 
 Oikontrol is maintained primarily by its author and shaped around Bitwig composition and performance workflows. It is stable enough to use, but still actively evolving as the controller designs are refined.
 
+## Download
+
+Download the latest prebuilt extension:
+
+[Oikontrol.bwextension](https://github.com/oikoaudio/bitwig-oikontrol/releases/latest/download/Oikontrol.bwextension)
+
+Older versions and release notes are available on the [releases page](https://github.com/oikoaudio/bitwig-oikontrol/releases).
+
 ## What You Get
 
 - **Hands-on Bitwig control** for Akai Fire and Launch Control XL Mk2.
@@ -27,7 +35,7 @@ Oikontrol is maintained primarily by its author and shaped around Bitwig composi
 
 ## Quick Install
 
-1. Download the prebuilt `Oikontrol.bwextension` artifact from the [releases page](https://github.com/oikoaudio/bitwig-oikontrol/releases).
+1. Download the latest prebuilt [`Oikontrol.bwextension`](https://github.com/oikoaudio/bitwig-oikontrol/releases/latest/download/Oikontrol.bwextension).
 2. Copy the file into Bitwig's user extensions folder:
    - Linux: `~/Bitwig Studio/Extensions/`
    - macOS: `~/Documents/Bitwig Studio/Extensions/`
