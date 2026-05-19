@@ -92,6 +92,15 @@ class PerformTrackControlOverlayTest {
     }
 
     @Test
+    void mixDeviceRowsMapToPagedTrackDevices() {
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForRow(0, 0));
+        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForRow(3, 0));
+        assertEquals(4, PerformClipLauncherMode.mixDeviceIndexForRow(0, 1));
+        assertEquals(7, PerformClipLauncherMode.mixDeviceIndexForRow(3, 1));
+        assertEquals(-1, PerformClipLauncherMode.mixDeviceIndexForRow(4, 1));
+    }
+
+    @Test
     void mixDevicePadColorShowsEnabledState() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 
@@ -106,6 +115,14 @@ class PerformTrackControlOverlayTest {
         assertEquals("Device Select", PerformClipLauncherMode.mixDeviceActionTitle(false, true));
         assertEquals("Device On", PerformClipLauncherMode.mixDeviceActionTitle(true, true));
         assertEquals("Device Off", PerformClipLauncherMode.mixDeviceActionTitle(true, false));
+    }
+
+    @Test
+    void rowWideDeviceToggleTurnsOffWhenAnyVisibleDeviceIsEnabled() {
+        assertEquals(false, PerformClipLauncherMode.rowWideDeviceToggleTarget(true));
+        assertEquals(true, PerformClipLauncherMode.rowWideDeviceToggleTarget(false));
+        assertEquals("Device Row Off", PerformClipLauncherMode.rowWideDeviceToggleTitle(false));
+        assertEquals("Device Row On", PerformClipLauncherMode.rowWideDeviceToggleTitle(true));
     }
 
 }

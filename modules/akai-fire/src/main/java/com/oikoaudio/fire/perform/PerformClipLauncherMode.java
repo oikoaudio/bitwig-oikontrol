@@ -607,6 +607,10 @@ public class PerformClipLauncherMode extends Layer {
     private void handlePadActionButton(final int index, final boolean pressed) {
         suppressMixMeterDisplay();
         if (trackActionMode) {
+            if (mixDeviceToggleMode && isAltHeld()) {
+                handleMixDeviceRowToggle(index, pressed);
+                return;
+            }
             handleMixFunctionButton(index, pressed);
             return;
         }
@@ -648,6 +652,49 @@ public class PerformClipLauncherMode extends Layer {
             case 3 -> driver.goToArrangementEndOrLoopEnd();
             default -> throw new IllegalArgumentException("Unsupported mix function button index: " + index);
         }
+    }
+
+    private void handleMixDeviceRowToggle(final int rowIndex, final boolean pressed) {
+        if (!pressed) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        final int deviceIndex = mixDeviceIndexForRow(rowIndex, mixDevicePageIndex);
+        if (deviceIndex < 0) {
+            return;
+        }
+
+        boolean anyDevices = false;
+        boolean anyEnabled = false;
+        for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
+            final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
+            if (trackAddress == null) {
+                continue;
+            }
+            final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
+            if (device != null && device.exists().get()) {
+                anyDevices = true;
+                anyEnabled |= device.isEnabled().get();
+            }
+        }
+
+        if (!anyDevices) {
+            showValueInfo("Device Row", "No devices");
+            return;
+        }
+
+        final boolean targetEnabled = rowWideDeviceToggleTarget(anyEnabled);
+        for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
+            final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
+            if (trackAddress == null) {
+                continue;
+            }
+            final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
+            if (device != null && device.exists().get()) {
+                device.isEnabled().set(targetEnabled);
+            }
+        }
+        showValueInfo(rowWideDeviceToggleTitle(targetEnabled), "Device " + (deviceIndex + 1));
     }
 
     private BiColorLightState padActionLightState(final int index) {
@@ -2007,6 +2054,10 @@ public class PerformClipLauncherMode extends Layer {
 
     static int mixDeviceIndexForPad(final int padIndex, final int devicePageIndex) {
         final int row = padIndex / PerformLayout.PAD_COLUMNS;
+        return mixDeviceIndexForRow(row, devicePageIndex);
+    }
+
+    static int mixDeviceIndexForRow(final int row, final int devicePageIndex) {
         return row >= 0 && row < MIX_DEVICE_ROWS
                 ? (clamp(devicePageIndex, 0, MIX_DEVICE_PAGE_COUNT - 1) * MIX_DEVICE_ROWS) + row
                 : -1;
@@ -2028,6 +2079,14 @@ public class PerformClipLauncherMode extends Layer {
             return "Device Select";
         }
         return enabled ? "Device On" : "Device Off";
+    }
+
+    static boolean rowWideDeviceToggleTarget(final boolean anyEnabled) {
+        return !anyEnabled;
+    }
+
+    static String rowWideDeviceToggleTitle(final boolean enabled) {
+        return enabled ? "Device Row On" : "Device Row Off";
     }
 
     static BiColorLightState mixStatusLightState(final boolean trackActionMode,
