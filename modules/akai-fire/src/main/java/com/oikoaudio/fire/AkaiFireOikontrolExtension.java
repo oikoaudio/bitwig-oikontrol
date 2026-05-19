@@ -170,6 +170,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean patternGestureConsumed = false;
     private boolean patternPressShiftHeld = false;
     private boolean patternPressAltHeld = false;
+    private boolean recordGestureConsumed = false;
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private boolean globalSettingsOverlayActive = false;
@@ -746,6 +747,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void toggleRec(final boolean pressed) {
+        if (!pressed && recordGestureConsumed) {
+            recordGestureConsumed = false;
+            return;
+        }
         if (isGlobalShiftHeld()) {
             return;
         }
@@ -759,7 +764,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (pressed && performMode != null && performMode.stopManualLauncherRecordingIfAny()) {
+            if (patternPressed) {
+                patternGestureConsumed = true;
+            }
+            recordGestureConsumed = true;
             performRecordPadGestureConsumed = true;
+            return;
+        }
+        if (pressed && patternPressed && !patternPressShiftHeld && !patternPressAltHeld) {
+            patternGestureConsumed = true;
+            recordGestureConsumed = true;
+            recordNextFreeLauncherSlot();
             return;
         }
         if (modeState.activeMode() == Mode.PERFORM) {
@@ -790,6 +805,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final boolean nextState = !transport.isArrangerRecordEnabled().get();
         transport.isArrangerRecordEnabled().toggle();
         notifyAction("Record", nextState ? "On" : "Off");
+    }
+
+    private void recordNextFreeLauncherSlot() {
+        if (performMode == null) {
+            notifyAction("Record Clip", "No launcher");
+            return;
+        }
+        final boolean requireLauncherActivity = modeState.activeMode() != Mode.PERFORM;
+        performMode.recordNextFreeLauncherSlot(requireLauncherActivity);
     }
 
     private void toggleClipLauncherAutomationWriteEnabled(final boolean pressed) {
@@ -1363,6 +1387,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return modeState.activeMode() == Mode.PERFORM
                 && recButton != null
                 && recButton.isPressed()
+                && !patternPressed
                 && !isGlobalShiftHeld()
                 && !isGlobalAltHeld();
     }

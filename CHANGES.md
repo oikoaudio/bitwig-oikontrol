@@ -19,6 +19,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - `ALT + BANK LEFT/RIGHT` now triggers Bitwig undo/redo in Launcher, Mix, Note, Harmonic, and Drum Pads modes.
 - `SHIFT + BROWSER` now latches the global settings overlay, with `KNOB MODE` switching to a second page for shared input velocity feel and pad color response.
 - The Fire global settings overlay now has a `Pins` page for clamped track, device, and clip pin on/off controls.
+- `PATTERN + REC` on Akai Fire now records the selected track into the next free launcher slot, and `REC` can stop launcher recordings started from the controller.
 
 ## [2.15.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.14.1...oikontrol-v2.15.0) (2026-05-18)
 

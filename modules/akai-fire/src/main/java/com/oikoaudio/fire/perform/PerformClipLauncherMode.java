@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.perform;
 
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
+import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
@@ -173,6 +174,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean manualRecordingPending = false;
     private boolean manualRecordingWasRecording = false;
     private boolean manualRecordingShouldRound = false;
+    private boolean manualRecordingUsesCursorTrack = false;
     private boolean trackActionMode = false;
     private boolean mixDeviceToggleMode = false;
     private boolean deviceLayerMixerMode = false;
@@ -223,6 +225,7 @@ public class PerformClipLauncherMode extends Layer {
         this.deviceLayerBank = this.remoteCursorDevice.createLayerBank(MAX_TRACKS);
         observeDeviceLayers();
         this.performCursorClip = cursorTrack.createLauncherCursorClip("PERFORM_CURSOR", "PERFORM_CURSOR", 64, 128);
+        observeCursorClipSlots();
 
         this.channelLayer = new Layer(driver.getLayers(), "PERFORM_ENC_CHANNEL");
         this.mixerLayer = new Layer(driver.getLayers(), "PERFORM_ENC_MIXER");
@@ -249,6 +252,21 @@ public class PerformClipLauncherMode extends Layer {
         initEncoderPages();
         bindMainEncoder();
         initButtons();
+    }
+
+    private void observeCursorClipSlots() {
+        final ClipLauncherSlotBank slotBank = cursorTrack.clipLauncherSlotBank();
+        for (int sceneIndex = 0; sceneIndex < slotBank.getSizeOfBank(); sceneIndex++) {
+            final int slotIndex = sceneIndex;
+            final ClipLauncherSlot slot = slotBank.getItemAt(sceneIndex);
+            slot.exists().markInterested();
+            slot.hasContent().markInterested();
+            slot.isPlaying().markInterested();
+            slot.isPlaybackQueued().markInterested();
+            slot.isRecording().markInterested();
+            slot.isRecordingQueued().markInterested();
+            slot.isRecording().addValueObserver(recording -> handleCursorSlotRecordingChanged(slotIndex, recording));
+        }
     }
 
     private void initGrid() {
@@ -1112,18 +1130,41 @@ public class PerformClipLauncherMode extends Layer {
         driver.consumePerformRecordPadGesture();
         track.selectInMixer();
         slot.select();
-        if (driver.shouldDisableLauncherPostRecordingAction() || driver.shouldRoundLauncherRecordingToNearestBar()) {
-            armManualRecording(absoluteTrackIndex, absoluteSceneIndex, driver.shouldRoundLauncherRecordingToNearestBar());
-        }
+        armManualRecording(absoluteTrackIndex, absoluteSceneIndex, driver.shouldRoundLauncherRecordingToNearestBar(),
+                false);
         driver.prepareLauncherRecording();
         slot.record();
         showValueInfo("Record Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
     }
 
-    private void armManualRecording(final int absoluteTrackIndex, final int absoluteSceneIndex, final boolean shouldRound) {
+    public boolean recordNextFreeLauncherSlot(final boolean requireLauncherActivity) {
+        final ClipLauncherSlotBank slotBank = cursorTrack.clipLauncherSlotBank();
+        if (requireLauncherActivity && !LauncherSlotRecorder.hasLauncherActivity(slotBank)) {
+            showValueInfo("Record Clip", "No launcher");
+            return false;
+        }
+        final int slotIndex = LauncherSlotRecorder.firstFreeSlotIndex(slotBank);
+        if (slotIndex < 0) {
+            showValueInfo("Record Clip", "No free slot");
+            return false;
+        }
+        final ClipLauncherSlot slot = slotBank.getItemAt(slotIndex);
+        cursorTrack.selectInMixer();
+        slot.select();
+        armManualRecording(cursorTrack.position().get(), slotIndex, driver.shouldRoundLauncherRecordingToNearestBar(),
+                true);
+        driver.prepareLauncherRecording();
+        slot.record();
+        showValueInfo("Record Clip", slotLabel(cursorTrack.position().get(), slotIndex));
+        return true;
+    }
+
+    private void armManualRecording(final int absoluteTrackIndex, final int absoluteSceneIndex,
+                                    final boolean shouldRound, final boolean usesCursorTrack) {
         manualRecordingPending = true;
         manualRecordingWasRecording = false;
         manualRecordingShouldRound = shouldRound;
+        manualRecordingUsesCursorTrack = usesCursorTrack;
         manualRecordingTrackIndex = absoluteTrackIndex;
         manualRecordingSceneIndex = absoluteSceneIndex;
     }
@@ -1131,6 +1172,9 @@ public class PerformClipLauncherMode extends Layer {
     public boolean stopManualLauncherRecordingIfAny() {
         if (!manualRecordingPending) {
             return false;
+        }
+        if (manualRecordingUsesCursorTrack) {
+            return stopCursorManualLauncherRecording();
         }
         final TrackAddress trackAddress = trackAddressForAbsoluteTrack(manualRecordingTrackIndex);
         final int visibleSceneIndex = manualRecordingSceneIndex - trackBank.sceneBank().scrollPosition().get();
@@ -1147,9 +1191,23 @@ public class PerformClipLauncherMode extends Layer {
         return true;
     }
 
+    private boolean stopCursorManualLauncherRecording() {
+        final ClipLauncherSlotBank slotBank = cursorTrack.clipLauncherSlotBank();
+        if (manualRecordingSceneIndex < 0 || manualRecordingSceneIndex >= slotBank.getSizeOfBank()) {
+            showValueInfo("Clip Record", "Target gone");
+            return true;
+        }
+        final ClipLauncherSlot slot = slotBank.getItemAt(manualRecordingSceneIndex);
+        cursorTrack.selectInMixer();
+        slot.select();
+        slot.launch();
+        showValueInfo("Clip Record", slotLabel(manualRecordingTrackIndex, manualRecordingSceneIndex));
+        return true;
+    }
+
     private void handleSlotRecordingChanged(final int sourceTrackIndex, final int visibleSceneIndex,
                                             final boolean recording) {
-        if (!manualRecordingPending) {
+        if (!manualRecordingPending || manualRecordingUsesCursorTrack) {
             return;
         }
         final int absoluteTrackIndex = trackBank.scrollPosition().get() + sourceTrackIndex;
@@ -1167,8 +1225,29 @@ public class PerformClipLauncherMode extends Layer {
 
         manualRecordingPending = false;
         manualRecordingWasRecording = false;
+        manualRecordingUsesCursorTrack = false;
         if (manualRecordingShouldRound) {
             roundRecordedClipLength(absoluteTrackIndex, absoluteSceneIndex);
+        }
+    }
+
+    private void handleCursorSlotRecordingChanged(final int sceneIndex, final boolean recording) {
+        if (!manualRecordingPending || !manualRecordingUsesCursorTrack || sceneIndex != manualRecordingSceneIndex) {
+            return;
+        }
+        if (recording) {
+            manualRecordingWasRecording = true;
+            return;
+        }
+        if (!manualRecordingWasRecording) {
+            return;
+        }
+
+        manualRecordingPending = false;
+        manualRecordingWasRecording = false;
+        manualRecordingUsesCursorTrack = false;
+        if (manualRecordingShouldRound) {
+            roundRecordedCursorClipLength(sceneIndex);
         }
     }
 
@@ -1183,6 +1262,28 @@ public class PerformClipLauncherMode extends Layer {
             final Track track = trackAddress.track();
             final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
             track.selectInMixer();
+            slot.select();
+            driver.getHost().scheduleTask(() -> {
+                final double currentLength = performCursorClip.getLoopLength().get();
+                final double roundedLength = roundToNearestBar(
+                        currentLength,
+                        driver.getTransportTimeSignatureNumerator(),
+                        driver.getTransportTimeSignatureDenominator());
+                performCursorClip.getLoopLength().set(roundedLength);
+                showValueInfo("Round Clip", formatBars(roundedLength));
+            }, 1);
+        }, 50);
+    }
+
+    private void roundRecordedCursorClipLength(final int sceneIndex) {
+        driver.getHost().scheduleTask(() -> {
+            final ClipLauncherSlotBank slotBank = cursorTrack.clipLauncherSlotBank();
+            if (sceneIndex < 0 || sceneIndex >= slotBank.getSizeOfBank()) {
+                showValueInfo("Round Clip", "Target gone");
+                return;
+            }
+            final ClipLauncherSlot slot = slotBank.getItemAt(sceneIndex);
+            cursorTrack.selectInMixer();
             slot.select();
             driver.getHost().scheduleTask(() -> {
                 final double currentLength = performCursorClip.getLoopLength().get();
