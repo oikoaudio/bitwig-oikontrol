@@ -474,7 +474,7 @@ The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The
 
 If the selected device has layers, press `PATTERN DOWN` once more from device view to open the Device Layers page. Columns address the first 16 layers of the selected Instrument Layer, FX Layer, Instrument Selector, or FX Selector. Rows select, solo, mute, and turn the layer on or off. Press `PATTERN UP` to return to device view.
 
-The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block.
+The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block. Press `PERFORM` to leave Birds-Eye and return to the normal launcher page, or press `NOTE`, `DRUM`, or `STEP` to leave Birds-Eye and switch modes.
 
 When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
 

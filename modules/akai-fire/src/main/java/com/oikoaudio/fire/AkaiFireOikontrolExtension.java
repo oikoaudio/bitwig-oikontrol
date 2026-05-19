@@ -888,6 +888,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (dismissGlobalSettingsOverlayForModeButton(Mode.DRUM)) {
             return;
         }
+        leavePerformBirdsEyeIfActive();
         if (isGlobalAltHeld()) {
             return;
         }
@@ -914,6 +915,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (dismissGlobalSettingsOverlayForModeButton(Mode.NOTE_PLAY)) {
             return;
         }
+        leavePerformBirdsEyeIfActive();
         if (isGlobalShiftHeld()) {
             toggleRecordQuantization();
             return;
@@ -971,6 +973,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void handleStepPressed(final boolean pressed) {
         if (pressed && dismissGlobalSettingsOverlayForStepButton()) {
             return;
+        }
+        if (pressed) {
+            leavePerformBirdsEyeIfActive();
         }
         if (modeState.activeMode() == Mode.MELODIC_STEP) {
             if (!pressed && suppressNextMelodicStepRelease) {
@@ -1049,6 +1054,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (!enteringPerform) {
+            if (performMode.isBirdsEyeMode()) {
+                performMode.leaveBirdsEyeMode();
+                notifyAction("Mode", performMode.activePageLabel());
+                return;
+            }
             if (performMode.isTrackActionMode()) {
                 performMode.toggleTrackActionMode();
                 notifyAction("Mode", performMode.activePageLabel());
@@ -1057,6 +1067,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             performMode.toggleSceneActionMode();
         }
         notifyAction("Mode", performMode.activePageLabel());
+    }
+
+    private boolean leavePerformBirdsEyeIfActive() {
+        if (modeState.activeMode() != Mode.PERFORM || performMode == null || !performMode.isBirdsEyeMode()) {
+            return false;
+        }
+        performMode.leaveBirdsEyeMode();
+        return true;
     }
 
     private void togglePlay(final boolean pressed) {

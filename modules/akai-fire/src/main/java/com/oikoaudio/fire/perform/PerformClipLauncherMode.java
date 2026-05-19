@@ -453,6 +453,10 @@ public class PerformClipLauncherMode extends Layer {
         return birdsEyeMode;
     }
 
+    public void leaveBirdsEyeMode() {
+        birdsEyeMode = false;
+    }
+
     public void toggleSceneActionMode() {
         sceneActionMode = !sceneActionMode;
         if (sceneActionMode) {
