@@ -114,6 +114,29 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesScreenMessageHoldPreferenceValues() {
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT,
+                FireControlPreferences.normalizeScreenMessageHold(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT));
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL,
+                FireControlPreferences.normalizeScreenMessageHold(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL));
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_LONG,
+                FireControlPreferences.normalizeScreenMessageHold(FireControlPreferences.SCREEN_MESSAGE_HOLD_LONG));
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL,
+                FireControlPreferences.normalizeScreenMessageHold("unexpected"));
+    }
+
+    @Test
+    void mapsScreenMessageHoldPreferenceValuesToMilliseconds() {
+        assertEquals(750,
+                FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT));
+        assertEquals(1500,
+                FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL));
+        assertEquals(3000,
+                FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_LONG));
+        assertEquals(1500, FireControlPreferences.toScreenMessageHoldMillis("unexpected"));
+    }
+
+    @Test
     void detectsWhenDrumModeShouldAutoPinFirstDrumMachine() {
         assertEquals(true,
                 FireControlPreferences.shouldAutoPinFirstDrumMachine(
@@ -137,8 +160,6 @@ class FireControlPreferencesTest {
 
     @Test
     void normalizesDefaultClipLengthPreferenceValues() {
-        assertEquals(FireControlPreferences.CLIP_LENGTH_OFF,
-                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_OFF));
         assertEquals(FireControlPreferences.CLIP_LENGTH_1_BAR,
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_1_BAR));
         assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
@@ -147,19 +168,34 @@ class FireControlPreferencesTest {
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_4_BARS));
         assertEquals(FireControlPreferences.CLIP_LENGTH_8_BARS,
                 FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_8_BARS));
-        assertEquals(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR,
-                FireControlPreferences.normalizeDefaultClipLength(
-                        FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
-        assertEquals(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR,
-                FireControlPreferences.normalizeDefaultClipLength("Round to nearest bar"));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_OFF));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
+                FireControlPreferences.normalizeDefaultClipLength(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
         assertEquals(FireControlPreferences.CLIP_LENGTH_2_BARS,
                 FireControlPreferences.normalizeDefaultClipLength("unexpected"));
     }
 
     @Test
+    void normalizesLauncherRecordLengthPreferenceValues() {
+        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_MANUAL,
+                FireControlPreferences.normalizeLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_OFF));
+        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_1_BAR,
+                FireControlPreferences.normalizeLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_1_BAR));
+        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_2_BARS,
+                FireControlPreferences.normalizeLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_4_BARS,
+                FireControlPreferences.normalizeLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_4_BARS));
+        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_8_BARS,
+                FireControlPreferences.normalizeLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_8_BARS));
+        assertEquals(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR,
+                FireControlPreferences.normalizeLauncherRecordLength("Round to nearest bar"));
+        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_2_BARS,
+                FireControlPreferences.normalizeLauncherRecordLength("unexpected"));
+    }
+
+    @Test
     void mapsDefaultClipLengthPreferenceToBeats() {
-        assertEquals(8.0,
-                FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_OFF));
         assertEquals(4.0,
                 FireControlPreferences.toClipLengthBeats(FireControlPreferences.CLIP_LENGTH_1_BAR));
         assertEquals(8.0,
@@ -174,24 +210,42 @@ class FireControlPreferencesTest {
     }
 
     @Test
-    void detectsRoundToNearestBarClipLengthPreference() {
-        assertEquals(true,
-                FireControlPreferences.isRoundToNearestBarClipLength(
-                        FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
-        assertEquals(true,
-                FireControlPreferences.isRoundToNearestBarClipLength("Round to nearest bar"));
-        assertEquals(false,
-                FireControlPreferences.isRoundToNearestBarClipLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
-        assertEquals(false, FireControlPreferences.isRoundToNearestBarClipLength("unexpected"));
+    void mapsLauncherRecordLengthPreferenceToBeats() {
+        assertEquals(8.0,
+                FireControlPreferences.toLauncherRecordLengthBeats(FireControlPreferences.LAUNCHER_RECORD_LENGTH_MANUAL));
+        assertEquals(4.0,
+                FireControlPreferences.toLauncherRecordLengthBeats(
+                        FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_1_BAR));
+        assertEquals(8.0,
+                FireControlPreferences.toLauncherRecordLengthBeats(
+                        FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_2_BARS));
+        assertEquals(16.0,
+                FireControlPreferences.toLauncherRecordLengthBeats(
+                        FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_4_BARS));
+        assertEquals(32.0,
+                FireControlPreferences.toLauncherRecordLengthBeats(
+                        FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_8_BARS));
     }
 
     @Test
-    void detectsOffClipLengthPreference() {
+    void detectsRoundLauncherRecordLengthPreference() {
         assertEquals(true,
-                FireControlPreferences.isOffClipLength(FireControlPreferences.CLIP_LENGTH_OFF));
+                FireControlPreferences.isRoundLauncherRecordLength(
+                        FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
+        assertEquals(true,
+                FireControlPreferences.isRoundLauncherRecordLength("Round to nearest bar"));
         assertEquals(false,
-                FireControlPreferences.isOffClipLength(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
-        assertEquals(false, FireControlPreferences.isOffClipLength("unexpected"));
+                FireControlPreferences.isRoundLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_2_BARS));
+        assertEquals(false, FireControlPreferences.isRoundLauncherRecordLength("unexpected"));
+    }
+
+    @Test
+    void detectsManualLauncherRecordLengthPreference() {
+        assertEquals(true,
+                FireControlPreferences.isManualLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_OFF));
+        assertEquals(false,
+                FireControlPreferences.isManualLauncherRecordLength(FireControlPreferences.CLIP_LENGTH_ROUND_NEAREST_BAR));
+        assertEquals(false, FireControlPreferences.isManualLauncherRecordLength("unexpected"));
     }
 
     @Test

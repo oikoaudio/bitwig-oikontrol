@@ -232,6 +232,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
         this.liveDrumPadBank = liveDrumMachineDevice.createDrumPadBank(DrumMachinePadLayout.PAD_WINDOW_SIZE);
         observeLiveDrumPads();
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
+        this.liveRemoteControlsPage.selectedPageIndex().markInterested();
+        this.liveRemoteControlsPage.pageCount().markInterested();
+        this.liveRemoteControlsPage.pageNames().markInterested();
+        this.liveRemoteControlsPage.getName().markInterested();
         final NoteLivePerformanceControls livePerformanceControls = new NoteLivePerformanceControls(
                 value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, value),
                 value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, value),
@@ -239,7 +243,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 () -> noteRepeatHandler.getNoteRepeatActive().get(),
                 oled::valueInfo);
         this.liveControls = new NoteLiveControlSurface(livePerformanceControls, liveEncoderControls,
-                encoderTouchResetHandler, oled::valueInfo, oled::detailInfo, oled::clearScreenDelayed);
+                encoderTouchResetHandler, oled::valueInfo, oled::detailInfo, oled::clearScreenDelayed,
+                driver.knobModeEncoderResetControl());
         this.livePadPerformer = new NoteLivePadPerformer(
                 new NoteLivePadPerformer.MidiOut() {
                     @Override
@@ -442,6 +447,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     adjustLiveModulation(inc);
                 });
         encoders[0].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(0, touched,
+                !isDrumMachineLiveMode(), "No reset",
                 () -> {
                     if (isDrumMachineLiveMode()) {
                         showDrumMachineLayoutInfo();
@@ -480,6 +486,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
         encoders[2].bindEncoder(liveChannelLayer, this::handleLivePitchGlissEncoder);
         encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
+                !isDrumMachineLiveMode() && !driver.isGlobalAltHeld(), "No reset",
                 () -> {
                     if (isDrumMachineLiveMode()) {
                         oled.valueInfo("Drum Pads", "--");
@@ -496,6 +503,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
         encoders[3].bindEncoder(liveChannelLayer, this::handleEncoder1);
         encoders[3].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(3, touched,
+                !isDrumMachineLiveMode(), "No reset",
                 () -> {
                     if (isDrumMachineLiveMode()) {
                         oled.valueInfo("Drum Pads", "--");
@@ -526,7 +534,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
             ParameterEncoderBinding.bind(encoders[i], liveUser2Layer, index, parameter,
                     "Remote " + (index + 1), driver::isGlobalShiftHeld,
                     ParameterEncoderBinding.TouchResetControl.of(encoderTouchResetHandler),
-                    ParameterEncoderBinding.ResetPolicy.NONE, oled::valueInfo, oled::clearScreenDelayed);
+                    ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT, driver.knobModeEncoderResetControl(),
+                    oled::valueInfo, oled::clearScreenDelayed);
         }
     }
 
@@ -563,8 +572,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
                     });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
-                if (touched) {
+                    if (touched) {
                     if (isHarmonicLiveMode()) {
+                        if (handleHarmonicMixerReset(index)) {
+                            return;
+                        }
                         showHarmonicMixerInfo(index);
                     } else {
                         handleLiveMixerParameterTouch(index, parameter, fallbackLabel, true);
@@ -580,6 +592,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
                                                final String fallbackLabel, final boolean touched) {
         if (touched) {
             final ParameterEncoderBinding.ResetPolicy resetPolicy = mixerResetPolicy(encoderIndex);
+            if (driver.handleKnobModeEncoderReset(true,
+                    ParameterEncoderBinding.isMapped(parameter)
+                            && resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE,
+                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset" : "Unmapped",
+                    () -> resetPolicy.reset(parameter),
+                    () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo))) {
+                return;
+            }
             if (resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE) {
                 encoderTouchResetHandler.beginTouchReset(encoderIndex, () -> {
                     resetPolicy.reset(parameter);
@@ -617,6 +637,27 @@ public abstract class LivePadSurfaceLayer extends Layer {
             case 3 -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
             default -> oled.clearScreenDelayed();
         }
+    }
+
+    private boolean handleHarmonicMixerReset(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> driver.handleKnobModeEncoderReset(true, true, "Notes", "No reset",
+                    () -> retuneLivePads(() -> harmonicNoteCountIndex = 2),
+                    () -> oled.valueInfo("Notes", harmonicNoteCountDisplay()));
+            case 1 -> driver.handleKnobModeEncoderReset(true, true, "Octaves", "No reset",
+                    () -> retuneLivePads(() -> harmonicOctaveSpan = 1),
+                    () -> oled.valueInfo("Octaves", Integer.toString(harmonicOctaveSpan)));
+            case 2 -> driver.handleKnobModeEncoderReset(true, true, "Bass Grid", "No reset",
+                    () -> retuneLivePads(() -> harmonicBassColumns = true),
+                    () -> oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off"));
+            case 3 -> driver.handleKnobModeEncoderReset(true, true, "Pitch Gliss", "No reset",
+                    () -> retuneLivePads(() -> {
+                        livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
+                        liveScaleDegreeGlissOffset = 0;
+                    }),
+                    () -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay()));
+            default -> false;
+        };
     }
 
     private void bindResettableLiveMidiEncoder(final TouchEncoder encoder, final Layer layer, final int encoderIndex,
@@ -920,6 +961,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
         livePitchBendTouched = touched;
         cancelLivePitchBendReturn();
         if (touched) {
+            if (driver.handleKnobModeEncoderReset(true, !isDrumMachineLiveMode(), "Pitch Bend", "No reset",
+                    () -> {
+                        livePitchBend = DEFAULT_LIVE_PITCH_BEND;
+                        liveExpressionControls.setTransientPitchBendValue(livePitchBend);
+                    },
+                    () -> oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND)))) {
+                return;
+            }
             oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
             return;
         }
@@ -1168,14 +1217,24 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void handleLiveModeAdvance(final boolean pressed) {
-        notePlayController.handleModeAdvance(pressed, false);
         if (pressed) {
-            oled.clearScreenDelayed();
+            return;
         }
+        if (driver.consumeKnobModeGesture()) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        notePlayController.handleModeAdvance(true, false);
     }
 
     private BiColorLightState getLiveModeLightState() {
         return notePlayController.modeLightState();
+    }
+
+    public AkaiFireOikontrolExtension.RemotePageTarget currentRemotePageTarget() {
+        return liveControls.currentEncoderMode() == EncoderMode.USER_2
+                ? new AkaiFireOikontrolExtension.RemotePageTarget(liveRemoteControlsPage, "Device")
+                : null;
     }
 
     private void handlePitchContextButton(final boolean pressed, final int amount, final boolean root) {

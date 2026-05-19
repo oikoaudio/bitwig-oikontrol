@@ -2086,6 +2086,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
+                        if (driver.handleKnobModeEncoderReset(true, true, "Engine", "No reset",
+                                () -> setGenerator(Generator.ACID),
+                                () -> oled.valueInfo(view.label, generator.label))) {
+                            return;
+                        }
                         if (driver.isGlobalAltHeld()) {
                             oled.valueInfo(view.label, activeGenerator().currentSubtypeLabel());
                         } else {
@@ -2133,8 +2138,18 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         if (driver.isGlobalAltHeld()) {
+                            if (driver.handleKnobModeEncoderReset(true, true, "Mut %", "No reset",
+                                    () -> mutateIntensity = 0.45,
+                                    () -> oled.valueInfo("Mut %", "%.2f".formatted(mutateIntensity)))) {
+                                return;
+                            }
                             oled.valueInfo("Mut %", "%.2f".formatted(mutateIntensity));
                         } else {
+                            if (driver.handleKnobModeEncoderReset(true, true, "Mut Type", "No reset",
+                                    () -> mutationMode = MelodicMutator.Mode.PRESERVE_RHYTHM,
+                                    () -> oled.valueInfo("Mut Type", mutationLabel(mutationMode)))) {
+                                return;
+                            }
                             oled.valueInfo("Mut Type", mutationLabel(mutationMode));
                         }
                     } else {
@@ -2167,6 +2182,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
+                        if (driver.handleKnobModeEncoderReset(true, true, "Density", "No reset",
+                                () -> density = 0.45,
+                                () -> oled.valueInfo("Density", "%.2f".formatted(density)))) {
+                            return;
+                        }
                         if (driver.isGlobalAltHeld()) {
                             oled.valueInfo("Thin/Fill", "Current phrase");
                         } else {
@@ -2200,8 +2220,18 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
                         if (driver.isGlobalAltHeld()) {
+                            if (driver.handleKnobModeEncoderReset(true, true, "Root", "No reset",
+                                    () -> driver.setSharedRootNote(0),
+                                    () -> oled.valueInfo("Root", NoteAssignHelper.noteName(driver.getSharedRootNote())))) {
+                                return;
+                            }
                             oled.valueInfo("Root", NoteAssignHelper.noteName(driver.getSharedRootNote()));
                         } else {
+                            if (driver.handleKnobModeEncoderReset(true, true, "Pool Oct", "No reset",
+                                    () -> poolLayoutRootPitch = -1,
+                                    () -> oled.valueInfo("Pool Oct", poolOctaveSummary()))) {
+                                return;
+                            }
                             oled.valueInfo("Pool Oct", poolOctaveSummary());
                         }
                     } else {
@@ -2293,7 +2323,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        handler.touchResetControl(), mixerResetPolicy(index), oled::valueInfo, oled::clearScreenDelayed);
+                        handler.touchResetControl(), mixerResetPolicy(index), driver.knobModeEncoderResetControl(),
+                        oled::valueInfo, oled::clearScreenDelayed);
             }
         };
     }

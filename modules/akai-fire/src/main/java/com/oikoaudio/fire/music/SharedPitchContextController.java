@@ -164,7 +164,7 @@ public final class SharedPitchContextController {
         return context;
     }
 
-    int resolveDefaultScaleIndex(final String defaultScalePreference) {
+    public int resolveDefaultScaleIndex(final String defaultScalePreference) {
         return switch (defaultScalePreference) {
             case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Major", 1);
             case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Minor", 2);

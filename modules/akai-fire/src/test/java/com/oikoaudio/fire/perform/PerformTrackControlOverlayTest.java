@@ -4,6 +4,9 @@ import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PerformTrackControlOverlayTest {
@@ -53,34 +56,61 @@ class PerformTrackControlOverlayTest {
     @Test
     void patternSceneNavigationIsUnlitInMix() {
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, false, 0, 0, 1, true));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 1, false));
+                PerformClipLauncherMode.patternSceneNavigationLightState(false, false, 0, false, 0, 0, 1, false));
         assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, false, 0, 0, -1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 1, true));
-        assertEquals(BiColorLightState.OFF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, false, 0, false, 0, 0, 1, true));
         assertEquals(BiColorLightState.AMBER_HALF,
-                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, -1, true));
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, false, 0, 0, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, false, 0, 0, -1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, false, 0, 0, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 1, false, 0, 0, -1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 0, 3, -1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 0, 3, 1, true));
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 2, 3, -1, true));
+        assertEquals(BiColorLightState.OFF,
+                PerformClipLauncherMode.patternSceneNavigationLightState(true, true, 0, true, 2, 3, 1, true));
     }
 
     @Test
-    void mixDevicePadsMapRowsToFirstFourTrackDevices() {
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(0));
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(15));
-        assertEquals(1, PerformClipLauncherMode.mixDeviceIndexForPad(16));
-        assertEquals(2, PerformClipLauncherMode.mixDeviceIndexForPad(32));
-        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForPad(48));
+    void mixDevicePadsMapRowsToPagedTrackDevices() {
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(0, 0));
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(15, 0));
+        assertEquals(1, PerformClipLauncherMode.mixDeviceIndexForPad(16, 0));
+        assertEquals(2, PerformClipLauncherMode.mixDeviceIndexForPad(32, 0));
+        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForPad(48, 0));
+        assertEquals(4, PerformClipLauncherMode.mixDeviceIndexForPad(0, 1));
+        assertEquals(5, PerformClipLauncherMode.mixDeviceIndexForPad(16, 1));
+        assertEquals(6, PerformClipLauncherMode.mixDeviceIndexForPad(32, 1));
+        assertEquals(7, PerformClipLauncherMode.mixDeviceIndexForPad(48, 1));
+    }
+
+    @Test
+    void mixDeviceRowsMapToPagedTrackDevices() {
+        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForRow(0, 0));
+        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForRow(3, 0));
+        assertEquals(4, PerformClipLauncherMode.mixDeviceIndexForRow(0, 1));
+        assertEquals(7, PerformClipLauncherMode.mixDeviceIndexForRow(3, 1));
+        assertEquals(-1, PerformClipLauncherMode.mixDeviceIndexForRow(4, 1));
     }
 
     @Test
     void mixDevicePadColorShowsEnabledState() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 
-        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixDevicePadColor(trackColor, true));
-        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false));
+        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixDevicePadColor(trackColor, true, true));
+        assertEquals(trackColor, PerformClipLauncherMode.mixDevicePadColor(trackColor, true, false));
+        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false, false));
+        assertEquals(trackColor.getSoftDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false, true));
     }
 
     @Test
@@ -88,6 +118,102 @@ class PerformTrackControlOverlayTest {
         assertEquals("Device Select", PerformClipLauncherMode.mixDeviceActionTitle(false, true));
         assertEquals("Device On", PerformClipLauncherMode.mixDeviceActionTitle(true, true));
         assertEquals("Device Off", PerformClipLauncherMode.mixDeviceActionTitle(true, false));
+    }
+
+    @Test
+    void rowWideDeviceToggleTurnsOffWhenAnyVisibleDeviceIsEnabled() {
+        assertEquals(false, PerformClipLauncherMode.rowWideDeviceToggleTarget(true));
+        assertEquals(true, PerformClipLauncherMode.rowWideDeviceToggleTarget(false));
+        assertEquals("Device Row Off", PerformClipLauncherMode.rowWideDeviceToggleTitle(false));
+        assertEquals("Device Row On", PerformClipLauncherMode.rowWideDeviceToggleTitle(true));
+    }
+
+    @Test
+    void deviceSelectionMemoryStoresValidDeviceSlotsByAbsoluteTrack() {
+        final Map<Integer, Integer> memory = new HashMap<>();
+
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 19, 5);
+
+        assertEquals(5, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 19));
+        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 18));
+    }
+
+    @Test
+    void deviceSelectionMemoryIgnoresInvalidAddresses() {
+        final Map<Integer, Integer> memory = new HashMap<>();
+
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, -1, 2);
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 3, -1);
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 3, 8);
+
+        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, -1));
+        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 3));
+    }
+
+    @Test
+    void mixDevicePadTogglesWindowWhenMainEncoderIsHeldWithoutAlt() {
+        assertEquals(true, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(true, false));
+        assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(true, true));
+        assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(false, false));
+    }
+
+    @Test
+    void birdsEyeVerticalPadsMapColumnsAndRowsToLauncherPages() {
+        final PerformLayout layout = PerformLayout.vertical();
+
+        assertEquals(0, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(0, layout, 64));
+        assertEquals(16, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(1, layout, 64));
+        assertEquals(48, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(3, layout, 64));
+        assertEquals(0, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(0, layout, 20));
+        assertEquals(4, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(16, layout, 20));
+    }
+
+    @Test
+    void birdsEyeHorizontalPadsMapRowsAndColumnsToLauncherPages() {
+        final PerformLayout layout = PerformLayout.horizontal();
+
+        assertEquals(0, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(0, layout, 32));
+        assertEquals(4, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(16, layout, 32));
+        assertEquals(0, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(0, layout, 64));
+        assertEquals(16, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(1, layout, 64));
+    }
+
+    @Test
+    void birdsEyeAvailabilityRequiresTrackAndSceneBlocks() {
+        final PerformLayout layout = PerformLayout.vertical();
+
+        assertEquals(true, PerformClipLauncherMode.birdsEyePadAvailable(0, layout, 16, 4));
+        assertEquals(false, PerformClipLauncherMode.birdsEyePadAvailable(1, layout, 16, 4));
+        assertEquals(false, PerformClipLauncherMode.birdsEyePadAvailable(16, layout, 16, 4));
+        assertEquals(false, PerformClipLauncherMode.birdsEyePadAvailable(-1, layout, 16, 4));
+    }
+
+    @Test
+    void birdsEyePadColorHighlightsCurrentBlock() {
+        assertEquals(RgbLigthState.OFF, PerformClipLauncherMode.birdsEyePadColor(false, false));
+        assertEquals(new RgbLigthState(0, 36, 84, true),
+                PerformClipLauncherMode.birdsEyePadColor(true, false));
+        assertEquals(new RgbLigthState(0, 108, 127, true),
+                PerformClipLauncherMode.birdsEyePadColor(true, true));
+    }
+
+    @Test
+    void deviceLayerMixerPadColorsFollowLayerRows() {
+        final RgbLigthState layerColor = new RgbLigthState(12, 80, 44, true);
+
+        assertEquals(layerColor, PerformClipLauncherMode.deviceLayerPadColorForPad(0, layerColor, false, false, true));
+        assertEquals(new RgbLigthState(96, 96, 0, true),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(16, layerColor, true, false, true));
+        assertEquals(RgbLigthState.OFF,
+                PerformClipLauncherMode.deviceLayerPadColorForPad(16, layerColor, false, false, true));
+        assertEquals(new RgbLigthState(110, 48, 0, true),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(32, layerColor, false, true, true));
+        assertEquals(new RgbLigthState(110, 0, 0, true),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(48, layerColor, false, false, true));
+        assertEquals(new RgbLigthState(110, 0, 0, true).getSoftDimmed(),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(48, layerColor, false, false, false));
+        assertEquals(layerColor.getSoftDimmed(),
+                PerformClipLauncherMode.deviceLayerPadColorForPad(0, layerColor, false, false, false));
     }
 
 }

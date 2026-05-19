@@ -502,6 +502,14 @@ public class DrumPadHandler {
         return selectedPad.adjustMixerValue(typeIndex, inc, parent.isShiftHeld());
     }
 
+    public boolean resetMixerParameter(final int typeIndex) {
+        return selectedPad != null && selectedPad.resetMixerValue(typeIndex);
+    }
+
+    public boolean hasSelectedPad() {
+        return selectedPad != null;
+    }
+
     public void ensureSelectedPad() {
         if (selectedPad != null) {
             selectedPad.pad.selectInEditor();

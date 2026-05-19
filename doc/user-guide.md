@@ -130,8 +130,11 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `REC` | Clip launcher overdub in Drum XOX; arranger record in other modes; hold for pad-target recording in `PERFORM` |
 | `ALT + REC` | Arranger automation write |
 | `PATTERN` | Clip launcher automation write |
+| `PATTERN + REC` | Record the selected track into the next free launcher slot, regardless of mode |
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub |
+| `KNOB MODE + PATTERN UP/DOWN` | Previous/next remote page for the active encoder page, when that page controls remotes |
+| `KNOB MODE + touch encoder` | Reset that encoder's current value when the target supports reset |
 | `SHIFT + DRUM` | Tap tempo |
 | `SHIFT + NOTE` | Toggle record quantization, restoring the previous grid or `1/16` |
 | `BROWSER` | Open or close Bitwig popup browser |
@@ -139,7 +142,15 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
-When the popup browser is open, `SELECT` turn moves through results, `SELECT` press commits the selected result, and `BROWSER` closes the browser.
+When the popup browser is open, `SELECT` turn moves through results, `SELECT` press or `PLAY` commits the selected result, and `STOP` or `BROWSER` closes the browser.
+
+When `KNOB MODE + PATTERN UP/DOWN` changes a remote page, the OLED shows the target page name and a bottom-row `N/M` count when there is more than one page. If the active encoder page has no remote target, the OLED reports `No remotes`. A single-page target reports `Page 1/1`, and page boundaries report `First page` or `Last page`. These chords are not treated as encoder-page cycles.
+
+Hold `KNOB MODE` and tap an encoder to reset the value under that encoder. The OLED reports `No reset` or `Unmapped` when the current encoder slot cannot reset, and the `KNOB MODE` tap is not treated as an encoder-page cycle. Volume controls are left without a reset action to avoid accidental jumps.
+
+When `Encoder touch reset` is enabled, touching and holding a resettable encoder also resets that value after a short hold. The explicit `KNOB MODE + touch encoder` chord is available separately as a deliberate reset gesture.
+
+Use `ALT + REC` for arranger automation write and `ALT + PATTERN` for launcher overdub. `PATTERN` still toggles clip launcher automation write directly. `PATTERN + REC` is the quick launcher capture chord: it records the selected track into the next free launcher slot regardless of mode. Plain `REC` remains the arranger-record path from Perform Mix pages. Press `REC` again to stop a launcher recording started from either `PATTERN + REC` or `REC + pad`.
 
 ### Global settings overlay
 
@@ -147,11 +158,14 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 
 | Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Pitch` | Shared root key | Shared scale | Shared octave | `ClipLen`: launcher recording length |
+| `Pitch` | Shared root key | Shared scale | Shared octave | -- |
 | `Input` | Global velocity sensitivity | Global velocity center | Pad brightness | Pad saturation |
+| `Clip` | `Create`: default empty-clip length | `Record`: launcher record length | -- | -- |
 | `Pins` | Pin track | Pin device | Pin clip | -- |
 
 On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
+
+The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens such as meters return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s.
 
 ### Main SELECT encoder
 
@@ -441,7 +455,8 @@ For immediate derived-line feedback, change source expression from the controlle
 
 | Control | Action |
 | --- | --- |
-| `REC` + pad | Record into the targeted launcher slot using `Default Clip Length` |
+| `REC` + pad | Record into the targeted launcher slot using `Launcher Record Length` |
+| `PATTERN + REC` | Record the selected track into the next free launcher slot |
 | `MUTE_1` + pad | Select without launching |
 | `MUTE_2` | Double selected visible clip length |
 | `SHIFT + MUTE_2` | Halve selected visible clip length |
@@ -456,12 +471,17 @@ For immediate derived-line feedback, change source expression from the controlle
 | `PERFORM` while in Launcher | Toggle launcher / Scene Launch pad page |
 | `ALT + PERFORM` | Toggle vertical/horizontal launcher layout |
 | `SHIFT + PERFORM` | Toggle latched Mix pad page |
+| `SHIFT + ALT + PERFORM` | Toggle Birds-Eye launcher navigation |
 
-The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. On the select row, hold `ALT` and press a pad to stop that track. While the Mix page is active, `MUTE_1` jumps to the loop start or project start, `MUTE_2` and its nearby status LED light when any track is soloed and clear all solos, `MUTE_3` and its nearby status LED light when any track is muted and clear all mutes, and `MUTE_4` jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press `PATTERN DOWN` on Mix to switch from track actions to device view, and press `PATTERN UP` in device view to return to track actions. In device view, each column remains one visible track, rows 1-4 represent the first four devices on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold `ALT` and press a device pad to toggle it on or off. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. `KNOB MODE` still cycles the Launcher encoder pages while the Mix pad page is active.
+The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. On the select row, hold `ALT` and press a pad to stop that track. While the Mix page is active, `MUTE_1` jumps to the loop start or project start, `MUTE_2` and its nearby status LED light when any track is soloed and clear all solos, `MUTE_3` and its nearby status LED light when any track is muted and clear all mutes, and `MUTE_4` jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press `PATTERN DOWN` on Mix to switch from track actions to device view for devices 1-4, press `PATTERN DOWN` again for devices 5-8, and press `PATTERN UP` to step back through device pages and then return to track actions. In device view, hold `KNOB MODE` and press `PATTERN UP`/`PATTERN DOWN` to move the selected device remote page. Each column remains one visible track, rows 1-4 represent the current four-device page on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold the main encoder while pressing a device pad to select that device and open or close its window. The last selected device slot is remembered per track, so selecting that track again from the Mix select row restores the remembered device when it still exists. Hold `ALT` and press a device pad to toggle it on or off. Hold `ALT` and press `MUTE_1`-`MUTE_4` to toggle the matching visible device row across all visible tracks: if any occupied slot in the row is enabled, the row turns off; otherwise it turns on. The selected enabled device is brightest, and the selected bypassed device is softly lit. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. Tap `KNOB MODE` to cycle the Launcher encoder pages while the Mix pad page is active.
+
+If the selected device has layers, press `PATTERN DOWN` once more from device view to open the Device Layers page. Columns address the first 16 layers of the selected Instrument Layer, FX Layer, Instrument Selector, or FX Selector. Rows select, solo, mute, and turn the layer on or off. Press `PATTERN UP` to return to device view.
+
+The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block. Press `PERFORM` to leave Birds-Eye and return to the normal launcher page, or press `NOTE`, `DRUM`, or `STEP` to leave Birds-Eye and switch modes.
 
 When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
 
-Hold `REC` and press a pad to target recording directly into that visible slot. For fixed `Default Clip Length` values, the script sets Bitwig's clip launcher post-record action to play the recorded clip after that length. If `Default Clip Length` is set to `Off`, recording continues until manually stopped without post-processing. If it is set to `Round`, recording continues until manually stopped, then the recorded clip loop length is rounded to the nearest whole bar. Press `REC` again to end an `Off` or `Round` launcher recording and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. `Default Clip Length` controls empty clip creation and is always a fixed length. `Launcher Record Length` controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, `Manual` records until stopped without post-processing, and `Round` records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 
@@ -550,6 +570,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Clip Launch Quantization`
 - `Perform Clip Launcher Layout`
 - `Default Clip Length`
+- `Launcher Record Length`
 - `Startup Mode`
 - `SELECT Encoder Startup`
 - `Default Root Key`
@@ -560,7 +581,8 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Melodic Fixed Seed`
 - `Pad Brightness`
 - `Pad Saturation`
-- `Encoder touch reset`
+- `Encoder touch reset`: enables the touch-and-hold reset gesture on resettable encoders
+- `Screen Message Hold`
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`

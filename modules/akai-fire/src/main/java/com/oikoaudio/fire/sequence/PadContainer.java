@@ -74,6 +74,7 @@ class PadContainer {
         for (int i = 0; i < 8; i++) {
             final Send sendItem = pad.sendBank().getItemAt(i);
             sendParameters[i] = sendItem;
+            sendItem.getOrigin().markInterested();
             // sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem, padHandler.getDiplayTarget(), false, null);
             sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem, padHandler.getDisplayTarget(), false);
         }
@@ -95,6 +96,7 @@ class PadContainer {
         bitwigPadColor = explicitPadColorOrNull();
         volumeParameter = pad.volume();
         panParameter = pad.pan();
+        panParameter.getOrigin().markInterested();
         volumeBinding = new ParameterDisplayBinding(0, index, volumeParameter, padHandler.getDisplayTarget(), false);
         panBinding = new ParameterDisplayBinding(1, index, panParameter, padHandler.getDisplayTarget(), true);
 
@@ -289,6 +291,15 @@ class PadContainer {
             return false;
         }
         EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, fine, inc);
+        return true;
+    }
+
+    public boolean resetMixerValue(final int typeIndex) {
+        final Parameter parameter = mixerParameter(typeIndex);
+        if (parameter == null || typeIndex == 0) {
+            return false;
+        }
+        parameter.value().setImmediately(parameter.getOrigin().get());
         return true;
     }
 
