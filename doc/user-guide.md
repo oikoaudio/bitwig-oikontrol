@@ -139,7 +139,7 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
-When the popup browser is open, `SELECT` turn moves through results, `SELECT` press commits the selected result, and `BROWSER` closes the browser.
+When the popup browser is open, `SELECT` turn moves through results, `SELECT` press or `PLAY` commits the selected result, and `STOP` or `BROWSER` closes the browser.
 
 ### Global settings overlay
 

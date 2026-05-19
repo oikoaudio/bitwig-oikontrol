@@ -40,6 +40,12 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class AkaiFireOikontrolExtension extends ControllerExtension {
+    enum BrowserTransportAction {
+        NONE,
+        COMMIT,
+        CANCEL
+    }
+
     private static final double MAIN_ENCODER_STEP = 0.01;
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
@@ -723,6 +729,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void stopAction(final boolean pressed) {
+        if (browserTransportAction(isPopupBrowserActive(), NoteAssign.STOP, pressed) == BrowserTransportAction.CANCEL) {
+            popupBrowser.cancel();
+            notifyAction("Browser", "Closed");
+            return;
+        }
         if (!pressed) {
             return;
         }
@@ -1022,6 +1033,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void togglePlay(final boolean pressed) {
+        if (browserTransportAction(isPopupBrowserActive(), NoteAssign.PLAY, pressed) == BrowserTransportAction.COMMIT) {
+            popupBrowser.commit();
+            notifyAction("Browser", "Commit");
+            return;
+        }
         if (!pressed) {
             return;
         }
@@ -2566,6 +2582,19 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void routeBrowserMainEncoderPress(final boolean press) {
         handleGlobalMainEncoderPress(press);
+    }
+
+    static BrowserTransportAction browserTransportAction(final boolean browserActive,
+                                                         final NoteAssign assignment,
+                                                         final boolean pressed) {
+        if (!browserActive || !pressed) {
+            return BrowserTransportAction.NONE;
+        }
+        return switch (assignment) {
+            case PLAY -> BrowserTransportAction.COMMIT;
+            case STOP -> BrowserTransportAction.CANCEL;
+            default -> BrowserTransportAction.NONE;
+        };
     }
 
     public static AkaiFireOikontrolExtension getInstance() {
