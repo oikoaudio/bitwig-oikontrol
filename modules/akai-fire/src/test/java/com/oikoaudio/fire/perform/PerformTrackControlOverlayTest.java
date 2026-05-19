@@ -4,6 +4,9 @@ import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PerformTrackControlOverlayTest {
@@ -123,6 +126,28 @@ class PerformTrackControlOverlayTest {
         assertEquals(true, PerformClipLauncherMode.rowWideDeviceToggleTarget(false));
         assertEquals("Device Row Off", PerformClipLauncherMode.rowWideDeviceToggleTitle(false));
         assertEquals("Device Row On", PerformClipLauncherMode.rowWideDeviceToggleTitle(true));
+    }
+
+    @Test
+    void deviceSelectionMemoryStoresValidDeviceSlotsByAbsoluteTrack() {
+        final Map<Integer, Integer> memory = new HashMap<>();
+
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 19, 5);
+
+        assertEquals(5, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 19));
+        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 18));
+    }
+
+    @Test
+    void deviceSelectionMemoryIgnoresInvalidAddresses() {
+        final Map<Integer, Integer> memory = new HashMap<>();
+
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, -1, 2);
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 3, -1);
+        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 3, 8);
+
+        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, -1));
+        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 3));
     }
 
 }

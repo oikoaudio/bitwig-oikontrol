@@ -131,6 +131,7 @@ public class PerformClipLauncherMode extends Layer {
     private final String[] trackNames = new String[MAX_TRACKS];
     private final DeviceBank[] trackDeviceBanks = new DeviceBank[MAX_TRACKS];
     private final String[][] trackDeviceNames = new String[MAX_TRACKS][MIX_DEVICE_SLOTS];
+    private final Map<Integer, Integer> rememberedDeviceByTrack = new HashMap<>();
     private final String[] sceneNames = new String[MAX_SCENES];
     private final int[] trackPeakMeters = new int[MAX_TRACKS];
     private final int[] trackRmsMeters = new int[MAX_TRACKS];
@@ -797,6 +798,7 @@ public class PerformClipLauncherMode extends Layer {
                     return;
                 }
                 track.selectInEditor();
+                restoreRememberedMixDevice(trackAddress);
                 showValueInfo("Mix Select", trackLabel);
             }
             case SOLO -> {
@@ -844,8 +846,25 @@ public class PerformClipLauncherMode extends Layer {
         remoteCursorDevice.selectDevice(device);
         selectedRemoteTrackIndex = trackAddress.absoluteIndex();
         selectedRemoteDeviceIndex = deviceIndex;
+        rememberMixDeviceSelection(rememberedDeviceByTrack, trackAddress.absoluteIndex(), deviceIndex);
         device.selectInEditor();
         showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()), mixDeviceName(trackAddress, deviceIndex));
+    }
+
+    private void restoreRememberedMixDevice(final TrackAddress trackAddress) {
+        final int deviceIndex = rememberedMixDeviceSelection(rememberedDeviceByTrack, trackAddress.absoluteIndex());
+        if (deviceIndex < 0) {
+            return;
+        }
+        final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
+        if (device == null || !device.exists().get()) {
+            rememberedDeviceByTrack.remove(trackAddress.absoluteIndex());
+            return;
+        }
+        remoteCursorDevice.selectDevice(device);
+        selectedRemoteTrackIndex = trackAddress.absoluteIndex();
+        selectedRemoteDeviceIndex = deviceIndex;
+        device.selectInEditor();
     }
 
     private void handleSceneActionPadPressed(final int padIndex, final boolean pressed) {
@@ -2087,6 +2106,23 @@ public class PerformClipLauncherMode extends Layer {
 
     static String rowWideDeviceToggleTitle(final boolean enabled) {
         return enabled ? "Device Row On" : "Device Row Off";
+    }
+
+    static void rememberMixDeviceSelection(final Map<Integer, Integer> rememberedDeviceByTrack,
+                                           final int absoluteTrackIndex,
+                                           final int deviceIndex) {
+        if (absoluteTrackIndex < 0 || deviceIndex < 0 || deviceIndex >= MIX_DEVICE_SLOTS) {
+            return;
+        }
+        rememberedDeviceByTrack.put(absoluteTrackIndex, deviceIndex);
+    }
+
+    static int rememberedMixDeviceSelection(final Map<Integer, Integer> rememberedDeviceByTrack,
+                                            final int absoluteTrackIndex) {
+        if (absoluteTrackIndex < 0) {
+            return -1;
+        }
+        return rememberedDeviceByTrack.getOrDefault(absoluteTrackIndex, -1);
     }
 
     static BiColorLightState mixStatusLightState(final boolean trackActionMode,
