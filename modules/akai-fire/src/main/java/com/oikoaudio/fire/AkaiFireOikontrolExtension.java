@@ -151,6 +151,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue defaultVelocitySensitivityPref;
     private SettableEnumValue melodicSeedModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
+    private SettableEnumValue screenMessageHoldPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableBooleanValue showDeactivatedTracksPref;
     private SettableRangedValue padBrightnessPref;
@@ -185,6 +186,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
+    private long screenMessageHoldMs = FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS;
     private final SharedPitchContextController sharedPitchContext = new SharedPitchContextController(
             new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
             MusicalScaleLibrary.getInstance());
@@ -495,6 +497,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         encoderTouchResetPref.markInterested();
         encoderTouchResetEnabled = encoderTouchResetPref.get();
         encoderTouchResetPref.addValueObserver(value -> encoderTouchResetEnabled = value);
+
+        screenMessageHoldPref = preferences.getEnumSetting("Screen Message Hold",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.SCREEN_MESSAGE_HOLDS,
+                FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL);
+        screenMessageHoldPref.markInterested();
+        screenMessageHoldPref.addValueObserver(this::applyScreenMessageHoldPreference);
+        applyScreenMessageHoldPreference(screenMessageHoldPref.get());
 
         showDeactivatedTracksPref = preferences.getBooleanSetting("Show deactivated tracks",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -1292,6 +1302,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isEncoderTouchResetEnabled() {
         return encoderTouchResetEnabled;
+    }
+
+    public long getScreenMessageHoldMs() {
+        return screenMessageHoldMs;
+    }
+
+    private void applyScreenMessageHoldPreference(final String preferenceValue) {
+        screenMessageHoldMs = FireControlPreferences.toScreenMessageHoldMillis(preferenceValue);
+        oled.setClearDelayMs(screenMessageHoldMs);
     }
 
     private void applyStartupModePreference() {

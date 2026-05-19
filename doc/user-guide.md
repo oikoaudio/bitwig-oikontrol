@@ -165,6 +165,8 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 
 On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
+The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens such as meters return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s.
+
 ### Main SELECT encoder
 
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
@@ -580,6 +582,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Pad Brightness`
 - `Pad Saturation`
 - `Encoder touch reset`: enables the touch-and-hold reset gesture on resettable encoders
+- `Screen Message Hold`
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Step Seq Pad Audition`

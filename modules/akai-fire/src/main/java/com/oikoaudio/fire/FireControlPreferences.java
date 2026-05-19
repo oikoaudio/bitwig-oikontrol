@@ -19,6 +19,17 @@ public final class FireControlPreferences {
     public static final double PAD_SATURATION_STEP = 5.0;
     public static final double PAD_SATURATION_DEFAULT = 100.0;
     public static final boolean ENCODER_TOUCH_RESET_DEFAULT = true;
+    public static final String SCREEN_MESSAGE_HOLD_SHORT = "Short";
+    public static final String SCREEN_MESSAGE_HOLD_NORMAL = "Normal";
+    public static final String SCREEN_MESSAGE_HOLD_LONG = "Long";
+    public static final long SCREEN_MESSAGE_HOLD_SHORT_MS = 750;
+    public static final long SCREEN_MESSAGE_HOLD_NORMAL_MS = 1500;
+    public static final long SCREEN_MESSAGE_HOLD_LONG_MS = 3000;
+    public static final String[] SCREEN_MESSAGE_HOLDS = {
+            SCREEN_MESSAGE_HOLD_SHORT,
+            SCREEN_MESSAGE_HOLD_NORMAL,
+            SCREEN_MESSAGE_HOLD_LONG
+    };
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
     public static final String CLIP_LAUNCH_MODE_FROM_START = "From Start";
@@ -367,6 +378,23 @@ public final class FireControlPreferences {
             }
         }
         return DRUM_PIN_MODE_FIRST_DRUM_MACHINE;
+    }
+
+    public static String normalizeScreenMessageHold(final String preferenceValue) {
+        for (final String value : SCREEN_MESSAGE_HOLDS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return SCREEN_MESSAGE_HOLD_NORMAL;
+    }
+
+    public static long toScreenMessageHoldMillis(final String preferenceValue) {
+        return switch (normalizeScreenMessageHold(preferenceValue)) {
+            case SCREEN_MESSAGE_HOLD_SHORT -> SCREEN_MESSAGE_HOLD_SHORT_MS;
+            case SCREEN_MESSAGE_HOLD_LONG -> SCREEN_MESSAGE_HOLD_LONG_MS;
+            default -> SCREEN_MESSAGE_HOLD_NORMAL_MS;
+        };
     }
 
     public static String normalizeDefaultClipLength(final String preferenceValue) {

@@ -114,6 +114,29 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesScreenMessageHoldPreferenceValues() {
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT,
+                FireControlPreferences.normalizeScreenMessageHold(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT));
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL,
+                FireControlPreferences.normalizeScreenMessageHold(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL));
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_LONG,
+                FireControlPreferences.normalizeScreenMessageHold(FireControlPreferences.SCREEN_MESSAGE_HOLD_LONG));
+        assertEquals(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL,
+                FireControlPreferences.normalizeScreenMessageHold("unexpected"));
+    }
+
+    @Test
+    void mapsScreenMessageHoldPreferenceValuesToMilliseconds() {
+        assertEquals(750,
+                FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT));
+        assertEquals(1500,
+                FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL));
+        assertEquals(3000,
+                FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_LONG));
+        assertEquals(1500, FireControlPreferences.toScreenMessageHoldMillis("unexpected"));
+    }
+
+    @Test
     void detectsWhenDrumModeShouldAutoPinFirstDrumMachine() {
         assertEquals(true,
                 FireControlPreferences.shouldAutoPinFirstDrumMachine(

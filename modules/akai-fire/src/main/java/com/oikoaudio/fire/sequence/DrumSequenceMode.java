@@ -35,7 +35,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
     private static final int METER_REFRESH_TICKS = 1;
-    private static final long METER_DISPLAY_SUPPRESS_MS = 4500;
 
     private final OledDisplay oled;
 
@@ -911,7 +910,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     public void suppressDrumMeterDisplay() {
         drumMeterDisplayActive = false;
-        drumMeterSuppressedUntilMs = System.currentTimeMillis() + METER_DISPLAY_SUPPRESS_MS;
+        drumMeterSuppressedUntilMs = System.currentTimeMillis() + driver.getScreenMessageHoldMs();
     }
 
     @Override

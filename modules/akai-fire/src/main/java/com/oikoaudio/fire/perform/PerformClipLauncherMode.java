@@ -95,8 +95,6 @@ public class PerformClipLauncherMode extends Layer {
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
     private static final int METER_REFRESH_TICKS = 1;
-    private static final long METER_DISPLAY_SUPPRESS_MS = 4500;
-    private static final long METER_MODE_INFO_SUPPRESS_MS = 1200;
     private static final String SELECTED_TRACK_METER_LEGEND = "Peak        | RMS";
     private static final String MIXER_ENCODER_FOOTER = "Vol  Pan  S1  S2";
     private static final String BLANK_TEXT_ROW = "                    ";
@@ -1731,29 +1729,29 @@ public class PerformClipLauncherMode extends Layer {
     private void showCurrentModeInfo() {
         if (birdsEyeMode) {
             showTransientDetailInfo("Birds Eye", "Pads: Jump viewport\nSHIFT+ALT+PERFORM: Exit",
-                    METER_MODE_INFO_SUPPRESS_MS);
+                    driver.getScreenMessageHoldMs());
             return;
         }
         if (sceneActionMode) {
             showTransientDetailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete",
-                    METER_MODE_INFO_SUPPRESS_MS);
+                    driver.getScreenMessageHoldMs());
             return;
         }
-        showTransientDetailInfo(modeTitle(encoderMode), modeInfo(encoderMode), METER_MODE_INFO_SUPPRESS_MS);
+        showTransientDetailInfo(modeTitle(encoderMode), modeInfo(encoderMode), driver.getScreenMessageHoldMs());
     }
 
     private void showTrackActionInfo() {
         if (deviceLayerMixerMode) {
             showTransientDetailInfo("Device Layers",
                     "Rows: Select/Solo/Mute/On\nPattern Up: Devices",
-                    METER_MODE_INFO_SUPPRESS_MS);
+                    driver.getScreenMessageHoldMs());
             return;
         }
         if (mixDeviceToggleMode) {
             showTransientDetailInfo(mixDevicePageTitle(),
                     "Rows: %s\nPad: Select  ALT: On/Off\nPattern: Page/Mix/Layer"
                             .formatted(mixDevicePageRangeLabel()),
-                    METER_MODE_INFO_SUPPRESS_MS);
+                    driver.getScreenMessageHoldMs());
             return;
         }
         showTransientDetailInfo("Mix",
@@ -1761,7 +1759,7 @@ public class PerformClipLauncherMode extends Layer {
                 TrackActionRow.SELECT.label,
                 TrackActionRow.SOLO.label,
                 TrackActionRow.MUTE.label,
-                TrackActionRow.ARM.label), METER_MODE_INFO_SUPPRESS_MS);
+                TrackActionRow.ARM.label), driver.getScreenMessageHoldMs());
     }
 
     private String mixDevicePageTitle() {
@@ -1931,7 +1929,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showTransientDetailInfo(final String title, final String lines) {
-        showTransientDetailInfo(title, lines, METER_DISPLAY_SUPPRESS_MS);
+        showTransientDetailInfo(title, lines, driver.getScreenMessageHoldMs());
     }
 
     private void showTransientDetailInfo(final String title, final String lines, final long suppressMs) {
@@ -1947,7 +1945,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public void suppressMixMeterDisplay() {
-        suppressMixMeterDisplay(METER_DISPLAY_SUPPRESS_MS);
+        suppressMixMeterDisplay(driver.getScreenMessageHoldMs());
     }
 
     private void suppressMixMeterDisplay(final long suppressMs) {
