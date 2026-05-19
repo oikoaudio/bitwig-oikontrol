@@ -743,8 +743,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         transport.stop();
-        notifyAction("Transport", "Stop");
-        oled.clearScreenDelayed();
     }
 
     private void toggleRec(final boolean pressed) {
@@ -836,6 +834,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public void notifyAction(final String title, final String value) {
         if (!showModeAwareActionInfo(title, value)) {
             oled.valueInfo(title, value);
+            suppressTransientOledOverlays();
         }
         if (screenNotificationsPref != null && screenNotificationsPref.get()) {
             host.showPopupNotification(title + ": " + value);
@@ -1050,20 +1049,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (drumSequenceMode.isAltHeld()) {
             final boolean wasPlaying = transport.isPlaying().get();
             drumSequenceMode.retrigger();
-            notifyAction(wasPlaying ? "Clip" : "Transport", wasPlaying ? "Retrigger" : "Play");
-            oled.clearScreenDelayed();
+            if (wasPlaying) {
+                notifyAction("Clip", "Retrigger");
+                oled.clearScreenDelayed();
+            }
             return;
         }
         // Regular behavior: toggle play/stop, retrigger on start.
         if (transport.isPlaying().get()) {
             transport.isPlaying().set(false);
-            notifyAction("Transport", "Stop");
-            oled.clearScreenDelayed();
         } else {
             drumSequenceMode.retrigger();
             transport.restart();
-            notifyAction("Transport", "Play");
-            oled.clearScreenDelayed();
         }
     }
 
