@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class PatternButtons {
+    private final AkaiFireOikontrolExtension driver;
     private final BiColorButton upButton;
     private final BiColorButton downButton;
 
@@ -20,6 +21,7 @@ public class PatternButtons {
     private Supplier<BiColorLightState> downLightSupplier = () -> BiColorLightState.OFF;
 
     public PatternButtons(AkaiFireOikontrolExtension driver, Layer layer) {
+        this.driver = driver;
         upButton = driver.getButton(NoteAssign.PATTERN_UP);
         downButton = driver.getButton(NoteAssign.PATTERN_DOWN);
 
@@ -29,15 +31,21 @@ public class PatternButtons {
         // Bind the buttons to delegate to our stored callbacks:
         upButton.bindPressed(layer, pressed -> {
             if (pressed) {
+                if (driver.handleKnobModePatternRemotePage(-1)) {
+                    return;
+                }
                 upCallback.accept(true);
             }
-        }, () -> upLightSupplier.get());
+        }, () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(-1) : upLightSupplier.get());
 
         downButton.bindPressed(layer, pressed -> {
             if (pressed) {
+                if (driver.handleKnobModePatternRemotePage(1)) {
+                    return;
+                }
                 downCallback.accept(true);
             }
-        }, () -> downLightSupplier.get());
+        }, () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(1) : downLightSupplier.get());
     }
 
     // Methods to register callbacks:

@@ -680,7 +680,10 @@ public final class FugueStepMode extends Layer {
     }
 
     private void handleEncoderModeButton(final boolean pressed) {
-        if (!pressed) {
+        if (pressed) {
+            return;
+        }
+        if (driver.consumeKnobModeGesture()) {
             oled.clearScreenDelayed();
             return;
         }

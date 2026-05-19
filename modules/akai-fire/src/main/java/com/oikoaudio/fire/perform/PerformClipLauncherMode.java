@@ -586,7 +586,7 @@ public class PerformClipLauncherMode extends Layer {
             final String label = fallbackLabels[i];
             ParameterEncoderBinding.bind(encoders[i], layer, index, parameter, label, this::isShiftHeld,
                     ParameterEncoderBinding.TouchResetControl.of(parameterResetHandler), mixerResetPolicy(index),
-                    this::showTransientValueInfo, this::clearTransientDisplayDelayed);
+                    driver.knobModeEncoderResetControl(), this::showTransientValueInfo, this::clearTransientDisplayDelayed);
         }
     }
 
@@ -598,13 +598,15 @@ public class PerformClipLauncherMode extends Layer {
 
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
         patternUp.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, -1),
-                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
+                () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(-1)
+                        : patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
                         isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
                         deviceRemoteControls.pageCount().getAsInt(), -1, canScrollScenes(-1)));
 
         final BiColorButton patternDown = driver.getButton(NoteAssign.PATTERN_DOWN);
         patternDown.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, 1),
-                () -> patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
+                () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(1)
+                        : patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
                         isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
                         deviceRemoteControls.pageCount().getAsInt(), 1, canScrollScenes(1)));
     }
@@ -1272,6 +1274,9 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handlePatternSceneScroll(final boolean pressed, final int direction) {
+        if (pressed && driver.handleKnobModePatternRemotePage(direction)) {
+            return;
+        }
         if (trackActionMode) {
             if (pressed) {
                 if (deviceLayerMixerMode) {
@@ -1377,7 +1382,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handleModeAdvance(final boolean pressed) {
-        if (!pressed) {
+        if (pressed) {
+            return;
+        }
+        if (driver.consumeKnobModeGesture()) {
             oled.clearScreenDelayed();
             return;
         }
@@ -1522,6 +1530,12 @@ public class PerformClipLauncherMode extends Layer {
             case USER_2 -> deviceRemoteControls;
             case MIXER -> null;
         };
+    }
+
+    public AkaiFireOikontrolExtension.RemotePageTarget currentRemotePageTarget() {
+        final CursorRemoteControlsPage page = remotePageForCurrentEncoderMode();
+        return page == null ? null : new AkaiFireOikontrolExtension.RemotePageTarget(
+                page, remotePageLabelForCurrentEncoderMode());
     }
 
     private String remotePageLabelForCurrentEncoderMode() {
@@ -1849,6 +1863,12 @@ public class PerformClipLauncherMode extends Layer {
     private void handleRemoteParameterTouch(final int encoderIndex, final Parameter parameter,
                                             final String fallbackLabel, final boolean touched) {
         if (touched) {
+            if (driver.handleKnobModeEncoderReset(true, ParameterEncoderBinding.isMapped(parameter),
+                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset here" : "Unmapped",
+                    parameter::reset,
+                    () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showTransientValueInfo))) {
+                return;
+            }
             parameterResetHandler.beginTouchReset(encoderIndex, () -> {
                 if (ParameterEncoderBinding.isMapped(parameter)) {
                     parameter.reset();

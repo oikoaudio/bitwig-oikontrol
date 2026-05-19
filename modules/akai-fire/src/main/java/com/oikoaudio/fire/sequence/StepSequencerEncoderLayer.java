@@ -188,10 +188,13 @@ public class StepSequencerEncoderLayer extends Layer {
     }
 
 	private void handleModeAdvance(final boolean pressed) {
-		if (!pressed) {
-			oled.clearScreenDelayed();
+		if (pressed) {
 			return;
 		}
+        if (driver.consumeKnobModeGesture()) {
+            oled.clearScreenDelayed();
+            return;
+        }
 		if (parent.isSelectHeld()) { // display encoder details on select + mode
 			oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
 		} else {
@@ -346,6 +349,10 @@ public class StepSequencerEncoderLayer extends Layer {
 
 	private void handleTouch(final int slotIndex, final boolean touched, final NoteStepAccess accessor) {
         if (touched) {
+            if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(), "No reset here",
+                    () -> resetAccessorToDefault(accessor), () -> showTouchPress(accessor))) {
+                return;
+            }
             beginTouchReset(slotIndex, () -> resetAccessorToDefault(accessor));
             showTouchPress(accessor);
             return;

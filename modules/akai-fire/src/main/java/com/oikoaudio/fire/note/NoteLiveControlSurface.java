@@ -2,6 +2,7 @@ package com.oikoaudio.fire.note;
 
 import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.lights.BiColorLightState;
+import com.oikoaudio.fire.sequence.EncoderMode;
 
 /**
  * Facade for Note mode's live-side button and encoder-page control surface.
@@ -79,6 +80,10 @@ final class NoteLiveControlSurface {
 
     BiColorLightState modeLightState() {
         return encoderModeControls.lightState();
+    }
+
+    EncoderMode currentEncoderMode() {
+        return encoderModeControls.mode();
     }
 
     void handleExpressionTouch(final boolean touched, final String label, final String value) {

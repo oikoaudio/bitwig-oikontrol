@@ -2293,7 +2293,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        handler.touchResetControl(), mixerResetPolicy(index), oled::valueInfo, oled::clearScreenDelayed);
+                        handler.touchResetControl(), mixerResetPolicy(index), driver.knobModeEncoderResetControl(),
+                        oled::valueInfo, oled::clearScreenDelayed);
             }
         };
     }

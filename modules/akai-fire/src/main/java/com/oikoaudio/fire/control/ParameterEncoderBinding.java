@@ -28,6 +28,21 @@ public final class ParameterEncoderBinding {
                             final ResetPolicy resetPolicy,
                             final ValueDisplay display,
                             final Runnable clearDisplay) {
+        bind(encoder, layer, encoderIndex, parameter, fallbackLabel, fineSupplier, touchReset, resetPolicy,
+                ExplicitResetControl.none(), display, clearDisplay);
+    }
+
+    public static void bind(final TouchEncoder encoder,
+                            final Layer layer,
+                            final int encoderIndex,
+                            final Parameter parameter,
+                            final String fallbackLabel,
+                            final BooleanSupplier fineSupplier,
+                            final TouchResetControl touchReset,
+                            final ResetPolicy resetPolicy,
+                            final ExplicitResetControl explicitReset,
+                            final ValueDisplay display,
+                            final Runnable clearDisplay) {
         markInterested(parameter);
         encoder.bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, inc -> {
             if (!isMapped(parameter)) {
@@ -39,7 +54,7 @@ public final class ParameterEncoderBinding {
         });
         encoder.bindTouched(layer, touched -> {
             if (touched) {
-                handleTouchStart(encoderIndex, parameter, fallbackLabel, touchReset, resetPolicy, display);
+                handleTouchStart(encoderIndex, parameter, fallbackLabel, touchReset, resetPolicy, explicitReset, display);
             } else {
                 touchReset.end(encoderIndex);
                 clearDisplay.run();
@@ -69,7 +84,15 @@ public final class ParameterEncoderBinding {
                                          final String fallbackLabel,
                                          final TouchResetControl touchReset,
                                          final ResetPolicy resetPolicy,
+                                         final ExplicitResetControl explicitReset,
                                          final ValueDisplay display) {
+        if (handleExplicitResetTouch(true, explicitReset, isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
+                fallbackLabel, isMapped(parameter) ? "No reset here" : "Unmapped",
+                () -> resetPolicy.reset(parameter),
+                () -> showValue(parameter, fallbackLabel, display),
+                display)) {
+            return;
+        }
         if (!isMapped(parameter)) {
             display.show(fallbackLabel, "Unmapped");
             return;
@@ -81,6 +104,27 @@ public final class ParameterEncoderBinding {
             });
         }
         showValue(parameter, fallbackLabel, display);
+    }
+
+    public static boolean handleExplicitResetTouch(final boolean touched,
+                                                   final ExplicitResetControl explicitReset,
+                                                   final boolean resettable,
+                                                   final String fallbackLabel,
+                                                   final String unavailableDetail,
+                                                   final Runnable resetAction,
+                                                   final Runnable showAction,
+                                                   final ValueDisplay display) {
+        if (!touched || !explicitReset.isHeld()) {
+            return false;
+        }
+        explicitReset.consume();
+        if (!resettable) {
+            display.show(fallbackLabel, unavailableDetail);
+            return true;
+        }
+        resetAction.run();
+        showAction.run();
+        return true;
     }
 
     public enum ResetPolicy {
@@ -127,6 +171,25 @@ public final class ParameterEncoderBinding {
                 @Override
                 public void end(final int encoderIndex) {
                     handler.endTouchReset(encoderIndex);
+                }
+            };
+        }
+    }
+
+    public interface ExplicitResetControl {
+        boolean isHeld();
+
+        void consume();
+
+        static ExplicitResetControl none() {
+            return new ExplicitResetControl() {
+                @Override
+                public boolean isHeld() {
+                    return false;
+                }
+
+                @Override
+                public void consume() {
                 }
             };
         }

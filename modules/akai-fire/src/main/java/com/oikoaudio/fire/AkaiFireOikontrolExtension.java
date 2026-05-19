@@ -3,6 +3,7 @@ package com.oikoaudio.fire;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.ModeButtonLights;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.UndoRedoBankButtonHandler;
@@ -44,6 +45,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         NONE,
         COMMIT,
         CANCEL
+    }
+
+    public record RemotePageTarget(CursorRemoteControlsPage page, String label) {
     }
 
     private static final double MAIN_ENCODER_STEP = 0.01;
@@ -161,6 +165,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int drumTrackIndexBeforeAutoPin = -1;
     private boolean mainEncoderPressed = false;
     private boolean mainEncoderTurnedWhilePressed = false;
+    private boolean knobModeGestureConsumed = false;
     private boolean patternPressed = false;
     private boolean patternGestureConsumed = false;
     private boolean patternPressShiftHeld = false;
@@ -2007,7 +2012,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void handleGlobalSettingsModeAdvance(final boolean pressed) {
-        if (!pressed) {
+        if (pressed) {
+            return;
+        }
+        if (consumeKnobModeGesture()) {
             oled.clearScreenDelayed();
             return;
         }
@@ -2582,6 +2590,144 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void routeBrowserMainEncoderPress(final boolean press) {
         handleGlobalMainEncoderPress(press);
+    }
+
+    public boolean isKnobModeHeld() {
+        final BiColorButton button = getButton(NoteAssign.KNOB_MODE);
+        return button != null && button.isPressed();
+    }
+
+    public boolean handleKnobModePatternRemotePage(final int direction) {
+        if (!isKnobModeHeld()) {
+            return false;
+        }
+        knobModeGestureConsumed = true;
+        final RemotePageTarget target = currentRemotePageTarget();
+        if (target == null || target.page() == null) {
+            oled.valueInfo("Remote Page", "No remotes here");
+            oled.clearScreenDelayed();
+            return true;
+        }
+        showRemotePageNavigation(target, direction);
+        return true;
+    }
+
+    public boolean handleKnobModeEncoderReset(final boolean touched,
+                                              final boolean resettable,
+                                              final String fallbackLabel,
+                                              final String unavailableDetail,
+                                              final Runnable resetAction,
+                                              final Runnable showAction) {
+        return ParameterEncoderBinding.handleExplicitResetTouch(touched, knobModeEncoderResetControl(), resettable,
+                fallbackLabel, unavailableDetail, resetAction, showAction, oled::valueInfo);
+    }
+
+    public ParameterEncoderBinding.ExplicitResetControl knobModeEncoderResetControl() {
+        return new ParameterEncoderBinding.ExplicitResetControl() {
+            @Override
+            public boolean isHeld() {
+                return isKnobModeHeld();
+            }
+
+            @Override
+            public void consume() {
+                knobModeGestureConsumed = true;
+            }
+        };
+    }
+
+    public boolean consumeKnobModeGesture() {
+        if (!knobModeGestureConsumed) {
+            return false;
+        }
+        knobModeGestureConsumed = false;
+        return true;
+    }
+
+    public BiColorLightState knobModeRemotePageLightState(final int direction) {
+        final RemotePageTarget target = currentRemotePageTarget();
+        if (target == null || target.page() == null) {
+            return BiColorLightState.OFF;
+        }
+        final CursorRemoteControlsPage page = target.page();
+        return remotePageNavigationLightState(page.selectedPageIndex().get(), page.pageCount().getAsInt(), direction);
+    }
+
+    private RemotePageTarget currentRemotePageTarget() {
+        return switch (modeState.activeMode()) {
+            case NOTE_PLAY -> notePlayMode == null ? null : notePlayMode.currentRemotePageTarget();
+            case DRUM -> currentDrumRemotePageTarget();
+            case PERFORM -> performMode == null ? null : performMode.currentRemotePageTarget();
+            case CHORD_STEP, MELODIC_STEP, FUGUE_STEP, NESTED_RHYTHM -> null;
+        };
+    }
+
+    private RemotePageTarget currentDrumRemotePageTarget() {
+        if (activeDrumSubMode == DrumSubMode.DRUM_PADS && drumPadPlayMode != null) {
+            return drumPadPlayMode.currentRemotePageTarget();
+        }
+        if (activeDrumSubMode != DrumSubMode.STANDARD || drumSequenceMode == null) {
+            return null;
+        }
+        final CursorRemoteControlsPage page = drumSequenceMode.getActiveRemoteControlsPage();
+        return page == null ? null : new RemotePageTarget(page, "Pad");
+    }
+
+    private void showRemotePageNavigation(final RemotePageTarget target, final int direction) {
+        final CursorRemoteControlsPage page = target.page();
+        final int pageCount = page.pageCount().getAsInt();
+        final String title = target.label() + " Page";
+        if (pageCount <= 1) {
+            oled.valueInfo(title, "No other pages");
+            oled.clearScreenDelayed();
+            return;
+        }
+        final int currentPage = page.selectedPageIndex().get();
+        final int nextPage = remotePageIndexAfterTurn(currentPage, pageCount, direction);
+        if (nextPage != currentPage) {
+            page.selectedPageIndex().set(nextPage);
+        }
+        oled.valueInfo(title, remotePageName(page, nextPage));
+        oled.sendString(0, OledDisplay.TextJustification.RIGHT, 7, remotePageCountLabel(nextPage, pageCount));
+        oled.clearScreenDelayed();
+    }
+
+    private String remotePageName(final CursorRemoteControlsPage page, final int pageIndex) {
+        final String pageName = page.pageNames().get(pageIndex);
+        if (pageName != null && !pageName.isBlank()) {
+            return pageName;
+        }
+        final String currentName = page.getName().get();
+        if (currentName != null && !currentName.isBlank()) {
+            return currentName;
+        }
+        return "Page " + (pageIndex + 1);
+    }
+
+    static int remotePageIndexAfterTurn(final int currentPage, final int pageCount, final int direction) {
+        if (pageCount <= 0) {
+            return currentPage;
+        }
+        return Math.max(0, Math.min(pageCount - 1, currentPage + direction));
+    }
+
+    static String remotePageCountLabel(final int pageIndex, final int pageCount) {
+        return pageCount > 1 ? (pageIndex + 1) + "/" + pageCount : "";
+    }
+
+    static BiColorLightState remotePageNavigationLightState(final int currentPage,
+                                                            final int pageCount,
+                                                            final int direction) {
+        if (pageCount <= 1) {
+            return BiColorLightState.OFF;
+        }
+        if (direction < 0) {
+            return currentPage > 0 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+        }
+        if (direction > 0) {
+            return currentPage < pageCount - 1 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+        }
+        return BiColorLightState.OFF;
     }
 
     static BrowserTransportAction browserTransportAction(final boolean browserActive,

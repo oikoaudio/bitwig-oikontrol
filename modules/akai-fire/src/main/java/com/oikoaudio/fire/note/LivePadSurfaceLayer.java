@@ -232,6 +232,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
         this.liveDrumPadBank = liveDrumMachineDevice.createDrumPadBank(DrumMachinePadLayout.PAD_WINDOW_SIZE);
         observeLiveDrumPads();
         this.liveRemoteControlsPage = liveCursorDevice.createCursorRemoteControlsPage(8);
+        this.liveRemoteControlsPage.selectedPageIndex().markInterested();
+        this.liveRemoteControlsPage.pageCount().markInterested();
+        this.liveRemoteControlsPage.pageNames().markInterested();
+        this.liveRemoteControlsPage.getName().markInterested();
         final NoteLivePerformanceControls livePerformanceControls = new NoteLivePerformanceControls(
                 value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, value),
                 value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, value),
@@ -526,7 +530,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
             ParameterEncoderBinding.bind(encoders[i], liveUser2Layer, index, parameter,
                     "Remote " + (index + 1), driver::isGlobalShiftHeld,
                     ParameterEncoderBinding.TouchResetControl.of(encoderTouchResetHandler),
-                    ParameterEncoderBinding.ResetPolicy.NONE, oled::valueInfo, oled::clearScreenDelayed);
+                    ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT, driver.knobModeEncoderResetControl(),
+                    oled::valueInfo, oled::clearScreenDelayed);
         }
     }
 
@@ -580,6 +585,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
                                                final String fallbackLabel, final boolean touched) {
         if (touched) {
             final ParameterEncoderBinding.ResetPolicy resetPolicy = mixerResetPolicy(encoderIndex);
+            if (driver.handleKnobModeEncoderReset(true,
+                    ParameterEncoderBinding.isMapped(parameter)
+                            && resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE,
+                    fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset here" : "Unmapped",
+                    () -> resetPolicy.reset(parameter),
+                    () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo))) {
+                return;
+            }
             if (resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE) {
                 encoderTouchResetHandler.beginTouchReset(encoderIndex, () -> {
                     resetPolicy.reset(parameter);
@@ -1168,14 +1181,24 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void handleLiveModeAdvance(final boolean pressed) {
-        notePlayController.handleModeAdvance(pressed, false);
         if (pressed) {
-            oled.clearScreenDelayed();
+            return;
         }
+        if (driver.consumeKnobModeGesture()) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        notePlayController.handleModeAdvance(true, false);
     }
 
     private BiColorLightState getLiveModeLightState() {
         return notePlayController.modeLightState();
+    }
+
+    public AkaiFireOikontrolExtension.RemotePageTarget currentRemotePageTarget() {
+        return liveControls.currentEncoderMode() == EncoderMode.USER_2
+                ? new AkaiFireOikontrolExtension.RemotePageTarget(liveRemoteControlsPage, "Device")
+                : null;
     }
 
     private void handlePitchContextButton(final boolean pressed, final int amount, final boolean root) {
