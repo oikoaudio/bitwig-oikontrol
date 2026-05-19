@@ -843,12 +843,20 @@ public class PerformClipLauncherMode extends Layer {
         }
         trackAddress.track().selectInMixer();
         trackAddress.track().selectInEditor();
+        selectMixDevice(trackAddress, device, deviceIndex);
+        if (mixDevicePadShouldToggleWindow(driver.isMainEncoderPressed(), isAltHeld())) {
+            driver.toggleCurrentDeviceWindow();
+            return;
+        }
+        showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()), mixDeviceName(trackAddress, deviceIndex));
+    }
+
+    private void selectMixDevice(final TrackAddress trackAddress, final Device device, final int deviceIndex) {
         remoteCursorDevice.selectDevice(device);
         selectedRemoteTrackIndex = trackAddress.absoluteIndex();
         selectedRemoteDeviceIndex = deviceIndex;
         rememberMixDeviceSelection(rememberedDeviceByTrack, trackAddress.absoluteIndex(), deviceIndex);
         device.selectInEditor();
-        showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()), mixDeviceName(trackAddress, deviceIndex));
     }
 
     private void restoreRememberedMixDevice(final TrackAddress trackAddress) {
@@ -2123,6 +2131,10 @@ public class PerformClipLauncherMode extends Layer {
             return -1;
         }
         return rememberedDeviceByTrack.getOrDefault(absoluteTrackIndex, -1);
+    }
+
+    static boolean mixDevicePadShouldToggleWindow(final boolean mainEncoderPressed, final boolean altHeld) {
+        return mainEncoderPressed && !altHeld;
     }
 
     static BiColorLightState mixStatusLightState(final boolean trackActionMode,

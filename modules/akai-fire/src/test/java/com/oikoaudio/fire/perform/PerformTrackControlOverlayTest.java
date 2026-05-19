@@ -150,4 +150,11 @@ class PerformTrackControlOverlayTest {
         assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 3));
     }
 
+    @Test
+    void mixDevicePadTogglesWindowWhenMainEncoderIsHeldWithoutAlt() {
+        assertEquals(true, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(true, false));
+        assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(true, true));
+        assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(false, false));
+    }
+
 }
