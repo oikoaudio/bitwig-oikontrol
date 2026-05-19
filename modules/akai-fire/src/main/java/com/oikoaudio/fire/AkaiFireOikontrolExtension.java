@@ -995,6 +995,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             modeState.activatePerform();
             switchActiveMode();
         }
+        if (isGlobalShiftHeld() && isGlobalAltHeld()) {
+            performMode.toggleBirdsEyeMode();
+            notifyAction("Mode", performMode.activePageLabel());
+            return;
+        }
         if (isGlobalShiftHeld()) {
             performMode.toggleTrackActionMode();
             notifyAction("Mode", performMode.activePageLabel());

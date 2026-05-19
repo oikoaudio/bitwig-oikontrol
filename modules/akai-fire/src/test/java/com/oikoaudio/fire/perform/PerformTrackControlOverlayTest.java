@@ -157,4 +157,44 @@ class PerformTrackControlOverlayTest {
         assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(false, false));
     }
 
+    @Test
+    void birdsEyeVerticalPadsMapColumnsAndRowsToLauncherPages() {
+        final PerformLayout layout = PerformLayout.vertical();
+
+        assertEquals(0, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(0, layout, 64));
+        assertEquals(16, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(1, layout, 64));
+        assertEquals(48, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(3, layout, 64));
+        assertEquals(0, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(0, layout, 20));
+        assertEquals(4, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(16, layout, 20));
+    }
+
+    @Test
+    void birdsEyeHorizontalPadsMapRowsAndColumnsToLauncherPages() {
+        final PerformLayout layout = PerformLayout.horizontal();
+
+        assertEquals(0, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(0, layout, 32));
+        assertEquals(4, PerformClipLauncherMode.birdsEyeTrackOffsetForPad(16, layout, 32));
+        assertEquals(0, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(0, layout, 64));
+        assertEquals(16, PerformClipLauncherMode.birdsEyeSceneOffsetForPad(1, layout, 64));
+    }
+
+    @Test
+    void birdsEyeAvailabilityRequiresTrackAndSceneBlocks() {
+        final PerformLayout layout = PerformLayout.vertical();
+
+        assertEquals(true, PerformClipLauncherMode.birdsEyePadAvailable(0, layout, 16, 4));
+        assertEquals(false, PerformClipLauncherMode.birdsEyePadAvailable(1, layout, 16, 4));
+        assertEquals(false, PerformClipLauncherMode.birdsEyePadAvailable(16, layout, 16, 4));
+        assertEquals(false, PerformClipLauncherMode.birdsEyePadAvailable(-1, layout, 16, 4));
+    }
+
+    @Test
+    void birdsEyePadColorHighlightsCurrentBlock() {
+        assertEquals(RgbLigthState.OFF, PerformClipLauncherMode.birdsEyePadColor(false, false));
+        assertEquals(new RgbLigthState(0, 36, 84, true),
+                PerformClipLauncherMode.birdsEyePadColor(true, false));
+        assertEquals(new RgbLigthState(0, 108, 127, true),
+                PerformClipLauncherMode.birdsEyePadColor(true, true));
+    }
+
 }

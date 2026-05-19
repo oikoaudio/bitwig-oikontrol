@@ -99,6 +99,8 @@ public class PerformClipLauncherMode extends Layer {
     private static final String BLANK_TEXT_ROW = "                    ";
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
     private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
+    private static final RgbLigthState BIRDS_EYE_AVAILABLE = new RgbLigthState(0, 36, 84, true);
+    private static final RgbLigthState BIRDS_EYE_CURRENT = new RgbLigthState(0, 108, 127, true);
     private static final boolean[][] SETTINGS_LOGO = {
             {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
             {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
@@ -169,6 +171,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean trackActionMode = false;
     private boolean mixDeviceToggleMode = false;
     private boolean sceneActionMode = false;
+    private boolean birdsEyeMode = false;
     private boolean active = false;
     private boolean mixMeterDisplayActive = false;
     private boolean selectedTrackMeterTextInitialized = false;
@@ -371,6 +374,7 @@ public class PerformClipLauncherMode extends Layer {
         trackActionMode = enabled;
         if (enabled) {
             sceneActionMode = false;
+            birdsEyeMode = false;
             clearClipModifierButtons();
         }
     }
@@ -385,6 +389,7 @@ public class PerformClipLauncherMode extends Layer {
         trackActionMode = enabled;
         if (trackActionMode) {
             sceneActionMode = false;
+            birdsEyeMode = false;
             clearClipModifierButtons();
         }
         if (trackActionMode) {
@@ -399,10 +404,28 @@ public class PerformClipLauncherMode extends Layer {
         return sceneActionMode;
     }
 
+    public boolean isBirdsEyeMode() {
+        return birdsEyeMode;
+    }
+
     public void toggleSceneActionMode() {
         sceneActionMode = !sceneActionMode;
         if (sceneActionMode) {
             trackActionMode = false;
+            birdsEyeMode = false;
+            leaveMixDeviceMode();
+        }
+        showCurrentModeInfo();
+        oled.clearScreenDelayed();
+    }
+
+    public void toggleBirdsEyeMode() {
+        birdsEyeMode = !birdsEyeMode;
+        if (birdsEyeMode) {
+            trackActionMode = false;
+            sceneActionMode = false;
+            leaveMixDeviceMode();
+            clearClipModifierButtons();
         }
         showCurrentModeInfo();
         oled.clearScreenDelayed();
@@ -421,6 +444,9 @@ public class PerformClipLauncherMode extends Layer {
     public String activePageLabel() {
         if (trackActionMode) {
             return mixDeviceToggleMode ? mixDevicePageTitle() : "Mix";
+        }
+        if (birdsEyeMode) {
+            return "Birds Eye";
         }
         if (sceneActionMode) {
             return "Scene Launch";
@@ -750,6 +776,10 @@ public class PerformClipLauncherMode extends Layer {
             handleTrackActionPadPressed(padIndex, pressed);
             return;
         }
+        if (birdsEyeMode) {
+            handleBirdsEyePadPressed(padIndex, pressed);
+            return;
+        }
         if (sceneActionMode) {
             handleSceneActionPadPressed(padIndex, pressed);
             return;
@@ -920,6 +950,23 @@ public class PerformClipLauncherMode extends Layer {
         scene.launch();
         pendingSceneLaunchIndex = absoluteSceneIndex;
         showValueInfo("Launch Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
+    }
+
+    private void handleBirdsEyePadPressed(final int padIndex, final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        if (!birdsEyePadAvailable(padIndex, layout, totalTrackCount, totalSceneCount)) {
+            showValueInfo("Birds Eye", "No block");
+            return;
+        }
+        final int trackOffset = birdsEyeTrackOffsetForPad(padIndex, layout, totalTrackCount);
+        final int sceneOffset = birdsEyeSceneOffsetForPad(padIndex, layout, totalSceneCount);
+        trackBank.scrollPosition().set(trackOffset);
+        trackBank.sceneBank().scrollPosition().set(sceneOffset);
+        showValueInfo("Birds Eye", "T%s S%s".formatted(
+                offsetLabel(trackOffset, totalTrackCount, visibleTrackCount()),
+                offsetLabel(sceneOffset, totalSceneCount, visibleSceneCount())));
     }
 
     private void handleSlotPressed(final TrackAddress trackAddress, final ClipLauncherSlot slot,
@@ -1468,6 +1515,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showCurrentModeInfo() {
+        if (birdsEyeMode) {
+            showTransientDetailInfo("Birds Eye", "Pads: Jump viewport\nSHIFT+ALT+PERFORM: Exit",
+                    METER_MODE_INFO_SUPPRESS_MS);
+            return;
+        }
         if (sceneActionMode) {
             showTransientDetailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete",
                     METER_MODE_INFO_SUPPRESS_MS);
@@ -1897,7 +1949,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean shouldShowPerformMeters() {
-        return active && !sceneActionMode && !isSettingsHeld();
+        return active && !sceneActionMode && !birdsEyeMode && !isSettingsHeld();
     }
 
     private void clearPendingSceneLaunchIfPlaying() {
@@ -1940,6 +1992,9 @@ public class PerformClipLauncherMode extends Layer {
         }
         if (trackActionMode) {
             return mixDeviceToggleMode ? getMixDevicePadState(padIndex) : getTrackActionPadState(padIndex);
+        }
+        if (birdsEyeMode) {
+            return getBirdsEyePadState(padIndex);
         }
         if (sceneActionMode) {
             return getSceneActionPadState(padIndex);
@@ -1986,6 +2041,17 @@ public class PerformClipLauncherMode extends Layer {
             return blinkSlow(baseColor, baseColor.getDimmed());
         }
         return baseColor.getSoftDimmed();
+    }
+
+    private RgbLigthState getBirdsEyePadState(final int padIndex) {
+        if (!birdsEyePadAvailable(padIndex, layout, totalTrackCount, totalSceneCount)) {
+            return RgbLigthState.OFF;
+        }
+        final int trackOffset = birdsEyeTrackOffsetForPad(padIndex, layout, totalTrackCount);
+        final int sceneOffset = birdsEyeSceneOffsetForPad(padIndex, layout, totalSceneCount);
+        final boolean current = trackOffset == trackBank.scrollPosition().get()
+                && sceneOffset == trackBank.sceneBank().scrollPosition().get();
+        return birdsEyePadColor(true, current);
     }
 
     private RgbLigthState getSlotState(final ClipLauncherSlot slot, final TrackAddress trackAddress, final int visibleSceneIndex) {
@@ -2135,6 +2201,39 @@ public class PerformClipLauncherMode extends Layer {
 
     static boolean mixDevicePadShouldToggleWindow(final boolean mainEncoderPressed, final boolean altHeld) {
         return mainEncoderPressed && !altHeld;
+    }
+
+    static boolean birdsEyePadAvailable(final int padIndex,
+                                        final PerformLayout layout,
+                                        final int totalTrackCount,
+                                        final int totalSceneCount) {
+        if (padIndex < 0 || padIndex >= PerformLayout.PAD_COLUMNS * PerformLayout.PAD_ROWS) {
+            return false;
+        }
+        final int trackBlockStart = layout.visibleTrackIndexForPad(padIndex) * layout.visibleTrackCount();
+        final int sceneBlockStart = layout.visibleSceneIndexForPad(padIndex) * layout.visibleSceneCount();
+        return trackBlockStart < totalTrackCount && sceneBlockStart < totalSceneCount;
+    }
+
+    static int birdsEyeTrackOffsetForPad(final int padIndex,
+                                         final PerformLayout layout,
+                                         final int totalTrackCount) {
+        final int blockStart = layout.visibleTrackIndexForPad(padIndex) * layout.visibleTrackCount();
+        return clamp(blockStart, 0, layout.maxTrackOffset(totalTrackCount));
+    }
+
+    static int birdsEyeSceneOffsetForPad(final int padIndex,
+                                         final PerformLayout layout,
+                                         final int totalSceneCount) {
+        final int blockStart = layout.visibleSceneIndexForPad(padIndex) * layout.visibleSceneCount();
+        return clamp(blockStart, 0, layout.maxSceneOffset(totalSceneCount));
+    }
+
+    static RgbLigthState birdsEyePadColor(final boolean available, final boolean current) {
+        if (!available) {
+            return RgbLigthState.OFF;
+        }
+        return current ? BIRDS_EYE_CURRENT : BIRDS_EYE_AVAILABLE;
     }
 
     static BiColorLightState mixStatusLightState(final boolean trackActionMode,
