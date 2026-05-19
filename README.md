@@ -46,15 +46,17 @@ Inside Bitwig, press the `?` symbol from the controller extension to open the bu
 
 ## Akai Fire Workflows
 
-The Fire script is built around the controller's four main mode buttons.
+The Fire script is built around four mode families, each with its own pages. Shared encoder pages, OLED feedback, and global settings tie the workflows together. Many modes share a musical context, so changing the root, scale, or octave can reshape live note input, generated melodic material, and chord-oriented workflows together.
 
-- **`DRUM`** - standard x0x drum sequencing, plus `Nested Rhythm` for generated, layered rhythm patterns.
-- **`NOTE`** - live note input with isomorphic and harmonic pad layouts.
-- **`STEP`** - `Melodic Step`, `Chord Step`, and `Fugue` workflows for generated melodies, in-scale chord construction, and transformed melodic lines.
-- **`PERFORM`** - vertical or horizontal clip launching, scene launching, clip management, and a `SHIFT + PERFORM` Mix page.
-- **`SHIFT + BROWSER`** - a latched global settings overlay for shared pitch, launcher recording length, velocity feel, pad color response, and cursor pinning.
-
-Many Fire modes share a common musical context, so changing the root, scale, or octave can reshape live note input, generated melodic material, and chord-oriented workflows together.
+- **`DRUM` family:** `Drum XOX`, `Nested Rhythm`, and `Drum Pads`.
+  `Drum XOX` is the x0x-style Drum Machine sequencer, with micro-timing, recurrence, velocity and expression editing, Euclidean controls, accent/fill gestures, per-pad mixer controls, and peak/RMS metering for quick gain staging. `Nested Rhythm` generates layered deterministic rhythm patterns for tuplets, ratchets, asymmetric subdivisions, and editable generated hits. `Drum Pads` is the live Drum Machine surface, with 64-pad grid, velocity-zone, and bongo-style layouts.
+- **`NOTE` family:** melodic note input and harmonic note input.
+  Melodic input gives scale-aware isomorphic playing, chromatic or in-key layouts, shared octave control, note repeat access, and pitch/mod-style performance controls with snapback behavior. Harmonic input turns the grid into a scale-aware lattice for stacked notes, bass columns, octave expansion, and quick modal chord color.
+- **`STEP` family:** `Melodic Step`, `Chord Step`, and `Fugue`.
+  `Melodic Step` combines generated phrase engines with hands-on step, pitch-pool, recurrence, and expression editing. `Chord Step` builds chord progressions from in-scale builder notes or preset color banks. `Fugue` treats channel 1 as a source line and generates related voices on channels 2-4 for canon-like, retrograde, transposed, augmented, and diminished variations.
+- **`PERFORM` family:** `Launcher`, `Scene Launch`, `Mix`, `Mix Devices`, `Device Layers`, and `Birds-Eye`.
+  Launcher pages handle vertical or horizontal clip launching, scene launching, clip creation, pad-target recording, and next-free-slot recording. Mix pages cover select/solo/mute/arm, track stop, loop navigation, device selection, device row toggles, plugin window toggles, remote page navigation, device-layer mixing, bird's-eye navigation for large launcher sets, and track peak/RMS metering.
+- **`SHIFT + BROWSER` settings:** a latched global overlay for shared pitch, input velocity feel, pad color response, default clip length, launcher record length, cursor pinning, and whether deactivated tracks are shown on the controller.
 
 ## Launch Control XL Workflows
 
