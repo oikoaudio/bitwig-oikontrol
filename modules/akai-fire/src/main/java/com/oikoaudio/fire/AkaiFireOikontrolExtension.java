@@ -812,8 +812,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             notifyAction("Record Clip", "No launcher");
             return;
         }
-        final boolean requireLauncherActivity = modeState.activeMode() != Mode.PERFORM;
-        performMode.recordNextFreeLauncherSlot(requireLauncherActivity);
+        performMode.recordNextFreeLauncherSlot(false);
     }
 
     private void toggleClipLauncherAutomationWriteEnabled(final boolean pressed) {
