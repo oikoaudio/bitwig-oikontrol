@@ -73,6 +73,18 @@ Project-specific instructions for coding agents working in this repository.
 - Keep behaviour-preserving refactors separate from feature work unless the user explicitly asks to combine them.
 - Use Conventional Commits for commit messages so release-please can classify changes reliably, for example `feat: add melodic arp mode`, `fix: correct encoder reset`, or `docs: update user guide`.
 
+## JJ And GitHub PR Workflow
+
+- Do not create, approve, or merge GitHub pull requests unless the user explicitly asks for that operation in the current conversation.
+- This repository uses JJ locally, so expect Git to be in a detached-head state. Prefer JJ for local state changes and `gh --repo oikoaudio/bitwig-oikontrol ...` for GitHub operations that should not infer a current Git branch.
+- Before creating a PR, check `jj status`, inspect the commit range since the previous bookmark or merge-domain boundary, and run the relevant tests.
+- When the working copy is an empty JJ change on top of the actual feature tip, create the PR bookmark on the parent commit with `jj bookmark create <name> -r @-`; otherwise create it on the intended non-empty revision.
+- Push the bookmark with `jj git push --bookmark <name> --remote origin`.
+- Create the PR with `gh pr create --repo oikoaudio/bitwig-oikontrol --base main --head <name>`, using a concise summary of the work since the previous bookmark or merge boundary and listing the tests run.
+- To merge a user-approved PR, first check it with `gh pr view --repo oikoaudio/bitwig-oikontrol <number> --json state,mergeStateStatus,reviewDecision,headRefName,baseRefName,url`. If merging, use `gh pr merge --repo oikoaudio/bitwig-oikontrol <number> --merge --delete-branch` so `gh` does not depend on the local detached Git HEAD.
+- After a merge, refresh local JJ state with `jj git fetch --remote origin`, move local `main` to the fetched remote with `jj bookmark move main --to main@origin`, and start a fresh empty working change with `jj new main`.
+- Verify the refreshed state with `jj status`, `jj log -r 'ancestors(@, 5)'`, and `jj bookmark list`. Release Please may then open a release PR automatically; do not approve or merge it unless explicitly asked.
+
 ## Controller Architecture Rules
 
 - Preserve controller behaviour unless the task explicitly asks for a UX change.
