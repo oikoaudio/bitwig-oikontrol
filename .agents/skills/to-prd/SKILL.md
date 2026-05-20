@@ -1,3 +1,8 @@
+---
+name: to-prd
+description: Turn an aligned feature idea, grilling output, or discovery notes into an implementation-facing PRD draft that captures goals, non-goals, user-visible behavior, scope, acceptance criteria, assumptions, risks, open questions, and follow-up docs.
+---
+
 # to-prd
 
 ## Purpose

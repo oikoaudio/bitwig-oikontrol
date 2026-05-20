@@ -1,3 +1,8 @@
+---
+name: zoom-out
+description: Pause implementation and reassess whether the current approach is too narrow, overfit, overengineered, or misaligned with the PRD; recommend whether to continue, simplify, split, stop, or return to grilling, PRD drafting, or issue planning.
+---
+
 # zoom-out
 
 ## Purpose

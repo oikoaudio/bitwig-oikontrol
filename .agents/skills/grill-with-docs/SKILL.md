@@ -1,3 +1,8 @@
+---
+name: grill-with-docs
+description: Challenge and refine a feature idea, product change, workflow, or architecture direction against repository docs, vocabulary, ADRs, references, and current code before it becomes implementation work; use before PRD drafting when hidden assumptions, missing terminology, or durable decisions need interrogation.
+---
+
 # grill-with-docs
 
 ## Purpose

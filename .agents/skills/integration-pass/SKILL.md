@@ -1,3 +1,8 @@
+---
+name: integration-pass
+description: Reconcile work after multiple implementation slices, JJ workspaces or changes, or parallel agent outputs; check consistency with the PRD, naming, tests, controller invariants, duplicated concepts, and integration risks before final delivery.
+---
+
 # integration-pass
 
 ## Purpose

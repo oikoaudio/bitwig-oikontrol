@@ -1,3 +1,8 @@
+---
+name: handoff
+description: Produce compact re-entry notes when work is stopping, changing owners, waiting for review, or needs a concise state snapshot, including current status, changed files, checks, blockers, and next steps.
+---
+
 # handoff
 
 ## Purpose

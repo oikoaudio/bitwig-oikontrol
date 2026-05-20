@@ -1,3 +1,8 @@
+---
+name: to-issues
+description: Split an approved PRD into vertical-slice GitHub Issue-ready bodies with dependencies, parallel-safety, acceptance criteria, likely touched files, files to avoid, test strategy, integration risks, and expected labels/state.
+---
+
 # to-issues
 
 ## Purpose

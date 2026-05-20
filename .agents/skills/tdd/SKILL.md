@@ -1,3 +1,8 @@
+---
+name: tdd
+description: Implement one approved issue with clear acceptance criteria using a narrow test-driven workflow in one JJ workspace/change; use for ready-for-agent implementation work, not for inventing scope or resolving unclear product intent.
+---
+
 # tdd
 
 ## Purpose
