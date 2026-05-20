@@ -13,8 +13,7 @@ build/
 *.bwextension
 
 # api documentation and implementation notes used during development
-/doc/dev
-/doc/dev/
+/docs/dev/
 /ref/
 
 # Docs site - experimental WIP left out for now

@@ -544,7 +544,7 @@ Use the builder when you want to define the chord yourself from the current scal
 
 `Nested Rhythm` is a rhythm-structure generator. It builds nested metric divisions, ranks candidate pulses, then thins, clusters, ratchets, and shapes expression from that structure. The result is useful for tuplets, asymmetric subdivisions, layered percussion, and rhythms that would be slow to draw by hand on a fixed 16th grid.
 
-The mode intentionally separates generated structure from local edits. `PATTERN DOWN` claims or rewrites the selected clip from the current generator state, while held-hit edits let you change recurrence and expression without abandoning the generated pattern. For more theory behind this mode, see `doc/nested-rhythm-musical-grounding.md`.
+The mode intentionally separates generated structure from local edits. `PATTERN DOWN` claims or rewrites the selected clip from the current generator state, while held-hit edits let you change recurrence and expression without abandoning the generated pattern. For more theory behind this mode, see `docs/nested-rhythm-musical-grounding.md`.
 
 #### Fugue background
 

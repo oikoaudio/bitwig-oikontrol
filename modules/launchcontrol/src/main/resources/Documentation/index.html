@@ -142,7 +142,7 @@
   <div class="shell">
     <section class="hero">
       <div class="kicker">Bitwig Oikontrol</div>
-      <p class="lede">Bundled help generated from <code>doc/user-guide.md</code>.</p>
+      <p class="lede">Bundled help generated from <code>docs/user-guide.md</code>.</p>
     </section>
     <main>
       <h1>Bitwig Oikontrol User Guide</h1>
@@ -661,7 +661,7 @@
       <p><code>Density</code> mainly changes how much of the phrase is populated. <code>Tension</code> allows wider or more colorful scale-degree movement. <code>Legato</code> encourages longer gates and slides where the engine supports them. Octave activity changes how willing the phrase is to jump registers. After generation, <code>ALT + PATTERN DOWN</code>, transform encoders, held-step editing, and pitch-pool edits are the intended way to keep an idea but bend it toward the part you need.</p>
       <h4>Nested Rhythm background</h4>
       <p><code>Nested Rhythm</code> is a rhythm-structure generator. It builds nested metric divisions, ranks candidate pulses, then thins, clusters, ratchets, and shapes expression from that structure. The result is useful for tuplets, asymmetric subdivisions, layered percussion, and rhythms that would be slow to draw by hand on a fixed 16th grid.</p>
-      <p>The mode intentionally separates generated structure from local edits. <code>PATTERN DOWN</code> claims or rewrites the selected clip from the current generator state, while held-hit edits let you change recurrence and expression without abandoning the generated pattern. For more theory behind this mode, see <code>doc/nested-rhythm-musical-grounding.md</code>.</p>
+      <p>The mode intentionally separates generated structure from local edits. <code>PATTERN DOWN</code> claims or rewrites the selected clip from the current generator state, while held-hit edits let you change recurrence and expression without abandoning the generated pattern. For more theory behind this mode, see <code>docs/nested-rhythm-musical-grounding.md</code>.</p>
       <h4>Fugue background</h4>
       <p><code>Fugue</code> is based on contrapuntal transformation rather than random generation. MIDI channel 1 is the subject or template line. Channels 2-4 are generated as related voices, so the result behaves more like canon, imitation, augmentation, diminution, retrograde, and transposed answers than like a normal step sequencer.</p>
       <p>Each derived line has its own direction, speed, start offset, and scale-aware pitch interval. Slowing a line down acts like augmentation; speeding it up acts like diminution. <code>Reverse</code> gives a retrograde version of the source, while <code>PingPong</code> reflects the line back through the phrase. Start offsets let the voices enter later, giving simple canon-like overlap. Pitch offsets move by scale degrees, so fifths, fourths, octaves, and wider answers stay connected to the shared root and scale.</p>
@@ -730,7 +730,7 @@
         <li>All LCXL factory modes were taken from Bitwig's original <code>bitwig-extensions</code> for the Launch Control XL controller </li>
       </ul>
 
-      <p class="footer">Canonical source for this guide is maintained in the repository as <code>doc/user-guide.md</code>. This bundled HTML is generated during the Gradle resource build.</p>
+      <p class="footer">Canonical source for this guide is maintained in the repository as <code>docs/user-guide.md</code>. This bundled HTML is generated during the Gradle resource build.</p>
     </main>
   </div>
 </body>

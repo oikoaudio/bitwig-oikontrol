@@ -6,8 +6,9 @@ Project-specific instructions for coding agents working in this repository.
 
 - Treat `ref/bitwig-api-flat/` as the local Bitwig API reference. Check it before guessing about API surface or controller-script behaviour.
 - Prefer repository documentation over memory when project-specific behaviour is already documented.
-- Relevant architectural decisions live under `doc/adr/`.
-- Treat active plans in `doc/dev/` as current design context. Treat `doc/dev/_archive/` as historical context: useful for intent and prior decisions, but not automatically current.
+- Relevant architectural decisions live under `docs/adr/`.
+- Treat active plans in `docs/dev/` as current design context. Treat `docs/dev/archive/` as historical context: useful for intent and prior decisions, but not automatically current.
+- Agent workflow guidance lives under `docs/agents/`; start with `docs/agents/workflows.md` and `docs/agents/parallel-work.md` for PRD/issues/parallel implementation work.
 
 ## Codebase Map
 
@@ -57,8 +58,8 @@ Project-specific instructions for coding agents working in this repository.
 
 - Default to test-driven development for code changes: add or update a failing test first when the change is testable, then implement, then rerun the relevant tests.
 - For larger features, define acceptance criteria before implementation.
-- Start from `doc/_feature_template.md` when drafting a new implementation plan.
-- Store feature plans in a clearly named markdown doc under `doc/dev/feature/` when that path is being used locally, or another appropriate tracked location under `doc/` when needed.
+- Start from `docs/_feature_template.md` when drafting a new implementation plan.
+- Store feature plans in a clearly named markdown doc under `docs/dev/feature/` when that path is being used locally, or another appropriate tracked location under `docs/` when needed.
 - Favor code that is clear and readable over code that is merely clever or maximally reusable.
 - Small and medium refactors are welcome when they make the resulting code materially cleaner, easier to understand, or easier to change safely.
 - Be cautious about DRY-driven abstractions that collapse distinct behaviors into powerful but hard-to-grasp helpers. Prefer explicit code when it keeps intent obvious.
@@ -68,15 +69,17 @@ Project-specific instructions for coding agents working in this repository.
   - if there is existing solution: if that solution is acceptable
   - whether the change can be done better in place
   - whether a refactor would make the result substantially better
-- Before implementing large or interaction-heavy changes, check for a relevant plan in `doc/dev/`.
+- Before implementing large or interaction-heavy changes, check for a relevant plan in `docs/dev/`.
 - If a plan conflicts with current code, trust current code for behaviour and use the plan to understand intent.
 - Keep behaviour-preserving refactors separate from feature work unless the user explicitly asks to combine them.
 - Use Conventional Commits for commit messages so release-please can classify changes reliably, for example `feat: add melodic arp mode`, `fix: correct encoder reset`, or `docs: update user guide`.
 
 ## JJ And GitHub PR Workflow
 
+- Human JJ command examples and Hunk setup live in `docs/contributing/jj-cheat-sheet.md`.
 - Do not create, approve, or merge GitHub pull requests unless the user explicitly asks for that operation in the current conversation.
 - This repository uses JJ locally, so expect Git to be in a detached-head state. Prefer JJ for local state changes and `gh --repo oikoaudio/bitwig-oikontrol ...` for GitHub operations that should not infer a current Git branch.
+- For parallel implementation, use one JJ workspace/change per approved issue and follow `docs/agents/parallel-work.md`.
 - Before creating a PR, check `jj status`, inspect the commit range since the previous bookmark or merge-domain boundary, and run the relevant tests.
 - When the working copy is an empty JJ change on top of the actual feature tip, create the PR bookmark on the parent commit with `jj bookmark create <name> -r @-`; otherwise create it on the intended non-empty revision.
 - Push the bookmark with `jj git push --bookmark <name> --remote origin`.
@@ -116,10 +119,10 @@ Project-specific instructions for coding agents working in this repository.
 
 ## Documentation Maintenance
 
-- `doc/user-guide.md` is the canonical user guide source.
+- `docs/user-guide.md` is the canonical user guide source.
 - Update user-facing documentation at the end of a feature or completed behaviour change, not after every intermediate implementation step.
-- If controller behaviour or layout changes by the end of the feature, update `doc/user-guide.md`.
-- Bundled in-app help is generated from `doc/user-guide.md` by the Gradle `generateBundledDocumentation` task; do not hand-edit generated `Documentation/index.html` output.
+- If controller behaviour or layout changes by the end of the feature, update `docs/user-guide.md`.
+- Bundled in-app help is generated from `docs/user-guide.md` by the Gradle `generateBundledDocumentation` task; do not hand-edit generated `Documentation/index.html` output.
 - Record notable code changes in `CHANGES.md` when appropriate.
 
 ## Implementation Notes
