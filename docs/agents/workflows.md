@@ -26,6 +26,8 @@ Stop after the grilling session. Do not create a PRD unless the user asks for `t
 
 Convert the agreed feature intent into a PRD draft or approved GitHub PRD parent issue, depending on the user's explicit request.
 
+When drafting a repo-local implementation plan instead of a GitHub PRD, start from `docs/_feature_template.md`. Store local feature plans in `docs/dev/feature/` or another appropriate tracked location under `docs/`.
+
 A PRD parent issue is authoritative for intended feature behaviour while active. It is not proof of current code behaviour.
 
 Stop after the PRD stage. Do not generate implementation issues unless the user asks for `to-issues`.

@@ -1,5 +1,7 @@
 # Codebase map
 
+Akai Fire class names below are rooted under `modules/akai-fire/src/main/java/com/oikoaudio/fire/` unless a full path is shown.
+
 ## Top-level modules
 
 - `modules/akai-fire/` is the main active development area for Akai Fire modes.
@@ -41,7 +43,7 @@
 ## Live Note and Drum Pad play modes
 
 - `NotePlayMode.java` and `DrumPadPlayMode.java` are the mode entry points.
-- `PitchedSurfaceLayer.java` holds shared pitched-surface behaviour.
+- `LivePadSurfaceLayer.java` holds shared live pad-surface behaviour.
 - `NoteLivePadPerformer.java`, `NoteLivePerformanceControls.java`, `NoteLiveExpressionControls.java`, and `NoteLiveEncoderModeControls.java` own live play behaviour and controls.
 - Layouts live in `NoteGridLayout.java`, `HarmonicLatticeLayout.java`, and `DrumMachinePadLayout.java`.
 

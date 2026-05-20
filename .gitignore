@@ -11,6 +11,7 @@ build/
 
 # Local test artifacts
 *.bwextension
+.scratch/
 
 # api documentation and implementation notes used during development
 /docs/dev/
