@@ -7,6 +7,7 @@ public final class FireControlPreferences {
     public static final String CATEGORY_HARDWARE = "Hardware";
     public static final String CATEGORY_GENERATIVE_CONTROL = "Generative control";
     public static final boolean SHOW_DEACTIVATED_TRACKS_DEFAULT = false;
+    public static final boolean EXCLUSIVE_TRACK_ARM_DEFAULT = false;
 
     public static final double PAD_BRIGHTNESS_MIN = 20.0;
     public static final double PAD_BRIGHTNESS_MAX = 100.0;

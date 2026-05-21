@@ -160,6 +160,8 @@ public class PerformClipLauncherMode extends Layer {
     private int selectedMeterAbsoluteIndex = -1;
     private int selectedRemoteTrackIndex = -1;
     private int selectedRemoteDeviceIndex = -1;
+    private int suppressedTrackSelectionNotificationAbsoluteIndex = -1;
+    private int lastTrackSelectionNotificationAbsoluteIndex = -1;
     private int mixDevicePageIndex = 0;
     private int selectedTrackRmsMax = 0;
     private int selectedTrackPeakMax = 0;
@@ -300,15 +302,13 @@ public class PerformClipLauncherMode extends Layer {
             track.addIsSelectedInMixerObserver(selected -> {
                 selectedVisibleTracks[column] = selected;
                 if (selected) {
-                    selectedTrackIndex = trackBank.scrollPosition().get() + column;
-                    selectMeterTrack(column, false);
+                    handleHostTrackSelection(column);
                 }
             });
             track.addIsSelectedInEditorObserver(selected -> {
                 if (selected) {
                     selectedVisibleTracks[column] = true;
-                    selectedTrackIndex = trackBank.scrollPosition().get() + column;
-                    selectMeterTrack(column, false);
+                    handleHostTrackSelection(column);
                 }
             });
             track.addVuMeterObserver(VuMeterFormatter.RANGE, -1, true, value -> handlePeakMeterChanged(column, value));
@@ -874,8 +874,6 @@ public class PerformClipLauncherMode extends Layer {
         }
         final Track track = trackAddress.track();
         final String trackLabel = trackLabel(trackAddress);
-        selectMeterTrack(trackAddress.sourceIndex(), true);
-        track.selectInMixer();
         switch (actionRow) {
             case SELECT -> {
                 if (isAltHeld()) {
@@ -883,6 +881,7 @@ public class PerformClipLauncherMode extends Layer {
                     showValueInfo("Mix Stop", trackLabel);
                     return;
                 }
+                selectMixTrack(trackAddress);
                 track.selectInEditor();
                 restoreRememberedMixDevice(trackAddress);
                 showValueInfo("Mix Select", trackLabel);
@@ -896,10 +895,41 @@ public class PerformClipLauncherMode extends Layer {
                 showValueInfo(track.mute().get() ? "Mix Mute" : "Mix Unmute", trackLabel);
             }
             case ARM -> {
-                track.arm().toggle();
-                showValueInfo(track.arm().get() ? "Mix Arm" : "Mix Disarm", trackLabel);
+                final boolean armed = toggleMixArm(trackAddress,
+                        trackArmUsesExclusive(isAltHeld(), driver.isExclusiveTrackArmEnabled()));
+                showValueInfo(armed ? "Mix Arm" : "Mix Disarm", trackLabel);
             }
         }
+    }
+
+    private boolean toggleMixArm(final TrackAddress trackAddress, final boolean exclusiveArm) {
+        final Track track = trackAddress.track();
+        final boolean shouldArm = !track.arm().get();
+        if (exclusiveArm) {
+            if (shouldArm) {
+                disarmOtherBankTracks(trackAddress.sourceIndex());
+            }
+            selectMixTrack(trackAddress);
+            track.selectInEditor();
+            track.arm().set(shouldArm);
+            return shouldArm;
+        }
+        final boolean armed = !track.arm().get();
+        track.arm().toggle();
+        return armed;
+    }
+
+    private void disarmOtherBankTracks(final int sourceTrackIndex) {
+        for (int index = 0; index < MAX_TRACKS; index++) {
+            if (index != sourceTrackIndex) {
+                trackBank.getItemAt(index).arm().set(false);
+            }
+        }
+    }
+
+    private void selectMixTrack(final TrackAddress trackAddress) {
+        selectMeterTrack(trackAddress.sourceIndex(), true);
+        selectTrackInMixerFromController(trackAddress.track(), trackAddress.absoluteIndex());
     }
 
     private void handleMixDevicePadPressed(final int padIndex, final boolean pressed) {
@@ -927,7 +957,7 @@ public class PerformClipLauncherMode extends Layer {
             showValueInfo(mixDeviceActionTitle(true, enabled), mixDeviceName(trackAddress, deviceIndex));
             return;
         }
-        trackAddress.track().selectInMixer();
+        selectTrackInMixerFromController(trackAddress.track(), trackAddress.absoluteIndex());
         trackAddress.track().selectInEditor();
         selectMixDevice(trackAddress, device, deviceIndex);
         if (mixDevicePadShouldToggleWindow(driver.isMainEncoderPressed(), isAltHeld())) {
@@ -1102,7 +1132,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        track.selectInMixer();
+        selectTrackInMixerFromController(track, absoluteTrackIndex);
         slot.select();
 
         if (selectHeld.get()) {
@@ -1130,7 +1160,7 @@ public class PerformClipLauncherMode extends Layer {
     private void recordIntoSlot(final Track track, final ClipLauncherSlot slot, final int absoluteTrackIndex,
                                 final int absoluteSceneIndex) {
         driver.consumePerformRecordPadGesture();
-        track.selectInMixer();
+        selectTrackInMixerFromController(track, absoluteTrackIndex);
         slot.select();
         armManualRecording(absoluteTrackIndex, absoluteSceneIndex, driver.shouldRoundLauncherRecordingToNearestBar(),
                 false);
@@ -1151,7 +1181,7 @@ public class PerformClipLauncherMode extends Layer {
             return false;
         }
         final ClipLauncherSlot slot = slotBank.getItemAt(slotIndex);
-        cursorTrack.selectInMixer();
+        selectCursorTrackInMixerFromController();
         slot.select();
         armManualRecording(cursorTrack.position().get(), slotIndex, driver.shouldRoundLauncherRecordingToNearestBar(),
                 true);
@@ -1186,7 +1216,7 @@ public class PerformClipLauncherMode extends Layer {
         }
         final Track track = trackAddress.track();
         final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
-        track.selectInMixer();
+        selectTrackInMixerFromController(track, manualRecordingTrackIndex);
         slot.select();
         slot.launch();
         showValueInfo("Clip Record", slotLabel(manualRecordingTrackIndex, manualRecordingSceneIndex));
@@ -1200,7 +1230,7 @@ public class PerformClipLauncherMode extends Layer {
             return true;
         }
         final ClipLauncherSlot slot = slotBank.getItemAt(manualRecordingSceneIndex);
-        cursorTrack.selectInMixer();
+        selectCursorTrackInMixerFromController();
         slot.select();
         slot.launch();
         showValueInfo("Clip Record", slotLabel(manualRecordingTrackIndex, manualRecordingSceneIndex));
@@ -1263,7 +1293,7 @@ public class PerformClipLauncherMode extends Layer {
             }
             final Track track = trackAddress.track();
             final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(visibleSceneIndex);
-            track.selectInMixer();
+            selectTrackInMixerFromController(track, absoluteTrackIndex);
             slot.select();
             driver.getHost().scheduleTask(() -> {
                 final double currentLength = performCursorClip.getLoopLength().get();
@@ -1285,7 +1315,7 @@ public class PerformClipLauncherMode extends Layer {
                 return;
             }
             final ClipLauncherSlot slot = slotBank.getItemAt(sceneIndex);
-            cursorTrack.selectInMixer();
+            selectCursorTrackInMixerFromController();
             slot.select();
             driver.getHost().scheduleTask(() -> {
                 final double currentLength = performCursorClip.getLoopLength().get();
@@ -1322,7 +1352,7 @@ public class PerformClipLauncherMode extends Layer {
         }
 
         final Track track = trackAddress.track();
-        track.selectInMixer();
+        selectTrackInMixerFromController(track, selectedTrackIndex);
         slot.select();
         driver.getHost().scheduleTask(() -> {
             final double currentLength = performCursorClip.getLoopLength().get();
@@ -2061,6 +2091,24 @@ public class PerformClipLauncherMode extends Layer {
         return actionRow.label;
     }
 
+    static boolean trackActionShouldSelectForPad(final int padIndex,
+                                                 final boolean altHeld,
+                                                 final boolean exclusiveTrackArmEnabled) {
+        final TrackActionRow actionRow = TrackActionRow.fromPadIndex(padIndex);
+        if (actionRow == null) {
+            return false;
+        }
+        return switch (actionRow) {
+            case SELECT -> !altHeld;
+            case ARM -> trackArmUsesExclusive(altHeld, exclusiveTrackArmEnabled);
+            case SOLO, MUTE -> false;
+        };
+    }
+
+    static boolean trackArmUsesExclusive(final boolean altHeld, final boolean exclusiveTrackArmEnabled) {
+        return altHeld != exclusiveTrackArmEnabled;
+    }
+
     private boolean canScrollTracks(final int direction) {
         final int current = trackBank.scrollPosition().get();
         return direction < 0 ? current > 0 : current < maxTrackOffset();
@@ -2614,6 +2662,10 @@ public class PerformClipLauncherMode extends Layer {
         return nameOrFallback(trackNames[trackAddress.sourceIndex()], "Track " + (trackAddress.absoluteIndex() + 1));
     }
 
+    private String trackLabel(final int sourceTrackIndex, final int absoluteTrackIndex) {
+        return nameOrFallback(trackNames[sourceTrackIndex], "Track " + (absoluteTrackIndex + 1));
+    }
+
     private String mixDeviceName(final TrackAddress trackAddress, final int deviceIndex) {
         return nameOrFallback(trackDeviceNames[trackAddress.sourceIndex()][deviceIndex],
                 "Device " + (deviceIndex + 1));
@@ -2678,6 +2730,49 @@ public class PerformClipLauncherMode extends Layer {
             selectedTrackRmsMax = trackRmsMeters[sourceTrackIndex];
             selectedTrackPeakMax = trackPeakMeters[sourceTrackIndex];
         }
+    }
+
+    private void handleHostTrackSelection(final int sourceTrackIndex) {
+        final int absoluteTrackIndex = trackBank.scrollPosition().get() + sourceTrackIndex;
+        selectedTrackIndex = absoluteTrackIndex;
+        selectMeterTrack(sourceTrackIndex, false);
+        if (absoluteTrackIndex == suppressedTrackSelectionNotificationAbsoluteIndex) {
+            lastTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
+            suppressedTrackSelectionNotificationAbsoluteIndex = -1;
+            return;
+        }
+        if (shouldShowExternalTrackSelectionInfo(true,
+                absoluteTrackIndex,
+                suppressedTrackSelectionNotificationAbsoluteIndex,
+                lastTrackSelectionNotificationAbsoluteIndex)) {
+            lastTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
+            showTransientValueInfo("Track Select", trackLabel(sourceTrackIndex, absoluteTrackIndex));
+        }
+    }
+
+    private void selectTrackInMixerFromController(final Track track, final int absoluteTrackIndex) {
+        suppressLocalTrackSelectionNotification(absoluteTrackIndex);
+        track.selectInMixer();
+    }
+
+    private void selectCursorTrackInMixerFromController() {
+        selectTrackInMixerFromController(cursorTrack, cursorTrack.position().get());
+    }
+
+    private void suppressLocalTrackSelectionNotification(final int absoluteTrackIndex) {
+        if (absoluteTrackIndex >= 0) {
+            suppressedTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
+        }
+    }
+
+    static boolean shouldShowExternalTrackSelectionInfo(final boolean selected,
+                                                       final int absoluteTrackIndex,
+                                                       final int suppressedAbsoluteTrackIndex,
+                                                       final int lastNotifiedAbsoluteTrackIndex) {
+        return selected
+                && absoluteTrackIndex >= 0
+                && absoluteTrackIndex != suppressedAbsoluteTrackIndex
+                && absoluteTrackIndex != lastNotifiedAbsoluteTrackIndex;
     }
 
     private boolean isSelectedMeterTrack(final TrackAddress trackAddress) {

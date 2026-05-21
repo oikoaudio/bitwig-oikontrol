@@ -222,6 +222,7 @@
       <p>Preferences that matter:</p>
       <ul>
         <li><code>Auto-attach to first Drum Machine and Arpeggiator</code></li>
+        <li><code>Exclusive Track Arm</code>: when on, record-arm buttons select the armed track and disarm the other visible strips; when off, record-arm buttons allow multiple armed tracks and do not change selection</li>
         <li><code>Audition on drum pad select</code></li>
         <li><code>Drum accent buttons momentary</code></li>
       </ul>
@@ -264,9 +265,9 @@
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td><code>PLAY</code></td><td>Toggle transport, with retrigger-on-start behavior</td></tr>
+          <tr><td><code>PLAY</code></td><td>Toggle transport; when stopped, launch from the current play start</td></tr>
           <tr><td><code>ALT + PLAY</code></td><td>Retrigger current clip</td></tr>
-          <tr><td><code>STOP</code></td><td>Stop transport</td></tr>
+          <tr><td><code>STOP</code></td><td>Stop transport; when already stopped, move play start to the beginning of the arrangement</td></tr>
           <tr><td><code>REC</code></td><td>Clip launcher overdub in Drum XOX; arranger record in other modes; hold for pad-target recording in <code>PERFORM</code></td></tr>
           <tr><td><code>ALT + REC</code></td><td>Arranger automation write</td></tr>
           <tr><td><code>PATTERN</code></td><td>Clip launcher automation write</td></tr>
@@ -308,8 +309,8 @@
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td>Hold <code>SHIFT</code> + turn <code>SELECT</code></td><td>Move the playback start by the current arranger grid resolution</td></tr>
-          <tr><td>Hold <code>PATTERN</code> + turn <code>SELECT</code></td><td>Move the play position by the current meter's beat unit</td></tr>
-          <tr><td>Hold <code>SHIFT + PATTERN</code> + turn <code>SELECT</code></td><td>Move the play position by fine 1/16-beat steps</td></tr>
+          <tr><td>Hold <code>SHIFT + PATTERN</code> + turn <code>SELECT</code></td><td>Move the playback start by fine 1/16-beat steps</td></tr>
+          <tr><td>Hold <code>PATTERN</code> + turn <code>SELECT</code></td><td>Jump to previous/next cue marker</td></tr>
           <tr><td>Hold <code>ALT</code> + turn <code>SELECT</code></td><td>Zoom the arranger/detail timeline horizontally</td></tr>
           <tr><td>Hold <code>SHIFT + ALT</code> + turn <code>SELECT</code></td><td>Zoom arranger/detail lanes vertically</td></tr>
       </tbody>
@@ -430,6 +431,8 @@
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code>; press again for <code>Chord Step</code></td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Shared octave down / up</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Undo / redo Bitwig project history</td></tr>
+          <tr><td><code>PATTERN UP/DOWN</code></td><td>Shared scale up / down</td></tr>
+          <tr><td><code>ALT + PATTERN UP/DOWN</code></td><td>Shared root key up / down</td></tr>
           <tr><td><code>MUTE_1</code></td><td>Sustain</td></tr>
           <tr><td><code>MUTE_2</code></td><td>Sostenuto</td></tr>
           <tr><td><code>MUTE_3</code></td><td>Note Repeat toggle</td></tr>
@@ -439,12 +442,13 @@
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr class="encoder-primary"><td><code>Channel</code></td><td>Mod</td><td>Pitch bend</td><td>Pitch Gliss / <code>ALT</code>: gliss mode</td><td>Shared scale / <code>ALT</code>: shared root key / <code>SHIFT</code>: local layout</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Mod</td><td>Pitch bend</td><td>Pitch Gliss / <code>ALT</code>: gliss mode</td><td>Timbre</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Aftertouch</td><td>Timbre</td><td>Pitch expression</td></tr>
           <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
       </tbody>
       </table>
+      <p>When live <code>NOTE</code> is idle, the OLED returns to a selected-track meter after transient encoder values. On the <code>Channel</code> page it shows one large selected-track VU meter. On the <code>Mixer</code> page it shows selected-track maximum peak/RMS and current peak/RMS with the same <code>Peak | RMS</code> legend used by Mix mode.</p>
       <h4>Harmonic input</h4>
       <p>Harmonic input is a scale-aware lattice built from the shared root, scale, and octave. Press <code>NOTE</code> while already in Note mode to toggle between melodic note input and harmonic input.</p>
       <p>The harmonic field walks through every other scale degree, so neighboring pads tend to produce harmonically related stacks rather than adjacent scale steps. Rows move upward by octave and are offset two columns to the right, which keeps the same harmonic anchor recurring diagonally across the grid.</p>
@@ -606,10 +610,10 @@
           <tr><td><code>SHIFT + ALT + PERFORM</code></td><td>Toggle Birds-Eye launcher navigation</td></tr>
       </tbody>
       </table>
-      <p>The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. On the select row, hold <code>ALT</code> and press a pad to stop that track. While the Mix page is active, <code>MUTE_1</code> jumps to the loop start or project start, <code>MUTE_2</code> and its nearby status LED light when any track is soloed and clear all solos, <code>MUTE_3</code> and its nearby status LED light when any track is muted and clear all mutes, and <code>MUTE_4</code> jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press <code>PATTERN DOWN</code> on Mix to switch from track actions to device view for devices 1-4, press <code>PATTERN DOWN</code> again for devices 5-8, and press <code>PATTERN UP</code> to step back through device pages and then return to track actions. In device view, hold <code>KNOB MODE</code> and press <code>PATTERN UP</code>/<code>PATTERN DOWN</code> to move the selected device remote page. Each column remains one visible track, rows 1-4 represent the current four-device page on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold the main encoder while pressing a device pad to select that device and open or close its window. The last selected device slot is remembered per track, so selecting that track again from the Mix select row restores the remembered device when it still exists. Hold <code>ALT</code> and press a device pad to toggle it on or off. Hold <code>ALT</code> and press <code>MUTE_1</code>-<code>MUTE_4</code> to toggle the matching visible device row across all visible tracks: if any occupied slot in the row is enabled, the row turns off; otherwise it turns on. The selected enabled device is brightest, and the selected bypassed device is softly lit. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. Tap <code>KNOB MODE</code> to cycle the Launcher encoder pages while the Mix pad page is active.</p>
+      <p>The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. Solo and mute pads do not change the selected track. Arm pads allow multiple armed tracks and do not change selection unless <code>Exclusive Track Arm</code> is enabled; with that preference on, arming a track selects it and disarms the other visible tracks. Hold <code>ALT</code> while pressing an arm pad to invert the preference for that press: additive arm when exclusive arm is enabled, or exclusive arm when it is disabled. On the select row, hold <code>ALT</code> and press a pad to stop that track. While the Mix page is active, <code>MUTE_1</code> jumps to the loop start or project start, <code>MUTE_2</code> and its nearby status LED light when any track is soloed and clear all solos, <code>MUTE_3</code> and its nearby status LED light when any track is muted and clear all mutes, and <code>MUTE_4</code> jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press <code>PATTERN DOWN</code> on Mix to switch from track actions to device view for devices 1-4, press <code>PATTERN DOWN</code> again for devices 5-8, and press <code>PATTERN UP</code> to step back through device pages and then return to track actions. In device view, hold <code>KNOB MODE</code> and press <code>PATTERN UP</code>/<code>PATTERN DOWN</code> to move the selected device remote page. Each column remains one visible track, rows 1-4 represent the current four-device page on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold the main encoder while pressing a device pad to select that device and open or close its window. The last selected device slot is remembered per track, so selecting that track again from the Mix select row restores the remembered device when it still exists. Hold <code>ALT</code> and press a device pad to toggle it on or off. Hold <code>ALT</code> and press <code>MUTE_1</code>-<code>MUTE_4</code> to toggle the matching visible device row across all visible tracks: if any occupied slot in the row is enabled, the row turns off; otherwise it turns on. The selected enabled device is brightest, and the selected bypassed device is softly lit. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. Tap <code>KNOB MODE</code> to cycle the Launcher encoder pages while the Mix pad page is active.</p>
       <p>If the selected device has layers, press <code>PATTERN DOWN</code> once more from device view to open the Device Layers page. Columns address the first 16 layers of the selected Instrument Layer, FX Layer, Instrument Selector, or FX Selector. Rows select, solo, mute, and turn the layer on or off. Press <code>PATTERN UP</code> to return to device view.</p>
       <p>The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block. Press <code>PERFORM</code> to leave Birds-Eye and return to the normal launcher page, or press <code>NOTE</code>, <code>DRUM</code>, or <code>STEP</code> to leave Birds-Eye and switch modes.</p>
-      <p>When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. On the Mix page's <code>Mixer</code> encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small <code>Peak | RMS</code> legend at the bottom.</p>
+      <p>When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the meter display. On the Mix page's <code>Mixer</code> encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small <code>Peak | RMS</code> legend at the bottom.</p>
       <p>Hold <code>REC</code> and press a pad to target recording directly into that visible slot. Hold <code>PATTERN</code> and tap <code>REC</code> to record into the first free slot on the selected track, regardless of the active mode. <code>Default Clip Length</code> controls empty clip creation and is always a fixed length. <code>Launcher Record Length</code> controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, <code>Manual</code> records until stopped without post-processing, and <code>Round</code> records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press <code>REC</code> again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.</p>
       <p>The <code>Scene Launch</code> page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold <code>MUTE_1</code> and press a scene pad to select it as the scene copy source, hold <code>MUTE_3</code> and press a scene pad to copy the selected scene to that target, and hold <code>MUTE_4</code> and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. <code>MUTE_2</code> is unused on this page.</p>
       <p>On <code>Scene Launch</code>, <code>BANK LEFT/RIGHT</code> also scrolls the visible scene window, with <code>SHIFT + BANK LEFT/RIGHT</code> scrolling by one scene.</p>
@@ -671,6 +675,7 @@
       <h3>Launch Control XL preferences</h3>
       <ul>
         <li><code>Auto-attach to first Drum Machine and Arpeggiator</code></li>
+        <li><code>Exclusive Track Arm</code>: record-arm buttons select the armed track and disarm the other visible strips when enabled; defaults off for standard multi-arm behavior</li>
         <li><code>Audition on drum pad select</code></li>
         <li><code>Drum accent buttons momentary</code></li>
       </ul>
@@ -695,6 +700,7 @@
         <li><code>Screen Message Hold</code></li>
         <li><code>Euclid Scope</code></li>
         <li><code>Drum Mode Pinning</code></li>
+        <li><code>Exclusive Track Arm</code>: arm pads select the armed track and disarm other visible tracks when enabled; defaults off for standard multi-arm behavior</li>
         <li><code>Step Seq Pad Audition</code></li>
         <li><code>On-screen action notifications</code></li>
       </ul>

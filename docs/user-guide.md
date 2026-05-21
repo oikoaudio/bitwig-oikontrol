@@ -79,6 +79,7 @@ User Template 7 is the drum workflow.
 Preferences that matter:
 
 - `Auto-attach to first Drum Machine and Arpeggiator`
+- `Exclusive Track Arm`: when on, record-arm buttons select the armed track and disarm the other visible strips; when off, record-arm buttons allow multiple armed tracks and do not change selection
 - `Audition on drum pad select`
 - `Drum accent buttons momentary`
 
@@ -124,9 +125,9 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 
 | Control | Action |
 | --- | --- |
-| `PLAY` | Toggle transport, with retrigger-on-start behavior |
+| `PLAY` | Toggle transport; when stopped, launch from the current play start |
 | `ALT + PLAY` | Retrigger current clip |
-| `STOP` | Stop transport |
+| `STOP` | Stop transport; when already stopped, move play start to the beginning of the arrangement |
 | `REC` | Clip launcher overdub in Drum XOX; arranger record in other modes; hold for pad-target recording in `PERFORM` |
 | `ALT + REC` | Arranger automation write |
 | `PATTERN` | Clip launcher automation write |
@@ -177,8 +178,8 @@ Global `SELECT` turn chords:
 | Control | Action |
 | --- | --- |
 | Hold `SHIFT` + turn `SELECT` | Move the playback start by the current arranger grid resolution |
-| Hold `PATTERN` + turn `SELECT` | Move the play position by the current meter's beat unit |
-| Hold `SHIFT + PATTERN` + turn `SELECT` | Move the play position by fine 1/16-beat steps |
+| Hold `SHIFT + PATTERN` + turn `SELECT` | Move the playback start by fine 1/16-beat steps |
+| Hold `PATTERN` + turn `SELECT` | Jump to previous/next cue marker |
 | Hold `ALT` + turn `SELECT` | Zoom the arranger/detail timeline horizontally |
 | Hold `SHIFT + ALT` + turn `SELECT` | Zoom arranger/detail lanes vertically |
 
@@ -301,6 +302,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `STEP` | Enter `Melodic Step`; press again for `Chord Step` |
 | `BANK LEFT/RIGHT` | Shared octave down / up |
 | `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
+| `PATTERN UP/DOWN` | Shared scale up / down |
+| `ALT + PATTERN UP/DOWN` | Shared root key up / down |
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
 | `MUTE_3` | Note Repeat toggle |
@@ -308,10 +311,12 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Mod | Pitch bend | Pitch Gliss / `ALT`: gliss mode | Shared scale / `ALT`: shared root key / `SHIFT`: local layout |
+| `Channel` | Mod | Pitch bend | Pitch Gliss / `ALT`: gliss mode | Timbre |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Timbre | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
+
+When live `NOTE` is idle, the OLED returns to a selected-track meter after transient encoder values. On the `Channel` page it shows one large selected-track VU meter. On the `Mixer` page it shows selected-track maximum peak/RMS and current peak/RMS with the same `Peak | RMS` legend used by Mix mode.
 
 #### Harmonic input
 
@@ -473,13 +478,13 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + PERFORM` | Toggle latched Mix pad page |
 | `SHIFT + ALT + PERFORM` | Toggle Birds-Eye launcher navigation |
 
-The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. On the select row, hold `ALT` and press a pad to stop that track. While the Mix page is active, `MUTE_1` jumps to the loop start or project start, `MUTE_2` and its nearby status LED light when any track is soloed and clear all solos, `MUTE_3` and its nearby status LED light when any track is muted and clear all mutes, and `MUTE_4` jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press `PATTERN DOWN` on Mix to switch from track actions to device view for devices 1-4, press `PATTERN DOWN` again for devices 5-8, and press `PATTERN UP` to step back through device pages and then return to track actions. In device view, hold `KNOB MODE` and press `PATTERN UP`/`PATTERN DOWN` to move the selected device remote page. Each column remains one visible track, rows 1-4 represent the current four-device page on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold the main encoder while pressing a device pad to select that device and open or close its window. The last selected device slot is remembered per track, so selecting that track again from the Mix select row restores the remembered device when it still exists. Hold `ALT` and press a device pad to toggle it on or off. Hold `ALT` and press `MUTE_1`-`MUTE_4` to toggle the matching visible device row across all visible tracks: if any occupied slot in the row is enabled, the row turns off; otherwise it turns on. The selected enabled device is brightest, and the selected bypassed device is softly lit. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. Tap `KNOB MODE` to cycle the Launcher encoder pages while the Mix pad page is active.
+The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. Solo and mute pads do not change the selected track. Arm pads allow multiple armed tracks and do not change selection unless `Exclusive Track Arm` is enabled; with that preference on, arming a track selects it and disarms the other visible tracks. Hold `ALT` while pressing an arm pad to invert the preference for that press: additive arm when exclusive arm is enabled, or exclusive arm when it is disabled. On the select row, hold `ALT` and press a pad to stop that track. While the Mix page is active, `MUTE_1` jumps to the loop start or project start, `MUTE_2` and its nearby status LED light when any track is soloed and clear all solos, `MUTE_3` and its nearby status LED light when any track is muted and clear all mutes, and `MUTE_4` jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press `PATTERN DOWN` on Mix to switch from track actions to device view for devices 1-4, press `PATTERN DOWN` again for devices 5-8, and press `PATTERN UP` to step back through device pages and then return to track actions. In device view, hold `KNOB MODE` and press `PATTERN UP`/`PATTERN DOWN` to move the selected device remote page. Each column remains one visible track, rows 1-4 represent the current four-device page on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold the main encoder while pressing a device pad to select that device and open or close its window. The last selected device slot is remembered per track, so selecting that track again from the Mix select row restores the remembered device when it still exists. Hold `ALT` and press a device pad to toggle it on or off. Hold `ALT` and press `MUTE_1`-`MUTE_4` to toggle the matching visible device row across all visible tracks: if any occupied slot in the row is enabled, the row turns off; otherwise it turns on. The selected enabled device is brightest, and the selected bypassed device is softly lit. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. Tap `KNOB MODE` to cycle the Launcher encoder pages while the Mix pad page is active.
 
 If the selected device has layers, press `PATTERN DOWN` once more from device view to open the Device Layers page. Columns address the first 16 layers of the selected Instrument Layer, FX Layer, Instrument Selector, or FX Selector. Rows select, solo, mute, and turn the layer on or off. Press `PATTERN UP` to return to device view.
 
 The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block. Press `PERFORM` to leave Birds-Eye and return to the normal launcher page, or press `NOTE`, `DRUM`, or `STEP` to leave Birds-Eye and switch modes.
 
-When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
+When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the meter display. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
 
 Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. `Default Clip Length` controls empty clip creation and is always a fixed length. `Launcher Record Length` controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, `Manual` records until stopped without post-processing, and `Round` records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
 
@@ -561,6 +566,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 ### Launch Control XL preferences
 
 - `Auto-attach to first Drum Machine and Arpeggiator`
+- `Exclusive Track Arm`: record-arm buttons select the armed track and disarm the other visible strips when enabled; defaults off for standard multi-arm behavior
 - `Audition on drum pad select`
 - `Drum accent buttons momentary`
 
@@ -585,6 +591,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Screen Message Hold`
 - `Euclid Scope`
 - `Drum Mode Pinning`
+- `Exclusive Track Arm`: arm pads select the armed track and disarm other visible tracks when enabled; defaults off for standard multi-arm behavior
 - `Step Seq Pad Audition`
 - `On-screen action notifications`
 

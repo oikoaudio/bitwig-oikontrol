@@ -57,6 +57,30 @@ public final class OledMeterRenderer {
         return image;
     }
 
+    public static int[] largeMeter(final int value, final int peakMarker) {
+        final int[] image = new int[IMAGE_BYTES];
+        final int left = 32;
+        final int right = 95;
+        final int top = 2;
+        final int bottom = 60;
+        final int innerLeft = left + 2;
+        final int innerRight = right - 2;
+        final int innerTop = top + 2;
+        final int innerBottom = bottom - 2;
+        final int maxHeight = innerBottom - innerTop + 1;
+
+        final int height = VuMeterFormatter.meterHeight(value, maxHeight);
+        if (height > 0) {
+            fillRect(image, innerLeft, innerBottom - height + 1, innerRight, innerBottom);
+        }
+
+        final int markerHeight = VuMeterFormatter.meterHeight(peakMarker, maxHeight);
+        if (markerHeight > 0) {
+            drawHorizontalLine(image, innerLeft, innerRight, innerBottom - markerHeight + 1);
+        }
+        return image;
+    }
+
     static int[] emptyImage() {
         return new int[IMAGE_BYTES];
     }

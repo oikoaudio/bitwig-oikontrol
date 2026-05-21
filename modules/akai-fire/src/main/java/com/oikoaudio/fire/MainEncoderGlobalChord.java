@@ -4,8 +4,8 @@ final class MainEncoderGlobalChord {
     enum Action {
         NONE,
         PLAYBACK_START_GRID,
-        PLAY_POSITION_GRID,
-        PLAY_POSITION_FINE,
+        PLAYBACK_START_FINE,
+        CUE_MARKER,
         TIMELINE_ZOOM_HORIZONTAL,
         TIMELINE_ZOOM_VERTICAL
     }
@@ -22,7 +22,7 @@ final class MainEncoderGlobalChord {
             return Action.NONE;
         }
         if (patternHeld) {
-            return shiftHeld ? Action.PLAY_POSITION_FINE : Action.PLAY_POSITION_GRID;
+            return shiftHeld ? Action.PLAYBACK_START_FINE : Action.CUE_MARKER;
         }
         if (altHeld) {
             return shiftHeld ? Action.TIMELINE_ZOOM_VERTICAL : Action.TIMELINE_ZOOM_HORIZONTAL;
