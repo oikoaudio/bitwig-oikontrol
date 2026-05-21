@@ -30,6 +30,15 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.18.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.17.0...oikontrol-v2.18.0) (2026-05-21)
+
+
+### Features
+
+* refine controller navigation and metering ([3203e67](https://github.com/oikoaudio/bitwig-oikontrol/commit/3203e679615f4bbf645c7505a631a34436d122ea))
+* refine controller navigation and metering ([76f0404](https://github.com/oikoaudio/bitwig-oikontrol/commit/76f0404f0431b23e019a9fec1f35d6b2440e4d11))
+* refine live note expression controls ([ec2a94c](https://github.com/oikoaudio/bitwig-oikontrol/commit/ec2a94cd2db7169112c9f74be92ed9e275352f23))
+
 ## [2.17.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.16.0...oikontrol-v2.17.0) (2026-05-19)
 
 
