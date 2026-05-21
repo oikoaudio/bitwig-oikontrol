@@ -18,7 +18,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire cue-marker navigation now advances by one marker per `SELECT` tick, and the last-touched parameter `SELECT` role uses a faster default speed with `SHIFT` matching the former default speed.
 - Added an `Exclusive Track Arm` preference to Akai Fire and Launch Control XL; when disabled, solo/mute/arm actions no longer change track selection, when enabled, arm selects the armed track while disarming the other visible tracks, and Akai Fire `ALT + arm pad` inverts the arm mode for that press.
 - Akai Fire now briefly shows the selected track name on the OLED when Bitwig or another controller changes the visible track selection, then returns to the meter display.
-- Akai Fire live Note now uses `PATTERN UP/DOWN` for shared scale, `ALT + PATTERN UP/DOWN` for shared root, moves Channel encoder 4 to Timbre CC74, and returns Channel/Mixer pages to selected-track meter idle displays after transient encoder values.
+- Akai Fire live Note now uses `PATTERN DOWN/UP` for next/previous shared scale, `ALT + PATTERN DOWN/UP` for lower/higher shared root, moves Channel encoder 4 to Timbre CC74, and returns Channel/Mixer pages to selected-track meter idle displays after transient encoder values.
+- Akai Fire live Note User 1 encoder 3 now sends Breath CC2 instead of duplicating Timbre.
 - Launch Control XL now clears LED dirty state after batched sysex flushes and disables verbose MIDI debug logging by default to reduce controller traffic and console load.
 - Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
 - `SHIFT + NOTE` now toggles Bitwig record quantization off and back to the previous grid, defaulting to `1/16`.

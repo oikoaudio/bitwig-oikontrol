@@ -71,6 +71,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final long LIVE_PITCH_BEND_RETURN_DELAY_MS = 15L;
     private static final long LIVE_PITCH_BEND_INACTIVITY_RETURN_MS = 120L;
     private static final int MIDI_CC_MOD = 1;
+    private static final int MIDI_CC_BREATH = 2;
     private static final int MIDI_CC_SUSTAIN = 64;
     private static final int MIDI_CC_SOSTENUTO = 66;
     private static final int MIDI_CC_TIMBRE = 74;
@@ -304,6 +305,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
             @Override
             public void timbre(final int value) {
                 noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_TIMBRE, value);
+            }
+
+            @Override
+            public void breath(final int value) {
+                noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_BREATH, value);
             }
 
             @Override
@@ -601,8 +607,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 liveVelocityEncoder::reset));
         bindResettableLiveMidiEncoder(encoders[1], liveUser1Layer, 1, "Aftertouch",
                 this::adjustLivePressure, () -> Integer.toString(liveExpressionControls.pressure()), this::resetLivePressure);
-        bindResettableLiveMidiEncoder(encoders[2], liveUser1Layer, 2, "Timbre",
-                this::adjustLiveTimbre, () -> Integer.toString(liveExpressionControls.timbre()), this::resetLiveTimbre);
+        bindResettableLiveMidiEncoder(encoders[2], liveUser1Layer, 2, "Breath",
+                this::adjustLiveBreath, () -> Integer.toString(liveExpressionControls.breath()), this::resetLiveBreath);
         bindResettableLiveMidiEncoder(encoders[3], liveUser1Layer, 3, "Pitch Expr",
                 this::adjustLivePitchExpression, this::formatLivePitchExpressionDisplay, this::resetLivePitchExpression);
     }
@@ -919,6 +925,12 @@ public abstract class LivePadSurfaceLayer extends Layer {
         }
     }
 
+    private void adjustLiveBreath(final int inc) {
+        if (liveExpressionControls.adjustBreath(inc)) {
+            showTransientParamInfo("Breath", liveExpressionControls.breath(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+        }
+    }
+
     private void adjustLivePitchBend(final int inc) {
         final int next = Math.max(MIN_MIDI_VALUE, Math.min(MAX_MIDI_VALUE, livePitchBend + inc));
         if (next == livePitchBend) {
@@ -1076,6 +1088,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private void resetLiveTimbre() {
         liveExpressionControls.resetTimbre();
+    }
+
+    private void resetLiveBreath() {
+        liveExpressionControls.resetBreath();
     }
 
     private void resetLivePitchExpression() {
@@ -1331,7 +1347,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             if (isDrumMachineLiveMode()) {
                 scrollDrumMachineWindow(DRUM_MACHINE_SCROLL_COARSE_STEPS);
             } else {
-                handleLivePatternButton(1);
+                handleLivePatternButton(-1);
             }
         }, () -> isDrumMachineLiveMode()
                 ? (canScrollDrumMachineWindow(DRUM_MACHINE_SCROLL_COARSE_STEPS)
@@ -1345,7 +1361,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             if (isDrumMachineLiveMode()) {
                 scrollDrumMachineWindow(-DRUM_MACHINE_SCROLL_COARSE_STEPS);
             } else {
-                handleLivePatternButton(-1);
+                handleLivePatternButton(1);
             }
         }, () -> isDrumMachineLiveMode()
                 ? (canScrollDrumMachineWindow(-DRUM_MACHINE_SCROLL_COARSE_STEPS)
@@ -1356,7 +1372,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private void handleLivePatternButton(final int direction) {
         if (driver.isGlobalAltHeld()) {
-            adjustTransposeSemitone(direction);
+            adjustTransposeSemitone(-direction);
             return;
         }
         adjustScale(direction);

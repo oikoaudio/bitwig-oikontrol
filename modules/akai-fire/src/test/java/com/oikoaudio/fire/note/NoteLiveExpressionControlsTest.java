@@ -22,16 +22,18 @@ class NoteLiveExpressionControlsTest {
     }
 
     @Test
-    void adjustTimbreAndModulationClampToMidiRange() {
+    void adjustTimbreModulationAndBreathClampToMidiRange() {
         final List<String> events = new ArrayList<>();
         final NoteLiveExpressionControls controls = new NoteLiveExpressionControls(new TestMidi(events));
 
         assertTrue(controls.adjustTimbre(200));
         assertTrue(controls.adjustModulation(200));
+        assertTrue(controls.adjustBreath(200));
 
         assertEquals(127, controls.timbre());
         assertEquals(127, controls.modulation());
-        assertEquals(List.of("timbre:127", "mod:127"), events);
+        assertEquals(127, controls.breath());
+        assertEquals(List.of("timbre:127", "mod:127", "breath:127"), events);
     }
 
     @Test
@@ -51,18 +53,21 @@ class NoteLiveExpressionControlsTest {
         controls.adjustPressure(10);
         controls.adjustTimbre(5);
         controls.adjustModulation(9);
+        controls.adjustBreath(11);
         controls.adjustPitchExpression(8);
         events.clear();
 
         controls.resetPressure();
         controls.resetTimbre();
         controls.resetModulation();
+        controls.resetBreath();
         controls.resetPitchExpression();
 
         assertEquals(List.of(
                 "pressure:0",
                 "timbre:0",
                 "mod:0",
+                "breath:0",
                 "bend:" + NoteLiveExpressionControls.pitchBendValueFor(64)), events);
     }
 
@@ -88,6 +93,11 @@ class NoteLiveExpressionControlsTest {
         @Override
         public void timbre(final int value) {
             events.add("timbre:" + value);
+        }
+
+        @Override
+        public void breath(final int value) {
+            events.add("breath:" + value);
         }
 
         @Override

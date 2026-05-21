@@ -72,6 +72,12 @@ class NoteLiveEncoderModeControlsTest {
                 "activate:CHANNEL"), events);
     }
 
+    @Test
+    void user1PageShowsBreathInsteadOfDuplicateTimbre() {
+        assertEquals("1: Velocity\n2: Aftertouch\n3: Breath\n4: Pitch Expr",
+                NoteLiveEncoderModeControls.modeInfo(EncoderMode.USER_1));
+    }
+
     private static NoteLiveEncoderModeControls createControls(final List<String> events) {
         return new NoteLiveEncoderModeControls(
                 layer(events, EncoderMode.CHANNEL),

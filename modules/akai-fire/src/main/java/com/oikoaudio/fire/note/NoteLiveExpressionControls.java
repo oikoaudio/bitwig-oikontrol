@@ -13,6 +13,7 @@ final class NoteLiveExpressionControls {
     private final MidiExpressionOut midiOut;
     private int pressure = MIN_MIDI_VALUE;
     private int timbre = DEFAULT_TIMBRE;
+    private int breath = MIN_MIDI_VALUE;
     private int modulation = MIN_MIDI_VALUE;
     private int pitchExpression = DEFAULT_PITCH_EXPRESSION;
     private int transientPitchBendOffset = 0;
@@ -31,6 +32,10 @@ final class NoteLiveExpressionControls {
 
     int modulation() {
         return modulation;
+    }
+
+    int breath() {
+        return breath;
     }
 
     int pitchExpression() {
@@ -67,6 +72,16 @@ final class NoteLiveExpressionControls {
         return true;
     }
 
+    boolean adjustBreath(final int inc) {
+        final int next = clampMidiValue(breath + inc);
+        if (next == breath) {
+            return false;
+        }
+        breath = next;
+        midiOut.breath(breath);
+        return true;
+    }
+
     boolean adjustPitchExpression(final int inc) {
         final int next = clampMidiValue(pitchExpression + inc);
         if (next == pitchExpression) {
@@ -90,6 +105,11 @@ final class NoteLiveExpressionControls {
     void resetTimbre() {
         timbre = DEFAULT_TIMBRE;
         midiOut.timbre(timbre);
+    }
+
+    void resetBreath() {
+        breath = MIN_MIDI_VALUE;
+        midiOut.breath(breath);
     }
 
     void resetPitchExpression() {
@@ -129,6 +149,8 @@ final class NoteLiveExpressionControls {
         void modulation(int value);
 
         void timbre(int value);
+
+        void breath(int value);
 
         void pitchBend(int bend);
     }

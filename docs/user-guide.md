@@ -302,8 +302,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `STEP` | Enter `Melodic Step`; press again for `Chord Step` |
 | `BANK LEFT/RIGHT` | Shared octave down / up |
 | `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
-| `PATTERN UP/DOWN` | Shared scale up / down |
-| `ALT + PATTERN UP/DOWN` | Shared root key up / down |
+| `PATTERN DOWN/UP` | Next / previous shared scale |
+| `ALT + PATTERN DOWN/UP` | Lower / higher shared root key |
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
 | `MUTE_3` | Note Repeat toggle |
@@ -313,7 +313,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | --- | --- | --- | --- | --- |
 | `Channel` | Mod | Pitch bend | Pitch Gliss / `ALT`: gliss mode | Timbre |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
-| `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Timbre | Pitch expression |
+| `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Breath | Pitch expression |
 | `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
 
 When live `NOTE` is idle, the OLED returns to a selected-track meter after transient encoder values. On the `Channel` page it shows one large selected-track VU meter. On the `Mixer` page it shows selected-track maximum peak/RMS and current peak/RMS with the same `Peak | RMS` legend used by Mix mode.
