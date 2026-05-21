@@ -44,4 +44,19 @@ class OledMeterRendererTest {
     void emptyMeterSetReturnsBlankImage() {
         assertTrue(OledMeterRenderer.isBlank(OledMeterRenderer.verticalMeters(new int[0], 0)));
     }
+
+    @Test
+    void largeMeterDrawsFillAndPeakMarkerWithoutFrame() {
+        final int[] image = OledMeterRenderer.largeMeter(64, 127);
+
+        assertEquals(0, OledMeterRenderer.pixel(image, 32, 2));
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 58));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 20));
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 4));
+    }
+
+    @Test
+    void largeMeterStaysBlankForSilenceWithoutHeldPeak() {
+        assertTrue(OledMeterRenderer.isBlank(OledMeterRenderer.largeMeter(0, 0)));
+    }
 }

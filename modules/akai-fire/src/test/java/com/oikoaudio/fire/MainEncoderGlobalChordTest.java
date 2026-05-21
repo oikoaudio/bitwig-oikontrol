@@ -12,10 +12,14 @@ class MainEncoderGlobalChordTest {
     }
 
     @Test
-    void patternChordKeepsExistingPlayPositionBehavior() {
-        assertEquals(MainEncoderGlobalChord.Action.PLAY_POSITION_GRID,
+    void patternTurnMovesBetweenCueMarkers() {
+        assertEquals(MainEncoderGlobalChord.Action.CUE_MARKER,
                 MainEncoderGlobalChord.resolve(1, false, true, false, false));
-        assertEquals(MainEncoderGlobalChord.Action.PLAY_POSITION_FINE,
+    }
+
+    @Test
+    void shiftPatternTurnFineMovesPlaybackStart() {
+        assertEquals(MainEncoderGlobalChord.Action.PLAYBACK_START_FINE,
                 MainEncoderGlobalChord.resolve(1, false, true, true, false));
     }
 

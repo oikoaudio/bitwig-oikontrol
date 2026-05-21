@@ -23,7 +23,7 @@ class NoteLiveEncoderModeControlsTest {
 
         assertEquals(EncoderMode.CHANNEL, controls.mode());
         assertEquals(BiColorLightState.MODE_CHANNEL, controls.lightState());
-        assertEquals("1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Scale", controls.modeInfo());
+        assertEquals("1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Timbre", controls.modeInfo());
         assertEquals(List.of(
                 "deactivate:CHANNEL",
                 "deactivate:MIXER",
@@ -70,6 +70,12 @@ class NoteLiveEncoderModeControlsTest {
                 "deactivate:USER_2",
                 "step:CHANNEL",
                 "activate:CHANNEL"), events);
+    }
+
+    @Test
+    void user1PageShowsBreathInsteadOfDuplicateTimbre() {
+        assertEquals("1: Velocity\n2: Aftertouch\n3: Breath\n4: Pitch Expr",
+                NoteLiveEncoderModeControls.modeInfo(EncoderMode.USER_1));
     }
 
     private static NoteLiveEncoderModeControls createControls(final List<String> events) {

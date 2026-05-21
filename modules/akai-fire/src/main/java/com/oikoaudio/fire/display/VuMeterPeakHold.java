@@ -36,4 +36,12 @@ public final class VuMeterPeakHold {
     public int valueAt(final int index) {
         return index >= 0 && index < values.length ? values[index] : 0;
     }
+
+    public void reset(final int index) {
+        if (index < 0 || index >= values.length) {
+            return;
+        }
+        values[index] = 0;
+        holdTicks[index] = 0;
+    }
 }

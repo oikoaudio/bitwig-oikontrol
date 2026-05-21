@@ -69,7 +69,7 @@ The Launch Control XL extension starts from Bitwig's original factory-template b
 
 ## Documentation
 
-- [doc/user-guide.md](doc/user-guide.md): canonical user guide source for both controllers.
+- [docs/user-guide.md](docs/user-guide.md): canonical user guide source for both controllers.
 - `CHANGES.md`: release notes and running changelog.
 - Bundled HTML documentation is generated from the user guide and shipped inside the extension.
 
@@ -138,8 +138,8 @@ Current artifact names:
 ### Developer Documentation
 
 - `CONTRIBUTING.md`: contribution workflow and Conventional Commit guidance.
-- `doc/adr/`: Architectural Decision Records, including `0000-use-adrs.md` and `0001-architecture-summary.md`.
-- `doc/dev/`: active implementation notes, experiments, and workflow documentation.
+- `docs/adr/`: Architectural Decision Records, including `0000-use-adrs.md` and `0001-architecture-summary.md`.
+- `docs/dev/`: active implementation notes, experiments, and workflow documentation.
 - `vscode-debug.md`: how to attach VS Code's debugger to Bitwig with JDWP while running the extension.
 
 ## Attribution

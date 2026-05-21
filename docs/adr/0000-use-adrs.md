@@ -6,7 +6,7 @@ The Oikontrol project diverges from Bitwig’s stock Launch Control XL script in
 
 ## Decision
 
-Adopt Architecture Decision Records (ADRs) under `doc/adr/` to document significant choices (e.g., starting point, template behaviour, build targets). Each ADR gets a monotonically increasing ID and a short markdown file.
+Adopt Architecture Decision Records (ADRs) under `docs/adr/` to document significant choices (e.g., starting point, template behaviour, build targets). Each ADR gets a monotonically increasing ID and a short markdown file.
 
 ## Status
 

@@ -30,4 +30,14 @@ class VuMeterPeakHoldTest {
 
         assertEquals(80, hold.valueAt(0));
     }
+
+    @Test
+    void resetClearsHeldPeak() {
+        final VuMeterPeakHold hold = new VuMeterPeakHold(1);
+
+        hold.update(0, 80);
+        hold.reset(0);
+
+        assertEquals(0, hold.valueAt(0));
+    }
 }

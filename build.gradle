@@ -373,11 +373,11 @@ def renderUserGuideDocument = { String markdown ->
   <div class="shell">
     <section class="hero">
       <div class="kicker">Bitwig Oikontrol</div>
-      <p class="lede">Bundled help generated from <code>doc/user-guide.md</code>.</p>
+      <p class="lede">Bundled help generated from <code>docs/user-guide.md</code>.</p>
     </section>
     <main>
 ${renderMarkdownToHtml(markdown)}
-      <p class="footer">Canonical source for this guide is maintained in the repository as <code>doc/user-guide.md</code>. This bundled HTML is generated during the Gradle resource build.</p>
+      <p class="footer">Canonical source for this guide is maintained in the repository as <code>docs/user-guide.md</code>. This bundled HTML is generated during the Gradle resource build.</p>
     </main>
   </div>
 </body>
@@ -386,7 +386,7 @@ ${renderMarkdownToHtml(markdown)}
 }
 
 tasks.register('generateBundledDocumentation') {
-    def sourceFile = layout.projectDirectory.file('doc/user-guide.md')
+    def sourceFile = layout.projectDirectory.file('docs/user-guide.md')
     def akaiFireOutput = project(':modules:akai-fire').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
     def launchControlOutput = project(':modules:launchcontrol').layout.projectDirectory.file('src/main/resources/Documentation/index.html')
     def oikontrolOutput = project(':modules:oikontrol').layout.projectDirectory.file('src/main/resources/Documentation/index.html')

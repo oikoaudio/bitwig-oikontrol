@@ -47,12 +47,25 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         CANCEL
     }
 
+    enum PlayPressAction {
+        STOP,
+        LAUNCH_FROM_PLAY_START
+    }
+
+    enum StopPressAction {
+        STOP,
+        GO_ARRANGEMENT_START
+    }
+
     public record RemotePageTarget(CursorRemoteControlsPage page, String label) {
     }
 
     private static final double MAIN_ENCODER_STEP = 0.01;
     private static final double MAIN_ENCODER_FINE_STEP = 0.0025;
+    private static final double LAST_TOUCHED_ENCODER_STEP = 0.04;
+    private static final double LAST_TOUCHED_ENCODER_FINE_STEP = 0.01;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
+    private static final int CUE_MARKER_BANK_SIZE = 128;
     private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
     private static final int BROWSER_OPEN_DEFER_MS = 40;
     private static final int SETTINGS_PAD_COLUMNS = 16;
@@ -90,6 +103,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private Transport transport;
     private Arranger arranger;
     private DetailEditor detailEditor;
+    private CueMarkerBank cueMarkerBank;
     private MidiIn midiIn;
     private MidiOut midiOut;
     private Layers layers;
@@ -134,6 +148,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final BooleanValueObject altActive = new BooleanValueObject();
     private PopupBrowser popupBrowser;
     private BrowserResultsItem browserResultsCursor;
+    private final boolean[] cueMarkerExists = new boolean[CUE_MARKER_BANK_SIZE];
+    private final double[] cueMarkerPositions = new double[CUE_MARKER_BANK_SIZE];
+    private final String[] cueMarkerNames = new String[CUE_MARKER_BANK_SIZE];
 
     private Preferences preferences;
     private SettableEnumValue clipLaunchModePref;
@@ -154,6 +171,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue screenMessageHoldPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableBooleanValue showDeactivatedTracksPref;
+    private SettableBooleanValue exclusiveTrackArmPref;
     private SettableRangedValue padBrightnessPref;
     private SettableRangedValue padSaturationPref;
     private SettableRangedValue melodicFixedSeedPref;
@@ -182,10 +200,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
     private int transportTimeSignatureDenominator = 4;
+    private double cueMarkerNavigationPosition = Double.NaN;
     private boolean performRecordPadGestureConsumed = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
+    private boolean exclusiveTrackArmEnabled = FireControlPreferences.EXCLUSIVE_TRACK_ARM_DEFAULT;
     private long screenMessageHoldMs = FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS;
     private final SharedPitchContextController sharedPitchContext = new SharedPitchContextController(
             new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
@@ -259,6 +279,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         application.canUndo().markInterested();
         application.canRedo().markInterested();
         arranger = host.createArranger();
+        cueMarkerBank = arranger.createCueMarkerBank(CUE_MARKER_BANK_SIZE);
+        initializeCueMarkerBank();
         detailEditor = host.createDetailEditor();
         groove = host.createGroove();
         groove.getEnabled().name().markInterested();
@@ -511,6 +533,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.SHOW_DEACTIVATED_TRACKS_DEFAULT);
         showDeactivatedTracksPref.markInterested();
 
+        exclusiveTrackArmPref = preferences.getBooleanSetting("Exclusive Track Arm",
+                FireControlPreferences.CATEGORY_FUNCTIONALITIES,
+                FireControlPreferences.EXCLUSIVE_TRACK_ARM_DEFAULT);
+        exclusiveTrackArmPref.markInterested();
+        exclusiveTrackArmEnabled = exclusiveTrackArmPref.get();
+        exclusiveTrackArmPref.addValueObserver(value -> exclusiveTrackArmEnabled = value);
+
         // Deferred for now: the current live NOTE implementation still relies on
         // Bitwig key-translation updates, so "New Notes Only" does not preserve
         // already-held notes correctly when the pitch offset changes. Keep the
@@ -610,6 +639,20 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         stateLights[1] = createLight(NoteAssign.TRACK_SELECT_2);
         stateLights[2] = createLight(NoteAssign.TRACK_SELECT_3);
         stateLights[3] = createLight(NoteAssign.TRACK_SELECT_4);
+    }
+
+    private void initializeCueMarkerBank() {
+        cueMarkerBank.itemCount().markInterested();
+        for (int index = 0; index < CUE_MARKER_BANK_SIZE; index++) {
+            final int markerIndex = index;
+            final CueMarker marker = cueMarkerBank.getItemAt(index);
+            marker.exists().markInterested();
+            marker.exists().addValueObserver(exists -> cueMarkerExists[markerIndex] = exists);
+            marker.position().markInterested();
+            marker.position().addValueObserver(position -> cueMarkerPositions[markerIndex] = position);
+            marker.name().markInterested();
+            marker.name().addValueObserver(name -> cueMarkerNames[markerIndex] = name);
+        }
     }
 
     private void initGlobalSettingsOverlay() {
@@ -760,7 +803,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        transport.stop();
+        switch (stopPressAction(transport.isPlaying().get())) {
+            case STOP -> transport.stop();
+            case GO_ARRANGEMENT_START -> goToArrangementStart();
+        }
     }
 
     private void toggleRec(final boolean pressed) {
@@ -1114,11 +1160,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         // Regular behavior: toggle play/stop, retrigger on start.
-        if (transport.isPlaying().get()) {
-            transport.isPlaying().set(false);
-        } else {
-            drumSequenceMode.retrigger();
-            transport.restart();
+        switch (playPressAction(transport.isPlaying().get())) {
+            case STOP -> transport.isPlaying().set(false);
+            case LAUNCH_FROM_PLAY_START -> {
+                drumSequenceMode.retrigger();
+                transport.launchFromPlayStartPosition();
+            }
         }
     }
 
@@ -1302,6 +1349,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isEncoderTouchResetEnabled() {
         return encoderTouchResetEnabled;
+    }
+
+    public boolean isExclusiveTrackArmEnabled() {
+        return exclusiveTrackArmEnabled;
     }
 
     public long getScreenMessageHoldMs() {
@@ -1529,6 +1580,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Project Start", transport.playStartPosition().getFormatted());
     }
 
+    private void goToArrangementStart() {
+        if (transport == null) {
+            return;
+        }
+        setPlaybackStartPosition(0.0);
+        oled.valueInfo("Project Start", transport.playStartPosition().getFormatted());
+    }
+
     public void goToArrangementEndOrLoopEnd() {
         if (transport == null) {
             return;
@@ -1563,12 +1622,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Play Start", transport.playStartPosition().getFormatted());
     }
 
+    public void adjustPlaybackStartPositionFine(final int inc) {
+        if (inc == 0 || transport == null) {
+            return;
+        }
+        final double current = Math.max(0.0, transport.playStartPosition().get());
+        setPlaybackStartPosition(Math.max(0.0, current + inc * 0.25));
+        oled.valueInfo("Play Start Fine", transport.playStartPosition().getFormatted());
+    }
+
     private boolean hasActiveArrangerLoop() {
         return transport.isArrangerLoopEnabled().get() && transport.arrangerLoopDuration().get() > 0.0;
     }
 
     private void setPlaybackStartPosition(final double beats) {
         final double target = Math.max(0.0, beats);
+        cueMarkerNavigationPosition = Double.NaN;
         transport.playStartPosition().set(target);
         transport.getPosition().set(target);
         if (transport.isPlaying().get()) {
@@ -1782,10 +1851,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         final SettableRangedValue value = parameter.value();
-        final double stepSize = fine ? MAIN_ENCODER_FINE_STEP : MAIN_ENCODER_STEP;
+        final double stepSize = mainCursorParameterStep(fine);
         final double nextValue = Math.max(0.0, Math.min(1.0, value.get() + (inc * stepSize)));
         value.setImmediately(nextValue);
         oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
+    }
+
+    static double mainCursorParameterStep(final boolean fine) {
+        return fine ? LAST_TOUCHED_ENCODER_FINE_STEP : LAST_TOUCHED_ENCODER_STEP;
     }
 
     public void showMainCursorParameterInfo() {
@@ -1799,6 +1872,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void showIdleOledInfo() {
         if (modeState.activeMode() == Mode.PERFORM && performMode != null && performMode.showIdleInfoIfNeeded()) {
+            return;
+        }
+        if (modeState.activeMode() == Mode.NOTE_PLAY && notePlayMode != null && notePlayMode.showIdleInfoIfNeeded()) {
             return;
         }
         if (modeState.activeMode() == Mode.DRUM
@@ -2533,14 +2609,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 adjustPlaybackStartPositionByGrid(inc);
                 return true;
             }
-            case PLAY_POSITION_GRID -> {
+            case PLAYBACK_START_FINE -> {
                 patternGestureConsumed = true;
-                adjustTransportPositionByGrid(inc, false);
+                adjustPlaybackStartPositionFine(inc);
                 return true;
             }
-            case PLAY_POSITION_FINE -> {
+            case CUE_MARKER -> {
                 patternGestureConsumed = true;
-                adjustTransportPositionByGrid(inc, true);
+                jumpToCueMarker(inc);
                 return true;
             }
             case TIMELINE_ZOOM_HORIZONTAL -> {
@@ -2558,13 +2634,58 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return false;
     }
 
-    private void adjustTransportPositionByGrid(final int inc, final boolean fine) {
-        if (transport == null) {
+    private void jumpToCueMarker(final int inc) {
+        if (inc == 0 || transport == null) {
             return;
         }
-        final double beatStep = fine ? 0.25 : Math.max(0.125, 4.0 / Math.max(1, transportTimeSignatureDenominator));
-        transport.getPosition().inc(inc * beatStep);
-        oled.valueInfo("Play Position", transport.getPosition().getFormatted());
+        final double reference = Double.isNaN(cueMarkerNavigationPosition)
+                ? transport.playStartPosition().get()
+                : cueMarkerNavigationPosition;
+        final int markerIndex = cueMarkerIndexAfterTurn(reference, inc, cueMarkerExists, cueMarkerPositions,
+                cueMarkerBank.itemCount().get());
+        if (markerIndex < 0) {
+            oled.valueInfo("Cue Marker", "None");
+            return;
+        }
+        final double markerPosition = cueMarkerPositions[markerIndex];
+        setPlaybackStartPosition(markerPosition);
+        cueMarkerNavigationPosition = markerPosition;
+        oled.valueInfo("Cue Marker", cueMarkerLabel(markerIndex));
+    }
+
+    private String cueMarkerLabel(final int markerIndex) {
+        final String name = cueMarkerNames[markerIndex];
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        return "Marker " + (markerIndex + 1);
+    }
+
+    static int cueMarkerIndexAfterTurn(final double reference,
+                                       final int inc,
+                                       final boolean[] exists,
+                                       final double[] positions,
+                                       final int itemCount) {
+        final int observedLimit = itemCount > 0 ? itemCount : exists.length;
+        final int limit = Math.min(Math.min(exists.length, positions.length), observedLimit);
+        if (inc == 0 || limit == 0) {
+            return -1;
+        }
+        final double epsilon = 0.000001;
+        if (inc > 0) {
+            for (int index = 0; index < limit; index++) {
+                if (exists[index] && positions[index] > reference + epsilon) {
+                    return index;
+                }
+            }
+            return -1;
+        }
+        for (int index = limit - 1; index >= 0; index--) {
+            if (exists[index] && positions[index] < reference - epsilon) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private void zoomTimelineHorizontally(final int inc) {
@@ -2980,6 +3101,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case STOP -> BrowserTransportAction.CANCEL;
             default -> BrowserTransportAction.NONE;
         };
+    }
+
+    static PlayPressAction playPressAction(final boolean playing) {
+        if (playing) {
+            return PlayPressAction.STOP;
+        }
+        return PlayPressAction.LAUNCH_FROM_PLAY_START;
+    }
+
+    static StopPressAction stopPressAction(final boolean playing) {
+        return playing ? StopPressAction.STOP : StopPressAction.GO_ARRANGEMENT_START;
     }
 
     public static AkaiFireOikontrolExtension getInstance() {

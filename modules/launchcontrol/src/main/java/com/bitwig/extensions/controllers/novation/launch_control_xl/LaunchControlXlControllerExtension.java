@@ -57,8 +57,9 @@ import java.util.OptionalInt;
  */
 public class LaunchControlXlControllerExtension extends ControllerExtension
 {
-   static final boolean DEBUG_TELEMETRY = true;
+   static final boolean DEBUG_TELEMETRY = false;
    static final int DEVICE_DISCOVERY_WIDTH = 128;
+   static final boolean EXCLUSIVE_TRACK_ARM_DEFAULT = false;
    private static HostNotifications sHostActions;
 
    // Launch Control XL (default user mode) MIDI note and CC numbers
@@ -169,6 +170,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          "Auto-attach to first Drum Machine and Arpeggiator",
          "LaunchControl XL",
          true);
+      mExclusiveTrackArm = mHost.getPreferences().getBooleanSetting(
+         "Exclusive Track Arm",
+         "LaunchControl XL",
+         EXCLUSIVE_TRACK_ARM_DEFAULT);
+      mExclusiveTrackArm.markInterested();
+      mExclusiveTrackArmEnabled = mExclusiveTrackArm.get();
+      mExclusiveTrackArm.addValueObserver(value -> mExclusiveTrackArmEnabled = value);
       mDrumSettings = DrumSettings.from(mHost);
 
       mMidiIn.setSysexCallback(this::onSysex);
@@ -1045,8 +1053,44 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       {
          case MUTE -> track.mute().toggle();
          case SOLO -> track.solo().toggle(false);
-         case ARM -> track.arm().toggle();
+         case ARM -> toggleTrackArm(stripIndex, track);
       }
+   }
+
+   private void toggleTrackArm(final int stripIndex, final Track track)
+   {
+      if (!mExclusiveTrackArmEnabled)
+      {
+         track.arm().toggle();
+         return;
+      }
+      final boolean shouldArm = !track.arm().get();
+      if (shouldArm)
+      {
+         disarmOtherTrackStrips(stripIndex);
+      }
+      track.arm().set(shouldArm);
+      mCursorTrack.selectChannel(track);
+   }
+
+   private void disarmOtherTrackStrips(final int selectedStripIndex)
+   {
+      for (int stripIndex = 0; stripIndex < STRIP_COUNT; stripIndex++)
+      {
+         if (stripIndex != selectedStripIndex)
+         {
+            final Track track = trackForStrip(stripIndex);
+            if (track != null)
+            {
+               track.arm().set(false);
+            }
+         }
+      }
+   }
+
+   static boolean trackBooleanShouldSelect(final TrackBooleanTarget target, final boolean exclusiveTrackArmEnabled)
+   {
+      return target == TrackBooleanTarget.ARM && exclusiveTrackArmEnabled;
    }
 
    private RemoteControl deviceParamForStrip(final int stripIndex, final int paramIndex)
@@ -1893,6 +1937,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private final AbsoluteHardwareKnob[] mHardwareKnobs = new AbsoluteHardwareKnob[3 * 8];
    private final HardwareSlider[] mHardwareSliders = new HardwareSlider[8];
    private SettableBooleanValue mAutoAttachToFirst;
+   private SettableBooleanValue mExclusiveTrackArm;
+   private boolean mExclusiveTrackArmEnabled = EXCLUSIVE_TRACK_ARM_DEFAULT;
    // Template-change sysex can arrive before the hardware is constructed; these flags ensure we
    // defer binding until the manager and controls exist.
    private boolean mHardwareReady;

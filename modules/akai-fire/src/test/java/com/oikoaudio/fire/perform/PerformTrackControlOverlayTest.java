@@ -31,6 +31,34 @@ class PerformTrackControlOverlayTest {
     }
 
     @Test
+    void onlySelectAndExclusiveArmActionsFollowSelection() {
+        assertEquals(true, PerformClipLauncherMode.trackActionShouldSelectForPad(0, false, false));
+        assertEquals(false, PerformClipLauncherMode.trackActionShouldSelectForPad(0, true, false));
+        assertEquals(false, PerformClipLauncherMode.trackActionShouldSelectForPad(16, false, true));
+        assertEquals(false, PerformClipLauncherMode.trackActionShouldSelectForPad(32, false, true));
+        assertEquals(false, PerformClipLauncherMode.trackActionShouldSelectForPad(48, false, false));
+        assertEquals(true, PerformClipLauncherMode.trackActionShouldSelectForPad(48, false, true));
+        assertEquals(true, PerformClipLauncherMode.trackActionShouldSelectForPad(48, true, false));
+        assertEquals(false, PerformClipLauncherMode.trackActionShouldSelectForPad(48, true, true));
+    }
+
+    @Test
+    void altArmInvertsExclusiveArmPreference() {
+        assertEquals(false, PerformClipLauncherMode.trackArmUsesExclusive(false, false));
+        assertEquals(true, PerformClipLauncherMode.trackArmUsesExclusive(false, true));
+        assertEquals(true, PerformClipLauncherMode.trackArmUsesExclusive(true, false));
+        assertEquals(false, PerformClipLauncherMode.trackArmUsesExclusive(true, true));
+    }
+
+    @Test
+    void externalTrackSelectionInfoIgnoresLocalAndDuplicateSelections() {
+        assertEquals(false, PerformClipLauncherMode.shouldShowExternalTrackSelectionInfo(false, 2, -1, -1));
+        assertEquals(false, PerformClipLauncherMode.shouldShowExternalTrackSelectionInfo(true, 2, 2, -1));
+        assertEquals(false, PerformClipLauncherMode.shouldShowExternalTrackSelectionInfo(true, 2, -1, 2));
+        assertEquals(true, PerformClipLauncherMode.shouldShowExternalTrackSelectionInfo(true, 2, -1, 1));
+    }
+
+    @Test
     void selectRowUsesTrackColorForAvailableTracks() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 

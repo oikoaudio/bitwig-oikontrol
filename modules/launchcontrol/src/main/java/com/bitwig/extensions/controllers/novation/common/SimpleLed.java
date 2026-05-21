@@ -49,6 +49,7 @@ public class SimpleLed
          if (mColor < 16)
             sb.append('0');
          sb.append(Integer.toHexString(mColor));
+         mNeedFlush = false;
 
       }
    }
