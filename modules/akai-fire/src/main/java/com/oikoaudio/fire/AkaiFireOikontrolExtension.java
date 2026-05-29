@@ -37,6 +37,7 @@ import com.bitwig.extensions.framework.values.Midi;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -49,6 +50,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     enum PlayPressAction {
         STOP,
+        RETRIGGER_LAUNCHERS_FROM_START,
         LAUNCH_FROM_PLAY_START
     }
 
@@ -95,6 +97,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public static final String MAIN_ENCODER_PLAYBACK_START_ROLE = FireControlPreferences.MAIN_ENCODER_PLAYBACK_START;
     public static final String MAIN_ENCODER_DRUM_GRID_ROLE = FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
     private static final String ACTION_JUMP_TO_END_OF_ARRANGEMENT = "jump_to_end_of_arrangement";
+    private static final String ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_ID = "retrigger_playing_launcher_clips";
+    private static final String ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL = "Retrigger playing Launcher clips";
+    private static final String NORMALIZED_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL = "retrigger playing launcher clips";
     private static final String RECORD_QUANTIZATION_OFF = "OFF";
     private static final String RECORD_QUANTIZATION_DEFAULT_ON = "1/16";
     private static AkaiFireOikontrolExtension instance;
@@ -190,6 +195,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean patternGestureConsumed = false;
     private boolean patternPressShiftHeld = false;
     private boolean patternPressAltHeld = false;
+    private boolean retriggerLaunchersOnNextPlay = false;
     private boolean recordGestureConsumed = false;
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
@@ -804,8 +810,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         switch (stopPressAction(transport.isPlaying().get())) {
-            case STOP -> transport.stop();
-            case GO_ARRANGEMENT_START -> goToArrangementStart();
+            case STOP -> {
+                retriggerLaunchersOnNextPlay = false;
+                transport.stop();
+            }
+            case GO_ARRANGEMENT_START -> {
+                goToArrangementStart();
+                retriggerLaunchersOnNextPlay = true;
+            }
         }
     }
 
@@ -1160,8 +1172,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         // Regular behavior: toggle play/stop, retrigger on start.
-        switch (playPressAction(transport.isPlaying().get())) {
-            case STOP -> transport.isPlaying().set(false);
+        switch (playPressAction(transport.isPlaying().get(), retriggerLaunchersOnNextPlay)) {
+            case STOP -> {
+                retriggerLaunchersOnNextPlay = false;
+                transport.isPlaying().set(false);
+            }
+            case RETRIGGER_LAUNCHERS_FROM_START -> {
+                retriggerLaunchersOnNextPlay = false;
+                if (!retriggerPlayingLauncherClips()) {
+                    drumSequenceMode.retrigger();
+                }
+                transport.launchFromPlayStartPosition();
+            }
             case LAUNCH_FROM_PLAY_START -> {
                 drumSequenceMode.retrigger();
                 transport.launchFromPlayStartPosition();
@@ -1586,6 +1608,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         setPlaybackStartPosition(0.0);
         oled.valueInfo("Project Start", transport.playStartPosition().getFormatted());
+    }
+
+    private boolean retriggerPlayingLauncherClips() {
+        final Action action = resolveRetriggerPlayingLauncherClipsAction(application);
+        if (action == null) {
+            notifyAction("Launcher Retrigger", "Unavailable");
+            return false;
+        }
+        action.invoke();
+        notifyAction("Launcher", "Retrigger");
+        return true;
     }
 
     public void goToArrangementEndOrLoopEnd() {
@@ -3104,14 +3137,65 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     static PlayPressAction playPressAction(final boolean playing) {
+        return playPressAction(playing, false);
+    }
+
+    static PlayPressAction playPressAction(final boolean playing, final boolean retriggerLaunchersArmed) {
         if (playing) {
             return PlayPressAction.STOP;
+        }
+        if (retriggerLaunchersArmed) {
+            return PlayPressAction.RETRIGGER_LAUNCHERS_FROM_START;
         }
         return PlayPressAction.LAUNCH_FROM_PLAY_START;
     }
 
     static StopPressAction stopPressAction(final boolean playing) {
         return playing ? StopPressAction.STOP : StopPressAction.GO_ARRANGEMENT_START;
+    }
+
+    static Action resolveRetriggerPlayingLauncherClipsAction(final Application application) {
+        if (application == null) {
+            return null;
+        }
+        Action action = application.getAction(ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_ID);
+        if (action != null) {
+            return action;
+        }
+        action = application.getAction(ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL);
+        if (action != null) {
+            return action;
+        }
+        final Action[] actions = application.getActions();
+        if (actions == null) {
+            return null;
+        }
+        for (final Action candidate : actions) {
+            if (isRetriggerPlayingLauncherClipsAction(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isRetriggerPlayingLauncherClipsAction(final Action action) {
+        return action != null
+                && (isRetriggerPlayingLauncherClipsText(action.getId())
+                || isRetriggerPlayingLauncherClipsText(action.getName())
+                || isRetriggerPlayingLauncherClipsText(action.getMenuItemText()));
+    }
+
+    private static boolean isRetriggerPlayingLauncherClipsText(final String text) {
+        if (text == null) {
+            return false;
+        }
+        final String normalized = text.trim()
+                .replace('_', ' ')
+                .replace('-', ' ')
+                .replaceAll("\\s+", " ")
+                .toLowerCase(Locale.ROOT);
+        return normalized.equals(NORMALIZED_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL)
+                || normalized.contains(NORMALIZED_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL);
     }
 
     public static AkaiFireOikontrolExtension getInstance() {

@@ -15,6 +15,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire OLED graphics now send only changed 8-pixel pages, allowing meter displays to refresh about every 100 ms without full-frame redraws, and bar meters show a slowly decaying held-peak marker plus a bottom dash for muted lanes.
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
 - Akai Fire global transport navigation now uses `PATTERN + SELECT` for cue markers, `SHIFT + PATTERN + SELECT` for fine play-start moves, launches from the current play start on `PLAY`, and moves play start to arrangement start on `STOP` when already stopped.
+- Akai Fire now uses the next `PLAY` after a double-`STOP` arrangement reset to invoke Bitwig's global retrigger for playing Launcher clips before launching from the play start.
 - Akai Fire cue-marker navigation now advances by one marker per `SELECT` tick, and the last-touched parameter `SELECT` role uses a faster default speed with `SHIFT` matching the former default speed.
 - Added an `Exclusive Track Arm` preference to Akai Fire and Launch Control XL; when disabled, solo/mute/arm actions no longer change track selection, when enabled, arm selects the armed track while disarming the other visible tracks, and Akai Fire `ALT + arm pad` inverts the arm mode for that press.
 - Akai Fire now briefly shows the selected track name on the OLED when Bitwig or another controller changes the visible track selection, then returns to the meter display.

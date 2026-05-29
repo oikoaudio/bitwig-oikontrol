@@ -143,6 +143,8 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
+After a second `STOP` resets the arrangement start, the next `PLAY` also asks Bitwig to retrigger playing Launcher clips before launching from the play start.
+
 When the popup browser is open, `SELECT` turn moves through results, `SELECT` press or `PLAY` commits the selected result, and `STOP` or `BROWSER` closes the browser.
 
 When `KNOB MODE + PATTERN UP/DOWN` changes a remote page, the OLED shows the target page name and a bottom-row `N/M` count when there is more than one page. If the active encoder page has no remote target, the OLED reports `No remotes`. A single-page target reports `Page 1/1`, and page boundaries report `First page` or `Last page`. These chords are not treated as encoder-page cycles.
