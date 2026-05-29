@@ -129,8 +129,8 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + PLAY` | Retrigger current clip |
 | `STOP` | Stop transport; when already stopped, move play start to the beginning of the arrangement |
 | `REC` | Clip launcher overdub in Drum XOX; arranger record in other modes; hold for pad-target recording in `PERFORM` |
-| `ALT + REC` | Arranger automation write |
-| `PATTERN` | Clip launcher automation write |
+| `ALT + REC` | Write automation |
+| `PATTERN` | Reserved as a plain tap; used for chords below |
 | `PATTERN + REC` | Record the selected track into the next free launcher slot, regardless of mode |
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub |
@@ -143,6 +143,8 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + BROWSER` | Open browser after the current device / insertion context |
 | `SHIFT + ALT + BROWSER` | Open browser before the current device / insertion context |
 
+Plain `PLAY` does not relaunch the selected Launcher clip, so clips that were already offset keep that offset. Use `ALT + PLAY` to retrigger the selected clip from its start.
+
 After a second `STOP` resets the arrangement start, the next `PLAY` also asks Bitwig to retrigger playing Launcher clips before launching from the play start.
 
 When the popup browser is open, `SELECT` turn moves through results, `SELECT` press or `PLAY` commits the selected result, and `STOP` or `BROWSER` closes the browser.
@@ -153,7 +155,7 @@ Hold `KNOB MODE` and tap an encoder to reset the value under that encoder. The O
 
 When `Encoder touch reset` is enabled, touching and holding a resettable encoder also resets that value after a short hold. The explicit `KNOB MODE + touch encoder` chord is available separately as a deliberate reset gesture.
 
-Use `ALT + REC` for arranger automation write and `ALT + PATTERN` for launcher overdub. `PATTERN` still toggles clip launcher automation write directly. `PATTERN + REC` is the quick launcher capture chord: it records the selected track into the next free launcher slot regardless of mode. Plain `REC` remains the arranger-record path from Perform Mix pages. Press `REC` again to stop a launcher recording started from either `PATTERN + REC` or `REC + pad`.
+Use `ALT + REC` for Bitwig 6's unified automation write toggle, and `ALT + PATTERN` for launcher overdub. Plain `PATTERN` is left unassigned so it can remain available for a future top-level action. `PATTERN + REC` is the quick launcher capture chord: it records the selected track into the next free launcher slot regardless of mode. Plain `REC` remains the arranger-record path from Perform Mix pages. Press `REC` again to stop a launcher recording started from either `PATTERN + REC` or `REC + pad`.
 
 ### Global settings overlay
 
@@ -456,7 +458,7 @@ For immediate derived-line feedback, change source expression from the controlle
 
 ### Launcher mode (`PERFORM`)
 
-`PERFORM` opens the 16x4 launcher surface. Filled slots select and launch. Empty slots create a new clip using `Default Clip Length`, then launch.
+`PERFORM` opens the 16x4 launcher surface. Filled slots select and launch from the clip start. Empty slots create a new clip using `Default Clip Length`, then launch from the clip start.
 
 `Perform Clip Launcher Layout` chooses whether the mode starts as `LauncherV` or `LauncherH`. `ALT + PERFORM` still toggles the layout for the current session.
 
@@ -488,7 +490,7 @@ The Birds-Eye page is for large launcher sets. Each pad represents one launcher 
 
 When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the meter display. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
 
-Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. `Default Clip Length` controls empty clip creation and is always a fixed length. `Launcher Record Length` controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, `Manual` records until stopped without post-processing, and `Round` records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.
+Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. `Default Clip Length` controls empty clip creation and is always a fixed length. `Launcher Record Length` controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, `Manual` records until stopped without post-processing, and `Round` records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but automation can still be written with Bitwig 6's unified automation write toggle and launcher overdub enabled.
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 

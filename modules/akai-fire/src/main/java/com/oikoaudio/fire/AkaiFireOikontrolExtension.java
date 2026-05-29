@@ -37,7 +37,6 @@ import com.bitwig.extensions.framework.values.Midi;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -57,6 +56,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     enum StopPressAction {
         STOP,
         GO_ARRANGEMENT_START
+    }
+
+    enum PatternReleaseAction {
+        NONE,
+        TOGGLE_METRONOME,
+        TOGGLE_LAUNCHER_OVERDUB
     }
 
     public record RemotePageTarget(CursorRemoteControlsPage page, String label) {
@@ -97,9 +102,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public static final String MAIN_ENCODER_PLAYBACK_START_ROLE = FireControlPreferences.MAIN_ENCODER_PLAYBACK_START;
     public static final String MAIN_ENCODER_DRUM_GRID_ROLE = FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
     private static final String ACTION_JUMP_TO_END_OF_ARRANGEMENT = "jump_to_end_of_arrangement";
-    private static final String ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_ID = "retrigger_playing_launcher_clips";
-    private static final String ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL = "Retrigger playing Launcher clips";
-    private static final String NORMALIZED_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL = "retrigger playing launcher clips";
     private static final String RECORD_QUANTIZATION_OFF = "OFF";
     private static final String RECORD_QUANTIZATION_DEFAULT_ON = "1/16";
     private static AkaiFireOikontrolExtension instance;
@@ -597,7 +599,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         transport.isArrangerAutomationWriteEnabled().markInterested();
         transport.isClipLauncherOverdubEnabled().markInterested();
         transport.isMetronomeEnabled().markInterested();
-        transport.isClipLauncherAutomationWriteEnabled().markInterested();
         transport.isFillModeActive().markInterested();
         transport.defaultLaunchQuantization().markInterested();
         transport.clipLauncherPostRecordingAction().markInterested();
@@ -739,14 +740,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return transport.isArrangerRecordEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
     }
 
-    private BiColorLightState getClipLauncherAutomationWriteEnabledState() {
-        return transport.isClipLauncherAutomationWriteEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
-    }
-
-    private BiColorLightState getArrangerAutomationWriteEnabledState() {
-        return transport.isArrangerAutomationWriteEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
-    }
-
     private BiColorLightState getPatternState() {
         if (getButton(NoteAssign.SHIFT).isPressed()) {
             return transport.isMetronomeEnabled().get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
@@ -754,7 +747,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (isGlobalAltHeld()) {
             return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.AMBER_FULL;
         }
-        return getClipLauncherAutomationWriteEnabledState();
+        return BiColorLightState.OFF;
     }
 
     private BiColorLightState getDrumState() {
@@ -833,9 +826,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             if (!pressed) {
                 return;
             }
-            final boolean nextState = !transport.isArrangerAutomationWriteEnabled().get();
-            transport.isArrangerAutomationWriteEnabled().toggle();
-            notifyAction("Arranger Write", nextState ? "On" : "Off");
+            toggleAutomationWriteEnabled();
             return;
         }
         if (pressed && performMode != null && performMode.stopManualLauncherRecordingIfAny()) {
@@ -890,12 +881,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         performMode.recordNextFreeLauncherSlot(false);
     }
 
-    private void toggleClipLauncherAutomationWriteEnabled(final boolean pressed) {
-        if (!pressed) {
-            return;
-        }
-        final boolean enabled = transport.isClipLauncherAutomationWriteEnabled().get();
-        transport.isClipLauncherAutomationWriteEnabled().set(!enabled);
+    private void toggleAutomationWriteEnabled() {
+        final boolean nextState = !transport.isArrangerAutomationWriteEnabled().get();
+        transport.isArrangerAutomationWriteEnabled().toggle();
+        notifyAction("Write Automation", nextState ? "On" : "Off");
     }
 
     private void handlePatternPressed(final boolean pressed) {
@@ -910,23 +899,20 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             patternGestureConsumed = false;
             return;
         }
-        if (patternPressShiftHeld) {
-            final boolean nextState = !transport.isMetronomeEnabled().get();
-            transport.isMetronomeEnabled().toggle();
-            notifyAction("Metronome", nextState ? "On" : "Off");
-            return;
+        switch (patternReleaseAction(false, patternPressShiftHeld, patternPressAltHeld)) {
+            case TOGGLE_METRONOME -> {
+                final boolean nextState = !transport.isMetronomeEnabled().get();
+                transport.isMetronomeEnabled().toggle();
+                notifyAction("Metronome", nextState ? "On" : "Off");
+            }
+            case TOGGLE_LAUNCHER_OVERDUB -> {
+                final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
+                transport.isClipLauncherOverdubEnabled().toggle();
+                notifyAction("Launcher Overdub", nextState ? "On" : "Off");
+            }
+            case NONE -> {
+            }
         }
-        if (patternPressAltHeld) {
-            final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
-            transport.isClipLauncherOverdubEnabled().toggle();
-            notifyAction("Launcher Overdub", nextState ? "On" : "Off");
-            return;
-        }
-        toggleClipLauncherAutomationWriteEnabled(true);
-        host.scheduleTask(
-                () -> notifyAction("Clip Write",
-                        transport.isClipLauncherAutomationWriteEnabled().get() ? "On" : "Off"),
-                1);
     }
 
     public void notifyAction(final String title, final String value) {
@@ -1162,16 +1148,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         // Alt+Play: retrigger the current clip without transport state change.
-        if (drumSequenceMode.isAltHeld()) {
+        if (isGlobalAltHeld()) {
             final boolean wasPlaying = transport.isPlaying().get();
-            drumSequenceMode.retrigger();
+            retriggerCurrentClip();
             if (wasPlaying) {
                 notifyAction("Clip", "Retrigger");
                 oled.clearScreenDelayed();
             }
             return;
         }
-        // Regular behavior: toggle play/stop, retrigger on start.
+        // Regular behavior: toggle play/stop. Launcher retriggering is explicit: Alt+Play for
+        // the selected clip, or second Stop then Play for Bitwig's global launcher retrigger.
         switch (playPressAction(transport.isPlaying().get(), retriggerLaunchersOnNextPlay)) {
             case STOP -> {
                 retriggerLaunchersOnNextPlay = false;
@@ -1180,12 +1167,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case RETRIGGER_LAUNCHERS_FROM_START -> {
                 retriggerLaunchersOnNextPlay = false;
                 if (!retriggerPlayingLauncherClips()) {
-                    drumSequenceMode.retrigger();
+                    retriggerCurrentClip();
                 }
                 transport.launchFromPlayStartPosition();
             }
             case LAUNCH_FROM_PLAY_START -> {
-                drumSequenceMode.retrigger();
                 transport.launchFromPlayStartPosition();
             }
         }
@@ -1611,14 +1597,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private boolean retriggerPlayingLauncherClips() {
-        final Action action = resolveRetriggerPlayingLauncherClipsAction(application);
-        if (action == null) {
+        if (!LauncherRetriggerActions.retriggerPlayingLauncherClips(application)) {
             notifyAction("Launcher Retrigger", "Unavailable");
             return false;
         }
-        action.invoke();
         notifyAction("Launcher", "Retrigger");
         return true;
+    }
+
+    private void retriggerCurrentClip() {
+        LauncherRetriggerActions.retriggerCurrentClip(viewControl == null ? null : viewControl.getSelectedClip());
     }
 
     public void goToArrangementEndOrLoopEnd() {
@@ -3154,48 +3142,19 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return playing ? StopPressAction.STOP : StopPressAction.GO_ARRANGEMENT_START;
     }
 
-    static Action resolveRetriggerPlayingLauncherClipsAction(final Application application) {
-        if (application == null) {
-            return null;
+    static PatternReleaseAction patternReleaseAction(final boolean gestureConsumed,
+                                                     final boolean shiftHeld,
+                                                     final boolean altHeld) {
+        if (gestureConsumed) {
+            return PatternReleaseAction.NONE;
         }
-        Action action = application.getAction(ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_ID);
-        if (action != null) {
-            return action;
+        if (shiftHeld) {
+            return PatternReleaseAction.TOGGLE_METRONOME;
         }
-        action = application.getAction(ACTION_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL);
-        if (action != null) {
-            return action;
+        if (altHeld) {
+            return PatternReleaseAction.TOGGLE_LAUNCHER_OVERDUB;
         }
-        final Action[] actions = application.getActions();
-        if (actions == null) {
-            return null;
-        }
-        for (final Action candidate : actions) {
-            if (isRetriggerPlayingLauncherClipsAction(candidate)) {
-                return candidate;
-            }
-        }
-        return null;
-    }
-
-    private static boolean isRetriggerPlayingLauncherClipsAction(final Action action) {
-        return action != null
-                && (isRetriggerPlayingLauncherClipsText(action.getId())
-                || isRetriggerPlayingLauncherClipsText(action.getName())
-                || isRetriggerPlayingLauncherClipsText(action.getMenuItemText()));
-    }
-
-    private static boolean isRetriggerPlayingLauncherClipsText(final String text) {
-        if (text == null) {
-            return false;
-        }
-        final String normalized = text.trim()
-                .replace('_', ' ')
-                .replace('-', ' ')
-                .replaceAll("\\s+", " ")
-                .toLowerCase(Locale.ROOT);
-        return normalized.equals(NORMALIZED_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL)
-                || normalized.contains(NORMALIZED_RETRIGGER_PLAYING_LAUNCHER_CLIPS_LABEL);
+        return PatternReleaseAction.NONE;
     }
 
     public static AkaiFireOikontrolExtension getInstance() {

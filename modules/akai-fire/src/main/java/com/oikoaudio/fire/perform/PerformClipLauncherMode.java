@@ -45,6 +45,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PerformClipLauncherMode extends Layer {
+    private static final String DEFAULT_LAUNCH_QUANTIZATION = "default";
+    private static final String FROM_START_LAUNCH_MODE = "from_start";
+
     private enum TrackActionRow {
         SELECT(0, "Select", new RgbLigthState(0, 96, 96, true)),
         SOLO(1, "Solo", new RgbLigthState(96, 96, 0, true)),
@@ -1147,13 +1150,13 @@ public class PerformClipLauncherMode extends Layer {
         }
 
         if (hasContent) {
-            slot.launch();
+            slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
             showValueInfo("Launch Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
             return;
         }
 
         slot.createEmptyClip(driver.getDefaultClipLengthBeats());
-        slot.launch();
+        slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
         showValueInfo("Create Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
     }
 

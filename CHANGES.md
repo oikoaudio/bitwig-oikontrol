@@ -16,6 +16,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
 - Akai Fire global transport navigation now uses `PATTERN + SELECT` for cue markers, `SHIFT + PATTERN + SELECT` for fine play-start moves, launches from the current play start on `PLAY`, and moves play start to arrangement start on `STOP` when already stopped.
 - Akai Fire now uses the next `PLAY` after a double-`STOP` arrangement reset to invoke Bitwig's global retrigger for playing Launcher clips before launching from the play start.
+- Akai Fire plain `PLAY` no longer retriggers the selected Launcher clip; `ALT + PLAY`, clip-row pads, and Perform launcher pads retrigger explicitly from the clip start.
+- Akai Fire now targets Bitwig API 25, keeps `ALT + REC` as Bitwig 6's unified automation write toggle, and leaves plain `PATTERN` unassigned for a future top-level action.
 - Akai Fire cue-marker navigation now advances by one marker per `SELECT` tick, and the last-touched parameter `SELECT` role uses a faster default speed with `SHIFT` matching the former default speed.
 - Added an `Exclusive Track Arm` preference to Akai Fire and Launch Control XL; when disabled, solo/mute/arm actions no longer change track selection, when enabled, arm selects the armed track while disarming the other visible tracks, and Akai Fire `ALT + arm pad` inverts the arm mode for that press.
 - Akai Fire now briefly shows the selected track name on the OLED when Bitwig or another controller changes the visible track selection, then returns to the meter display.

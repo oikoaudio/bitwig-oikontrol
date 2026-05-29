@@ -88,7 +88,7 @@ Oikontrol uses:
 ### Requirements
 
 - **Java:** built and tested with JDK 21.
-- **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in Bitwig Studio 6.0; beta 12 has been tested.
+- **Bitwig API:** targets `extension-api:25`, which ships with **Bitwig Studio 6.0**.
 - **Controllers:** Novation Launch Control XL Mk2 and Akai Fire.
 
 ### Building And Testing

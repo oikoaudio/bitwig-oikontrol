@@ -20,6 +20,10 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
+    dependencies {
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+    }
+
     test {
         useJUnitPlatform()
         jvmArgs += [

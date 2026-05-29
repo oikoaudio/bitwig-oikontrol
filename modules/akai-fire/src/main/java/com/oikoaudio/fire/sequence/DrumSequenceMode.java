@@ -1295,10 +1295,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         stepPadSurface.clearRecurrenceHold();
     }
 
-    public void retrigger() {
-        cursorClip.launch();
-    }
-
     public StepViewPosition getPositionHandler() {
         return positionHandler;
     }

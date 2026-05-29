@@ -1,14 +1,8 @@
 package com.oikoaudio.fire;
 
-import com.bitwig.extension.controller.api.Action;
-import com.bitwig.extension.controller.api.Application;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class TransportNavigationTest {
     @Test
@@ -100,37 +94,23 @@ class TransportNavigationTest {
     }
 
     @Test
-    void retriggerPlayingLauncherClipsActionResolvesLikelyActionId() {
-        final Application application = mock(Application.class);
-        final Action action = mock(Action.class);
-        when(application.getAction("retrigger_playing_launcher_clips")).thenReturn(action);
-
-        assertSame(action, AkaiFireOikontrolExtension.resolveRetriggerPlayingLauncherClipsAction(application));
+    void akaiFireRequiresBitwigSixApi() {
+        assertEquals(25, new AkaiFireOikontrolDefinition().getRequiredAPIVersion());
     }
 
     @Test
-    void retriggerPlayingLauncherClipsActionFallsBackToGuiLabel() {
-        final Application application = mock(Application.class);
-        final Action other = action("other_action", "Other", "Other");
-        final Action target = action("internal_unknown", "Retrigger playing Launcher clips", "");
-        when(application.getActions()).thenReturn(new Action[] {other, target});
-
-        assertSame(target, AkaiFireOikontrolExtension.resolveRetriggerPlayingLauncherClipsAction(application));
+    void plainPatternReleaseIsUnassigned() {
+        assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.NONE,
+                AkaiFireOikontrolExtension.patternReleaseAction(false, false, false));
     }
 
     @Test
-    void retriggerPlayingLauncherClipsActionMissingReturnsNull() {
-        final Application application = mock(Application.class);
-        when(application.getActions()).thenReturn(new Action[0]);
-
-        assertNull(AkaiFireOikontrolExtension.resolveRetriggerPlayingLauncherClipsAction(application));
-    }
-
-    private static Action action(final String id, final String name, final String menuItemText) {
-        final Action action = mock(Action.class);
-        when(action.getId()).thenReturn(id);
-        when(action.getName()).thenReturn(name);
-        when(action.getMenuItemText()).thenReturn(menuItemText);
-        return action;
+    void patternReleaseChordsKeepTheirActions() {
+        assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.TOGGLE_METRONOME,
+                AkaiFireOikontrolExtension.patternReleaseAction(false, true, false));
+        assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.TOGGLE_LAUNCHER_OVERDUB,
+                AkaiFireOikontrolExtension.patternReleaseAction(false, false, true));
+        assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.NONE,
+                AkaiFireOikontrolExtension.patternReleaseAction(true, false, false));
     }
 }
