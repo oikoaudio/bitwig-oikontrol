@@ -9,6 +9,7 @@ public final class OledMeterRenderer {
     private static final int IMAGE_BYTES = WIDTH * HEIGHT / PAGE_HEIGHT;
     private static final int TOP_MARGIN = 2;
     private static final int BOTTOM_MARGIN = 3;
+    private static final int FOOTER_HEIGHT = 8;
     private static final int MIN_BAR_WIDTH = 2;
 
     private OledMeterRenderer() {
@@ -24,6 +25,16 @@ public final class OledMeterRenderer {
 
     public static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
                                        final int count) {
+        return verticalMeters(values, peakMarkers, muted, count, HEIGHT);
+    }
+
+    public static int[] verticalMetersWithFooter(final int[] values, final int[] peakMarkers, final boolean[] muted,
+                                                 final int count) {
+        return verticalMeters(values, peakMarkers, muted, count, HEIGHT - FOOTER_HEIGHT);
+    }
+
+    private static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
+                                        final int count, final int drawingHeight) {
         final int visibleCount = Math.max(0, Math.min(count, values.length));
         final int[] image = new int[IMAGE_BYTES];
         if (visibleCount == 0) {
@@ -32,11 +43,12 @@ public final class OledMeterRenderer {
 
         final int slotWidth = Math.max(1, WIDTH / visibleCount);
         final int barWidth = Math.max(MIN_BAR_WIDTH, slotWidth - 2);
-        final int maxHeight = HEIGHT - TOP_MARGIN - BOTTOM_MARGIN;
+        final int bottomLimit = Math.max(TOP_MARGIN, Math.min(HEIGHT, drawingHeight) - 1);
+        final int maxHeight = Math.max(1, bottomLimit - TOP_MARGIN - BOTTOM_MARGIN + 1);
         for (int index = 0; index < visibleCount; index++) {
             final int left = index * slotWidth + Math.max(0, (slotWidth - barWidth) / 2);
             final int right = Math.min(WIDTH - 1, left + barWidth - 1);
-            final int bottom = HEIGHT - 1 - BOTTOM_MARGIN;
+            final int bottom = bottomLimit - BOTTOM_MARGIN;
             final int height = VuMeterFormatter.meterHeight(values[index], maxHeight);
             final int top = bottom - height + 1;
             final boolean mutedLane = muted != null && index < muted.length && muted[index];

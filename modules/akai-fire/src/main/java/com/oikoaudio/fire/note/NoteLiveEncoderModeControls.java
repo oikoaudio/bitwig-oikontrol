@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.note;
 
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 
@@ -73,7 +74,16 @@ final class NoteLiveEncoderModeControls {
             case CHANNEL -> "1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Timbre";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
             case USER_1 -> "1: Velocity\n2: Aftertouch\n3: Breath\n4: Pitch Expr";
-            case USER_2 -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
+            case USER_2 -> EncoderFooterLegend.remoteModeInfo("Device Remotes", "D", 1);
+        };
+    }
+
+    static String modeLegend(final EncoderMode mode) {
+        return switch (mode) {
+            case CHANNEL -> EncoderFooterLegend.of("Mod", "Bnd", "Gli", "Tmb");
+            case MIXER -> EncoderFooterLegend.MIXER;
+            case USER_1 -> EncoderFooterLegend.of("Vel", "Aft", "Br", "PEx");
+            case USER_2 -> EncoderFooterLegend.remoteControls("D", 1);
         };
     }
 

@@ -113,6 +113,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final String RECORD_QUANTIZATION_DEFAULT_ON = "1/16";
     private static final String AUTOMATION_WRITE_MODE_TOUCH = "touch";
     private static final long STOPPED_METER_RING_OUT_MS = 2000;
+    private static final long STOPPED_IDLE_TRACK_REFRESH_MS = 2500;
     private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
     private Application application;
@@ -185,6 +186,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue melodicSeedModePref;
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableEnumValue screenMessageHoldPref;
+    private SettableEnumValue idleOledPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableBooleanValue showDeactivatedTracksPref;
     private SettableBooleanValue exclusiveTrackArmPref;
@@ -227,6 +229,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private long screenMessageHoldMs = FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS;
     private long stoppedMeterRingOutUntilMs = 0;
     private int stoppedMeterRingOutGeneration = 0;
+    private long lastStoppedIdleTrackRefreshMs = 0;
     private final SharedPitchContextController sharedPitchContext = new SharedPitchContextController(
             new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
             MusicalScaleLibrary.getInstance());
@@ -381,7 +384,22 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         fugueStepMode.notifyBlink(blinkTicks);
         nestedRhythmMode.notifyBlink(blinkTicks);
         performMode.notifyBlink(blinkTicks);
+        refreshStoppedIdleTrackInfoIfNeeded();
         host.scheduleTask(this::handlePing, 100);
+    }
+
+    private void refreshStoppedIdleTrackInfoIfNeeded() {
+        if (isTransportPlaying() || shouldShowMeterIdleDisplay() || oled.hasPendingTransientMessage()) {
+            return;
+        }
+        final long now = System.currentTimeMillis();
+        if (now - lastStoppedIdleTrackRefreshMs >= STOPPED_IDLE_TRACK_REFRESH_MS) {
+            if (showActiveModeIdleOledInfo()) {
+                lastStoppedIdleTrackRefreshMs = now;
+                return;
+            }
+            showIdleModeTrackInfo(currentModeLabel());
+        }
     }
 
     private void onSysEx(final String msg) {
@@ -547,6 +565,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         screenMessageHoldPref.markInterested();
         screenMessageHoldPref.addValueObserver(this::applyScreenMessageHoldPreference);
         applyScreenMessageHoldPreference(screenMessageHoldPref.get());
+
+        idleOledPref = preferences.getEnumSetting("Idle Perf & Drum OLED",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.IDLE_OLED_MODES,
+                FireControlPreferences.IDLE_OLED_CONTEXT);
+        idleOledPref.markInterested();
 
         showDeactivatedTracksPref = preferences.getBooleanSetting("Show deactivated tracks",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -743,6 +767,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         stoppedMeterRingOutGeneration++;
         if (playing) {
             stoppedMeterRingOutUntilMs = 0;
+            lastStoppedIdleTrackRefreshMs = 0;
             return;
         }
         stoppedMeterRingOutUntilMs = System.currentTimeMillis() + STOPPED_METER_RING_OUT_MS;
@@ -1007,7 +1032,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public void notifyAction(final String title, final String value) {
         if (!showModeAwareActionInfo(title, value)) {
             oled.valueInfo(title, value);
-            suppressTransientOledOverlays();
         }
         if (screenNotificationsPref != null && screenNotificationsPref.get()) {
             host.showPopupNotification(title + ": " + value);
@@ -1023,6 +1047,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 && activeDrumSubMode == DrumSubMode.STANDARD
                 && drumSequenceMode != null
                 && drumSequenceMode.showGlobalActionInfo(title, value);
+    }
+
+    private void showModeChangeInfo(final String modeLabel) {
+        showIdleModeTrackInfo(modeLabel);
+        notifyPopup("Mode", modeLabel);
     }
 
     public void notifyPopup(final String title, final String value) {
@@ -1050,11 +1079,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.DRUM) {
             activeDrumSubMode = activeDrumSubMode.next();
             switchActiveMode();
-            notifyAction("Mode", activeDrumSubMode.displayName());
+            showModeChangeInfo(activeDrumSubMode.displayName());
         } else {
             modeState.activateDrum();
             switchActiveMode();
-            notifyAction("Mode", activeDrumSubMode.displayName());
+            showModeChangeInfo(activeDrumSubMode.displayName());
         }
     }
 
@@ -1081,17 +1110,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             }
             modeState.activateNotePlay();
             switchActiveMode();
-            notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+            showModeChangeInfo(notePlayMode.currentNoteSubModeLabel());
             return;
         }
         if (modeState.activeMode() != Mode.NOTE_PLAY) {
             modeState.activateNotePlay();
             switchActiveMode();
-            notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+            showModeChangeInfo(notePlayMode.currentNoteSubModeLabel());
             return;
         }
         notePlayMode.cycleNoteSubMode();
-        notifyAction("Mode", notePlayMode.currentNoteSubModeLabel());
+        showModeChangeInfo(notePlayMode.currentNoteSubModeLabel());
     }
 
     private void handleRecordQuantizationChanged(final String value) {
@@ -1140,7 +1169,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 if (pressed) {
                     modeState.activateChordStep();
                     switchActiveMode();
-                    notifyAction("Mode", "Chord Step");
+                    showModeChangeInfo("Chord Step");
                 }
                 return;
             }
@@ -1157,7 +1186,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             }
             modeState.activateFugueStep();
             switchActiveMode();
-            notifyAction("Mode", "Fugue");
+            showModeChangeInfo("Fugue");
             return;
         }
         if (modeState.activeMode() == Mode.FUGUE_STEP) {
@@ -1190,33 +1219,33 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (isGlobalShiftHeld() && isGlobalAltHeld()) {
             performMode.toggleBirdsEyeMode();
-            notifyAction("Mode", performMode.activePageLabel());
+            showModeChangeInfo(performMode.activePageLabel());
             return;
         }
         if (isGlobalShiftHeld()) {
             performMode.toggleTrackActionMode();
-            notifyAction("Mode", performMode.activePageLabel());
+            showModeChangeInfo(performMode.activePageLabel());
             return;
         }
         if (isGlobalAltHeld()) {
             performMode.toggleOrientation();
-            notifyAction("Mode", performMode.activePageLabel());
+            showModeChangeInfo(performMode.activePageLabel());
             return;
         }
         if (!enteringPerform) {
             if (performMode.isBirdsEyeMode()) {
                 performMode.leaveBirdsEyeMode();
-                notifyAction("Mode", performMode.activePageLabel());
+                showModeChangeInfo(performMode.activePageLabel());
                 return;
             }
             if (performMode.isTrackActionMode()) {
                 performMode.toggleTrackActionMode();
-                notifyAction("Mode", performMode.activePageLabel());
+                showModeChangeInfo(performMode.activePageLabel());
                 return;
             }
             performMode.toggleSceneActionMode();
         }
-        notifyAction("Mode", performMode.activePageLabel());
+        showModeChangeInfo(performMode.activePageLabel());
     }
 
     private boolean leavePerformBirdsEyeIfActive() {
@@ -1454,6 +1483,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public long getScreenMessageHoldMs() {
         return screenMessageHoldMs;
+    }
+
+    public boolean isIdleOledMetersEnabled() {
+        return idleOledPref != null && FireControlPreferences.IDLE_OLED_METERS.equals(idleOledPref.get());
     }
 
     private void applyScreenMessageHoldPreference(final String preferenceValue) {
@@ -1814,7 +1847,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public void exitMelodicStepMode() {
         final Mode activeMode = modeState.exitMelodicStepMode();
         switchActiveMode();
-        notifyAction("Mode", switch (activeMode) {
+        showModeChangeInfo(switch (activeMode) {
             case DRUM -> activeDrumSubMode.displayName();
             case CHORD_STEP -> "Chord Step";
             case PERFORM -> "Perform";
@@ -1826,13 +1859,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         suppressNextMelodicStepRelease = true;
         modeState.enterMelodicStepMode();
         switchActiveMode();
-        notifyAction("Mode", "Melo Step");
+        showModeChangeInfo("Melo Step");
     }
 
     public void enterFugueStepMode() {
         modeState.activateFugueStep();
         switchActiveMode();
-        notifyAction("Mode", "Fugue");
+        showModeChangeInfo("Fugue");
     }
 
     public void enterNestedRhythmMode() {
@@ -1840,7 +1873,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         activeDrumSubMode = DrumSubMode.NESTED_RHYTHM;
         modeState.activateDrum();
         switchActiveMode();
-        notifyAction("Mode", "NestedRytm");
+        showModeChangeInfo("NestedRytm");
     }
 
     public boolean isEuclidFullClipEnabled() {
@@ -1981,20 +2014,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showIdleOledInfo() {
+        if (showActiveModeIdleOledInfo()) {
+            return;
+        }
         if (!isTransportPlaying() && !shouldShowMeterIdleDisplay()) {
-            showIdleTrackInfo();
-            return;
-        }
-        if (modeState.activeMode() == Mode.PERFORM && performMode != null && performMode.showIdleInfoIfNeeded()) {
-            return;
-        }
-        if (modeState.activeMode() == Mode.NOTE_PLAY && notePlayMode != null && notePlayMode.showIdleInfoIfNeeded()) {
-            return;
-        }
-        if (modeState.activeMode() == Mode.DRUM
-                && activeDrumSubMode == DrumSubMode.STANDARD
-                && drumSequenceMode != null
-                && drumSequenceMode.showIdleInfoIfNeeded()) {
+            showIdleModeTrackInfo(currentModeLabel());
             return;
         }
         final Parameter parameter = getLastClickedParameter();
@@ -2002,16 +2026,35 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             oled.valueInfo(parameter.name().get(), parameter.displayedValue().get());
             return;
         }
-        final String modeLabel = switch (modeState.activeMode()) {
+        showIdleModeTrackInfo(currentModeLabel());
+    }
+
+    private String currentModeLabel() {
+        return switch (modeState.activeMode()) {
             case DRUM -> activeDrumSubMode.displayName();
-            case NOTE_PLAY -> "Note";
+            case NOTE_PLAY -> notePlayMode == null ? "Note" : notePlayMode.currentNoteSubModeLabel();
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melo Step";
             case FUGUE_STEP -> "Fugue";
             case NESTED_RHYTHM -> "NestedRytm";
-            case PERFORM -> "Perform";
+            case PERFORM -> performMode == null ? "Perform" : performMode.activePageLabel();
         };
-        oled.valueInfo("Mode", modeLabel);
+    }
+
+    private boolean showActiveModeIdleOledInfo() {
+        if (modeState.activeMode() == Mode.PERFORM && performMode != null && performMode.showIdleInfoIfNeeded()) {
+            return true;
+        }
+        if (modeState.activeMode() == Mode.NOTE_PLAY && notePlayMode != null && notePlayMode.showIdleInfoIfNeeded()) {
+            return true;
+        }
+        if (modeState.activeMode() == Mode.DRUM
+                && activeDrumSubMode == DrumSubMode.STANDARD
+                && drumSequenceMode != null
+                && drumSequenceMode.showIdleInfoIfNeeded()) {
+            return true;
+        }
+        return false;
     }
 
     public void resetMainCursorParameter() {
@@ -2900,16 +2943,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         showTrackInfo(pageStep ? "Track Page" : "Track Select", trackName);
     }
 
-    private void showIdleTrackInfo() {
+    private void showIdleModeTrackInfo(final String modeLabel) {
         if (viewControl == null) {
+            oled.valueInfo("Mode", modeLabel);
             return;
         }
-        showTrackInfo("Track", viewControl.getCursorTrack().name().get());
+        lastStoppedIdleTrackRefreshMs = System.currentTimeMillis();
+        oled.valueInfo(modeLabel, normalizedTrackName(viewControl.getCursorTrack().name().get()));
     }
 
     private void showTrackInfo(final String title, final String trackName) {
-        oled.valueInfo(title,
-                trackName == null || trackName.isBlank() ? "Unnamed" : trackName);
+        oled.valueInfo(title, normalizedTrackName(trackName));
+    }
+
+    private String normalizedTrackName(final String trackName) {
+        return trackName == null || trackName.isBlank() ? "Unnamed" : trackName;
     }
 
     private void handleBrowserPressed(final boolean pressed) {
@@ -3068,11 +3116,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (target == null || target.page() == null) {
             oled.valueInfo("Remote Page", "No remotes");
             oled.clearScreenDelayed();
-            suppressTransientOledOverlays();
             return true;
         }
         showRemotePageNavigation(target, direction);
-        suppressTransientOledOverlays();
         return true;
     }
 
@@ -3084,9 +3130,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                                               final Runnable showAction) {
         final boolean handled = ParameterEncoderBinding.handleExplicitResetTouch(touched, knobModeEncoderResetControl(), resettable,
                 fallbackLabel, unavailableDetail, resetAction, showAction, oled::valueInfo);
-        if (handled) {
-            suppressTransientOledOverlays();
-        }
         return handled;
     }
 
@@ -3119,18 +3162,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         final CursorRemoteControlsPage page = target.page();
         return remotePageNavigationLightState(page.selectedPageIndex().get(), page.pageCount().getAsInt(), direction);
-    }
-
-    private void suppressTransientOledOverlays() {
-        if (modeState.activeMode() == Mode.PERFORM && performMode != null) {
-            performMode.suppressMixMeterDisplay();
-            return;
-        }
-        if (modeState.activeMode() == Mode.DRUM
-                && activeDrumSubMode == DrumSubMode.STANDARD
-                && drumSequenceMode != null) {
-            drumSequenceMode.suppressDrumMeterDisplay();
-        }
     }
 
     private RemotePageTarget currentRemotePageTarget() {

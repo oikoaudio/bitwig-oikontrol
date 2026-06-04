@@ -2,6 +2,7 @@ package com.oikoaudio.fire.perform;
 
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.lights.BiColorLightState;
+import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -63,6 +64,15 @@ class PerformTrackControlOverlayTest {
         assertEquals(true, PerformClipLauncherMode.shouldShowPerformMeters(true, false, false, false, true));
         assertEquals(false, PerformClipLauncherMode.shouldShowPerformMeters(true, false, false, false, false));
         assertEquals(false, PerformClipLauncherMode.shouldShowPerformMeters(true, true, false, false, true));
+    }
+
+    @Test
+    void contextIdleUsesTrackLegendForRemoteEncoderPages() {
+        assertEquals(true, PerformClipLauncherMode.shouldShowPerformTrackLegendIdle(EncoderMode.CHANNEL, false));
+        assertEquals(true, PerformClipLauncherMode.shouldShowPerformTrackLegendIdle(EncoderMode.USER_1, false));
+        assertEquals(true, PerformClipLauncherMode.shouldShowPerformTrackLegendIdle(EncoderMode.USER_2, false));
+        assertEquals(false, PerformClipLauncherMode.shouldShowPerformTrackLegendIdle(EncoderMode.MIXER, false));
+        assertEquals(false, PerformClipLauncherMode.shouldShowPerformTrackLegendIdle(EncoderMode.CHANNEL, true));
     }
 
     @Test

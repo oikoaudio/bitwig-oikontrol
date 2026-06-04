@@ -9,12 +9,22 @@ class LivePadSurfaceLayerIdleDisplayTest {
     @Test
     void liveMetersOnlyShowWhileTransportIsPlaying() {
         assertEquals(true, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, false, false, EncoderMode.CHANNEL, true));
+                true, false, false, EncoderMode.MIXER, true));
         assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, false, false, EncoderMode.CHANNEL, false));
+                true, false, false, EncoderMode.MIXER, false));
         assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, true, false, EncoderMode.CHANNEL, true));
+                true, true, false, EncoderMode.MIXER, true));
         assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
                 true, false, true, EncoderMode.MIXER, true));
+        assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
+                true, false, false, EncoderMode.CHANNEL, true));
+    }
+
+    @Test
+    void contextIdleRefreshWaitsForTransientToExpire() {
+        assertEquals(false, LivePadSurfaceLayer.shouldRefreshLiveContextIdle(false, true, true));
+        assertEquals(false, LivePadSurfaceLayer.shouldRefreshLiveContextIdle(true, false, true));
+        assertEquals(false, LivePadSurfaceLayer.shouldRefreshLiveContextIdle(false, false, false));
+        assertEquals(true, LivePadSurfaceLayer.shouldRefreshLiveContextIdle(false, false, true));
     }
 }

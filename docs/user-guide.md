@@ -170,7 +170,9 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 
 On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
-The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays.
+The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data.
+
+Where the active mode has a four-encoder page, the OLED can keep a compact bottom-row legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melodic Step, Chord Step, Nested Rhythm, and Fugue.
 
 ### Main SELECT encoder
 
@@ -200,7 +202,7 @@ Global `SELECT` turn chords:
 
 `Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Nested Rhythm` and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, Drum XOX focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, Drum XOX follows the selected drum context.
 
-When Drum XOX is idle, the OLED shows vertical RMS meters for the 16 visible Drum Machine pad chains. On the `Mixer` encoder page, it instead shows selected-pad maximum peak/RMS on the first large row and current peak/RMS on the second large row.
+When Drum XOX is idle, the OLED shows the selected pad name with the current encoder legend when `Idle Perf & Drum OLED` is `Context`. Set `Idle Perf & Drum OLED` to `Meters` to show vertical RMS meters for the 16 visible Drum Machine pad chains above the same footer. On the `Mixer` encoder page, it instead shows selected-pad maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a compact bottom-row legend for the four encoders.
 
 | Pad row | Role |
 | --- | --- |
@@ -318,9 +320,9 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `Channel` | Mod | Pitch bend | Pitch Gliss / `ALT`: gliss mode | Timbre |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Breath | Pitch expression |
-| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
+| `User 2` | Selected device remote 1 | Device remote 2 | Device remote 3 | Device remote 4 |
 
-When live `NOTE` is idle, the OLED returns to a selected-track meter after transient encoder values. On the `Channel` page it shows one large selected-track VU meter. On the `Mixer` page it shows selected-track maximum peak/RMS and current peak/RMS with the same `Peak | RMS` legend used by Mix mode.
+When live `NOTE` is idle, the OLED returns to useful selected-track context after transient encoder values. On the `Mixer` page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS, with a compact bottom-row legend for the four encoders. On `Channel`, `User 1`, and `User 2`, it falls back to the selected track name with the current encoder-page legend on the bottom row. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the footer falls back to `D1`-style labels.
 
 #### Harmonic input
 
@@ -488,7 +490,7 @@ If the selected device has layers, press `PATTERN DOWN` once more from device vi
 
 The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block. Press `PERFORM` to leave Birds-Eye and return to the normal launcher page, or press `NOTE`, `DRUM`, or `STEP` to leave Birds-Eye and switch modes.
 
-When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the meter display. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small `Peak | RMS` legend at the bottom.
+When the Launcher or Mix page is idle, the OLED shows the selected track name with the current encoder legend when `Idle Perf & Drum OLED` is `Context`. Set `Idle Perf & Drum OLED` to `Meters` to show vertical RMS meters for the visible tracks above that same footer. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the persistent idle display. On the Mix page's `Mixer` encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a compact bottom-row legend for the four encoders.
 
 Hold `REC` and press a pad to target recording directly into that visible slot. Hold `PATTERN` and tap `REC` to record into the first free slot on the selected track, regardless of the active mode. `Default Clip Length` controls empty clip creation and is always a fixed length. `Launcher Record Length` controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, `Manual` records until stopped without post-processing, and `Round` records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press `REC` again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but automation can still be written with `ALT + PATTERN` launcher overdub, which enables `PATTERN` automation write in touch mode when needed.
 
@@ -500,10 +502,12 @@ On remote encoder pages, hold `ALT` while turning an encoder to control remotes 
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Project Remote 1 | Project Remote 2 | Project Remote 3 | Project Remote 4 |
+| `Channel` | Global Remote 1 | Global Remote 2 | Global Remote 3 | Global Remote 4 |
 | `Mixer` | Selected track volume | Selected track pan | Selected track send 1 | Selected track send 2 |
-| `User 1` | Selected track remote 1 | Remote 2 | Remote 3 | Remote 4 |
-| `User 2` | Selected device remote 1 | Remote 2 | Remote 3 | Remote 4 |
+| `User 1` | Selected track remote 1 | Track remote 2 | Track remote 3 | Track remote 4 |
+| `User 2` | Selected device remote 1 | Device remote 2 | Device remote 3 | Device remote 4 |
+
+In `SHIFT + PERFORM`, remote encoder pages idle to the selected track name with a bottom-row legend when `Idle Perf & Drum OLED` is `Context`. Set `Idle Perf & Drum OLED` to `Meters` to restore visible-track meters above that same legend. The legend uses mapped remote parameter names where available, and scoped fallback labels such as `G1`, `T1`, or `D1` when Bitwig reports only generic remote slots.
 
 ### Generative mode background
 
@@ -593,6 +597,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Pad Saturation`
 - `Encoder touch reset`: enables the touch-and-hold reset gesture on resettable encoders
 - `Screen Message Hold`
+- `Idle Perf & Drum OLED`: choose contextual idle text/values or visible-track/pad meters for Perform and Drum XOX
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Exclusive Track Arm`: arm pads select the armed track and disarm other visible tracks when enabled; defaults off for standard multi-arm behavior

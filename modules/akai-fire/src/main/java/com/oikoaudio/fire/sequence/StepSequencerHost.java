@@ -62,6 +62,10 @@ public interface StepSequencerHost {
         return getEncoderBankLayout().bank(mode).modeInfo();
     }
 
+    default String getEncoderFooterLegend(final EncoderMode mode) {
+        return getEncoderBankLayout().bank(mode).footerLegend();
+    }
+
     default void handleEncoderModeChanged(final EncoderMode mode) {
     }
 }

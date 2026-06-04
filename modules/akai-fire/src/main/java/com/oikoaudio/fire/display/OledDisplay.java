@@ -31,7 +31,11 @@ public class OledDisplay {
 	private final long[] imagePageLastSentMs = new long[OLED_PAGE_COUNT];
 	private boolean inGraphicsMode = false;
 	private long clearTask = -1;
+	private long clearTaskDelayMs = DEFAULT_CLEAR_DELAY_MS;
 	private long clearDelayMs = DEFAULT_CLEAR_DELAY_MS;
+	private long transientMessageUntilMs = -1;
+	private long layoutRevision = 0;
+	private String footerLegend = null;
 	private long logoBlock;
 	private Runnable idleAction;
 
@@ -59,7 +63,25 @@ public class OledDisplay {
 	}
 
 	public void clearScreenDelayed() {
+		clearScreenDelayed(clearDelayMs);
+	}
+
+	public void clearScreenDelayed(final long delayMs) {
 		clearTask = System.currentTimeMillis();
+		clearTaskDelayMs = Math.max(0, delayMs);
+		transientMessageUntilMs = clearTask + clearTaskDelayMs;
+	}
+
+	public boolean hasPendingClear() {
+		return clearTask > 0;
+	}
+
+	public boolean hasPendingTransientMessage() {
+		return hasPendingClear() || System.currentTimeMillis() < transientMessageUntilMs;
+	}
+
+	public long layoutRevision() {
+		return layoutRevision;
 	}
 
 	public void setClearDelayMs(final long clearDelayMs) {
@@ -70,13 +92,36 @@ public class OledDisplay {
 		this.idleAction = idleAction;
 	}
 
+	public void setFooterLegend(final String footerLegend) {
+		this.footerLegend = footerLegend == null || footerLegend.isBlank() ? null : footerLegend;
+	}
+
 	public void clearScreen() {
+		transientMessageUntilMs = -1;
 		sendImage(SysExUtil.EMPTY_SCREEN);
 		inGraphicsMode = false;
 	}
 
 	public void sendImage(final int[] imageData) {
+		transientMessageUntilMs = -1;
+		layoutRevision++;
 		sendImageData(imageData);
+		inGraphicsMode = true;
+	}
+
+	public void sendImageWithFooter(final int[] imageData, final String footerLegend) {
+		if (imageData.length != OLED_IMAGE_BYTES) {
+			sendImage(imageData);
+			setFooterLegend(footerLegend);
+			renderFooterLegend();
+			return;
+		}
+		transientMessageUntilMs = -1;
+		layoutRevision++;
+		sendImageData(imageData, 0, OLED_PAGE_COUNT - 2);
+		inGraphicsMode = false;
+		setFooterLegend(footerLegend);
+		renderFooterLegendPreservingImageCache();
 		inGraphicsMode = true;
 	}
 
@@ -87,8 +132,12 @@ public class OledDisplay {
 			return;
 		}
 
+		sendImageData(imageData, 0, OLED_PAGE_COUNT - 1);
+	}
+
+	private void sendImageData(final int[] imageData, final int startPage, final int endPage) {
 		final long now = System.currentTimeMillis();
-		for (int page = 0; page < OLED_PAGE_COUNT; page++) {
+		for (int page = Math.max(0, startPage); page <= Math.min(OLED_PAGE_COUNT - 1, endPage); page++) {
 			final int offset = page * OLED_PAGE_WIDTH;
 			if (imagePageValid[page]
 					&& pageMatches(imageData, offset, imagePageCache[page])
@@ -154,25 +203,32 @@ public class OledDisplay {
 
 	public void detailInfo(final String title, final String lines) {
 		clearScreen();
+		markTransientMessage();
 		final String[] line = lines.split("\\n");
 		sendString(1, TextJustification.CENTER, 0, title);
 		for (int i = 0; i < 7; i++) {
 			final String l = i < line.length ? line[i] : "";
 			sendString(0, TextJustification.LEFT, 2 + i * 1, l);
 		}
+		if (line.length <= 5) {
+			renderFooterLegend();
+		}
 	}
 
 	public void lineInfo(final String title, final String lines) {
 		clearScreen();
+		markTransientMessage();
 		final String[] line = lines.split("\\n");
 		sendString(2, TextJustification.CENTER, 0, title);
 		for (int i = 0; i < 3; i++) {
 			final String l = i < line.length ? line[i] : "";
 			sendString(1, TextJustification.LEFT, 2 + i * 2, l);
 		}
+		renderFooterLegend();
 	}
 
 	public void functionInfo(final String details, final String functionName, final String lines) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, functionName);
 		sendString(0, TextJustification.LEFT, 3, "");
@@ -198,18 +254,22 @@ public class OledDisplay {
 	}
 
 	public void paramInfo(final String paramName, final String details) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, paramName);
 		sendString(2, TextJustification.CENTER, 3, "");
 		sendString(3, TextJustification.CENTER, 5, "");
+		renderFooterLegend();
 	}
 
 	public void paramInfo(final String paramName, final String value, final String details) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, paramName);
 		sendString(0, TextJustification.CENTER, 3, "");
 		sendString(2, TextJustification.CENTER, 4, value);
 		sendString(0, TextJustification.CENTER, 6, "");
+		renderFooterLegend();
 	}
 
 	public void paramInfo(final String paramName, final int value, final String details, final int min, final int max) {
@@ -218,6 +278,7 @@ public class OledDisplay {
 
 	public void parameterInfo(final String element, final String parameterName, final double value,
 			final String displayValue, final boolean biPolar) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, element);
 		sendString(2, TextJustification.CENTER, 1, parameterName);
 		sendString(2, TextJustification.CENTER, 3, displayValue);
@@ -227,10 +288,12 @@ public class OledDisplay {
 		} else {
 			barValue(value, 0, 1);
 		}
+		renderFooterLegend();
 	}
 
 	public void paramInfo(final String paramName, final int value, final String details, final int min, final int max,
 			final Integer offValue) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, paramName);
 		if (offValue != null && value == offValue.intValue()) {
@@ -244,6 +307,7 @@ public class OledDisplay {
 		final double unit = (double) GENERAL_BAR_WIDTH / (double) range;
 		final int bar = (int) Math.round(min + unit * (value - min));
 		showBar(true, GENERAL_BAR_WIDTH, 1, Fill.Fifty, Fill.Empty, 6, 0, bar);
+		renderFooterLegend();
 	}
 
 	public void valueInfo(final String title, final String value) {
@@ -252,37 +316,45 @@ public class OledDisplay {
 	}
 
 	public void valueInfoNoClear(final String title, final String value) {
+		markTransientMessage();
 		sendString(2, TextJustification.CENTER, 0, title);
 		sendString(3, TextJustification.CENTER, 2, value);
 		sendString(5, TextJustification.CENTER, 5, "");
+		renderFooterLegend();
 	}
 
 	public void paramInfoDouble(final String paramName, final double value, final String details, final double min,
 			final double max) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, paramName);
 		sendString(2, TextJustification.CENTER, 3, Integer.toString((int) value));
 		sendString(0, TextJustification.CENTER, 5, "");
 		barValue(value, min, max);
+		renderFooterLegend();
 	}
 
 	public void paramInfoPercent(final String paramName, final double value, final String details, final double min,
 			final double max) {
+		markTransientMessage();
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, paramName);
 		sendString(2, TextJustification.CENTER, 3, toPercent(value));
 		sendString(0, TextJustification.CENTER, 5, "");
 		barValue(value, min, max);
+		renderFooterLegend();
 	}
 
 	public void paramInfoDuration(final String paramName, final double duration, final String details,
 			final double gridRes) {
+		markTransientMessage();
 		final double stepLen = duration / gridRes;
 		sendString(0, TextJustification.CENTER, 0, details);
 		sendString(2, TextJustification.CENTER, 1, paramName);
 		sendString(2, TextJustification.CENTER, 3, String.format("%.2f", stepLen));
 		sendString(0, TextJustification.CENTER, 5, "");
 		sendString(3, TextJustification.CENTER, 6, "");
+		renderFooterLegend();
 	}
 
 	private void barValue(final double value, final double min, final double max) {
@@ -304,14 +376,36 @@ public class OledDisplay {
 		showBar(true, GENERAL_BAR_WIDTH, 1, Fill.Fifty, Fill.Empty, 6, start, end);
 	}
 
+	private void renderFooterLegend() {
+		if (footerLegend != null) {
+			sendString(0, TextJustification.LEFT, 7, footerLegend);
+		}
+	}
+
+	private void renderFooterLegendPreservingImageCache() {
+		if (footerLegend != null) {
+			sendString(0, TextJustification.LEFT, 7, footerLegend, false, false);
+			imagePageValid[OLED_PAGE_COUNT - 1] = false;
+		}
+	}
+
 	private String toPercent(final double chance) {
 		final int val = (int) Math.round(chance * 100);
 		return Integer.toString(val) + "%";
 	}
 
+	private void markTransientMessage() {
+		transientMessageUntilMs = System.currentTimeMillis() + clearDelayMs;
+	}
+
 	public void sendString(final int fontSize, final TextJustification justification, final int placement,
 			final String text) {
-		if (inGraphicsMode) {
+		sendString(fontSize, justification, placement, text, true, true);
+	}
+
+	private void sendString(final int fontSize, final TextJustification justification, final int placement,
+			final String text, final boolean clearGraphics, final boolean invalidateAllImages) {
+		if (clearGraphics && inGraphicsMode) {
 			clearScreen();
 		}
 		if (placement > 7 || fontSize > 3) {
@@ -329,19 +423,22 @@ public class OledDisplay {
 			sysex[10 + i] = (byte) fitText.charAt(i);
 		}
 		midiOut.sendSysex(sysex);
-		invalidateImageCache();
+		if (invalidateAllImages) {
+			invalidateImageCache();
+		}
 		inGraphicsMode = false;
 		clearTask = -1;
 	}
 
 	public void notifyBlink(final int blinkTicks) {
-		if (clearTask > 0 && System.currentTimeMillis() - clearTask > clearDelayMs) {
+		if (clearTask > 0 && System.currentTimeMillis() - clearTask > clearTaskDelayMs) {
+			clearTask = -1;
+			transientMessageUntilMs = -1;
 			if (idleAction != null) {
 				idleAction.run();
 			} else {
 				clearScreen();
 			}
-			clearTask = -1;
 		}
 		if (logoBlock > 0 && System.currentTimeMillis() - logoBlock > 3000) {
 			logoBlock = -1;

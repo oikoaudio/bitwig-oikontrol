@@ -23,6 +23,8 @@ public final class FireControlPreferences {
     public static final String SCREEN_MESSAGE_HOLD_SHORT = "Short";
     public static final String SCREEN_MESSAGE_HOLD_NORMAL = "Normal";
     public static final String SCREEN_MESSAGE_HOLD_LONG = "Long";
+    public static final String IDLE_OLED_CONTEXT = "Context";
+    public static final String IDLE_OLED_METERS = "Meters";
     public static final long SCREEN_MESSAGE_HOLD_SHORT_MS = 750;
     public static final long SCREEN_MESSAGE_HOLD_NORMAL_MS = 1500;
     public static final long SCREEN_MESSAGE_HOLD_LONG_MS = 3000;
@@ -30,6 +32,10 @@ public final class FireControlPreferences {
             SCREEN_MESSAGE_HOLD_SHORT,
             SCREEN_MESSAGE_HOLD_NORMAL,
             SCREEN_MESSAGE_HOLD_LONG
+    };
+    public static final String[] IDLE_OLED_MODES = {
+            IDLE_OLED_CONTEXT,
+            IDLE_OLED_METERS
     };
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
