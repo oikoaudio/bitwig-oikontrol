@@ -20,15 +20,15 @@ class TopLevelModeStateTest {
     }
 
     @Test
-    void melodicExitReturnsToPreviousNonStepMode() {
+    void melodicExitFallsBackToNotePlayIfPreviousWasChordStep() {
         final TopLevelModeState state = new TopLevelModeState();
         state.activateChordStep();
 
         state.enterMelodicStepMode();
 
         assertEquals(TopLevelModeState.Mode.MELODIC_STEP, state.activeMode());
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.exitMelodicStepMode());
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
+        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.exitMelodicStepMode());
+        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.activeMode());
     }
 
     @Test

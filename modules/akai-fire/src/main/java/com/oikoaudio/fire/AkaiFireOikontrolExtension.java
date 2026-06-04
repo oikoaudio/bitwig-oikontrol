@@ -1167,9 +1167,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             }
             if (!isGlobalShiftHeld() && !isGlobalAltHeld()) {
                 if (pressed) {
-                    modeState.activateChordStep();
-                    switchActiveMode();
-                    showModeChangeInfo("Chord Step");
+                    enterFugueStepMode();
                 }
                 return;
             }
@@ -1184,16 +1182,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             if (!pressed || isGlobalAltHeld()) {
                 return;
             }
-            modeState.activateFugueStep();
-            switchActiveMode();
-            showModeChangeInfo("Fugue");
+            enterMelodicStepMode();
             return;
         }
         if (modeState.activeMode() == Mode.FUGUE_STEP) {
             if (!pressed || isGlobalAltHeld()) {
                 return;
             }
-            enterMelodicStepMode();
+            enterChordStepMode();
             return;
         }
         if (modeState.shouldIgnoreTopLevelStepPress(isGlobalShiftHeld(), isGlobalAltHeld())) {
@@ -1202,7 +1198,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        enterMelodicStepMode();
+        enterChordStepMode();
     }
 
     private void handlePerformPressed(final boolean pressed) {
@@ -1863,7 +1859,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         suppressNextMelodicStepRelease = true;
         modeState.enterMelodicStepMode();
         switchActiveMode();
-        showModeChangeInfo("Melo Step");
+        showModeChangeInfo("Melo Gen");
+    }
+
+    public void enterChordStepMode() {
+        modeState.activateChordStep();
+        switchActiveMode();
+        showModeChangeInfo("Chord Step");
     }
 
     public void enterFugueStepMode() {
@@ -2038,7 +2040,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case DRUM -> activeDrumSubMode.displayName();
             case NOTE_PLAY -> notePlayMode == null ? "Note" : notePlayMode.currentNoteSubModeLabel();
             case CHORD_STEP -> "Chord Step";
-            case MELODIC_STEP -> "Melo Step";
+            case MELODIC_STEP -> "Melo Gen";
             case FUGUE_STEP -> "Fugue";
             case NESTED_RHYTHM -> "NestedRytm";
             case PERFORM -> performMode == null ? "Perform" : performMode.activePageLabel();

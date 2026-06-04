@@ -18,13 +18,13 @@ class ChordStepBuilderControllerTest {
         final Fixture fixture = new Fixture();
 
         assertEquals(60, fixture.builder.noteMidiForPad(0));
-        assertEquals(62, fixture.builder.noteMidiForPad(1));
+        assertEquals(61, fixture.builder.noteMidiForPad(1));
 
         fixture.builder.toggleLayout();
 
-        assertFalse(fixture.builder.isInKey());
-        assertEquals("Chromatic", fixture.builder.layoutDisplayName());
-        assertEquals(61, fixture.builder.noteMidiForPad(1));
+        assertTrue(fixture.builder.isInKey());
+        assertEquals("In Key", fixture.builder.layoutDisplayName());
+        assertEquals(62, fixture.builder.noteMidiForPad(1));
     }
 
     @Test
@@ -33,21 +33,19 @@ class ChordStepBuilderControllerTest {
 
         fixture.builder.toggleNoteOffset(1);
 
-        assertTrue(fixture.selection.isBuilderNoteSelected(62));
+        assertTrue(fixture.selection.isBuilderNoteSelected(61));
         assertTrue(fixture.builder.isNoteSelectedForPad(1));
 
         fixture.builder.toggleNoteOffset(1);
 
-        assertFalse(fixture.selection.isBuilderNoteSelected(62));
+        assertFalse(fixture.selection.isBuilderNoteSelected(61));
     }
 
     @Test
-    void seedsEmptyBuilderWithFirstVisibleRootNote() {
+    void startsWithEmptyBuilderNotes() {
         final Fixture fixture = new Fixture();
 
-        fixture.builder.ensureSeededIfEmpty();
-
-        assertTrue(fixture.selection.isBuilderNoteSelected(60));
+        assertFalse(fixture.selection.hasBuilderNotes());
     }
 
     @Test
@@ -55,11 +53,11 @@ class ChordStepBuilderControllerTest {
         final Fixture fixture = new Fixture();
 
         assertEquals(ChordStepBuilderController.PadRole.ROOT, fixture.builder.padRole(0));
-        assertEquals(ChordStepBuilderController.PadRole.IN_SCALE, fixture.builder.padRole(1));
+        assertEquals(ChordStepBuilderController.PadRole.OUT_OF_SCALE, fixture.builder.padRole(1));
 
         fixture.builder.toggleLayout();
 
-        assertEquals(ChordStepBuilderController.PadRole.OUT_OF_SCALE, fixture.builder.padRole(1));
+        assertEquals(ChordStepBuilderController.PadRole.IN_SCALE, fixture.builder.padRole(1));
     }
 
     private static final class Fixture {

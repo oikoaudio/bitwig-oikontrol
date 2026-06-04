@@ -161,7 +161,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.noteInput = driver.getNoteInput();
 
         final ControllerHost host = driver.getHost();
-        this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melodic Step", 8, CLIP_ROW_PAD_COUNT, true);
+        this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melo Gen", 8, CLIP_ROW_PAD_COUNT, true);
         this.cursorTrack.name().markInterested();
         this.cursorTrack.canHoldNoteData().markInterested();
         this.clipSlotBank = cursorTrack.clipLauncherSlotBank();
@@ -176,7 +176,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             rebuildCachedPattern();
         });
         final PinnableCursorDevice cursorDevice = cursorTrack.createCursorDevice("MELODIC_STEP_DEVICE",
-                "Melodic Step Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
+                "Melo Gen Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.remoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
         for (int i = 0; i < remoteControlsPage.getParameterCount(); i++) {
             ParameterEncoderBinding.markInterested(remoteControlsPage.getParameter(i));

@@ -13,14 +13,24 @@ public final class ChordStepPatternButtonControls {
     }
 
     public void handleUpPressed(final boolean pressed) {
-        if (pressed && !host.isAltHeld()) {
+        if (!pressed || host.isAltHeld()) {
+            return;
+        }
+        if (host.canPageLeft() || host.canPageRight()) {
             host.page(-1);
+        } else {
+            host.showPageInfo();
         }
     }
 
     public void handleDownPressed(final boolean pressed) {
-        if (pressed && !host.isAltHeld()) {
+        if (!pressed || host.isAltHeld()) {
+            return;
+        }
+        if (host.canPageLeft() || host.canPageRight()) {
             host.page(1);
+        } else {
+            host.showPageInfo();
         }
     }
 
@@ -36,6 +46,8 @@ public final class ChordStepPatternButtonControls {
         boolean isAltHeld();
 
         void page(int direction);
+
+        void showPageInfo();
 
         boolean canPageLeft();
 

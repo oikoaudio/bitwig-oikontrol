@@ -161,7 +161,7 @@ final class ChordStepEncoderControls {
     private EncoderBankLayout createLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Octave/Root\n2: Velocity\n3: Chord Family\n4: Interpret/Invert",
+                "1: Oct/Root/Scale\n2: Velocity\n3: Chord Family\n4: Int/Inv/Layout",
                 new EncoderSlotBinding[]{
                         chordPitchContextSlot(),
                         chordBuildVelocitySlot(),
@@ -229,6 +229,14 @@ final class ChordStepEncoderControls {
             public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
+                    final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                    if (scaleContext) {
+                        if (inc != 0) {
+                            handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
+                            host.adjustChordSharedScale(inc);
+                        }
+                        return;
+                    }
                     final boolean rootContext = driver.isGlobalAltHeld();
                     final EncoderStepAccumulator accumulator = rootContext ? chordRootEncoder : chordOctaveEncoder;
                     final int amount = accumulator.consume(inc);
@@ -245,6 +253,16 @@ final class ChordStepEncoderControls {
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
+                        final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                        if (scaleContext) {
+                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset",
+                                    () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
+                                return;
+                            }
+                            handler.beginTouchReset(slotIndex, () -> { });
+                            oled.valueInfo("Scale", host.getScaleDisplayName());
+                            return;
+                        }
                         final boolean rootContext = driver.isGlobalAltHeld();
                         if (driver.handleKnobModeEncoderReset(true, true, rootContext ? "Root" : "Octave",
                                 "No reset", () -> {
@@ -410,8 +428,8 @@ final class ChordStepEncoderControls {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0) {
                         handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                        if (driver.isGlobalShiftHeld()) {
-                            host.adjustChordSharedScale(inc);
+                        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                            host.setBuilderLayoutInKey(inc > 0);
                         } else if (driver.isGlobalAltHeld()) {
                             host.invertCurrentChord(inc > 0 ? 1 : -1);
                         } else {
@@ -421,13 +439,13 @@ final class ChordStepEncoderControls {
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        if (driver.isGlobalShiftHeld()) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset",
-                                    () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
+                        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                            if (driver.handleKnobModeEncoderReset(true, false, "Builder Layout", "No reset",
+                                    () -> { }, host::showBuilderLayoutInfo)) {
                                 return;
                             }
                             handler.beginTouchReset(slotIndex, () -> { });
-                            oled.valueInfo("Scale", host.getScaleDisplayName());
+                            host.showBuilderLayoutInfo();
                             return;
                         }
                         if (driver.isGlobalAltHeld()) {
@@ -498,6 +516,10 @@ final class ChordStepEncoderControls {
         void invertCurrentChord(int direction);
 
         void adjustChordInterpretation(int amount);
+
+        void setBuilderLayoutInKey(boolean inKey);
+
+        void showBuilderLayoutInfo();
 
         void resetChordInterpretation();
 

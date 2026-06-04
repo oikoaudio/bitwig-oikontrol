@@ -20,7 +20,7 @@ public final class ChordStepBuilderController {
     private final IntSupplier firstVisibleMidiNote;
     private final int sourcePadCount;
 
-    private boolean inKey = true;
+    private boolean inKey = false;
 
     public ChordStepBuilderController(final ChordStepChordSelection selection,
                                       final SharedPitchContextController pitchContext,
@@ -36,34 +36,16 @@ public final class ChordStepBuilderController {
         inKey = !inKey;
     }
 
+    public void setInKey(final boolean inKey) {
+        this.inKey = inKey;
+    }
+
     public boolean isInKey() {
         return inKey;
     }
 
     public String layoutDisplayName() {
         return inKey ? "In Key" : "Chromatic";
-    }
-
-    public void ensureSeededIfEmpty() {
-        if (!selection.isBuilderFamily() || selection.hasBuilderNotes()) {
-            return;
-        }
-        final int firstVisibleNote = firstVisibleMidiNote.getAsInt();
-        if (firstVisibleNote < 0) {
-            return;
-        }
-        final int builderRoot = Math.floorMod(firstVisibleNote, 12);
-        for (int padIndex = 0; padIndex < sourcePadCount; padIndex++) {
-            final int midiNote = noteMidiForPad(padIndex);
-            if (midiNote >= 0 && pitchContext.isRootMidiNote(builderRoot, midiNote)) {
-                selection.addBuilderNote(midiNote);
-                return;
-            }
-        }
-        final int firstPadNote = noteMidiForPad(0);
-        if (firstPadNote >= 0) {
-            selection.addBuilderNote(firstPadNote);
-        }
     }
 
     public void toggleNoteOffset(final int padIndex) {

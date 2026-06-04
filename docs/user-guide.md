@@ -114,10 +114,10 @@ The Akai Fire extension is organized around four top-level workflows.
 | --- | --- | --- |
 | `DRUM` | Drum workflows | `Drum XOX`; press again for `Nested Rhythm`, then `Drum Pads` |
 | `NOTE` | Live note input | 16x4 melodic / harmonic note surface |
-| `STEP` | Step sequencing | Enter `Melodic Step`; from there press again for `Chord Step`, then `Fugue` |
+| `STEP` | Step sequencing | Enter `Chord Step`; from there press again for `Melo Gen`, then `Fugue` |
 | `PERFORM` | Clip launching | 16x4 clip grid and track actions |
 
-Shared pitch context is global across `NOTE`, `Melodic Step`, `Chord Step`, and the settings overlay. `Root Key`, `Scale`, and `Octave` changes in one of those places update the others.
+Shared pitch context is global across `NOTE`, `Melo Gen`, `Chord Step`, and the settings overlay. `Root Key`, `Scale`, and `Octave` changes in one of those places update the others.
 
 Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colors. `Pad Brightness` and `Pad Saturation` control how strongly those project colors translate to the Fire LEDs.
 
@@ -172,7 +172,7 @@ On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin c
 
 The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data.
 
-Where the active mode has a four-encoder page, the OLED can keep a compact bottom-row legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melodic Step, Chord Step, Nested Rhythm, and Fugue.
+Where the active mode has a four-encoder page, the OLED can keep a compact bottom-row legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Chord Step, Nested Rhythm, and Fugue.
 
 ### Main SELECT encoder
 
@@ -219,7 +219,7 @@ When Drum XOX is idle, the OLED shows the selected pad name with the current enc
 
 | Control | Action |
 | --- | --- |
-| `STEP` | Enter `Melodic Step` |
+| `STEP` | Enter `Chord Step` |
 | `SHIFT + STEP` | Latch accent mode |
 | Hold step pad(s) + `STEP` | Toggle accent on the held steps |
 | `ALT + STEP` | Fill |
@@ -268,7 +268,7 @@ The `Channel` encoder page is the primary Nested Rhythm surface: it changes the 
 | --- | --- |
 | `DRUM` while in `XOX Drum mode` | Enter `Nested Rhythm mode` |
 | `DRUM` while in `Nested Rhythm` | Enter `Drum Pads` |
-| `STEP` | Enter `Melodic Step mode` |
+| `STEP` | Enter `Chord Step` |
 | `ALT + STEP` | Fill |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
@@ -304,8 +304,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | Pad matrix | 16x4 note grid |
 | Pad LEDs | Root, in-scale, and out-of-scale feedback |
 | `NOTE` | Toggle between melodic note input and harmonic note input |
-| `ALT + NOTE` | Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input |
-| `STEP` | Enter `Melodic Step`; press again for `Chord Step` |
+| `ALT + NOTE` | Toggle the current layout variant: chromatic / in-key in melodic and Chord Step builder input, bass columns / full field in harmonic input |
+| `STEP` | Enter `Chord Step`; press again for `Melo Gen` |
 | `SHIFT + STEP` | Toggle Bitwig Step Input helper for the selected clip |
 | `BANK LEFT/RIGHT` | Shared octave down / up |
 | `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
@@ -343,9 +343,11 @@ While harmonic input is active, the `Mixer` encoder page changes from track mixi
 
 Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, and the bass grid enabled. `Notes per pad` controls how many notes each harmonic pad produces before octave expansion. `Octave span` adds octave copies above those notes. Bass-grid pads always stay single-note, even when notes-per-pad is set higher. `Pitch Gliss` shifts the harmonic field through the same pitch-gliss offset used on the `Channel` page.
 
-### Melodic Step mode
+### Melo Gen mode
 
-`Melodic Step` is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks. It edits a 2-bar / 32-step window and keeps generated phrases constrained to the current pitch pool.
+Press `STEP` from `Chord Step` to enter `Melo Gen`; press `STEP` again to enter `Fugue`.
+
+`Melo Gen` is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks. It edits a 2-bar / 32-step window and keeps generated phrases constrained to the current pitch pool.
 
 | Pad row | Role |
 | --- | --- |
@@ -389,9 +391,9 @@ For recurrence editing, hold one or more active melodic steps. Row 1 becomes an 
 
 ### Chord Step mode
 
-Press `STEP` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to return to live note input.
+Press `STEP` from normal performance modes to enter `Chord Step`. Press `STEP` again to enter `Melo Gen`. Press `NOTE` to return to live note input.
 
-`Chord Step` is the chord-oriented note-step workflow. The builder defaults to in-key view and uses the same shared root and scale as live `NOTE`.
+`Chord Step` is the chord-oriented note-step workflow. The builder starts blank in chromatic view and uses the same shared root and scale as live `NOTE`.
 
 | Pad row | Role |
 | --- | --- |
@@ -405,7 +407,7 @@ Press `STEP` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to return t
 | Tap lit step | Remove chord |
 | Hold step pad(s) + chord pad | Rewrite held steps with that chord |
 | Tap chord pad with no held step | Audition chord, if enabled |
-| `STEP` | Enter `Fugue` |
+| `STEP` | Enter `Melo Gen` |
 | `SHIFT + STEP` | Latch accent mode |
 | Hold step pad(s) + `STEP` | Toggle accent on the held steps |
 | `ALT + STEP` | Fill |
@@ -425,7 +427,7 @@ Press `STEP` from `Melodic Step` to enter `Chord Step`. Press `NOTE` to return t
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave / `ALT`: shared root | Global velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `SHIFT`: shared scale / `ALT`: invert chord |
+| `Channel` | Chord octave / `ALT`: shared root / `SHIFT`: shared scale | Global velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `ALT`: invert chord / `SHIFT`: builder layout |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity | Pressure | Timbre | Pitch |
 | `User 2` | Note length | Chance | Velocity spread | Repeats |
@@ -518,7 +520,7 @@ The control tables above describe where the functions are. This section describe
 
 #### Chord Step background
 
-`Chord Step` starts as an open chord builder. The default `Builder` family lets you choose the notes of a chord directly from the pad rows, with the builder normally showing in-scale notes from the shared root and scale. That makes the mode useful for ordinary user-defined chords as well as more exploratory harmony.
+`Chord Step` starts as an open chord builder. The default `Builder` family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. Use `SHIFT + encoder 4` on the `Channel` page, or `ALT + NOTE`, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.
 
 The preset banks are the more opinionated side of the mode. They use interval sets designed to move harmonic content without forcing a song key or a functional progression. Many of the voicings are deliberately open, so they tolerate inversion, transposition, and scale remapping better than tightly closed block chords. Changing shared `Root Key` or `Scale` does not move to a different preset slot; it changes how the selected slot is rendered.
 
@@ -542,9 +544,9 @@ The available families mix the open builder with preset color banks:
 
 Use the builder when you want to define the chord yourself from the current scale. Use the preset banks when you want harmonic color that can stay on one tonal center, shift with a mode, cast into another scale, or produce suspended / quartal / cluster material without writing a functional chord progression.
 
-#### Melodic Step background
+#### Melo Gen background
 
-`Melodic Step` generates mono phrases, then lets you edit them as normal steps. All engines write into the current pitch pool and shared pitch context, but each engine has a different phrase grammar.
+`Melo Gen` generates mono phrases, then lets you edit them as normal steps. All engines write into the current pitch pool and shared pitch context, but each engine has a different phrase grammar.
 
 | Engine | Tendency |
 | --- | --- |
@@ -611,7 +613,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 
 `Pad Brightness` and `Pad Saturation` interact with the Bitwig track colors used by `DRUM` and `PERFORM`, so the same settings can read differently across different project palettes.
 
-`Melodic Seed Mode` controls how `Melodic Step` chooses its initial generator seed when the controller session starts. `Random` starts each session from a new seed. `Fixed` starts from the configured `Melodic Fixed Seed` value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each `Generate` press still advances forward from that starting point.
+`Melodic Seed Mode` controls how `Melo Gen` chooses its initial generator seed when the controller session starts. `Random` starts each session from a new seed. `Fixed` starts from the configured `Melodic Fixed Seed` value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each `Generate` press still advances forward from that starting point.
 
 The melodic seed controls are grouped into their own `Generative control` preference section so they stay together in Bitwig's settings UI.
 

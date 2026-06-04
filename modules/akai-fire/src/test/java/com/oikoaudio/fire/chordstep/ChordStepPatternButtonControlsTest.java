@@ -9,6 +9,7 @@ class ChordStepPatternButtonControlsTest {
     @Test
     void patternUpPagesLeftUnlessAltIsHeld() {
         final Host host = new Host();
+        host.canLeft = true;
         final ChordStepPatternButtonControls controls = new ChordStepPatternButtonControls(host);
 
         controls.handleUpPressed(true);
@@ -21,6 +22,7 @@ class ChordStepPatternButtonControlsTest {
     @Test
     void patternDownPagesRightUnlessAltIsHeld() {
         final Host host = new Host();
+        host.canRight = true;
         final ChordStepPatternButtonControls controls = new ChordStepPatternButtonControls(host);
 
         controls.handleDownPressed(true);
@@ -45,11 +47,24 @@ class ChordStepPatternButtonControlsTest {
         assertEquals(BiColorLightState.GREEN_HALF, controls.downLight());
     }
 
+    @Test
+    void patternButtonsShowPageInfoWhenOnlyOnePageExists() {
+        final Host host = new Host();
+        final ChordStepPatternButtonControls controls = new ChordStepPatternButtonControls(host);
+
+        controls.handleUpPressed(true);
+        controls.handleDownPressed(true);
+
+        assertEquals(0, host.pageDirectionTotal);
+        assertEquals(2, host.pageInfoCount);
+    }
+
     private static final class Host implements ChordStepPatternButtonControls.Host {
         private boolean alt;
         private boolean canLeft;
         private boolean canRight;
         private int pageDirectionTotal;
+        private int pageInfoCount;
 
         @Override
         public boolean isAltHeld() {
@@ -59,6 +74,11 @@ class ChordStepPatternButtonControlsTest {
         @Override
         public void page(final int direction) {
             pageDirectionTotal += direction;
+        }
+
+        @Override
+        public void showPageInfo() {
+            pageInfoCount++;
         }
 
         @Override

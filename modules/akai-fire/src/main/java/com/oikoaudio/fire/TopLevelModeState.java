@@ -68,6 +68,7 @@ public final class TopLevelModeState {
     }
 
     private boolean isStepFamily(final Mode mode) {
-        return mode == Mode.MELODIC_STEP || mode == Mode.FUGUE_STEP || mode == Mode.NESTED_RHYTHM;
+        return mode == Mode.CHORD_STEP || mode == Mode.MELODIC_STEP
+                || mode == Mode.FUGUE_STEP || mode == Mode.NESTED_RHYTHM;
     }
 }

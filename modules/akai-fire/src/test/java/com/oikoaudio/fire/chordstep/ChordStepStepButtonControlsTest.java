@@ -18,20 +18,18 @@ class ChordStepStepButtonControlsTest {
         controls.handlePressed(true);
 
         assertTrue(host.toggledHeldAccent);
-        assertEquals(0, host.fugueEntries);
         assertEquals(0, host.melodicEntries);
     }
 
     @Test
-    void normalPressAdvancesStandaloneChordStepToFugue() {
+    void normalPressAdvancesStandaloneChordStepToMelodicStep() {
         final Host host = new Host();
         host.standalone = true;
         final ChordStepStepButtonControls controls = controls(host);
 
         controls.handlePressed(true);
 
-        assertEquals(1, host.fugueEntries);
-        assertEquals(0, host.melodicEntries);
+        assertEquals(1, host.melodicEntries);
     }
 
     @Test
@@ -41,7 +39,6 @@ class ChordStepStepButtonControlsTest {
 
         controls.handlePressed(true);
 
-        assertEquals(0, host.fugueEntries);
         assertEquals(1, host.melodicEntries);
     }
 
@@ -80,7 +77,6 @@ class ChordStepStepButtonControlsTest {
         private boolean fillActive;
         private boolean fillToggled;
         private boolean toggledHeldAccent;
-        private int fugueEntries;
         private int melodicEntries;
         private String lastTitle = "";
         private String lastValue = "";
@@ -109,11 +105,6 @@ class ChordStepStepButtonControlsTest {
         @Override
         public boolean isStandaloneChordStepSurface() {
             return standalone;
-        }
-
-        @Override
-        public void enterFugueStepMode() {
-            fugueEntries++;
         }
 
         @Override
