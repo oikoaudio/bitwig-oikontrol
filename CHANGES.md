@@ -24,6 +24,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now briefly shows the selected track name on the OLED when Bitwig or another controller changes the visible track selection, then returns to the meter display.
 - Akai Fire live Note now uses `PATTERN DOWN/UP` for next/previous shared scale, `ALT + PATTERN DOWN/UP` for lower/higher shared root, moves Channel encoder 4 to Timbre CC74, and returns Channel/Mixer pages to selected-track meter idle displays after transient encoder values.
 - Akai Fire live Note User 1 encoder 3 now sends Breath CC2 instead of duplicating Timbre.
+- Akai Fire live Note and Harmonic modes now have a `SHIFT + STEP` Bitwig Step Input helper that opens the selected clip in the Detail Editor, selects the Step Input tool, and shows an estimated `Step N/M` OLED position.
 - Launch Control XL now clears LED dirty state after batched sysex flushes and disables verbose MIDI debug logging by default to reduce controller traffic and console load.
 - Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
 - `SHIFT + NOTE` now toggles Bitwig record quantization off and back to the previous grid, defaulting to `1/16`.

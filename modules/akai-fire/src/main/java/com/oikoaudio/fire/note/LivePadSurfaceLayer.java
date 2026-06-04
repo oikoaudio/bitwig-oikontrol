@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.note;
 
+import com.bitwig.extension.controller.api.Application;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
@@ -10,12 +11,14 @@ import com.bitwig.extension.controller.api.DrumPadBank;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
+import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.SettableRangedValue;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.values.Midi;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
+import com.oikoaudio.fire.BitwigEditorToolActions;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
@@ -78,6 +81,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final int[] LIVE_PITCH_OFFSETS = {-24, -19, -12, -7, 0, 7, 12, 19, 24};
     private static final int DEFAULT_LIVE_PITCH_OFFSET_INDEX = 4;
     private static final int DRUM_MACHINE_SCROLL_COARSE_STEPS = 16;
+    private static final double STEP_INPUT_DISPLAY_STEP_SIZE_BEATS = 0.25;
     private static final int MIN_SCALE_DEGREE_GLISS = -14;
     private static final int MAX_SCALE_DEGREE_GLISS = 14;
     private static final int METER_REFRESH_TICKS = 1;
@@ -101,6 +105,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private final NoteLivePadPerformer livePadPerformer;
     private final NoteLiveExpressionControls liveExpressionControls;
     private final CursorTrack cursorTrack;
+    private final PinnableCursorClip stepInputCursorClip;
     private final PinnableCursorDevice liveCursorDevice;
     private final PinnableCursorDevice liveDrumMachineDevice;
     private final DrumPadBank liveDrumPadBank;
@@ -182,6 +187,12 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean liveMeterDisplayActive = false;
     private boolean liveContextDisplayActive = false;
     private long liveContextDisplayRevision = Long.MIN_VALUE;
+    private boolean stepInputHelperActive = false;
+    private int stepInputActivationGeneration = 0;
+    private int stepInputStepIndex = 0;
+    private int stepInputHeldPadCount = 0;
+    private boolean stepInputPadGesturePending = false;
+    private double stepInputClipLengthBeats = 0.0;
     private final PeakRmsOledView selectedTrackMeterView;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
@@ -243,6 +254,16 @@ public abstract class LivePadSurfaceLayer extends Layer {
         this.cursorTrack.addVuMeterObserver(VuMeterFormatter.RANGE, -1, true, this::handleSelectedTrackPeakMeterChanged);
         this.cursorTrack.addVuMeterObserver(VuMeterFormatter.RANGE, -1, false, this::handleSelectedTrackRmsMeterChanged);
         trackBaseColor = ColorLookup.getColor(this.cursorTrack.color().get());
+        this.stepInputCursorClip = cursorTrack.createLauncherCursorClip("NOTE_STEP_INPUT_CLIP", "Note Step Input Clip",
+                CLIP_ROW_PAD_COUNT, 128);
+        this.stepInputCursorClip.setStepSize(STEP_INPUT_DISPLAY_STEP_SIZE_BEATS);
+        this.stepInputCursorClip.getLoopLength().markInterested();
+        this.stepInputCursorClip.getLoopLength().addValueObserver(length -> {
+            stepInputClipLengthBeats = length;
+            if (stepInputHelperActive) {
+                showStepInputDisplay();
+            }
+        });
         this.liveCursorDevice = cursorTrack.createCursorDevice("NOTE_LIVE_DEVICE", "Note Live Device", 8,
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.liveDrumMachineDevice = drumPadsOnly
@@ -400,6 +421,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     public boolean showIdleInfoIfNeeded() {
+        if (stepInputHelperActive) {
+            resetLiveMeterDisplay();
+            showStepInputDisplay();
+            return true;
+        }
         if (shouldShowLiveMeters()) {
             showLiveMeterDisplay();
             liveMeterDisplayActive = true;
@@ -751,6 +777,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void refreshLiveContextIdleIfVisible() {
+        if (stepInputHelperActive) {
+            showStepInputDisplay();
+            return;
+        }
         if (!shouldRefreshLiveContextIdle(isLiveContextDisplayCurrent(), oled.hasPendingTransientMessage(),
                 shouldShowLiveTrackLegendIdle())) {
             return;
@@ -787,6 +817,28 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private void applyLiveFooterLegend() {
         oled.setFooterLegend(liveEncoderModeLegend(liveControls.currentEncoderMode()));
+    }
+
+    private void showStepInputDisplay() {
+        liveContextDisplayActive = false;
+        applyLiveFooterLegend();
+        oled.clearScreen();
+        oled.valueInfoPersistentNoClear("Step Input", stepInputStepLabel());
+    }
+
+    private String stepInputStepLabel() {
+        final int displayStep = stepInputStepIndex + 1;
+        final int totalSteps = estimatedStepInputTotalSteps(stepInputClipLengthBeats, STEP_INPUT_DISPLAY_STEP_SIZE_BEATS);
+        return totalSteps > 0
+                ? "Step %d/%d".formatted(displayStep, totalSteps)
+                : "Step %d".formatted(displayStep);
+    }
+
+    static int estimatedStepInputTotalSteps(final double clipLengthBeats, final double stepSizeBeats) {
+        if (clipLengthBeats <= 0.0 || stepSizeBeats <= 0.0) {
+            return -1;
+        }
+        return Math.max(1, (int) Math.round(clipLengthBeats / stepSizeBeats));
     }
 
     private void handleHarmonicMixerEncoder(final int encoderIndex, final int inc) {
@@ -1228,9 +1280,152 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
-        if (pressed) {
+        if (pressed && driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+            toggleStepInputHelper();
+            return;
+        }
+        if (pressed && !driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
             driver.enterMelodicStepMode();
         }
+    }
+
+    private void toggleStepInputHelper() {
+        if (stepInputHelperActive) {
+            deactivateStepInputHelper(false);
+            return;
+        }
+        activateStepInputHelper();
+    }
+
+    private void activateStepInputHelper() {
+        if (isDrumMachineLiveMode()) {
+            oled.valueInfo("Step Input", "Note/Harmonic");
+            return;
+        }
+        final Application application = driver.getApplication();
+        stepInputCursorClip.showInEditor();
+        final int generation = ++stepInputActivationGeneration;
+        oled.valueInfo("Step Input", "Opening");
+        driver.getHost().scheduleTask(() -> focusStepInputTrack(application, generation), 100);
+    }
+
+    private void focusStepInputTrack(final Application application, final int generation) {
+        if (generation != stepInputActivationGeneration || isDrumMachineLiveMode()) {
+            return;
+        }
+        cursorTrack.selectInEditor();
+        BitwigEditorToolActions.focusTrackHeader(application);
+        driver.getHost().scheduleTask(() -> focusStepInputEditor(application, generation), 100);
+    }
+
+    private void focusStepInputEditor(final Application application, final int generation) {
+        if (generation != stepInputActivationGeneration || isDrumMachineLiveMode()) {
+            return;
+        }
+        if (!BitwigEditorToolActions.focusClipEditorPanel(application)) {
+            driver.notifyPopup("Step Input", "Editor focus unavailable");
+            BitwigEditorToolActions.logCandidateActions(application,
+                    message -> driver.getHost().println("[Oikontrol] " + message));
+        }
+        driver.getHost().scheduleTask(() -> completeStepInputActivation(application, generation), 100);
+    }
+
+    private void completeStepInputActivation(final Application application, final int generation) {
+        if (generation != stepInputActivationGeneration || isDrumMachineLiveMode()) {
+            return;
+        }
+        if (!BitwigEditorToolActions.activateStepInputTool(application)) {
+            oled.valueInfo("Step Input", "Unavailable");
+            driver.notifyPopup("Step Input", "Tool unavailable");
+            BitwigEditorToolActions.logCandidateActions(application,
+                    message -> driver.getHost().println("[Oikontrol] " + message));
+            return;
+        }
+        if (!BitwigEditorToolActions.moveTimeSelectionToFirstItem(application)) {
+            driver.notifyPopup("Step Input", "Start action unavailable");
+            BitwigEditorToolActions.logCandidateActions(application,
+                    message -> driver.getHost().println("[Oikontrol] " + message));
+        }
+        stepInputHelperActive = true;
+        stepInputStepIndex = 0;
+        stepInputHeldPadCount = 0;
+        stepInputPadGesturePending = false;
+        resetLiveIdleDisplay();
+        showStepInputDisplay();
+        driver.notifyPopup("Step Input", "On");
+    }
+
+    private void deactivateStepInputHelper(final boolean force) {
+        stepInputActivationGeneration++;
+        final Application application = driver.getApplication();
+        if (!force && !BitwigEditorToolActions.activatePointerTool(application)) {
+            oled.valueInfo("Pointer", "Unavailable");
+            driver.notifyPopup("Pointer", "Tool unavailable");
+            BitwigEditorToolActions.logCandidateActions(application,
+                    message -> driver.getHost().println("[Oikontrol] " + message));
+            return;
+        }
+        stepInputHelperActive = false;
+        stepInputHeldPadCount = 0;
+        stepInputPadGesturePending = false;
+        resetLiveIdleDisplay();
+        showLiveTrackLegendIdle();
+        driver.notifyPopup("Step Input", "Off");
+    }
+
+    private boolean handleStepInputBankButton(final boolean pressed, final int amount) {
+        if (!stepInputHelperActive || !pressed || driver.isGlobalAltHeld()) {
+            return false;
+        }
+        final Application application = driver.getApplication();
+        if (application == null) {
+            oled.valueInfo("Step Input", "Unavailable");
+            return true;
+        }
+        if (amount > 0) {
+            application.arrowKeyRight();
+            advanceStepInputEstimate(1);
+            return true;
+        }
+        application.arrowKeyLeft();
+        advanceStepInputEstimate(-1);
+        return true;
+    }
+
+    private void handleStepInputPadGesture(final boolean pressed) {
+        if (!stepInputHelperActive || isDrumMachineLiveMode()) {
+            return;
+        }
+        if (pressed) {
+            if (stepInputHeldPadCount == 0) {
+                stepInputPadGesturePending = true;
+            }
+            stepInputHeldPadCount++;
+            return;
+        }
+        if (stepInputHeldPadCount > 0) {
+            stepInputHeldPadCount--;
+        }
+        if (stepInputHeldPadCount == 0 && stepInputPadGesturePending) {
+            stepInputPadGesturePending = false;
+            advanceStepInputEstimate(1);
+        }
+    }
+
+    private void advanceStepInputEstimate(final int amount) {
+        stepInputStepIndex = Math.max(0, stepInputStepIndex + amount);
+        showStepInputDisplay();
+    }
+
+    private void clearStepInputHelper() {
+        if (!stepInputHelperActive) {
+            return;
+        }
+        BitwigEditorToolActions.activatePointerTool(driver.getApplication());
+        stepInputActivationGeneration++;
+        stepInputHelperActive = false;
+        stepInputHeldPadCount = 0;
+        stepInputPadGesturePending = false;
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
@@ -1242,6 +1437,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return;
         }
         notePlayController.handlePadPress(padIndex, pressed, velocity, liveVelocity.centerVelocity());
+        handleStepInputPadGesture(pressed);
     }
 
     private boolean handleBongoSurfaceGate(final int padIndex, final boolean pressed) {
@@ -1348,6 +1544,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {
+        if (handleStepInputBankButton(pressed, amount)) {
+            return;
+        }
         if (driver.handleGlobalUndoRedoBankButton(pressed, amount)) {
             return;
         }
@@ -2142,6 +2341,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     @Override
     protected void onDeactivate() {
+        clearStepInputHelper();
         active = false;
         resetLiveIdleDisplay();
         oled.setFooterLegend(null);

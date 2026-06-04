@@ -432,6 +432,7 @@
           <tr><td><code>NOTE</code></td><td>Toggle between melodic note input and harmonic note input</td></tr>
           <tr><td><code>ALT + NOTE</code></td><td>Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input</td></tr>
           <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code>; press again for <code>Chord Step</code></td></tr>
+          <tr><td><code>SHIFT + STEP</code></td><td>Toggle Bitwig Step Input helper for the selected clip</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Shared octave down / up</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Undo / redo Bitwig project history</td></tr>
           <tr><td><code>PATTERN DOWN/UP</code></td><td>Next / previous shared scale</td></tr>
@@ -452,6 +453,7 @@
       </tbody>
       </table>
       <p>When live <code>NOTE</code> is idle, the OLED returns to useful selected-track context after transient encoder values. On the <code>Mixer</code> page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS, with a compact bottom-row legend for the four encoders. On <code>Channel</code>, <code>User 1</code>, and <code>User 2</code>, it falls back to the selected track name with the current encoder-page legend on the bottom row. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the footer falls back to <code>D1</code>-style labels.</p>
+      <p><code>SHIFT + STEP</code> opens the selected launcher clip in Bitwig's Detail Editor, selects Bitwig's Step Input tool, and tries to move the editor position to the first item. The OLED shows <code>Step Input</code>, an estimated one-based <code>Step N/M</code> position, and the current encoder footer. Fire pad note/chord gestures advance the estimate once per released note-entry gesture. While the helper is active, <code>BANK RIGHT</code> sends Bitwig's right-arrow command for rest/advance or held-note extension, and <code>BANK LEFT</code> sends left-arrow for back. Press <code>SHIFT + STEP</code> again to return Bitwig to the Pointer tool.</p>
       <h4>Harmonic input</h4>
       <p>Harmonic input is a scale-aware lattice built from the shared root, scale, and octave. Press <code>NOTE</code> while already in Note mode to toggle between melodic note input and harmonic input.</p>
       <p>The harmonic field walks through every other scale degree, so neighboring pads tend to produce harmonically related stacks rather than adjacent scale steps. Rows move upward by octave and are offset two columns to the right, which keeps the same harmonic anchor recurring diagonally across the grid.</p>

@@ -306,6 +306,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `NOTE` | Toggle between melodic note input and harmonic note input |
 | `ALT + NOTE` | Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input |
 | `STEP` | Enter `Melodic Step`; press again for `Chord Step` |
+| `SHIFT + STEP` | Toggle Bitwig Step Input helper for the selected clip |
 | `BANK LEFT/RIGHT` | Shared octave down / up |
 | `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `PATTERN DOWN/UP` | Next / previous shared scale |
@@ -323,6 +324,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `User 2` | Selected device remote 1 | Device remote 2 | Device remote 3 | Device remote 4 |
 
 When live `NOTE` is idle, the OLED returns to useful selected-track context after transient encoder values. On the `Mixer` page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS, with a compact bottom-row legend for the four encoders. On `Channel`, `User 1`, and `User 2`, it falls back to the selected track name with the current encoder-page legend on the bottom row. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the footer falls back to `D1`-style labels.
+
+`SHIFT + STEP` opens the selected launcher clip in Bitwig's Detail Editor, selects Bitwig's Step Input tool, and tries to move the editor position to the first item. The OLED shows `Step Input`, an estimated one-based `Step N/M` position, and the current encoder footer. Fire pad note/chord gestures advance the estimate once per released note-entry gesture. While the helper is active, `BANK RIGHT` sends Bitwig's right-arrow command for rest/advance or held-note extension, and `BANK LEFT` sends left-arrow for back. Press `SHIFT + STEP` again to return Bitwig to the Pointer tool.
 
 #### Harmonic input
 

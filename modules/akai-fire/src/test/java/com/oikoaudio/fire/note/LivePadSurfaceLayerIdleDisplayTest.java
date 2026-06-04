@@ -27,4 +27,12 @@ class LivePadSurfaceLayerIdleDisplayTest {
         assertEquals(false, LivePadSurfaceLayer.shouldRefreshLiveContextIdle(false, false, false));
         assertEquals(true, LivePadSurfaceLayer.shouldRefreshLiveContextIdle(false, false, true));
     }
+
+    @Test
+    void estimatesStepInputTotalStepsFromClipLength() {
+        assertEquals(16, LivePadSurfaceLayer.estimatedStepInputTotalSteps(4.0, 0.25));
+        assertEquals(1, LivePadSurfaceLayer.estimatedStepInputTotalSteps(0.25, 0.25));
+        assertEquals(-1, LivePadSurfaceLayer.estimatedStepInputTotalSteps(0.0, 0.25));
+        assertEquals(-1, LivePadSurfaceLayer.estimatedStepInputTotalSteps(4.0, 0.0));
+    }
 }

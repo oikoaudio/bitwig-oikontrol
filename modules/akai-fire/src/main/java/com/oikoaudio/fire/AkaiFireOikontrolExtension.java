@@ -1325,6 +1325,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return noteInput;
     }
 
+    public Application getApplication() {
+        return application;
+    }
+
     public ViewCursorControl getViewControl() {
         return viewControl;
     }
