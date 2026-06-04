@@ -2949,7 +2949,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         lastStoppedIdleTrackRefreshMs = System.currentTimeMillis();
-        oled.valueInfo(modeLabel, normalizedTrackName(viewControl.getCursorTrack().name().get()));
+        oled.clearScreen();
+        oled.valueInfoPersistentNoClear(modeLabel, normalizedTrackName(viewControl.getCursorTrack().name().get()));
     }
 
     private void showTrackInfo(final String title, final String trackName) {

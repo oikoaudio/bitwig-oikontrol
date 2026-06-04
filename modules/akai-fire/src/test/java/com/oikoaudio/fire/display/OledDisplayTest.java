@@ -88,6 +88,20 @@ class OledDisplayTest {
     }
 
     @Test
+    void persistentTextCancelsPendingTransientAndClear() {
+        final MidiOut midiOut = mock(MidiOut.class);
+        final OledDisplay display = new OledDisplay(midiOut);
+        display.setClearDelayMs(10_000);
+
+        display.clearScreenDelayed();
+        assertTrue(display.hasPendingTransientMessage());
+
+        display.valueInfoPersistentNoClear("Note", "Track 1");
+
+        assertFalse(display.hasPendingTransientMessage());
+    }
+
+    @Test
     void delayedClearCanUsePerMessageDelay() throws InterruptedException {
         final MidiOut midiOut = mock(MidiOut.class);
         final OledDisplay display = new OledDisplay(midiOut);

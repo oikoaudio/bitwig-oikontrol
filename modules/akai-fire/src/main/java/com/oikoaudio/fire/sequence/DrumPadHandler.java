@@ -543,7 +543,7 @@ public class DrumPadHandler {
         resetSelectedPadMeterText();
         parent.getOled().setFooterLegend(footerLegend);
         parent.getOled().clearScreen();
-        parent.getOled().valueInfoNoClear("Pad", selectedPadLabel());
+        parent.getOled().valueInfoPersistentNoClear("Pad", selectedPadLabel());
     }
 
     private int[] padPeakHoldValues() {

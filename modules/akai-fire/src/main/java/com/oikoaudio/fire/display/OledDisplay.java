@@ -317,6 +317,16 @@ public class OledDisplay {
 
 	public void valueInfoNoClear(final String title, final String value) {
 		markTransientMessage();
+		drawValueInfoNoClear(title, value);
+	}
+
+	public void valueInfoPersistentNoClear(final String title, final String value) {
+		clearTask = -1;
+		transientMessageUntilMs = -1;
+		drawValueInfoNoClear(title, value);
+	}
+
+	private void drawValueInfoNoClear(final String title, final String value) {
 		sendString(2, TextJustification.CENTER, 0, title);
 		sendString(3, TextJustification.CENTER, 2, value);
 		sendString(5, TextJustification.CENTER, 5, "");

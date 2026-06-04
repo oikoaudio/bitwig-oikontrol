@@ -745,7 +745,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private void showLiveTrackLegendIdle() {
         applyLiveFooterLegend();
         oled.clearScreen();
-        oled.valueInfoNoClear(currentNoteSubModeLabel(), normalizedSelectedTrackName());
+        oled.valueInfoPersistentNoClear(currentNoteSubModeLabel(), normalizedSelectedTrackName());
         liveContextDisplayActive = true;
         liveContextDisplayRevision = oled.layoutRevision();
     }

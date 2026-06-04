@@ -1939,7 +1939,7 @@ public class PerformClipLauncherMode extends Layer {
         resetSelectedTrackMeterText();
         applyEncoderFooterLegend();
         oled.clearScreen();
-        oled.valueInfoNoClear(activePageLabel(), selectedPerformTrackName());
+        oled.valueInfoPersistentNoClear(activePageLabel(), selectedPerformTrackName());
     }
 
     private String selectedPerformTrackName() {
