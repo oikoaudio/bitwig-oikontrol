@@ -2226,7 +2226,16 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean shouldShowPerformMeters() {
-        return active && !sceneActionMode && !birdsEyeMode && !isSettingsHeld();
+        return shouldShowPerformMeters(active, sceneActionMode, birdsEyeMode, isSettingsHeld(),
+                driver.shouldShowMeterIdleDisplay());
+    }
+
+    static boolean shouldShowPerformMeters(final boolean active,
+                                           final boolean sceneActionMode,
+                                           final boolean birdsEyeMode,
+                                           final boolean settingsHeld,
+                                           final boolean meterIdleAllowed) {
+        return active && !sceneActionMode && !birdsEyeMode && !settingsHeld && meterIdleAllowed;
     }
 
     private void clearPendingSceneLaunchIfPlaying() {

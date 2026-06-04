@@ -943,8 +943,20 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private boolean shouldShowDrumMeters() {
-        return active && !shiftActive.get() && !muteMode.get() && !soloMode.get()
-                && !selectHeld.get() && !copyHeld.get() && !deleteHeld.get();
+        return shouldShowDrumMeters(active, shiftActive.get(), muteMode.get(), soloMode.get(),
+                selectHeld.get(), copyHeld.get(), deleteHeld.get(), driver.shouldShowMeterIdleDisplay());
+    }
+
+    static boolean shouldShowDrumMeters(final boolean active,
+                                        final boolean shiftActive,
+                                        final boolean muteMode,
+                                        final boolean soloMode,
+                                        final boolean selectHeld,
+                                        final boolean copyHeld,
+                                        final boolean deleteHeld,
+                                        final boolean meterIdleAllowed) {
+        return active && !shiftActive && !muteMode && !soloMode
+                && !selectHeld && !copyHeld && !deleteHeld && meterIdleAllowed;
     }
 
     public OledDisplay getOled() {

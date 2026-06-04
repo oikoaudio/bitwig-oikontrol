@@ -59,6 +59,13 @@ class PerformTrackControlOverlayTest {
     }
 
     @Test
+    void performMetersOnlyShowWhileTransportIsPlaying() {
+        assertEquals(true, PerformClipLauncherMode.shouldShowPerformMeters(true, false, false, false, true));
+        assertEquals(false, PerformClipLauncherMode.shouldShowPerformMeters(true, false, false, false, false));
+        assertEquals(false, PerformClipLauncherMode.shouldShowPerformMeters(true, true, false, false, true));
+    }
+
+    @Test
     void selectRowUsesTrackColorForAvailableTracks() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 

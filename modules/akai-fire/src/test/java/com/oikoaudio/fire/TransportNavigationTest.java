@@ -99,8 +99,8 @@ class TransportNavigationTest {
     }
 
     @Test
-    void plainPatternReleaseIsUnassigned() {
-        assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.NONE,
+    void plainPatternReleaseTogglesAutomationWrite() {
+        assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.TOGGLE_AUTOMATION_WRITE,
                 AkaiFireOikontrolExtension.patternReleaseAction(false, false, false));
     }
 
@@ -112,5 +112,59 @@ class TransportNavigationTest {
                 AkaiFireOikontrolExtension.patternReleaseAction(false, false, true));
         assertEquals(AkaiFireOikontrolExtension.PatternReleaseAction.NONE,
                 AkaiFireOikontrolExtension.patternReleaseAction(true, false, false));
+    }
+
+    @Test
+    void automationWriteNextStateTreatsArrangerAndLauncherAsUnified() {
+        assertEquals(true, AkaiFireOikontrolExtension.automationWriteNextState(false, false));
+        assertEquals(false, AkaiFireOikontrolExtension.automationWriteNextState(true, false));
+        assertEquals(false, AkaiFireOikontrolExtension.automationWriteNextState(false, true));
+        assertEquals(false, AkaiFireOikontrolExtension.automationWriteNextState(true, true));
+    }
+
+    @Test
+    void altRecordTogglesArrangerOverdub() {
+        assertEquals(true, AkaiFireOikontrolExtension.overdubNextState(false));
+        assertEquals(false, AkaiFireOikontrolExtension.overdubNextState(true));
+    }
+
+    @Test
+    void launcherOverdubActivationArmsTouchAutomationWrite() {
+        final AkaiFireOikontrolExtension.LauncherOverdubPressPlan plan =
+                AkaiFireOikontrolExtension.launcherOverdubPressPlan(false, false, false);
+
+        assertEquals(true, plan.launcherOverdubEnabled());
+        assertEquals(true, plan.automationWriteEnabled());
+        assertEquals(true, plan.touchAutomationWriteMode());
+        assertEquals(true, plan.automationWriteAutoEnabled());
+    }
+
+    @Test
+    void launcherOverdubDoesNotClaimExistingAutomationWrite() {
+        final AkaiFireOikontrolExtension.LauncherOverdubPressPlan plan =
+                AkaiFireOikontrolExtension.launcherOverdubPressPlan(false, true, false);
+
+        assertEquals(true, plan.launcherOverdubEnabled());
+        assertEquals(true, plan.automationWriteEnabled());
+        assertEquals(true, plan.touchAutomationWriteMode());
+        assertEquals(false, plan.automationWriteAutoEnabled());
+    }
+
+    @Test
+    void launcherOverdubDeactivationOnlyClearsAutomationWriteItAutoEnabled() {
+        final AkaiFireOikontrolExtension.LauncherOverdubPressPlan autoEnabledPlan =
+                AkaiFireOikontrolExtension.launcherOverdubPressPlan(true, true, true);
+        final AkaiFireOikontrolExtension.LauncherOverdubPressPlan manuallyEnabledPlan =
+                AkaiFireOikontrolExtension.launcherOverdubPressPlan(true, true, false);
+
+        assertEquals(false, autoEnabledPlan.launcherOverdubEnabled());
+        assertEquals(false, autoEnabledPlan.automationWriteEnabled());
+        assertEquals(false, autoEnabledPlan.touchAutomationWriteMode());
+        assertEquals(false, autoEnabledPlan.automationWriteAutoEnabled());
+
+        assertEquals(false, manuallyEnabledPlan.launcherOverdubEnabled());
+        assertEquals(true, manuallyEnabledPlan.automationWriteEnabled());
+        assertEquals(false, manuallyEnabledPlan.touchAutomationWriteMode());
+        assertEquals(false, manuallyEnabledPlan.automationWriteAutoEnabled());
     }
 }

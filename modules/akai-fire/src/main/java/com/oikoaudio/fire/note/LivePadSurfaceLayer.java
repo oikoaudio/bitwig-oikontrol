@@ -430,9 +430,17 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private boolean shouldShowLiveMeters() {
-        return active && !drumPadsOnly && !isDrumMachineLiveMode()
-                && (liveControls.currentEncoderMode() == EncoderMode.CHANNEL
-                || liveControls.currentEncoderMode() == EncoderMode.MIXER);
+        return shouldShowLiveMeters(active, drumPadsOnly, isDrumMachineLiveMode(),
+                liveControls.currentEncoderMode(), driver.shouldShowMeterIdleDisplay());
+    }
+
+    static boolean shouldShowLiveMeters(final boolean active,
+                                        final boolean drumPadsOnly,
+                                        final boolean drumMachineLiveMode,
+                                        final EncoderMode encoderMode,
+                                        final boolean meterIdleAllowed) {
+        return active && !drumPadsOnly && !drumMachineLiveMode && meterIdleAllowed
+                && (encoderMode == EncoderMode.CHANNEL || encoderMode == EncoderMode.MIXER);
     }
 
     private void bindPadBankRowControls() {

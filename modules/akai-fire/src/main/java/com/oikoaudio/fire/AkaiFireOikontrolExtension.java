@@ -60,8 +60,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     enum PatternReleaseAction {
         NONE,
+        TOGGLE_AUTOMATION_WRITE,
         TOGGLE_METRONOME,
         TOGGLE_LAUNCHER_OVERDUB
+    }
+
+    record LauncherOverdubPressPlan(boolean launcherOverdubEnabled,
+                                    boolean automationWriteEnabled,
+                                    boolean touchAutomationWriteMode,
+                                    boolean automationWriteAutoEnabled) {
     }
 
     public record RemotePageTarget(CursorRemoteControlsPage page, String label) {
@@ -104,6 +111,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final String ACTION_JUMP_TO_END_OF_ARRANGEMENT = "jump_to_end_of_arrangement";
     private static final String RECORD_QUANTIZATION_OFF = "OFF";
     private static final String RECORD_QUANTIZATION_DEFAULT_ON = "1/16";
+    private static final String AUTOMATION_WRITE_MODE_TOUCH = "touch";
+    private static final long STOPPED_METER_RING_OUT_MS = 2000;
     private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
     private Application application;
@@ -197,6 +206,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean patternGestureConsumed = false;
     private boolean patternPressShiftHeld = false;
     private boolean patternPressAltHeld = false;
+    private boolean launcherOverdubAutoEnabledAutomationWrite = false;
     private boolean retriggerLaunchersOnNextPlay = false;
     private boolean recordGestureConsumed = false;
     private boolean suppressNextMelodicStepRelease = false;
@@ -215,6 +225,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
     private boolean exclusiveTrackArmEnabled = FireControlPreferences.EXCLUSIVE_TRACK_ARM_DEFAULT;
     private long screenMessageHoldMs = FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS;
+    private long stoppedMeterRingOutUntilMs = 0;
+    private int stoppedMeterRingOutGeneration = 0;
     private final SharedPitchContextController sharedPitchContext = new SharedPitchContextController(
             new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
             MusicalScaleLibrary.getInstance());
@@ -572,6 +584,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void setUpTransportControl() {
         transport.isPlaying().markInterested();
+        transport.isPlaying().addValueObserver(this::handleTransportPlayingChanged);
         transport.getPosition().markInterested();
         transport.playStartPosition().markInterested();
         transport.isArrangerLoopEnabled().markInterested();
@@ -596,8 +609,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         });
         transport.playPosition().markInterested();
         transport.isArrangerRecordEnabled().markInterested();
+        transport.isArrangerOverdubEnabled().markInterested();
         transport.isArrangerAutomationWriteEnabled().markInterested();
+        transport.isClipLauncherAutomationWriteEnabled().markInterested();
         transport.isClipLauncherOverdubEnabled().markInterested();
+        transport.automationWriteMode().markInterested();
         transport.isMetronomeEnabled().markInterested();
         transport.isFillModeActive().markInterested();
         transport.defaultLaunchQuantization().markInterested();
@@ -719,6 +735,27 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return transport != null && transport.isPlaying().get();
     }
 
+    public boolean shouldShowMeterIdleDisplay() {
+        return isTransportPlaying() || System.currentTimeMillis() < stoppedMeterRingOutUntilMs;
+    }
+
+    private void handleTransportPlayingChanged(final boolean playing) {
+        stoppedMeterRingOutGeneration++;
+        if (playing) {
+            stoppedMeterRingOutUntilMs = 0;
+            return;
+        }
+        stoppedMeterRingOutUntilMs = System.currentTimeMillis() + STOPPED_METER_RING_OUT_MS;
+        final int generation = stoppedMeterRingOutGeneration;
+        host.scheduleTask(() -> {
+            if (generation == stoppedMeterRingOutGeneration
+                    && !isTransportPlaying()
+                    && System.currentTimeMillis() >= stoppedMeterRingOutUntilMs) {
+                showIdleOledInfo();
+            }
+        }, STOPPED_METER_RING_OUT_MS);
+    }
+
     public int getTransportTimeSignatureNumerator() {
         return transportTimeSignatureNumerator;
     }
@@ -729,7 +766,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private BiColorLightState getRecordState() {
         if (isGlobalAltHeld()) {
-            return transport.isArrangerAutomationWriteEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return transport.isArrangerOverdubEnabled().get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
         }
         if (modeState.activeMode() == Mode.DRUM) {
             return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
@@ -747,7 +784,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (isGlobalAltHeld()) {
             return transport.isClipLauncherOverdubEnabled().get() ? BiColorLightState.AMBER_HALF : BiColorLightState.AMBER_FULL;
         }
-        return BiColorLightState.OFF;
+        return isAutomationWriteEnabled() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     private BiColorLightState getDrumState() {
@@ -826,7 +863,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             if (!pressed) {
                 return;
             }
-            toggleAutomationWriteEnabled();
+            toggleArrangerOverdubEnabled();
             return;
         }
         if (pressed && performMode != null && performMode.stopManualLauncherRecordingIfAny()) {
@@ -882,9 +919,64 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void toggleAutomationWriteEnabled() {
-        final boolean nextState = !transport.isArrangerAutomationWriteEnabled().get();
-        transport.isArrangerAutomationWriteEnabled().toggle();
+        launcherOverdubAutoEnabledAutomationWrite = false;
+        final boolean nextState = automationWriteNextState(
+                transport.isArrangerAutomationWriteEnabled().get(),
+                transport.isClipLauncherAutomationWriteEnabled().get());
+        setAutomationWriteEnabled(nextState);
         notifyAction("Write Automation", nextState ? "On" : "Off");
+    }
+
+    private void setAutomationWriteEnabled(final boolean enabled) {
+        transport.isArrangerAutomationWriteEnabled().set(enabled);
+        transport.isClipLauncherAutomationWriteEnabled().set(enabled);
+    }
+
+    private void toggleArrangerOverdubEnabled() {
+        final boolean nextState = overdubNextState(transport.isArrangerOverdubEnabled().get());
+        transport.isArrangerOverdubEnabled().set(nextState);
+        notifyAction("Arranger Overdub", nextState ? "On" : "Off");
+    }
+
+    private boolean isAutomationWriteEnabled() {
+        return transport.isArrangerAutomationWriteEnabled().get()
+                || transport.isClipLauncherAutomationWriteEnabled().get();
+    }
+
+    static boolean automationWriteNextState(final boolean arrangerWriteEnabled,
+                                            final boolean clipLauncherWriteEnabled) {
+        return !(arrangerWriteEnabled || clipLauncherWriteEnabled);
+    }
+
+    static boolean overdubNextState(final boolean overdubEnabled) {
+        return !overdubEnabled;
+    }
+
+    static LauncherOverdubPressPlan launcherOverdubPressPlan(final boolean launcherOverdubEnabled,
+                                                             final boolean automationWriteEnabled,
+                                                             final boolean automationWriteAutoEnabled) {
+        final boolean nextLauncherOverdubEnabled = overdubNextState(launcherOverdubEnabled);
+        if (nextLauncherOverdubEnabled) {
+            return new LauncherOverdubPressPlan(true, true, true, !automationWriteEnabled);
+        }
+        return new LauncherOverdubPressPlan(false,
+                automationWriteAutoEnabled ? false : automationWriteEnabled,
+                false,
+                false);
+    }
+
+    private void toggleLauncherOverdubEnabled() {
+        final LauncherOverdubPressPlan plan = launcherOverdubPressPlan(
+                transport.isClipLauncherOverdubEnabled().get(),
+                isAutomationWriteEnabled(),
+                launcherOverdubAutoEnabledAutomationWrite);
+        transport.isClipLauncherOverdubEnabled().set(plan.launcherOverdubEnabled());
+        if (plan.touchAutomationWriteMode()) {
+            transport.automationWriteMode().set(AUTOMATION_WRITE_MODE_TOUCH);
+        }
+        setAutomationWriteEnabled(plan.automationWriteEnabled());
+        launcherOverdubAutoEnabledAutomationWrite = plan.automationWriteAutoEnabled();
+        notifyAction("Launcher Overdub", plan.launcherOverdubEnabled() ? "On" : "Off");
     }
 
     private void handlePatternPressed(final boolean pressed) {
@@ -905,11 +997,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 transport.isMetronomeEnabled().toggle();
                 notifyAction("Metronome", nextState ? "On" : "Off");
             }
-            case TOGGLE_LAUNCHER_OVERDUB -> {
-                final boolean nextState = !transport.isClipLauncherOverdubEnabled().get();
-                transport.isClipLauncherOverdubEnabled().toggle();
-                notifyAction("Launcher Overdub", nextState ? "On" : "Off");
-            }
+            case TOGGLE_LAUNCHER_OVERDUB -> toggleLauncherOverdubEnabled();
+            case TOGGLE_AUTOMATION_WRITE -> toggleAutomationWriteEnabled();
             case NONE -> {
             }
         }
@@ -1892,6 +1981,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showIdleOledInfo() {
+        if (!isTransportPlaying() && !shouldShowMeterIdleDisplay()) {
+            showIdleTrackInfo();
+            return;
+        }
         if (modeState.activeMode() == Mode.PERFORM && performMode != null && performMode.showIdleInfoIfNeeded()) {
             return;
         }
@@ -2804,7 +2897,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showSelectedTrackInfo(final boolean pageStep, final String trackName) {
-        oled.valueInfo(pageStep ? "Track Page" : "Track Select",
+        showTrackInfo(pageStep ? "Track Page" : "Track Select", trackName);
+    }
+
+    private void showIdleTrackInfo() {
+        if (viewControl == null) {
+            return;
+        }
+        showTrackInfo("Track", viewControl.getCursorTrack().name().get());
+    }
+
+    private void showTrackInfo(final String title, final String trackName) {
+        oled.valueInfo(title,
                 trackName == null || trackName.isBlank() ? "Unnamed" : trackName);
     }
 
@@ -3154,7 +3258,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (altHeld) {
             return PatternReleaseAction.TOGGLE_LAUNCHER_OVERDUB;
         }
-        return PatternReleaseAction.NONE;
+        return PatternReleaseAction.TOGGLE_AUTOMATION_WRITE;
     }
 
     public static AkaiFireOikontrolExtension getInstance() {

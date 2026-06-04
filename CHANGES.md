@@ -11,13 +11,14 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - The Akai Fire Mix page now uses `PATTERN DOWN` / `PATTERN UP` to enter and leave a device-centered view of the first four devices on each visible track, with plain pads selecting devices and showing device names on the OLED, `ALT + pad` toggling bypass, and encoders focusing selected-device remotes while the view is active.
 - Mix no longer uses `PATTERN UP/DOWN` for scene scrolling, and launcher orientation labels are now `LauncherV`/`LauncherH`.
 - Launcher and Mix OLED idle screens now show visible-track RMS meters as vertical bars, and the Mix page's Mixer encoder page shows selected-track RMS and peak max/current values.
+- When playback stops, Akai Fire idle OLED meters now ring out briefly before falling back to the selected track name instead of silent meter displays.
 - Drum XOX now shows visible Drum Machine pad-chain RMS meters as vertical bars on the idle OLED, with selected-pad Peak/RMS max/current values on the Mixer encoder page.
 - Akai Fire OLED graphics now send only changed 8-pixel pages, allowing meter displays to refresh about every 100 ms without full-frame redraws, and bar meters show a slowly decaying held-peak marker plus a bottom dash for muted lanes.
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
 - Akai Fire global transport navigation now uses `PATTERN + SELECT` for cue markers, `SHIFT + PATTERN + SELECT` for fine play-start moves, launches from the current play start on `PLAY`, and moves play start to arrangement start on `STOP` when already stopped.
 - Akai Fire now uses the next `PLAY` after a double-`STOP` arrangement reset to invoke Bitwig's global retrigger for playing Launcher clips before launching from the play start.
 - Akai Fire plain `PLAY` no longer retriggers the selected Launcher clip; `ALT + PLAY`, clip-row pads, and Perform launcher pads retrigger explicitly from the clip start.
-- Akai Fire now targets Bitwig API 25, keeps `ALT + REC` as Bitwig 6's unified automation write toggle, and leaves plain `PATTERN` unassigned for a future top-level action.
+- Akai Fire now targets Bitwig API 25, uses plain `PATTERN` as Bitwig 6's unified automation write toggle, maps `ALT + REC` to arranger overdub, and makes `ALT + PATTERN` launcher overdub enable touch automation write when needed.
 - Akai Fire cue-marker navigation now advances by one marker per `SELECT` tick, and the last-touched parameter `SELECT` role uses a faster default speed with `SHIFT` matching the former default speed.
 - Added an `Exclusive Track Arm` preference to Akai Fire and Launch Control XL; when disabled, solo/mute/arm actions no longer change track selection, when enabled, arm selects the armed track while disarming the other visible tracks, and Akai Fire `ALT + arm pad` inverts the arm mode for that press.
 - Akai Fire now briefly shows the selected track name on the OLED when Bitwig or another controller changes the visible track selection, then returns to the meter display.
