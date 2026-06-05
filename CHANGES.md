@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Launch Control XL factory modes now use an eight-track factory bank again and explicitly own Bitwig's controller feedback box, so the red box matches the eight faders/knob columns; Track Left/Right pages by eight tracks and selects the first strip after paging while still honoring the `Show deactivated tracks` preference.
 - Akai Fire Perform now uses a flat track bank for launcher and Mix pages, so expanded group children appear in the visible track window.
 - `SHIFT + PERFORM` is now presented as the Mix page, and its track-select pads use the corresponding Bitwig track colors.
 - The Mix page `MUTE_1`-`MUTE_4` buttons now jump to arrangement boundaries and clear project solo/mute states instead of acting as clip modifiers.

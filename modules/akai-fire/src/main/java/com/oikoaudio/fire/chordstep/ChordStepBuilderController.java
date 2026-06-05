@@ -2,6 +2,10 @@ package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.music.SharedPitchContextController;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.IntSupplier;
 
 /**
@@ -19,8 +23,10 @@ public final class ChordStepBuilderController {
     private final SharedPitchContextController pitchContext;
     private final IntSupplier firstVisibleMidiNote;
     private final int sourcePadCount;
+    private final Set<Integer> heldSourcePads = new HashSet<>();
 
     private boolean inKey = false;
+    private boolean latchEnabled = false;
 
     public ChordStepBuilderController(final ChordStepChordSelection selection,
                                       final SharedPitchContextController pitchContext,
@@ -48,11 +54,54 @@ public final class ChordStepBuilderController {
         return inKey ? "In Key" : "Chromatic";
     }
 
-    public void toggleNoteOffset(final int padIndex) {
+    public boolean isLatchEnabled() {
+        return latchEnabled;
+    }
+
+    public boolean setLatchEnabled(final boolean latchEnabled) {
+        if (this.latchEnabled == latchEnabled) {
+            return false;
+        }
+        this.latchEnabled = latchEnabled;
+        heldSourcePads.clear();
+        return true;
+    }
+
+    public String latchDisplayName() {
+        return latchEnabled ? "On" : "Off";
+    }
+
+    public boolean handleSourcePad(final int padIndex, final boolean pressed) {
+        if (latchEnabled) {
+            return pressed && toggleNoteOffset(padIndex);
+        }
+        if (!pressed) {
+            heldSourcePads.remove(padIndex);
+            return false;
+        }
+        final int midiNote = noteMidiForPad(padIndex);
+        if (midiNote < 0) {
+            return false;
+        }
+        heldSourcePads.add(padIndex);
+        final List<Integer> heldNotes = new ArrayList<>();
+        for (final int heldPad : heldSourcePads) {
+            final int heldMidiNote = noteMidiForPad(heldPad);
+            if (heldMidiNote >= 0) {
+                heldNotes.add(heldMidiNote);
+            }
+        }
+        selection.replaceBuilderNotesIfChanged(heldNotes);
+        return true;
+    }
+
+    public boolean toggleNoteOffset(final int padIndex) {
         final int midiNote = noteMidiForPad(padIndex);
         if (midiNote >= 0) {
             selection.toggleBuilderNote(midiNote);
+            return true;
         }
+        return false;
     }
 
     public boolean isNoteSelectedForPad(final int padIndex) {

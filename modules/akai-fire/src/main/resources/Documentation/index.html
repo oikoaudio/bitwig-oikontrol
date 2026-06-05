@@ -199,6 +199,7 @@
         <li>Template 7: not supported</li>
         <li>Template 8: 3 track remote controls</li>
       </ul>
+      <p>In factory templates, the eight faders, knob columns, and bottom-button columns follow the eight-track Bitwig controller feedback box. Track Left/Right moves the controlled track window by eight tracks. When <code>Show deactivated tracks</code> is off, deactivated tracks are skipped by the factory track bank; when it is on, they remain available in the bank.</p>
       <h3>User Template 6: Device pages</h3>
       <p>User Template 6 turns the controller into a fixed page remote-control surface.</p>
       <ul>
@@ -539,6 +540,7 @@
           <tr><td>Hold step pad(s) + <code>STEP</code></td><td>Toggle accent on the held steps</td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
           <tr><td><code>PATTERN UP/DOWN</code></td><td>Page visible chord-step window</td></tr>
+          <tr><td><code>SHIFT + PATTERN DOWN/UP</code></td><td>Set builder latch off / on</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Move clip start</td></tr>
           <tr><td><code>SHIFT + BANK LEFT/RIGHT</code> with no held steps</td><td>Fine move clip start</td></tr>
           <tr><td><code>SHIFT + both BANK buttons</code> with no held steps</td><td>Snap clip start back to the nearest coarse grid position</td></tr>
@@ -639,7 +641,7 @@
       <h3>Generative mode background</h3>
       <p>The control tables above describe where the functions are. This section describes what the generative modes are trying to do musically.</p>
       <h4>Chord Step background</h4>
-      <p><code>Chord Step</code> starts as an open chord builder. The default <code>Builder</code> family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. Use <code>SHIFT + encoder 4</code> on the <code>Channel</code> page, or <code>ALT + NOTE</code>, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.</p>
+      <p><code>Chord Step</code> starts as an open chord builder. The default <code>Builder</code> family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. With builder latch off, tapping a source pad replaces the current builder notes, while pressing several source pads together captures that grip as the current chord after release. Hold steps while changing the builder grip to rewrite those steps immediately. Use <code>SHIFT + PATTERN DOWN</code> for latch off and <code>SHIFT + PATTERN UP</code> for latch on. With builder latch on, source-pad taps add or remove notes from the builder until you change, invert, reset, or reload it. Use <code>SHIFT + encoder 4</code> on the <code>Channel</code> page, or <code>ALT + NOTE</code>, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.</p>
       <p>The preset banks are the more opinionated side of the mode. They use interval sets designed to move harmonic content without forcing a song key or a functional progression. Many of the voicings are deliberately open, so they tolerate inversion, transposition, and scale remapping better than tightly closed block chords. Changing shared <code>Root Key</code> or <code>Scale</code> does not move to a different preset slot; it changes how the selected slot is rendered.</p>
       <p>The preset slots are also ordered to keep neighboring chords in a similar sounding range. The voicing generator favors stable outer contours, especially the bass and top note, so stepping through a bank tends to change the internal color without making the whole part jump wildly around the keyboard.</p>
       <p><code>Raw</code> interpretation keeps the chord shape as semitone intervals from the current root. This is useful when you want the exact color of the stored formula: dominant, diminished, quartal, cluster, sus, or drone shapes. <code>InKey</code> interpretation casts the formula through the current Bitwig scale, so the same slot becomes a scale-aware color shape. This is good for modal writing, parallel harmonic color, and material that will later pass through Bitwig scale-aware devices.</p>
@@ -687,6 +689,7 @@
         <li><code>Exclusive Track Arm</code>: record-arm buttons select the armed track and disarm the other visible strips when enabled; defaults off for standard multi-arm behavior</li>
         <li><code>Audition on drum pad select</code></li>
         <li><code>Drum accent buttons momentary</code></li>
+        <li><code>Show deactivated tracks</code>: includes deactivated tracks in Launch Control XL factory track banks; defaults off so deactivated tracks are skipped</li>
       </ul>
       <h3>Akai Fire preferences</h3>
       <ul>

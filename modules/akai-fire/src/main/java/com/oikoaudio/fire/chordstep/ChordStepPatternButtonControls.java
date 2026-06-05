@@ -16,6 +16,10 @@ public final class ChordStepPatternButtonControls {
         if (!pressed || host.isAltHeld()) {
             return;
         }
+        if (host.isShiftHeld()) {
+            host.setBuilderLatchEnabled(true);
+            return;
+        }
         if (host.canPageLeft() || host.canPageRight()) {
             host.page(-1);
         } else {
@@ -25,6 +29,10 @@ public final class ChordStepPatternButtonControls {
 
     public void handleDownPressed(final boolean pressed) {
         if (!pressed || host.isAltHeld()) {
+            return;
+        }
+        if (host.isShiftHeld()) {
+            host.setBuilderLatchEnabled(false);
             return;
         }
         if (host.canPageLeft() || host.canPageRight()) {
@@ -44,6 +52,10 @@ public final class ChordStepPatternButtonControls {
 
     public interface Host {
         boolean isAltHeld();
+
+        boolean isShiftHeld();
+
+        void setBuilderLatchEnabled(boolean enabled);
 
         void page(int direction);
 

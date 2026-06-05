@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,15 +29,61 @@ class ChordStepBuilderControllerTest {
     }
 
     @Test
-    void togglesBuilderNotesFromSourcePads() {
+    void latchOffSourcePadTapsReplaceBuilderNotesByDefault() {
         final Fixture fixture = new Fixture();
 
-        fixture.builder.toggleNoteOffset(1);
+        assertFalse(fixture.builder.isLatchEnabled());
+
+        assertTrue(fixture.builder.handleSourcePad(0, true));
+        assertFalse(fixture.builder.handleSourcePad(0, false));
+        assertTrue(fixture.builder.handleSourcePad(2, true));
+        assertFalse(fixture.builder.handleSourcePad(2, false));
+
+        assertArrayEquals(new int[] {62}, fixture.selection.renderSelectedChord(null, 0));
+        assertFalse(fixture.selection.isBuilderNoteSelected(60));
+        assertTrue(fixture.selection.isBuilderNoteSelected(62));
+    }
+
+    @Test
+    void latchOffMultiPadGripPersistsAfterRelease() {
+        final Fixture fixture = new Fixture();
+
+        assertTrue(fixture.builder.handleSourcePad(0, true));
+        assertTrue(fixture.builder.handleSourcePad(4, true));
+        assertTrue(fixture.builder.handleSourcePad(7, true));
+        assertFalse(fixture.builder.handleSourcePad(0, false));
+        assertFalse(fixture.builder.handleSourcePad(4, false));
+        assertFalse(fixture.builder.handleSourcePad(7, false));
+
+        assertArrayEquals(new int[] {60, 64, 67}, fixture.selection.renderSelectedChord(null, 0));
+    }
+
+    @Test
+    void latchOffRepeatedSourcePadPressRemainsActionable() {
+        final Fixture fixture = new Fixture();
+
+        assertTrue(fixture.builder.handleSourcePad(0, true));
+        assertFalse(fixture.builder.handleSourcePad(0, false));
+
+        assertTrue(fixture.builder.handleSourcePad(0, true));
+
+        assertArrayEquals(new int[] {60}, fixture.selection.renderSelectedChord(null, 0));
+    }
+
+    @Test
+    void latchOnTogglesBuilderNotesFromSourcePads() {
+        final Fixture fixture = new Fixture();
+
+        assertTrue(fixture.builder.setLatchEnabled(true));
+        assertEquals("On", fixture.builder.latchDisplayName());
+
+        assertTrue(fixture.builder.handleSourcePad(1, true));
+        assertFalse(fixture.builder.handleSourcePad(1, false));
 
         assertTrue(fixture.selection.isBuilderNoteSelected(61));
         assertTrue(fixture.builder.isNoteSelectedForPad(1));
 
-        fixture.builder.toggleNoteOffset(1);
+        assertTrue(fixture.builder.handleSourcePad(1, true));
 
         assertFalse(fixture.selection.isBuilderNoteSelected(61));
     }

@@ -54,6 +54,8 @@ Factory templates keep the same general role as the Bitwig factory script:
 - Template 7: not supported
 - Template 8: 3 track remote controls
 
+In factory templates, the eight faders, knob columns, and bottom-button columns follow the eight-track Bitwig controller feedback box. Track Left/Right moves the controlled track window by eight tracks. When `Show deactivated tracks` is off, deactivated tracks are skipped by the factory track bank; when it is on, they remain available in the bank.
+
 ### User Template 6: Device pages
 
 User Template 6 turns the controller into a fixed page remote-control surface.
@@ -414,6 +416,7 @@ Press `STEP` from normal performance modes to enter `Chord Step`. Press `STEP` a
 | Hold step pad(s) + `STEP` | Toggle accent on the held steps |
 | `ALT + STEP` | Fill |
 | `PATTERN UP/DOWN` | Page visible chord-step window |
+| `SHIFT + PATTERN DOWN/UP` | Set builder latch off / on |
 | `BANK LEFT/RIGHT` | Move clip start |
 | `SHIFT + BANK LEFT/RIGHT` with no held steps | Fine move clip start |
 | `SHIFT + both BANK buttons` with no held steps | Snap clip start back to the nearest coarse grid position |
@@ -523,7 +526,7 @@ The control tables above describe where the functions are. This section describe
 
 #### Chord Step background
 
-`Chord Step` starts as an open chord builder. The default `Builder` family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. Use `SHIFT + encoder 4` on the `Channel` page, or `ALT + NOTE`, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.
+`Chord Step` starts as an open chord builder. The default `Builder` family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. With builder latch off, tapping a source pad replaces the current builder notes, while pressing several source pads together captures that grip as the current chord after release. Hold steps while changing the builder grip to rewrite those steps immediately. Use `SHIFT + PATTERN DOWN` for latch off and `SHIFT + PATTERN UP` for latch on. With builder latch on, source-pad taps add or remove notes from the builder until you change, invert, reset, or reload it. Use `SHIFT + encoder 4` on the `Channel` page, or `ALT + NOTE`, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.
 
 The preset banks are the more opinionated side of the mode. They use interval sets designed to move harmonic content without forcing a song key or a functional progression. Many of the voicings are deliberately open, so they tolerate inversion, transposition, and scale remapping better than tightly closed block chords. Changing shared `Root Key` or `Scale` does not move to a different preset slot; it changes how the selected slot is rendered.
 
@@ -585,6 +588,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Exclusive Track Arm`: record-arm buttons select the armed track and disarm the other visible strips when enabled; defaults off for standard multi-arm behavior
 - `Audition on drum pad select`
 - `Drum accent buttons momentary`
+- `Show deactivated tracks`: includes deactivated tracks in Launch Control XL factory track banks; defaults off so deactivated tracks are skipped
 
 ### Akai Fire preferences
 
