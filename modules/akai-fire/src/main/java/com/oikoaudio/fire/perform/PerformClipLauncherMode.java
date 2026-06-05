@@ -2067,7 +2067,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int trackScrollAmount() {
-        return layout.trackScrollAmount(isShiftHeld());
+        return isShiftHeld() ? 1 : visibleTrackCount();
     }
 
     private int sceneScrollAmount() {
@@ -2128,6 +2128,10 @@ public class PerformClipLauncherMode extends Layer {
         return altHeld != exclusiveTrackArmEnabled;
     }
 
+    static int visibleTrackCountForPage(final PerformLayout layout, final boolean trackActionMode) {
+        return trackActionMode ? PerformLayout.PAD_COLUMNS : layout.visibleTrackCount();
+    }
+
     private boolean canScrollTracks(final int direction) {
         final int current = trackBank.scrollPosition().get();
         return direction < 0 ? current > 0 : current < maxTrackOffset();
@@ -2143,7 +2147,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int maxTrackOffset() {
-        return layout.maxTrackOffset(totalTrackCount);
+        return Math.max(0, totalTrackCount - visibleTrackCount());
     }
 
     private int maxSceneOffset() {
@@ -2833,7 +2837,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int visibleTrackCount() {
-        return layout.visibleTrackCount();
+        return visibleTrackCountForPage(layout, trackActionMode);
     }
 
     private int visibleSceneCount() {

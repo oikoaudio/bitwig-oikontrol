@@ -414,7 +414,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return;
         }
         if (pressed) {
-            driver.enterMelodicStepMode();
+            driver.enterPlainStepPressTarget();
         }
     }
 
@@ -647,8 +647,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void enterMelodicStepMode() {
-                driver.enterMelodicStepMode();
+            public void enterPlainStepPressTarget() {
+                driver.enterPlainStepPressTarget();
             }
 
             @Override

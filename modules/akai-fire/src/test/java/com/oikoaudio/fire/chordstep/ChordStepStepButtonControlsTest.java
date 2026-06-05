@@ -18,28 +18,28 @@ class ChordStepStepButtonControlsTest {
         controls.handlePressed(true);
 
         assertTrue(host.toggledHeldAccent);
-        assertEquals(0, host.melodicEntries);
+        assertEquals(0, host.stepModeEntries);
     }
 
     @Test
-    void normalPressAdvancesStandaloneChordStepToMelodicStep() {
+    void normalPressAdvancesStandaloneChordStepToNextStepMode() {
         final Host host = new Host();
         host.standalone = true;
         final ChordStepStepButtonControls controls = controls(host);
 
         controls.handlePressed(true);
 
-        assertEquals(1, host.melodicEntries);
+        assertEquals(1, host.stepModeEntries);
     }
 
     @Test
-    void normalPressReturnsEmbeddedChordStepToMelodicStep() {
+    void normalPressReturnsEmbeddedChordStepToNextStepMode() {
         final Host host = new Host();
         final ChordStepStepButtonControls controls = controls(host);
 
         controls.handlePressed(true);
 
-        assertEquals(1, host.melodicEntries);
+        assertEquals(1, host.stepModeEntries);
     }
 
     @Test
@@ -77,7 +77,7 @@ class ChordStepStepButtonControlsTest {
         private boolean fillActive;
         private boolean fillToggled;
         private boolean toggledHeldAccent;
-        private int melodicEntries;
+        private int stepModeEntries;
         private String lastTitle = "";
         private String lastValue = "";
         private BiColorLightState modeLight = BiColorLightState.OFF;
@@ -108,8 +108,8 @@ class ChordStepStepButtonControlsTest {
         }
 
         @Override
-        public void enterMelodicStepMode() {
-            melodicEntries++;
+        public void enterPlainStepPressTarget() {
+            stepModeEntries++;
         }
 
         @Override

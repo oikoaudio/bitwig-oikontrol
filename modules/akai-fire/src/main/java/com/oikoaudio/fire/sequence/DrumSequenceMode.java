@@ -1672,7 +1672,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         if (pressed) {
-            driver.enterMelodicStepMode();
+            driver.enterPlainStepPressTarget();
         }
     }
 

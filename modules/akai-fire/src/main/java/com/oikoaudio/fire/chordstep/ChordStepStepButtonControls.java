@@ -33,7 +33,7 @@ public final class ChordStepStepButtonControls {
         if (!pressed) {
             return;
         }
-        host.enterMelodicStepMode();
+        host.enterPlainStepPressTarget();
     }
 
     public BiColorLightState lightState(final boolean active) {
@@ -63,7 +63,7 @@ public final class ChordStepStepButtonControls {
 
         boolean isStandaloneChordStepSurface();
 
-        void enterMelodicStepMode();
+        void enterPlainStepPressTarget();
 
         void toggleFillMode();
 

@@ -1285,7 +1285,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return;
         }
         if (pressed && !driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
-            driver.enterMelodicStepMode();
+            driver.enterPlainStepPressTarget();
         }
     }
 

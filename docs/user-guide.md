@@ -117,6 +117,8 @@ The Akai Fire extension is organized around four top-level workflows.
 | `STEP` | Step sequencing | Enter `Chord Step`; from there press again for `Melo Gen`, then `Fugue` |
 | `PERFORM` | Clip launching | 16x4 clip grid and track actions |
 
+`DRUM`, `STEP`, and `PERFORM` remember the last page used under that button. The first entry uses the defaults above, or the configured `Startup Mode` on controller startup; after that, leaving and returning restores the last page in that family.
+
 Shared pitch context is global across `NOTE`, `Melo Gen`, `Chord Step`, and the settings overlay. `Root Key`, `Scale`, and `Octave` changes in one of those places update the others.
 
 Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colors. `Pad Brightness` and `Pad Saturation` control how strongly those project colors translate to the Fire LEDs.
@@ -438,7 +440,7 @@ Coarse nudge is intentionally disabled in `Chord Step`; micro-timing is currentl
 
 ### Fugue mode
 
-Press `STEP` from `Chord Step` to enter `Fugue`. `Fugue` treats MIDI channel 1 as the source line and generates related lines on channels 2-4.
+Press `STEP` from `Melo Gen` to enter `Fugue`. `Fugue` treats MIDI channel 1 as the source line and generates related lines on channels 2-4.
 
 | Control | Action |
 | --- | --- |
@@ -448,6 +450,7 @@ Press `STEP` from `Chord Step` to enter `Fugue`. `Fugue` treats MIDI channel 1 a
 | `PATTERN DOWN` | Reread channel 1 from the clip and rebuild derived lines |
 | `BANK LEFT/RIGHT` | Adjust active line start; on channel 1, adjust clip length |
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| `STEP` | Enter `Chord Step` |
 | Encoder turn on a derived-line page | Immediately rebuild that line with the new parameter |
 | Channel 1 pads and encoders | Edit the source/template line |
 
@@ -467,7 +470,7 @@ For immediate derived-line feedback, change source expression from the controlle
 
 `PERFORM` opens the 16x4 launcher surface. Filled slots select and launch from the clip start. Empty slots create a new clip using `Default Clip Length`, then launch from the clip start.
 
-`Perform Clip Launcher Layout` chooses whether the mode starts as `LauncherV` or `LauncherH`. `ALT + PERFORM` still toggles the layout for the current session.
+`Perform Clip Launcher Layout` chooses whether the launcher starts as `LauncherV` or `LauncherH`. `ALT + PERFORM` still toggles the launcher layout for the current session; Mix remains a 16-track page.
 
 | Control | Action |
 | --- | --- |
@@ -485,7 +488,7 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Launcher encoder pages |
 | `PERFORM` while in Launcher | Toggle launcher / Scene Launch pad page |
-| `ALT + PERFORM` | Toggle vertical/horizontal launcher layout |
+| `ALT + PERFORM` | Toggle vertical/horizontal launcher layout; Mix stays 16 tracks |
 | `SHIFT + PERFORM` | Toggle latched Mix pad page |
 | `SHIFT + ALT + PERFORM` | Toggle Birds-Eye launcher navigation |
 

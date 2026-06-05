@@ -52,6 +52,14 @@ class PerformTrackControlOverlayTest {
     }
 
     @Test
+    void mixKeepsSixteenTrackColumnsWhenLauncherLayoutIsHorizontal() {
+        final PerformLayout horizontal = PerformLayout.horizontal();
+
+        assertEquals(4, PerformClipLauncherMode.visibleTrackCountForPage(horizontal, false));
+        assertEquals(16, PerformClipLauncherMode.visibleTrackCountForPage(horizontal, true));
+    }
+
+    @Test
     void externalTrackSelectionInfoIgnoresLocalAndDuplicateSelections() {
         assertEquals(false, PerformClipLauncherMode.shouldShowExternalTrackSelectionInfo(false, 2, -1, -1));
         assertEquals(false, PerformClipLauncherMode.shouldShowExternalTrackSelectionInfo(true, 2, 2, -1));

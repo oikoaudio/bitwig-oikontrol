@@ -16,7 +16,9 @@ import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
 import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
+import com.oikoaudio.fire.TopLevelModeState.DrumMode;
 import com.oikoaudio.fire.TopLevelModeState.Mode;
+import com.oikoaudio.fire.TopLevelModeState.PerformMode;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.oikoaudio.fire.note.DrumPadPlayMode;
 import com.oikoaudio.fire.note.NotePlayMode;
@@ -249,37 +251,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
     private final TopLevelModeState modeState = new TopLevelModeState();
-    private DrumSubMode activeDrumSubMode = DrumSubMode.STANDARD;
     private String currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
-
-    private enum DrumSubMode {
-        STANDARD(ModeButtonLights.MODE_1),
-        NESTED_RHYTHM(ModeButtonLights.MODE_2),
-        DRUM_PADS(ModeButtonLights.MODE_3);
-
-        private final BiColorLightState lightState;
-
-        DrumSubMode(final BiColorLightState lightState) {
-            this.lightState = lightState;
-        }
-
-        public BiColorLightState getLightState() {
-            return lightState;
-        }
-
-        public DrumSubMode next() {
-            return values()[(ordinal() + 1) % values().length];
-        }
-
-        public String displayName() {
-            return switch (this) {
-                case STANDARD -> "Drum XOX";
-                case NESTED_RHYTHM -> "NestedRytm";
-                case DRUM_PADS -> "Drum Pads";
-            };
-        }
-    }
 
     protected AkaiFireOikontrolExtension(final AkaiFireOikontrolDefinition definition, final ControllerHost host) {
         super(definition, host);
@@ -813,7 +786,25 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private BiColorLightState getDrumState() {
-        return modeState.activeMode() == Mode.DRUM ? activeDrumSubMode.getLightState() : BiColorLightState.OFF;
+        return modeState.activeMode() == Mode.DRUM
+                ? drumModeLightState(modeState.activeDrumMode())
+                : BiColorLightState.OFF;
+    }
+
+    private BiColorLightState drumModeLightState(final DrumMode mode) {
+        return switch (mode) {
+            case STANDARD -> ModeButtonLights.MODE_1;
+            case NESTED_RHYTHM -> ModeButtonLights.MODE_2;
+            case DRUM_PADS -> ModeButtonLights.MODE_3;
+        };
+    }
+
+    private String drumModeLabel(final DrumMode mode) {
+        return switch (mode) {
+            case STANDARD -> "Drum XOX";
+            case NESTED_RHYTHM -> "NestedRytm";
+            case DRUM_PADS -> "Drum Pads";
+        };
     }
 
     private BiColorLightState getNoteState() {
@@ -832,9 +823,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (modeState.activeMode() == Mode.FUGUE_STEP && fugueStepMode != null) {
             return fugueStepMode.getModeButtonLightState();
-        }
-        if (modeState.activeMode() == Mode.NESTED_RHYTHM && nestedRhythmMode != null) {
-            return nestedRhythmMode.getModeButtonLightState();
         }
         return BiColorLightState.OFF;
     }
@@ -1044,7 +1032,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return true;
         }
         return modeState.activeMode() == Mode.DRUM
-                && activeDrumSubMode == DrumSubMode.STANDARD
+                && modeState.activeDrumMode() == DrumMode.STANDARD
                 && drumSequenceMode != null
                 && drumSequenceMode.showGlobalActionInfo(title, value);
     }
@@ -1077,13 +1065,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (modeState.activeMode() == Mode.DRUM) {
-            activeDrumSubMode = activeDrumSubMode.next();
+            modeState.cycleDrumMode();
             switchActiveMode();
-            showModeChangeInfo(activeDrumSubMode.displayName());
+            showModeChangeInfo(drumModeLabel(modeState.activeDrumMode()));
         } else {
             modeState.activateDrum();
             switchActiveMode();
-            showModeChangeInfo(activeDrumSubMode.displayName());
+            showModeChangeInfo(drumModeLabel(modeState.activeDrumMode()));
         }
     }
 
@@ -1167,7 +1155,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             }
             if (!isGlobalShiftHeld() && !isGlobalAltHeld()) {
                 if (pressed) {
-                    enterFugueStepMode();
+                    enterPlainStepPressTarget();
                 }
                 return;
             }
@@ -1182,14 +1170,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             if (!pressed || isGlobalAltHeld()) {
                 return;
             }
-            enterMelodicStepMode();
+            enterPlainStepPressTarget();
             return;
         }
         if (modeState.activeMode() == Mode.FUGUE_STEP) {
             if (!pressed || isGlobalAltHeld()) {
                 return;
             }
-            enterChordStepMode();
+            enterPlainStepPressTarget();
             return;
         }
         if (modeState.shouldIgnoreTopLevelStepPress(isGlobalShiftHeld(), isGlobalAltHeld())) {
@@ -1198,7 +1186,16 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             return;
         }
-        enterChordStepMode();
+        enterPlainStepPressTarget();
+    }
+
+    public void enterPlainStepPressTarget() {
+        switch (modeState.plainStepPressTarget()) {
+            case CHORD_STEP -> enterChordStepMode();
+            case MELODIC_STEP -> enterMelodicStepMode();
+            case FUGUE_STEP -> enterFugueStepMode();
+            default -> enterChordStepMode();
+        }
     }
 
     private void handlePerformPressed(final boolean pressed) {
@@ -1215,11 +1212,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (isGlobalShiftHeld() && isGlobalAltHeld()) {
             performMode.toggleBirdsEyeMode();
+            rememberActivePerformMode();
             showModeChangeInfo(performMode.activePageLabel());
             return;
         }
         if (isGlobalShiftHeld()) {
             performMode.toggleTrackActionMode();
+            rememberActivePerformMode();
             showModeChangeInfo(performMode.activePageLabel());
             return;
         }
@@ -1231,17 +1230,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!enteringPerform) {
             if (performMode.isBirdsEyeMode()) {
                 performMode.leaveBirdsEyeMode();
+                rememberActivePerformMode();
                 showModeChangeInfo(performMode.activePageLabel());
                 return;
             }
             if (performMode.isTrackActionMode()) {
                 performMode.toggleTrackActionMode();
+                rememberActivePerformMode();
                 showModeChangeInfo(performMode.activePageLabel());
                 return;
             }
             performMode.toggleSceneActionMode();
+            rememberActivePerformMode();
         }
         showModeChangeInfo(performMode.activePageLabel());
+    }
+
+    private void rememberActivePerformMode() {
+        modeState.activatePerform(performMode.isTrackActionMode() ? PerformMode.MIX : PerformMode.LAUNCHER);
     }
 
     private boolean leavePerformBirdsEyeIfActive() {
@@ -1498,17 +1504,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final String startupMode = FireControlPreferences.normalizeStartupMode(startupModePref == null
                 ? FireControlPreferences.STARTUP_MODE_NOTE
                 : startupModePref.get());
-        if (performMode != null) {
-            performMode.setTrackActionMode(FireControlPreferences.STARTUP_MODE_MIX.equals(startupMode));
-        }
         switch (startupMode) {
             case FireControlPreferences.STARTUP_MODE_HARMONY -> modeState.activateChordStep();
-            case FireControlPreferences.STARTUP_MODE_DRUM_XOX -> {
-                activeDrumSubMode = DrumSubMode.STANDARD;
-                modeState.activateDrum();
-            }
-            case FireControlPreferences.STARTUP_MODE_LAUNCHER, FireControlPreferences.STARTUP_MODE_MIX ->
-                    modeState.activatePerform();
+            case FireControlPreferences.STARTUP_MODE_DRUM_XOX -> modeState.activateDrum(DrumMode.STANDARD);
+            case FireControlPreferences.STARTUP_MODE_MIX -> modeState.activatePerform(PerformMode.MIX);
+            case FireControlPreferences.STARTUP_MODE_LAUNCHER -> modeState.activatePerform(PerformMode.LAUNCHER);
             default -> modeState.activateNotePlay();
         }
     }
@@ -1525,9 +1525,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         performMode.deactivate();
         if (modeState.activeMode() == Mode.DRUM) {
             applyDrumPinningIfEnabled();
-            if (activeDrumSubMode == DrumSubMode.NESTED_RHYTHM) {
+            if (modeState.activeDrumMode() == DrumMode.NESTED_RHYTHM) {
                 nestedRhythmMode.activate();
-            } else if (activeDrumSubMode == DrumSubMode.DRUM_PADS) {
+            } else if (modeState.activeDrumMode() == DrumMode.DRUM_PADS) {
                 drumPadPlayMode.activate();
             } else {
                 drumSequenceMode.activate();
@@ -1543,9 +1543,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             melodicStepMode.activate();
         } else if (modeState.activeMode() == Mode.FUGUE_STEP) {
             fugueStepMode.activate();
-        } else if (modeState.activeMode() == Mode.NESTED_RHYTHM) {
-            nestedRhythmMode.activate();
         } else {
+            performMode.setTrackActionMode(modeState.activePerformMode() == PerformMode.MIX);
             performMode.activate();
         }
         refreshSurfaceLights();
@@ -1673,7 +1672,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private boolean isDrumGridRoleAvailable() {
-        return modeState.activeMode() == Mode.DRUM && activeDrumSubMode == DrumSubMode.STANDARD;
+        return modeState.activeMode() == Mode.DRUM && modeState.activeDrumMode() == DrumMode.STANDARD;
     }
 
     private String resolveMainEncoderRoleForActiveMode(final String role) {
@@ -1848,7 +1847,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         final Mode activeMode = modeState.exitMelodicStepMode();
         switchActiveMode();
         showModeChangeInfo(switch (activeMode) {
-            case DRUM -> activeDrumSubMode.displayName();
+            case DRUM -> drumModeLabel(modeState.activeDrumMode());
             case CHORD_STEP -> "Chord Step";
             case PERFORM -> "Perform";
             default -> "Note";
@@ -1874,14 +1873,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         showModeChangeInfo("Fugue");
     }
 
-    public void enterNestedRhythmMode() {
-        suppressNextMelodicStepRelease = true;
-        activeDrumSubMode = DrumSubMode.NESTED_RHYTHM;
-        modeState.activateDrum();
-        switchActiveMode();
-        showModeChangeInfo("NestedRytm");
-    }
-
     public boolean isEuclidFullClipEnabled() {
         return euclidScopePref != null
                 && FireControlPreferences.EUCLID_SCOPE_FULL_CLIP.equals(
@@ -1901,7 +1892,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private boolean shouldAutoPinStandardDrumMode() {
         return modeState.activeMode() == Mode.DRUM
-                && activeDrumSubMode == DrumSubMode.STANDARD
+                && modeState.activeDrumMode() == DrumMode.STANDARD
                 && shouldAutoPinFirstDrumMachine();
     }
 
@@ -2037,12 +2028,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private String currentModeLabel() {
         return switch (modeState.activeMode()) {
-            case DRUM -> activeDrumSubMode.displayName();
+            case DRUM -> drumModeLabel(modeState.activeDrumMode());
             case NOTE_PLAY -> notePlayMode == null ? "Note" : notePlayMode.currentNoteSubModeLabel();
             case CHORD_STEP -> "Chord Step";
             case MELODIC_STEP -> "Melo Gen";
             case FUGUE_STEP -> "Fugue";
-            case NESTED_RHYTHM -> "NestedRytm";
             case PERFORM -> performMode == null ? "Perform" : performMode.activePageLabel();
         };
     }
@@ -2055,7 +2045,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return true;
         }
         if (modeState.activeMode() == Mode.DRUM
-                && activeDrumSubMode == DrumSubMode.STANDARD
+                && modeState.activeDrumMode() == DrumMode.STANDARD
                 && drumSequenceMode != null
                 && drumSequenceMode.showIdleInfoIfNeeded()) {
             return true;
@@ -2181,7 +2171,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         globalSettingsOverlayLatch.close();
         final boolean alreadyInStepFamily = switch (modeState.activeMode()) {
-            case CHORD_STEP, MELODIC_STEP, FUGUE_STEP, NESTED_RHYTHM -> true;
+            case CHORD_STEP, MELODIC_STEP, FUGUE_STEP -> true;
             default -> false;
         };
         deactivateGlobalSettingsOverlay();
@@ -3176,15 +3166,15 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case NOTE_PLAY -> notePlayMode == null ? null : notePlayMode.currentRemotePageTarget();
             case DRUM -> currentDrumRemotePageTarget();
             case PERFORM -> performMode == null ? null : performMode.currentRemotePageTarget();
-            case CHORD_STEP, MELODIC_STEP, FUGUE_STEP, NESTED_RHYTHM -> null;
+            case CHORD_STEP, MELODIC_STEP, FUGUE_STEP -> null;
         };
     }
 
     private RemotePageTarget currentDrumRemotePageTarget() {
-        if (activeDrumSubMode == DrumSubMode.DRUM_PADS && drumPadPlayMode != null) {
+        if (modeState.activeDrumMode() == DrumMode.DRUM_PADS && drumPadPlayMode != null) {
             return drumPadPlayMode.currentRemotePageTarget();
         }
-        if (activeDrumSubMode != DrumSubMode.STANDARD || drumSequenceMode == null) {
+        if (modeState.activeDrumMode() != DrumMode.STANDARD || drumSequenceMode == null) {
             return null;
         }
         final CursorRemoteControlsPage page = drumSequenceMode.getActiveRemoteControlsPage();
