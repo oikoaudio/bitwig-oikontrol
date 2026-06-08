@@ -37,6 +37,25 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.19.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.18.0...oikontrol-v2.19.0) (2026-06-08)
+
+
+### Features
+
+* add OLED encoder legend position ([59e3265](https://github.com/oikoaudio/bitwig-oikontrol/commit/59e32657de6678ec73e35650a8398053d052cb53))
+* **akai-fire:** add Bitwig step input helper ([90570f8](https://github.com/oikoaudio/bitwig-oikontrol/commit/90570f8d14d605f169605ca80341517fa6268bb9))
+* **akai-fire:** add chord builder layout control ([63d6430](https://github.com/oikoaudio/bitwig-oikontrol/commit/63d643083eff2d137e284a85292dabd3397c457a))
+* **akai-fire:** improve idle OLED context and encoder legends ([70b151b](https://github.com/oikoaudio/bitwig-oikontrol/commit/70b151b956bd1a9abe21e3bfe49e0de69c38d0be))
+* **akai-fire:** refine automation and idle OLED workflow ([a17495d](https://github.com/oikoaudio/bitwig-oikontrol/commit/a17495d369719f425358ac12d18bde27b00fb5e9))
+* **akai-fire:** remember mode family pages ([ad77f0b](https://github.com/oikoaudio/bitwig-oikontrol/commit/ad77f0b7a23e31cf971b10c0f42e857402d5870d))
+* refine chord builder latch and LCXL track paging ([f1365d3](https://github.com/oikoaudio/bitwig-oikontrol/commit/f1365d386c3d8284281485d8448788d592609722))
+* retrigger launcher clips after double stop ([35e6b29](https://github.com/oikoaudio/bitwig-oikontrol/commit/35e6b2907f01a3b3551a340a058b505d2fa304c8))
+
+
+### Bug Fixes
+
+* **akai-fire:** keep contextual OLED idle screens visible ([af8f7d2](https://github.com/oikoaudio/bitwig-oikontrol/commit/af8f7d2e96d3b5aba80d73905e7dee6a878c948e))
+
 ## [2.18.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.17.0...oikontrol-v2.18.0) (2026-05-21)
 
 
