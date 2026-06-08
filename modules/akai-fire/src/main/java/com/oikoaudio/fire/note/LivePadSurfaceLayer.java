@@ -1134,10 +1134,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private String liveEncoderModeLegend(final EncoderMode mode) {
         if (isDrumMachineLiveMode() && mode == EncoderMode.CHANNEL) {
-            return EncoderFooterLegend.of("Lay", "Vel", "--", "--");
+            return EncoderFooterLegend.of("Lay", "Velo", "--", "--");
         }
         if (isHarmonicLiveMode() && mode == EncoderMode.MIXER) {
-            return EncoderFooterLegend.of("Not", "Oct", "Bas", "Gli");
+            return EncoderFooterLegend.of("Note", "Oct", "Bass", "Glis");
         }
         if (mode == EncoderMode.USER_2) {
             return EncoderFooterLegend.remoteControls("D", 1, liveRemoteParameterNames(0));

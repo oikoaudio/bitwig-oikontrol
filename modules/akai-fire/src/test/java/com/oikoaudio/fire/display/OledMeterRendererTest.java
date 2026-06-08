@@ -50,6 +50,17 @@ class OledMeterRendererTest {
     }
 
     @Test
+    void verticalMetersWithFooterCanReserveTopPage() {
+        final int[] image = OledMeterRenderer.verticalMetersWithFooter(
+                new int[]{127}, new int[]{127}, new boolean[]{false}, 1, EncoderLegendPosition.TOP);
+
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 0));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 7));
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 10));
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
+    }
+
+    @Test
     void emptyMeterSetReturnsBlankImage() {
         assertTrue(OledMeterRenderer.isBlank(OledMeterRenderer.verticalMeters(new int[0], 0)));
     }

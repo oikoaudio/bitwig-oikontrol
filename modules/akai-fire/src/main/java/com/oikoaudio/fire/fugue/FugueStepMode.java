@@ -831,8 +831,8 @@ public final class FugueStepMode extends Layer {
 
     private void applyEncoderFooterLegend() {
         oled.setFooterLegend(activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL
-                ? EncoderFooterLegend.of("Root", "Scal", "Len", "Strt")
-                : EncoderFooterLegend.of("Dir", "Temp", "Star", "Pitc"));
+                ? EncoderFooterLegend.of("Root", "Scal", "Lgth", "Strt")
+                : EncoderFooterLegend.of("Dir", "Temp", "Strt", "Ptch"));
     }
 
     private void selectLine(final int line) {

@@ -1819,7 +1819,7 @@ public class PerformClipLauncherMode extends Layer {
         trackPeakHoldMeters.decay();
         oled.sendImageWithFooter(OledMeterRenderer.verticalMetersWithFooter(
                         visibleTrackMeterValues(), visibleTrackPeakHoldValues(),
-                        visibleTrackMutedValues(), visibleTrackCount()),
+                        visibleTrackMutedValues(), visibleTrackCount(), oled.footerLegendPosition()),
                 encoderFooterLegend(encoderMode));
     }
 
@@ -1955,7 +1955,7 @@ public class PerformClipLauncherMode extends Layer {
 
     private void applyEncoderFooterLegend() {
         if (isSettingsHeld()) {
-            oled.setFooterLegend(EncoderFooterLegend.of("Root", "Scal", "Oct", "Glob"));
+            oled.setFooterLegend(EncoderFooterLegend.of("Root", "Scal", "Octv", "Glob"));
             return;
         }
         oled.setFooterLegend(encoderFooterLegend(encoderMode));

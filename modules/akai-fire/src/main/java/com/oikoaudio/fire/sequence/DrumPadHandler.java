@@ -536,7 +536,8 @@ public class DrumPadHandler {
         resetSelectedPadMeterText();
         padPeakHoldMeters.decay();
         parent.getOled().sendImageWithFooter(OledMeterRenderer.verticalMetersWithFooter(
-                padRmsMeters, padPeakHoldValues(), padMutedValues(), VISIBLE_PAD_COUNT), footerLegend);
+                padRmsMeters, padPeakHoldValues(), padMutedValues(), VISIBLE_PAD_COUNT,
+                parent.getOled().footerLegendPosition()), footerLegend);
     }
 
     public void showSelectedPadContextDisplay(final String footerLegend) {

@@ -126,6 +126,18 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesEncoderLegendPositionPreferenceValues() {
+        assertEquals(FireControlPreferences.ENCODER_LEGEND_POSITION_BOTTOM,
+                FireControlPreferences.normalizeEncoderLegendPosition(
+                        FireControlPreferences.ENCODER_LEGEND_POSITION_BOTTOM));
+        assertEquals(FireControlPreferences.ENCODER_LEGEND_POSITION_TOP,
+                FireControlPreferences.normalizeEncoderLegendPosition(
+                        FireControlPreferences.ENCODER_LEGEND_POSITION_TOP));
+        assertEquals(FireControlPreferences.ENCODER_LEGEND_POSITION_BOTTOM,
+                FireControlPreferences.normalizeEncoderLegendPosition("unexpected"));
+    }
+
+    @Test
     void mapsScreenMessageHoldPreferenceValuesToMilliseconds() {
         assertEquals(750,
                 FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT));

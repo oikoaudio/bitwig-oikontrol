@@ -9,6 +9,7 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.UndoRedoBankButtonHandler;
 import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.chordstep.ChordStepMode;
+import com.oikoaudio.fire.display.EncoderLegendPosition;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.fugue.FugueStepMode;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -189,6 +190,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue livePitchOffsetBehaviorPref;
     private SettableEnumValue screenMessageHoldPref;
     private SettableEnumValue idleOledPref;
+    private SettableEnumValue encoderLegendPositionPref;
     private SettableBooleanValue encoderTouchResetPref;
     private SettableBooleanValue showDeactivatedTracksPref;
     private SettableBooleanValue exclusiveTrackArmPref;
@@ -544,6 +546,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 FireControlPreferences.IDLE_OLED_MODES,
                 FireControlPreferences.IDLE_OLED_CONTEXT);
         idleOledPref.markInterested();
+
+        encoderLegendPositionPref = preferences.getEnumSetting("Encoder Legend Position",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.ENCODER_LEGEND_POSITIONS,
+                FireControlPreferences.ENCODER_LEGEND_POSITION_BOTTOM);
+        encoderLegendPositionPref.markInterested();
+        encoderLegendPositionPref.addValueObserver(this::applyEncoderLegendPositionPreference);
+        applyEncoderLegendPositionPreference(encoderLegendPositionPref.get());
 
         showDeactivatedTracksPref = preferences.getBooleanSetting("Show deactivated tracks",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -1498,6 +1508,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void applyScreenMessageHoldPreference(final String preferenceValue) {
         screenMessageHoldMs = FireControlPreferences.toScreenMessageHoldMillis(preferenceValue);
         oled.setClearDelayMs(screenMessageHoldMs);
+    }
+
+    private void applyEncoderLegendPositionPreference(final String preferenceValue) {
+        final String normalized = FireControlPreferences.normalizeEncoderLegendPosition(preferenceValue);
+        oled.setFooterLegendPosition(FireControlPreferences.ENCODER_LEGEND_POSITION_TOP.equals(normalized)
+                ? EncoderLegendPosition.TOP
+                : EncoderLegendPosition.BOTTOM);
     }
 
     private void applyStartupModePreference() {

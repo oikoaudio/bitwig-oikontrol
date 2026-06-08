@@ -80,20 +80,20 @@ class NoteLiveEncoderModeControlsTest {
 
     @Test
     void shorthandLegendsFitTheOledBottomRow() {
-        assertEquals("Mod  Bnd  Gli  Tmb", NoteLiveEncoderModeControls.modeLegend(EncoderMode.CHANNEL));
+        assertEquals("Mod  Bend Glis Timb", NoteLiveEncoderModeControls.modeLegend(EncoderMode.CHANNEL));
         assertEquals("Vol  Pan  S1  S2", NoteLiveEncoderModeControls.modeLegend(EncoderMode.MIXER));
-        assertEquals("Vel  Aft  Br   PEx", NoteLiveEncoderModeControls.modeLegend(EncoderMode.USER_1));
-        assertEquals("D1   D2   D3   D4", NoteLiveEncoderModeControls.modeLegend(EncoderMode.USER_2));
+        assertEquals("Velo Aft  Brth PExp", NoteLiveEncoderModeControls.modeLegend(EncoderMode.USER_1));
+        assertEquals("Dev1 Dev2 Dev3 Dev4", NoteLiveEncoderModeControls.modeLegend(EncoderMode.USER_2));
     }
 
     @Test
     void user2PageIdentifiesDeviceRemotes() {
         assertEquals("""
                         Device Remotes
-                        1: D1 Remote
-                        2: D2 Remote
-                        3: D3 Remote
-                        4: D4 Remote""",
+                        1: Dev1 Remote
+                        2: Dev2 Remote
+                        3: Dev3 Remote
+                        4: Dev4 Remote""",
                 NoteLiveEncoderModeControls.modeInfo(EncoderMode.USER_2));
     }
 

@@ -16,6 +16,7 @@ class PeakRmsOledViewTest {
     @Test
     void drawsPeakRmsRowsWithBottomLegend() {
         final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.BOTTOM);
         final PeakRmsOledView view = new PeakRmsOledView(oled);
 
         view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
@@ -29,8 +30,25 @@ class PeakRmsOledViewTest {
     }
 
     @Test
+    void drawsPeakRmsRowsWithTopLegend() {
+        final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.TOP);
+        final PeakRmsOledView view = new PeakRmsOledView(oled);
+
+        view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
+
+        final InOrder order = inOrder(oled);
+        order.verify(oled).clearScreen();
+        order.verify(oled).sendString(0, OledDisplay.TextJustification.LEFT, 0, EncoderFooterLegend.MIXER);
+        order.verify(oled).sendString(0, OledDisplay.TextJustification.LEFT, 2, "Peak          RMS");
+        order.verify(oled).sendString(2, OledDisplay.TextJustification.LEFT, 3, "+0.0   -6.0");
+        order.verify(oled).sendString(2, OledDisplay.TextJustification.LEFT, 6, "-16.1  -inf");
+    }
+
+    @Test
     void transientValuePreservesBottomLegendRows() {
         final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.BOTTOM);
         final PeakRmsOledView view = new PeakRmsOledView(oled);
         view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
 
@@ -54,8 +72,31 @@ class PeakRmsOledViewTest {
     }
 
     @Test
+    void transientValuePreservesTopLegendRows() {
+        final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.TOP);
+        final PeakRmsOledView view = new PeakRmsOledView(oled);
+        view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
+
+        view.showValueInfo("Volume", "-3.0 dB");
+
+        final InOrder order = inOrder(oled);
+        order.verify(oled).clearScreen();
+        order.verify(oled).sendString(0, OledDisplay.TextJustification.LEFT, 0, EncoderFooterLegend.MIXER);
+        order.verify(oled).sendString(0, OledDisplay.TextJustification.LEFT, 2, "Peak          RMS");
+        order.verify(oled).sendString(2, OledDisplay.TextJustification.LEFT, 3, "+0.0   -6.0");
+        order.verify(oled).sendString(2, OledDisplay.TextJustification.LEFT, 6, "-16.1  -inf");
+        for (int row = 1; row < 8; row++) {
+            order.verify(oled).sendString(0, OledDisplay.TextJustification.LEFT, row, "                    ");
+        }
+        order.verify(oled).sendString(0, OledDisplay.TextJustification.LEFT, 0, EncoderFooterLegend.MIXER);
+        order.verify(oled).valueInfoNoClear("Volume", "-3.0 dB");
+    }
+
+    @Test
     void externalScreenClearInvalidatesCachedStaticRows() {
         final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.BOTTOM);
         final AtomicLong revision = new AtomicLong();
         when(oled.layoutRevision()).thenAnswer(invocation -> revision.get());
         doAnswer(invocation -> {

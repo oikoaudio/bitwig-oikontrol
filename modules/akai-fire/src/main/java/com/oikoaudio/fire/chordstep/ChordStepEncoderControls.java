@@ -10,6 +10,7 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
@@ -162,6 +163,7 @@ final class ChordStepEncoderControls {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
                 "1: Oct/Root/Scale\n2: Velocity\n3: Chord Family\n4: Int/Inv/Layout",
+                EncoderFooterLegend.of("RScO", "Velo", "Chrd", "Intr"),
                 new EncoderSlotBinding[]{
                         chordPitchContextSlot(),
                         chordBuildVelocitySlot(),
@@ -186,6 +188,7 @@ final class ChordStepEncoderControls {
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
+                EncoderFooterLegend.of("Velo", "Pres", "Timb", "PExp"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.VELOCITY),
                         noteAccessSlot(NoteStepAccess.PRESSURE),
@@ -194,6 +197,7 @@ final class ChordStepEncoderControls {
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
+                EncoderFooterLegend.of("Len", "Chnc", "VSpr", "Rpt"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.DURATION),
                         noteAccessSlot(NoteStepAccess.CHANCE),

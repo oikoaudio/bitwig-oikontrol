@@ -25,6 +25,8 @@ public final class FireControlPreferences {
     public static final String SCREEN_MESSAGE_HOLD_LONG = "Long";
     public static final String IDLE_OLED_CONTEXT = "Context";
     public static final String IDLE_OLED_METERS = "Meters";
+    public static final String ENCODER_LEGEND_POSITION_BOTTOM = "Bottom";
+    public static final String ENCODER_LEGEND_POSITION_TOP = "Top";
     public static final long SCREEN_MESSAGE_HOLD_SHORT_MS = 750;
     public static final long SCREEN_MESSAGE_HOLD_NORMAL_MS = 1500;
     public static final long SCREEN_MESSAGE_HOLD_LONG_MS = 3000;
@@ -36,6 +38,10 @@ public final class FireControlPreferences {
     public static final String[] IDLE_OLED_MODES = {
             IDLE_OLED_CONTEXT,
             IDLE_OLED_METERS
+    };
+    public static final String[] ENCODER_LEGEND_POSITIONS = {
+            ENCODER_LEGEND_POSITION_BOTTOM,
+            ENCODER_LEGEND_POSITION_TOP
     };
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
@@ -402,6 +408,15 @@ public final class FireControlPreferences {
             case SCREEN_MESSAGE_HOLD_LONG -> SCREEN_MESSAGE_HOLD_LONG_MS;
             default -> SCREEN_MESSAGE_HOLD_NORMAL_MS;
         };
+    }
+
+    public static String normalizeEncoderLegendPosition(final String preferenceValue) {
+        for (final String value : ENCODER_LEGEND_POSITIONS) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return ENCODER_LEGEND_POSITION_BOTTOM;
     }
 
     public static String normalizeDefaultClipLength(final String preferenceValue) {

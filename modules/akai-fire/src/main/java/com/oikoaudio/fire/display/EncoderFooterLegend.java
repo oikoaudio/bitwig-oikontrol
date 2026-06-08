@@ -72,7 +72,8 @@ public final class EncoderFooterLegend {
         if (label == null || label.isBlank()) {
             return "--";
         }
-        return label.length() <= 4 ? label : label.substring(0, 4);
+        final String preferred = preferredLabel(label.trim());
+        return preferred.length() <= 4 ? preferred : preferred.substring(0, 4);
     }
 
     private static String labelFromInfoLine(final String line) {
@@ -119,10 +120,24 @@ public final class EncoderFooterLegend {
         if (scopePrefix == null || scopePrefix.isBlank()) {
             return "R";
         }
-        return scopePrefix.substring(0, 1).toUpperCase();
+        return switch (scopePrefix.substring(0, 1).toUpperCase()) {
+            case "G" -> "Glb";
+            case "T" -> "Trk";
+            case "D" -> "Dev";
+            default -> scopePrefix.substring(0, 1).toUpperCase();
+        };
     }
 
     private static String normalizeScopeLabel(final String scopeLabel) {
         return scopeLabel == null || scopeLabel.isBlank() ? "Remotes" : scopeLabel;
+    }
+
+    private static String preferredLabel(final String label) {
+        return switch (label) {
+            case "Engine" -> "Engn";
+            case "Mut Type" -> "MutT";
+            case "Pitch Expr" -> "PExp";
+            default -> label;
+        };
     }
 }

@@ -19,6 +19,7 @@ import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -657,6 +658,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
                 "1: Density / Alt Dens Dir / Shift Rec\n2: Tuplet / Alt Tup.Div / Shift Target Phase\n3: Ratchet / Alt Rat.Div / Shift Target Phase\n4: Cluster / Alt Play Start / Shift Rate",
+                EncoderFooterLegend.of("Dens", "Tupl", "Ratc", "Clus"),
                 new EncoderSlotBinding[]{
                         modifierContinuousWithSteppedAltSlot(
                                 view("Density", this::densityLabel, this::adjustDensity, this::resetDensity),
@@ -692,6 +694,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Chance / Alt Base / Shift Rot",
+                EncoderFooterLegend.of("Velo", "Pres", "Timb", "Chnc"),
                 new EncoderSlotBinding[]{
                         modifierChoiceSlot(
                                 view("Velocity", this::velocityPrimaryLabel, this::adjustVelocityPrimary,
@@ -724,6 +727,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Pitch\n2: Pitch Expr\n3: Length / Alt Play Start / Shift Rate\n4: Reset Hits / Alt Rat Mode",
+                EncoderFooterLegend.of("Ptch", "PExp", "Len", "Rset"),
                 new EncoderSlotBinding[]{
                         choiceSlot("Pitch", this::pitchLabel, this::adjustPitch),
                         modifierChoiceSlot(

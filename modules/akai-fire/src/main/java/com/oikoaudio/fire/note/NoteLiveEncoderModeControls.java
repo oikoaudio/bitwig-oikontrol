@@ -80,9 +80,9 @@ final class NoteLiveEncoderModeControls {
 
     static String modeLegend(final EncoderMode mode) {
         return switch (mode) {
-            case CHANNEL -> EncoderFooterLegend.of("Mod", "Bnd", "Gli", "Tmb");
+            case CHANNEL -> EncoderFooterLegend.of("Mod", "Bend", "Glis", "Timb");
             case MIXER -> EncoderFooterLegend.MIXER;
-            case USER_1 -> EncoderFooterLegend.of("Vel", "Aft", "Br", "PEx");
+            case USER_1 -> EncoderFooterLegend.of("Velo", "Aft", "Brth", "PExp");
             case USER_2 -> EncoderFooterLegend.remoteControls("D", 1);
         };
     }

@@ -30,11 +30,27 @@ public final class OledMeterRenderer {
 
     public static int[] verticalMetersWithFooter(final int[] values, final int[] peakMarkers, final boolean[] muted,
                                                  final int count) {
-        return verticalMeters(values, peakMarkers, muted, count, HEIGHT - FOOTER_HEIGHT);
+        return verticalMetersWithFooter(values, peakMarkers, muted, count, EncoderLegendPosition.BOTTOM);
+    }
+
+    public static int[] verticalMetersWithFooter(final int[] values, final int[] peakMarkers, final boolean[] muted,
+                                                 final int count, final EncoderLegendPosition footerPosition) {
+        final EncoderLegendPosition normalizedPosition = footerPosition == null
+                ? EncoderLegendPosition.BOTTOM
+                : footerPosition;
+        if (normalizedPosition == EncoderLegendPosition.TOP) {
+            return verticalMeters(values, peakMarkers, muted, count, FOOTER_HEIGHT + TOP_MARGIN, HEIGHT - 1);
+        }
+        return verticalMeters(values, peakMarkers, muted, count, TOP_MARGIN, HEIGHT - FOOTER_HEIGHT - 1);
     }
 
     private static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
                                         final int count, final int drawingHeight) {
+        return verticalMeters(values, peakMarkers, muted, count, TOP_MARGIN, Math.min(HEIGHT, drawingHeight) - 1);
+    }
+
+    private static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
+                                        final int count, final int topLimit, final int bottomLimit) {
         final int visibleCount = Math.max(0, Math.min(count, values.length));
         final int[] image = new int[IMAGE_BYTES];
         if (visibleCount == 0) {
@@ -43,12 +59,13 @@ public final class OledMeterRenderer {
 
         final int slotWidth = Math.max(1, WIDTH / visibleCount);
         final int barWidth = Math.max(MIN_BAR_WIDTH, slotWidth - 2);
-        final int bottomLimit = Math.max(TOP_MARGIN, Math.min(HEIGHT, drawingHeight) - 1);
-        final int maxHeight = Math.max(1, bottomLimit - TOP_MARGIN - BOTTOM_MARGIN + 1);
+        final int boundedTop = Math.max(TOP_MARGIN, topLimit);
+        final int boundedBottom = Math.max(boundedTop, Math.min(HEIGHT - 1, bottomLimit));
+        final int maxHeight = Math.max(1, boundedBottom - boundedTop - BOTTOM_MARGIN + 1);
         for (int index = 0; index < visibleCount; index++) {
             final int left = index * slotWidth + Math.max(0, (slotWidth - barWidth) / 2);
             final int right = Math.min(WIDTH - 1, left + barWidth - 1);
-            final int bottom = bottomLimit - BOTTOM_MARGIN;
+            final int bottom = boundedBottom - BOTTOM_MARGIN;
             final int height = VuMeterFormatter.meterHeight(values[index], maxHeight);
             final int top = bottom - height + 1;
             final boolean mutedLane = muted != null && index < muted.length && muted[index];
@@ -56,12 +73,12 @@ public final class OledMeterRenderer {
             if (mutedLane) {
                 drawHorizontalLine(image, left, right, bottom);
             } else if (height > 0) {
-                fillRect(image, left, Math.max(TOP_MARGIN, top), right, bottom);
+                fillRect(image, left, Math.max(boundedTop, top), right, bottom);
             }
             if (!mutedLane && peakMarkers != null && index < peakMarkers.length) {
                 final int markerHeight = VuMeterFormatter.meterHeight(peakMarkers[index], maxHeight);
                 if (markerHeight > 0) {
-                    final int markerY = Math.max(TOP_MARGIN, bottom - markerHeight + 1);
+                    final int markerY = Math.max(boundedTop, bottom - markerHeight + 1);
                     drawHorizontalLine(image, left, right, markerY);
                 }
             }

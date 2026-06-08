@@ -13,7 +13,7 @@ class EncoderBankTest {
                         slot(), slot(), slot(), slot()
                 });
 
-        assertEquals("Engi Dens Pool Mut", bank.footerLegend());
+        assertEquals("Engn Dens Pool MutT", bank.footerLegend());
     }
 
     @Test

@@ -15,24 +15,25 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - When playback stops, Akai Fire idle OLED meters now ring out briefly before falling back to the selected track name instead of silent meter displays.
 - Drum XOX now shows visible Drum Machine pad-chain RMS meters as vertical bars on the idle OLED, with selected-pad Peak/RMS max/current values on the Mixer encoder page.
 - Akai Fire OLED graphics now send only changed 8-pixel pages, allowing meter displays to refresh about every 100 ms without full-frame redraws, and bar meters show a slowly decaying held-peak marker plus a bottom dash for muted lanes.
+- Akai Fire OLED information displays now keep compact encoder legends visible across idle, transient, and meter screens, support a top/bottom legend position preference, use clearer short labels, and keep persistent mode/track context visible instead of blanking after mode changes.
 - Added a `Playback Start` SELECT encoder role for moving Bitwig's playback start position by the arranger grid resolution.
 - Akai Fire global transport navigation now uses `PATTERN + SELECT` for cue markers, `SHIFT + PATTERN + SELECT` for fine play-start moves, launches from the current play start on `PLAY`, and moves play start to arrangement start on `STOP` when already stopped.
-- Akai Fire now uses the next `PLAY` after a double-`STOP` arrangement reset to invoke Bitwig's global retrigger for playing Launcher clips before launching from the play start.
-- Akai Fire plain `PLAY` no longer retriggers the selected Launcher clip; `ALT + PLAY`, clip-row pads, and Perform launcher pads retrigger explicitly from the clip start.
-- Akai Fire now targets Bitwig API 25, uses plain `PATTERN` as Bitwig 6's unified automation write toggle, maps `ALT + REC` to arranger overdub, and makes `ALT + PATTERN` launcher overdub enable touch automation write when needed.
+- Akai Fire now uses the next `PLAY` after a double-`STOP` arrangement reset to invoke Bitwig's global retrigger for playing Launcher clips before launching from the play start, while plain `PLAY` otherwise preserves clip offsets and explicit retrigger stays on `ALT + PLAY`, clip-row pads, and Perform launcher pads.
+- Akai Fire now targets Bitwig API 25 and splits recording/automation controls around Bitwig 6's unified write model: plain `PATTERN` toggles arranger and launcher automation write together, `ALT + REC` toggles arranger overdub, `ALT + PATTERN` toggles launcher overdub and enables touch automation write when needed, and `PATTERN + REC` records the selected track into the next free launcher slot.
 - Akai Fire cue-marker navigation now advances by one marker per `SELECT` tick, and the last-touched parameter `SELECT` role uses a faster default speed with `SHIFT` matching the former default speed.
 - Added an `Exclusive Track Arm` preference to Akai Fire and Launch Control XL; when disabled, solo/mute/arm actions no longer change track selection, when enabled, arm selects the armed track while disarming the other visible tracks, and Akai Fire `ALT + arm pad` inverts the arm mode for that press.
 - Akai Fire now briefly shows the selected track name on the OLED when Bitwig or another controller changes the visible track selection, then returns to the meter display.
 - Akai Fire live Note now uses `PATTERN DOWN/UP` for next/previous shared scale, `ALT + PATTERN DOWN/UP` for lower/higher shared root, moves Channel encoder 4 to Timbre CC74, and returns Channel/Mixer pages to selected-track meter idle displays after transient encoder values.
 - Akai Fire live Note User 1 encoder 3 now sends Breath CC2 instead of duplicating Timbre.
 - Akai Fire live Note and Harmonic modes now have a `SHIFT + STEP` Bitwig Step Input helper that opens the selected clip in the Detail Editor, selects the Step Input tool, and shows an estimated `Step N/M` OLED position.
+- Chord Step now starts from an open `Builder` chord source with chromatic or in-key source-pad layouts, optional builder-note latch on `SHIFT + PATTERN DOWN/UP`, and `SHIFT + Channel encoder 4` / `ALT + NOTE` layout switching for building chords directly from the pad rows.
 - Launch Control XL now clears LED dirty state after batched sysex flushes and disables verbose MIDI debug logging by default to reduce controller traffic and console load.
 - Added an Akai Fire `Startup Mode` preference for starting in Note, Harmony, Drum XOX, Launcher, or Mix.
 - `SHIFT + NOTE` now toggles Bitwig record quantization off and back to the previous grid, defaulting to `1/16`.
 - `ALT + BANK LEFT/RIGHT` now triggers Bitwig undo/redo in Launcher, Mix, Note, Harmonic, and Drum Pads modes.
 - `SHIFT + BROWSER` now latches the global settings overlay, with `KNOB MODE` switching to a second page for shared input velocity feel and pad color response.
 - The Fire global settings overlay now has a `Pins` page for clamped track, device, and clip pin on/off controls.
-- `PATTERN + REC` on Akai Fire now records the selected track into the next free launcher slot regardless of mode, and `REC` can stop launcher recordings started from the controller.
+- `REC` can stop launcher recordings started from the controller, including `PATTERN + REC` next-free-slot recording and Perform `REC + pad` recording, even after switching modes.
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
