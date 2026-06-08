@@ -17,9 +17,8 @@ public final class VuMeterFormatter {
 
     public static String meterPairLine(final int peakValue, final int rmsValue) {
         final String peak = meterValueShort(peakValue);
-        final String separator = peak.length() >= 5 ? "| " : " | ";
-        final String line = peak + separator + meterValueShort(rmsValue);
-        return line.length() <= 20 ? line : line.replace(" | ", "|");
+        final String separator = peak.length() >= 5 ? "  " : "   ";
+        return peak + separator + meterValueShort(rmsValue);
     }
 
     public static String formatDb(final int value, final boolean includeUnit) {

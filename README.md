@@ -87,8 +87,8 @@ Oikontrol uses:
 
 ### Requirements
 
-- **Java:** built and tested with JDK 21.
-- **Bitwig API:** targets `extension-api:24`, which ships with **Bitwig Studio 5.3**. The extension should also work in Bitwig Studio 6.0; beta 12 has been tested.
+- **Java:** built and tested with JDK 25 while producing Java 21-compatible extension classes.
+- **Bitwig API:** targets `extension-api:25`, which ships with **Bitwig Studio 6.0**.
 - **Controllers:** Novation Launch Control XL Mk2 and Akai Fire.
 
 ### Building And Testing
@@ -107,7 +107,7 @@ just launchcontrol-extension
 just artifacts
 ```
 
-The `Justfile` defaults `GRADLE_USER_HOME` to `/tmp/gradle-home`, which works well in WSL and avoids polluting the home directory during wrapper downloads.
+The `Justfile` runs Gradle through `mise exec`, so `mise.toml` is the normal source of the JDK version. Set `GRADLE_USER_HOME=/tmp/gradle-home` if you want wrapper and dependency downloads outside your home Gradle cache, or set `GRADLE_JAVA_HOME=/path/to/jdk` for a one-off Java override.
 
 You can also build directly with Gradle:
 

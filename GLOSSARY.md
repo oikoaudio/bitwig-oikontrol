@@ -102,6 +102,8 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Chord Builder**: The Chord Step manual chord source where builder pads select notes and render the current chord.
 
+**Builder Latch**: The Chord Step builder setting that switches source pads between latch-off replacement/grip entry and latch-on gradual add/remove chord construction.
+
 **Chord Bank**: A static library of Chord Step preset chord formulas and voicing variants.
 
 **Chord Interpretation**: The Chord Step choice between keeping a stored semitone shape as `Raw` or casting it through the current Bitwig scale as `InKey`.

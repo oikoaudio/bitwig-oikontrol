@@ -187,6 +187,15 @@ public final class ChordStepChordSelection {
         builderSelectedNotes.addAll(notes);
     }
 
+    public boolean replaceBuilderNotesIfChanged(final Collection<Integer> notes) {
+        final Set<Integer> nextNotes = new HashSet<>(notes);
+        if (isBuilderFamily() && builderSelectedNotes.equals(nextNotes)) {
+            return false;
+        }
+        replaceBuilderNotes(nextNotes);
+        return true;
+    }
+
     public boolean hasBuilderNotes() {
         return !builderSelectedNotes.isEmpty();
     }
@@ -278,7 +287,7 @@ public final class ChordStepChordSelection {
                 .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
                 .toList();
         final String suffix = renderedNotes.size() > 4 ? " +" + (renderedNotes.size() - 4) : "";
-        return "%d notes %s%s".formatted(renderedNotes.size(), String.join(" ", noteNames), suffix).trim();
+        return "%s%s".formatted(String.join(" ", noteNames), suffix).trim();
     }
 
     private static String oledChordName(final ChordBank.Slot slot) {

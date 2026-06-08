@@ -44,7 +44,7 @@ class ChordStepChordSelectionTest {
         selection.replaceBuilderNotes(List.of(72, 60, 67));
 
         assertArrayEquals(new int[] {60, 67, 72}, selection.renderSelectedChord(MAJOR, 0));
-        assertEquals("3 notes C G C", selection.chordName());
+        assertEquals("C G C", selection.chordName());
     }
 
     @Test

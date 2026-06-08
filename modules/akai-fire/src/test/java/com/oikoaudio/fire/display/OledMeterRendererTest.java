@@ -3,7 +3,6 @@ package com.oikoaudio.fire.display;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OledMeterRendererTest {
@@ -38,6 +37,27 @@ class OledMeterRendererTest {
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 20));
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 2));
+    }
+
+    @Test
+    void verticalMetersWithFooterReserveBottomPage() {
+        final int[] image = OledMeterRenderer.verticalMetersWithFooter(
+                new int[]{127}, new int[]{127}, new boolean[]{false}, 1);
+
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 52));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 56));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 63));
+    }
+
+    @Test
+    void verticalMetersWithFooterCanReserveTopPage() {
+        final int[] image = OledMeterRenderer.verticalMetersWithFooter(
+                new int[]{127}, new int[]{127}, new boolean[]{false}, 1, EncoderLegendPosition.TOP);
+
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 0));
+        assertEquals(0, OledMeterRenderer.pixel(image, 64, 7));
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 10));
+        assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
     }
 
     @Test

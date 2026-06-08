@@ -199,6 +199,7 @@
         <li>Template 7: not supported</li>
         <li>Template 8: 3 track remote controls</li>
       </ul>
+      <p>In factory templates, the eight faders, knob columns, and bottom-button columns follow the eight-track Bitwig controller feedback box. Track Left/Right moves the controlled track window by eight tracks. When <code>Show deactivated tracks</code> is off, deactivated tracks are skipped by the factory track bank; when it is on, they remain available in the bank.</p>
       <h3>User Template 6: Device pages</h3>
       <p>User Template 6 turns the controller into a fixed page remote-control surface.</p>
       <ul>
@@ -255,11 +256,12 @@
         <tbody>
           <tr><td><code>DRUM</code></td><td>Drum workflows</td><td><code>Drum XOX</code>; press again for <code>Nested Rhythm</code>, then <code>Drum Pads</code></td></tr>
           <tr><td><code>NOTE</code></td><td>Live note input</td><td>16x4 melodic / harmonic note surface</td></tr>
-          <tr><td><code>STEP</code></td><td>Step sequencing</td><td>Enter <code>Melodic Step</code>; from there press again for <code>Chord Step</code>, then <code>Fugue</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Step sequencing</td><td>Enter <code>Chord Step</code>; from there press again for <code>Melo Gen</code>, then <code>Fugue</code></td></tr>
           <tr><td><code>PERFORM</code></td><td>Clip launching</td><td>16x4 clip grid and track actions</td></tr>
       </tbody>
       </table>
-      <p>Shared pitch context is global across <code>NOTE</code>, <code>Melodic Step</code>, <code>Chord Step</code>, and the settings overlay. <code>Root Key</code>, <code>Scale</code>, and <code>Octave</code> changes in one of those places update the others.</p>
+      <p><code>DRUM</code>, <code>STEP</code>, and <code>PERFORM</code> remember the last page used under that button. The first entry uses the defaults above, or the configured <code>Startup Mode</code> on controller startup; after that, leaving and returning restores the last page in that family.</p>
+      <p>Shared pitch context is global across <code>NOTE</code>, <code>Melo Gen</code>, <code>Chord Step</code>, and the settings overlay. <code>Root Key</code>, <code>Scale</code>, and <code>Octave</code> changes in one of those places update the others.</p>
       <p>Pad colors in <code>DRUM</code> and <code>PERFORM</code> follow Bitwig track, drum-lane, and clip colors. <code>Pad Brightness</code> and <code>Pad Saturation</code> control how strongly those project colors translate to the Fire LEDs.</p>
       <h3>Shared controls</h3>
       <table class="control-map">
@@ -269,11 +271,11 @@
           <tr><td><code>ALT + PLAY</code></td><td>Retrigger current clip</td></tr>
           <tr><td><code>STOP</code></td><td>Stop transport; when already stopped, move play start to the beginning of the arrangement</td></tr>
           <tr><td><code>REC</code></td><td>Clip launcher overdub in Drum XOX; arranger record in other modes; hold for pad-target recording in <code>PERFORM</code></td></tr>
-          <tr><td><code>ALT + REC</code></td><td>Arranger automation write</td></tr>
-          <tr><td><code>PATTERN</code></td><td>Clip launcher automation write</td></tr>
+          <tr><td><code>ALT + REC</code></td><td>Arranger overdub</td></tr>
+          <tr><td><code>PATTERN</code></td><td>Write automation</td></tr>
           <tr><td><code>PATTERN + REC</code></td><td>Record the selected track into the next free launcher slot, regardless of mode</td></tr>
           <tr><td><code>SHIFT + PATTERN</code></td><td>Metronome</td></tr>
-          <tr><td><code>ALT + PATTERN</code></td><td>Clip launcher overdub</td></tr>
+          <tr><td><code>ALT + PATTERN</code></td><td>Clip launcher overdub; when enabling, also enables automation write in touch mode</td></tr>
           <tr><td><code>KNOB MODE + PATTERN UP/DOWN</code></td><td>Previous/next remote page for the active encoder page, when that page controls remotes</td></tr>
           <tr><td><code>KNOB MODE + touch encoder</code></td><td>Reset that encoder's current value when the target supports reset</td></tr>
           <tr><td><code>SHIFT + DRUM</code></td><td>Tap tempo</td></tr>
@@ -284,11 +286,13 @@
           <tr><td><code>SHIFT + ALT + BROWSER</code></td><td>Open browser before the current device / insertion context</td></tr>
       </tbody>
       </table>
+      <p>Plain <code>PLAY</code> does not relaunch the selected Launcher clip, so clips that were already offset keep that offset. Use <code>ALT + PLAY</code> to retrigger the selected clip from its start.</p>
+      <p>After a second <code>STOP</code> resets the arrangement start, the next <code>PLAY</code> also asks Bitwig to retrigger playing Launcher clips before launching from the play start.</p>
       <p>When the popup browser is open, <code>SELECT</code> turn moves through results, <code>SELECT</code> press or <code>PLAY</code> commits the selected result, and <code>STOP</code> or <code>BROWSER</code> closes the browser.</p>
       <p>When <code>KNOB MODE + PATTERN UP/DOWN</code> changes a remote page, the OLED shows the target page name and a bottom-row <code>N/M</code> count when there is more than one page. If the active encoder page has no remote target, the OLED reports <code>No remotes</code>. A single-page target reports <code>Page 1/1</code>, and page boundaries report <code>First page</code> or <code>Last page</code>. These chords are not treated as encoder-page cycles.</p>
       <p>Hold <code>KNOB MODE</code> and tap an encoder to reset the value under that encoder. The OLED reports <code>No reset</code> or <code>Unmapped</code> when the current encoder slot cannot reset, and the <code>KNOB MODE</code> tap is not treated as an encoder-page cycle. Volume controls are left without a reset action to avoid accidental jumps.</p>
       <p>When <code>Encoder touch reset</code> is enabled, touching and holding a resettable encoder also resets that value after a short hold. The explicit <code>KNOB MODE + touch encoder</code> chord is available separately as a deliberate reset gesture.</p>
-      <p>Use <code>ALT + REC</code> for arranger automation write and <code>ALT + PATTERN</code> for launcher overdub. <code>PATTERN</code> still toggles clip launcher automation write directly. <code>PATTERN + REC</code> is the quick launcher capture chord: it records the selected track into the next free launcher slot regardless of mode. Plain <code>REC</code> remains the arranger-record path from Perform Mix pages. Press <code>REC</code> again to stop a launcher recording started from either <code>PATTERN + REC</code> or <code>REC + pad</code>.</p>
+      <p>Use <code>PATTERN</code> for Bitwig 6's unified automation write toggle. <code>PATTERN</code> drives both arranger and launcher automation-write states together so the controller follows Bitwig 6's single Automation Write model. Use <code>ALT + REC</code> for arranger overdub, and use <code>ALT + PATTERN</code> for launcher overdub when adding data to existing Launcher clips. Turning launcher overdub on from the controller also enables automation write in touch mode; if that gesture enabled automation write, turning launcher overdub off turns automation write back off. <code>PATTERN + REC</code> is the quick launcher capture chord: it records the selected track into the next free launcher slot regardless of mode. Plain <code>REC</code> remains the arranger-record path from Perform Mix pages. Press <code>REC</code> again to stop a launcher recording started from either <code>PATTERN + REC</code> or <code>REC + pad</code>.</p>
       <h3>Global settings overlay</h3>
       <p>Press <code>SHIFT + BROWSER</code> to latch the global settings overlay. Press <code>SHIFT + BROWSER</code> again, press <code>BROWSER</code>, or press a plain mode button from the latched overlay to close it. Press <code>KNOB MODE</code> to switch between settings pages.</p>
       <table>
@@ -301,7 +305,8 @@
       </tbody>
       </table>
       <p>On the <code>Pins</code> page, turn an encoder right for <code>On</code> and left for <code>Off</code>; the pin controls stop at those two states and do not wrap. The <code>Input</code> velocity settings are shared by live <code>NOTE</code>, <code>Drum Pads</code>, and <code>Chord Step</code> input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle <code>Show deactivated tracks</code>; the same persistent option is available in the controller preferences and defaults to off.</p>
-      <p>The <code>Screen Message Hold</code> hardware preference controls how long transient OLED messages stay visible before persistent screens such as meters return: <code>Short</code> is 750 ms, <code>Normal</code> is 1.5 s, and <code>Long</code> is 3 s.</p>
+      <p>The <code>Screen Message Hold</code> hardware preference controls how long transient OLED messages stay visible before persistent screens return: <code>Short</code> is 750 ms, <code>Normal</code> is 1.5 s, and <code>Long</code> is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The <code>Idle Perf &amp; Drum OLED</code> hardware preference defaults to <code>Context</code>; set it to <code>Meters</code> to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data.</p>
+      <p>Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Chord Step, Nested Rhythm, and Fugue. The <code>Encoder Legend Position</code> hardware preference defaults to <code>Bottom</code>; set it to <code>Top</code> if the top row is easier to read in your controller setup.</p>
       <h3>Main SELECT encoder</h3>
       <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
       <p>Global <code>SELECT</code> turn chords:</p>
@@ -328,7 +333,7 @@
       </table>
       <h3>DRUM Mode</h3>
       <p><code>Drum XOX</code> is the default sequencer-oriented workflow for a Drum Machine. Press <code>DRUM</code> again to cycle through <code>Nested Rhythm</code> and <code>Drum Pads</code>. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, Drum XOX focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, Drum XOX follows the selected drum context.</p>
-      <p>When Drum XOX is idle, the OLED shows vertical RMS meters for the 16 visible Drum Machine pad chains. On the <code>Mixer</code> encoder page, it instead shows selected-pad maximum peak/RMS on the first large row and current peak/RMS on the second large row.</p>
+      <p>When Drum XOX is idle, the OLED shows the selected pad name with the current encoder legend when <code>Idle Perf &amp; Drum OLED</code> is <code>Context</code>. Set <code>Idle Perf &amp; Drum OLED</code> to <code>Meters</code> to show vertical RMS meters for the 16 visible Drum Machine pad chains with the same legend. On the <code>Mixer</code> encoder page, it instead shows selected-pad maximum peak/RMS on the first large row, current peak/RMS on the second large row, and the compact encoder legend.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -349,7 +354,7 @@
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code></td></tr>
           <tr><td><code>SHIFT + STEP</code></td><td>Latch accent mode</td></tr>
           <tr><td>Hold step pad(s) + <code>STEP</code></td><td>Toggle accent on the held steps</td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
@@ -396,7 +401,7 @@
         <tbody>
           <tr><td><code>DRUM</code> while in <code>XOX Drum mode</code></td><td>Enter <code>Nested Rhythm mode</code></td></tr>
           <tr><td><code>DRUM</code> while in <code>Nested Rhythm</code></td><td>Enter <code>Drum Pads</code></td></tr>
-          <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step mode</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code></td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
           <tr><td><code>PATTERN UP</code> or <code>ALT + MUTE_4</code></td><td>Reset hit edits for the selected clip</td></tr>
           <tr><td><code>PATTERN DOWN</code></td><td>Generate current nested rhythm into the selected clip</td></tr>
@@ -427,8 +432,9 @@
           <tr><td>Pad matrix</td><td>16x4 note grid</td></tr>
           <tr><td>Pad LEDs</td><td>Root, in-scale, and out-of-scale feedback</td></tr>
           <tr><td><code>NOTE</code></td><td>Toggle between melodic note input and harmonic note input</td></tr>
-          <tr><td><code>ALT + NOTE</code></td><td>Toggle the current layout variant: chromatic / in-key in melodic input, bass columns / full field in harmonic input</td></tr>
-          <tr><td><code>STEP</code></td><td>Enter <code>Melodic Step</code>; press again for <code>Chord Step</code></td></tr>
+          <tr><td><code>ALT + NOTE</code></td><td>Toggle the current layout variant: chromatic / in-key in melodic and Chord Step builder input, bass columns / full field in harmonic input</td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code>; press again for <code>Melo Gen</code></td></tr>
+          <tr><td><code>SHIFT + STEP</code></td><td>Toggle Bitwig Step Input helper for the selected clip</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Shared octave down / up</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Undo / redo Bitwig project history</td></tr>
           <tr><td><code>PATTERN DOWN/UP</code></td><td>Next / previous shared scale</td></tr>
@@ -445,10 +451,11 @@
           <tr class="encoder-primary"><td><code>Channel</code></td><td>Mod</td><td>Pitch bend</td><td>Pitch Gliss / <code>ALT</code>: gliss mode</td><td>Timbre</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Aftertouch</td><td>Breath</td><td>Pitch expression</td></tr>
-          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Device remote 2</td><td>Device remote 3</td><td>Device remote 4</td></tr>
       </tbody>
       </table>
-      <p>When live <code>NOTE</code> is idle, the OLED returns to a selected-track meter after transient encoder values. On the <code>Channel</code> page it shows one large selected-track VU meter. On the <code>Mixer</code> page it shows selected-track maximum peak/RMS and current peak/RMS with the same <code>Peak | RMS</code> legend used by Mix mode.</p>
+      <p>When live <code>NOTE</code> is idle, the OLED returns to useful selected-track context after transient encoder values. On the <code>Mixer</code> page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS with the compact encoder legend. On <code>Channel</code>, <code>User 1</code>, and <code>User 2</code>, it falls back to the selected track name with the current encoder-page legend. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the legend falls back to <code>D1</code>-style labels.</p>
+      <p><code>SHIFT + STEP</code> opens the selected launcher clip in Bitwig's Detail Editor, selects Bitwig's Step Input tool, and tries to move the editor position to the first item. The OLED shows <code>Step Input</code>, an estimated one-based <code>Step N/M</code> position, and the current encoder footer. Fire pad note/chord gestures advance the estimate once per released note-entry gesture. While the helper is active, <code>BANK RIGHT</code> sends Bitwig's right-arrow command for rest/advance or held-note extension, and <code>BANK LEFT</code> sends left-arrow for back. Press <code>SHIFT + STEP</code> again to return Bitwig to the Pointer tool.</p>
       <h4>Harmonic input</h4>
       <p>Harmonic input is a scale-aware lattice built from the shared root, scale, and octave. Press <code>NOTE</code> while already in Note mode to toggle between melodic note input and harmonic input.</p>
       <p>The harmonic field walks through every other scale degree, so neighboring pads tend to produce harmonically related stacks rather than adjacent scale steps. Rows move upward by octave and are offset two columns to the right, which keeps the same harmonic anchor recurring diagonally across the grid.</p>
@@ -461,8 +468,9 @@
       </tbody>
       </table>
       <p>Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, and the bass grid enabled. <code>Notes per pad</code> controls how many notes each harmonic pad produces before octave expansion. <code>Octave span</code> adds octave copies above those notes. Bass-grid pads always stay single-note, even when notes-per-pad is set higher. <code>Pitch Gliss</code> shifts the harmonic field through the same pitch-gliss offset used on the <code>Channel</code> page.</p>
-      <h3>Melodic Step mode</h3>
-      <p><code>Melodic Step</code> is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks. It edits a 2-bar / 32-step window and keeps generated phrases constrained to the current pitch pool.</p>
+      <h3>Melo Gen mode</h3>
+      <p>Press <code>STEP</code> from <code>Chord Step</code> to enter <code>Melo Gen</code>; press <code>STEP</code> again to enter <code>Fugue</code>.</p>
+      <p><code>Melo Gen</code> is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks. It edits a 2-bar / 32-step window and keeps generated phrases constrained to the current pitch pool.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -510,8 +518,8 @@
       <p>Current generator modes are <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Rolling</code>, and <code>Octave</code>. If you manually edit the pitch pool, it becomes user-owned and is not auto-replaced on mode switch.</p>
       <p>For recurrence editing, hold one or more active melodic steps. Row 1 becomes an 8-pad recurrence editor; tap pads to toggle recurrence hits, or hold the first pad as a span anchor and tap another pad to set the recurrence span.</p>
       <h3>Chord Step mode</h3>
-      <p>Press <code>STEP</code> from <code>Melodic Step</code> to enter <code>Chord Step</code>. Press <code>NOTE</code> to return to live note input.</p>
-      <p><code>Chord Step</code> is the chord-oriented note-step workflow. The builder defaults to in-key view and uses the same shared root and scale as live <code>NOTE</code>.</p>
+      <p>Press <code>STEP</code> from normal performance modes to enter <code>Chord Step</code>. Press <code>STEP</code> again to enter <code>Melo Gen</code>. Press <code>NOTE</code> to return to live note input.</p>
+      <p><code>Chord Step</code> is the chord-oriented note-step workflow. The builder starts blank in chromatic view and uses the same shared root and scale as live <code>NOTE</code>.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -527,11 +535,12 @@
           <tr><td>Tap lit step</td><td>Remove chord</td></tr>
           <tr><td>Hold step pad(s) + chord pad</td><td>Rewrite held steps with that chord</td></tr>
           <tr><td>Tap chord pad with no held step</td><td>Audition chord, if enabled</td></tr>
-          <tr><td><code>STEP</code></td><td>Enter <code>Fugue</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Melo Gen</code></td></tr>
           <tr><td><code>SHIFT + STEP</code></td><td>Latch accent mode</td></tr>
           <tr><td>Hold step pad(s) + <code>STEP</code></td><td>Toggle accent on the held steps</td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
           <tr><td><code>PATTERN UP/DOWN</code></td><td>Page visible chord-step window</td></tr>
+          <tr><td><code>SHIFT + PATTERN DOWN/UP</code></td><td>Set builder latch off / on</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Move clip start</td></tr>
           <tr><td><code>SHIFT + BANK LEFT/RIGHT</code> with no held steps</td><td>Fine move clip start</td></tr>
           <tr><td><code>SHIFT + both BANK buttons</code> with no held steps</td><td>Snap clip start back to the nearest coarse grid position</td></tr>
@@ -551,7 +560,7 @@
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root</td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>SHIFT</code>: shared scale / <code>ALT</code>: invert chord</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root / <code>SHIFT</code>: shared scale</td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>ALT</code>: invert chord / <code>SHIFT</code>: builder layout</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Note velocity</td><td>Pressure</td><td>Timbre</td><td>Pitch</td></tr>
           <tr class="encoder-expression"><td><code>User 2</code></td><td>Note length</td><td>Chance</td><td>Velocity spread</td><td>Repeats</td></tr>
@@ -560,7 +569,7 @@
       <p>Chord banks are static libraries of chord formulas and voicing variants. Changing shared <code>Root Key</code> or <code>Scale</code> does not switch bank, page, or slot; it only changes how the selected slot is rendered. <code>As Is</code> transposes the stored chord shape from the current root. <code>In Scale</code> rebuilds that slot from the current shared scale and root.</p>
       <p>Coarse nudge is intentionally disabled in <code>Chord Step</code>; micro-timing is currently temperamental and should be treated as experimental.</p>
       <h3>Fugue mode</h3>
-      <p>Press <code>STEP</code> from <code>Chord Step</code> to enter <code>Fugue</code>. <code>Fugue</code> treats MIDI channel 1 as the source line and generates related lines on channels 2-4.</p>
+      <p>Press <code>STEP</code> from <code>Melo Gen</code> to enter <code>Fugue</code>. <code>Fugue</code> treats MIDI channel 1 as the source line and generates related lines on channels 2-4.</p>
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
@@ -570,6 +579,7 @@
           <tr><td><code>PATTERN DOWN</code></td><td>Reread channel 1 from the clip and rebuild derived lines</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Adjust active line start; on channel 1, adjust clip length</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code></td></tr>
           <tr><td>Encoder turn on a derived-line page</td><td>Immediately rebuild that line with the new parameter</td></tr>
           <tr><td>Channel 1 pads and encoders</td><td>Edit the source/template line</td></tr>
       </tbody>
@@ -586,8 +596,8 @@
       <p>If you change channel 1 notes or expression directly in Bitwig, press <code>PATTERN DOWN</code> to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.</p>
       <p>For immediate derived-line feedback, change source expression from the controller instead. Controller-owned edits update the clip and regenerate from the controller's current source state.</p>
       <h3>Launcher mode (<code>PERFORM</code>)</h3>
-      <p><code>PERFORM</code> opens the 16x4 launcher surface. Filled slots select and launch. Empty slots create a new clip using <code>Default Clip Length</code>, then launch.</p>
-      <p><code>Perform Clip Launcher Layout</code> chooses whether the mode starts as <code>LauncherV</code> or <code>LauncherH</code>. <code>ALT + PERFORM</code> still toggles the layout for the current session.</p>
+      <p><code>PERFORM</code> opens the 16x4 launcher surface. Filled slots select and launch from the clip start. Empty slots create a new clip using <code>Default Clip Length</code>, then launch from the clip start.</p>
+      <p><code>Perform Clip Launcher Layout</code> chooses whether the launcher starts as <code>LauncherV</code> or <code>LauncherH</code>. <code>ALT + PERFORM</code> still toggles the launcher layout for the current session; Mix remains a 16-track page.</p>
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
@@ -605,7 +615,7 @@
           <tr><td><code>SHIFT + PATTERN UP/DOWN</code></td><td>Scroll scenes by one</td></tr>
           <tr><td><code>KNOB MODE</code></td><td>Cycle Launcher encoder pages</td></tr>
           <tr><td><code>PERFORM</code> while in Launcher</td><td>Toggle launcher / Scene Launch pad page</td></tr>
-          <tr><td><code>ALT + PERFORM</code></td><td>Toggle vertical/horizontal launcher layout</td></tr>
+          <tr><td><code>ALT + PERFORM</code></td><td>Toggle vertical/horizontal launcher layout; Mix stays 16 tracks</td></tr>
           <tr><td><code>SHIFT + PERFORM</code></td><td>Toggle latched Mix pad page</td></tr>
           <tr><td><code>SHIFT + ALT + PERFORM</code></td><td>Toggle Birds-Eye launcher navigation</td></tr>
       </tbody>
@@ -613,24 +623,25 @@
       <p>The Mix page rows are select, solo, mute, and arm for the 16 visible tracks. The select row uses each track's Bitwig color. Solo and mute pads do not change the selected track. Arm pads allow multiple armed tracks and do not change selection unless <code>Exclusive Track Arm</code> is enabled; with that preference on, arming a track selects it and disarms the other visible tracks. Hold <code>ALT</code> while pressing an arm pad to invert the preference for that press: additive arm when exclusive arm is enabled, or exclusive arm when it is disabled. On the select row, hold <code>ALT</code> and press a pad to stop that track. While the Mix page is active, <code>MUTE_1</code> jumps to the loop start or project start, <code>MUTE_2</code> and its nearby status LED light when any track is soloed and clear all solos, <code>MUTE_3</code> and its nearby status LED light when any track is muted and clear all mutes, and <code>MUTE_4</code> jumps to the loop end or zooms the arranger to the full project and jumps to the project end. Press <code>PATTERN DOWN</code> on Mix to switch from track actions to device view for devices 1-4, press <code>PATTERN DOWN</code> again for devices 5-8, and press <code>PATTERN UP</code> to step back through device pages and then return to track actions. In device view, hold <code>KNOB MODE</code> and press <code>PATTERN UP</code>/<code>PATTERN DOWN</code> to move the selected device remote page. Each column remains one visible track, rows 1-4 represent the current four-device page on that track, lit pads indicate enabled devices, dim pads indicate bypassed devices, and unoccupied device slots are off. Press a device pad to select it and show its device name on the OLED; hold the main encoder while pressing a device pad to select that device and open or close its window. The last selected device slot is remembered per track, so selecting that track again from the Mix select row restores the remembered device when it still exists. Hold <code>ALT</code> and press a device pad to toggle it on or off. Hold <code>ALT</code> and press <code>MUTE_1</code>-<code>MUTE_4</code> to toggle the matching visible device row across all visible tracks: if any occupied slot in the row is enabled, the row turns off; otherwise it turns on. The selected enabled device is brightest, and the selected bypassed device is softly lit. Entering device view switches the encoders to the selected device remote page, and returning to track actions restores the previous encoder page. Tap <code>KNOB MODE</code> to cycle the Launcher encoder pages while the Mix pad page is active.</p>
       <p>If the selected device has layers, press <code>PATTERN DOWN</code> once more from device view to open the Device Layers page. Columns address the first 16 layers of the selected Instrument Layer, FX Layer, Instrument Selector, or FX Selector. Rows select, solo, mute, and turn the layer on or off. Press <code>PATTERN UP</code> to return to device view.</p>
       <p>The Birds-Eye page is for large launcher sets. Each pad represents one launcher viewport block in the current vertical or horizontal layout; lit pads have tracks and scenes behind them, and the bright pad is the current viewport. Press a pad to jump both the track bank and scene bank to that block. Press <code>PERFORM</code> to leave Birds-Eye and return to the normal launcher page, or press <code>NOTE</code>, <code>DRUM</code>, or <code>STEP</code> to leave Birds-Eye and switch modes.</p>
-      <p>When the Launcher or Mix page is idle, the OLED shows vertical RMS meters for the visible tracks. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the meter display. On the Mix page's <code>Mixer</code> encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and a small <code>Peak | RMS</code> legend at the bottom.</p>
-      <p>Hold <code>REC</code> and press a pad to target recording directly into that visible slot. Hold <code>PATTERN</code> and tap <code>REC</code> to record into the first free slot on the selected track, regardless of the active mode. <code>Default Clip Length</code> controls empty clip creation and is always a fixed length. <code>Launcher Record Length</code> controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, <code>Manual</code> records until stopped without post-processing, and <code>Round</code> records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press <code>REC</code> again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but clip automation can still be written with clip launcher automation write/overdub enabled.</p>
+      <p>When the Launcher or Mix page is idle, the OLED shows the selected track name with the current encoder legend when <code>Idle Perf &amp; Drum OLED</code> is <code>Context</code>. Set <code>Idle Perf &amp; Drum OLED</code> to <code>Meters</code> to show vertical RMS meters for the visible tracks with that same legend. Track selection changes coming from Bitwig or another controller briefly show the selected track name before returning to the persistent idle display. On the Mix page's <code>Mixer</code> encoder page, the OLED shows selected-track maximum peak/RMS on the first large row, current peak/RMS on the second large row, and the compact encoder legend.</p>
+      <p>Hold <code>REC</code> and press a pad to target recording directly into that visible slot. Hold <code>PATTERN</code> and tap <code>REC</code> to record into the first free slot on the selected track, regardless of the active mode. <code>Default Clip Length</code> controls empty clip creation and is always a fixed length. <code>Launcher Record Length</code> controls launcher recording: fixed values set Bitwig's clip launcher post-record action to play the recorded clip after that length, <code>Manual</code> records until stopped without post-processing, and <code>Round</code> records until stopped, then rounds the recorded clip loop length to the nearest whole bar. Press <code>REC</code> again to end a launcher recording started from the controller and launch the recorded clip, even after switching to another mode. Filled MIDI clips can overdub MIDI according to Bitwig's clip launcher behavior; audio launcher clips do not support audio overdub, but automation can still be written with <code>ALT + PATTERN</code> launcher overdub, which enables <code>PATTERN</code> automation write in touch mode when needed.</p>
       <p>The <code>Scene Launch</code> page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold <code>MUTE_1</code> and press a scene pad to select it as the scene copy source, hold <code>MUTE_3</code> and press a scene pad to copy the selected scene to that target, and hold <code>MUTE_4</code> and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. <code>MUTE_2</code> is unused on this page.</p>
       <p>On <code>Scene Launch</code>, <code>BANK LEFT/RIGHT</code> also scrolls the visible scene window, with <code>SHIFT + BANK LEFT/RIGHT</code> scrolling by one scene.</p>
       <p>On remote encoder pages, hold <code>ALT</code> while turning an encoder to control remotes 5-8 on the same page.</p>
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr class="encoder-shared"><td><code>Channel</code></td><td>Project Remote 1</td><td>Project Remote 2</td><td>Project Remote 3</td><td>Project Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>Channel</code></td><td>Global Remote 1</td><td>Global Remote 2</td><td>Global Remote 3</td><td>Global Remote 4</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Selected track volume</td><td>Selected track pan</td><td>Selected track send 1</td><td>Selected track send 2</td></tr>
-          <tr class="encoder-shared"><td><code>User 1</code></td><td>Selected track remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
-          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>User 1</code></td><td>Selected track remote 1</td><td>Track remote 2</td><td>Track remote 3</td><td>Track remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Device remote 2</td><td>Device remote 3</td><td>Device remote 4</td></tr>
       </tbody>
       </table>
+      <p>In <code>SHIFT + PERFORM</code>, remote encoder pages idle to the selected track name with the compact encoder legend when <code>Idle Perf &amp; Drum OLED</code> is <code>Context</code>. Set <code>Idle Perf &amp; Drum OLED</code> to <code>Meters</code> to restore visible-track meters with that same legend. The legend uses mapped remote parameter names where available, and scoped fallback labels such as <code>G1</code>, <code>T1</code>, or <code>D1</code> when Bitwig reports only generic remote slots.</p>
       <h3>Generative mode background</h3>
       <p>The control tables above describe where the functions are. This section describes what the generative modes are trying to do musically.</p>
       <h4>Chord Step background</h4>
-      <p><code>Chord Step</code> starts as an open chord builder. The default <code>Builder</code> family lets you choose the notes of a chord directly from the pad rows, with the builder normally showing in-scale notes from the shared root and scale. That makes the mode useful for ordinary user-defined chords as well as more exploratory harmony.</p>
+      <p><code>Chord Step</code> starts as an open chord builder. The default <code>Builder</code> family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. With builder latch off, tapping a source pad replaces the current builder notes, while pressing several source pads together captures that grip as the current chord after release. Hold steps while changing the builder grip to rewrite those steps immediately. Use <code>SHIFT + PATTERN DOWN</code> for latch off and <code>SHIFT + PATTERN UP</code> for latch on. With builder latch on, source-pad taps add or remove notes from the builder until you change, invert, reset, or reload it. Use <code>SHIFT + encoder 4</code> on the <code>Channel</code> page, or <code>ALT + NOTE</code>, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.</p>
       <p>The preset banks are the more opinionated side of the mode. They use interval sets designed to move harmonic content without forcing a song key or a functional progression. Many of the voicings are deliberately open, so they tolerate inversion, transposition, and scale remapping better than tightly closed block chords. Changing shared <code>Root Key</code> or <code>Scale</code> does not move to a different preset slot; it changes how the selected slot is rendered.</p>
       <p>The preset slots are also ordered to keep neighboring chords in a similar sounding range. The voicing generator favors stable outer contours, especially the bass and top note, so stepping through a bank tends to change the internal color without making the whole part jump wildly around the keyboard.</p>
       <p><code>Raw</code> interpretation keeps the chord shape as semitone intervals from the current root. This is useful when you want the exact color of the stored formula: dominant, diminished, quartal, cluster, sus, or drone shapes. <code>InKey</code> interpretation casts the formula through the current Bitwig scale, so the same slot becomes a scale-aware color shape. This is good for modal writing, parallel harmonic color, and material that will later pass through Bitwig scale-aware devices.</p>
@@ -650,8 +661,8 @@
       </tbody>
       </table>
       <p>Use the builder when you want to define the chord yourself from the current scale. Use the preset banks when you want harmonic color that can stay on one tonal center, shift with a mode, cast into another scale, or produce suspended / quartal / cluster material without writing a functional chord progression.</p>
-      <h4>Melodic Step background</h4>
-      <p><code>Melodic Step</code> generates mono phrases, then lets you edit them as normal steps. All engines write into the current pitch pool and shared pitch context, but each engine has a different phrase grammar.</p>
+      <h4>Melo Gen background</h4>
+      <p><code>Melo Gen</code> generates mono phrases, then lets you edit them as normal steps. All engines write into the current pitch pool and shared pitch context, but each engine has a different phrase grammar.</p>
       <table>
         <thead><tr><th>Engine</th><th>Tendency</th></tr></thead>
         <tbody>
@@ -678,6 +689,7 @@
         <li><code>Exclusive Track Arm</code>: record-arm buttons select the armed track and disarm the other visible strips when enabled; defaults off for standard multi-arm behavior</li>
         <li><code>Audition on drum pad select</code></li>
         <li><code>Drum accent buttons momentary</code></li>
+        <li><code>Show deactivated tracks</code>: includes deactivated tracks in Launch Control XL factory track banks; defaults off so deactivated tracks are skipped</li>
       </ul>
       <h3>Akai Fire preferences</h3>
       <ul>
@@ -698,6 +710,8 @@
         <li><code>Pad Saturation</code></li>
         <li><code>Encoder touch reset</code>: enables the touch-and-hold reset gesture on resettable encoders</li>
         <li><code>Screen Message Hold</code></li>
+        <li><code>Idle Perf &amp; Drum OLED</code>: choose contextual idle text/values or visible-track/pad meters for Perform and Drum XOX</li>
+        <li><code>Encoder Legend Position</code>: choose whether compact OLED encoder legends appear on the bottom or top row</li>
         <li><code>Euclid Scope</code></li>
         <li><code>Drum Mode Pinning</code></li>
         <li><code>Exclusive Track Arm</code>: arm pads select the armed track and disarm other visible tracks when enabled; defaults off for standard multi-arm behavior</li>
@@ -706,7 +720,7 @@
       </ul>
       <p><code>Startup Mode</code> chooses the first active Akai Fire page when the extension starts. The available startup pages are <code>Note</code>, <code>Harmony</code>, <code>Drum XOX</code>, <code>Launcher</code>, and <code>Mix</code>.</p>
       <p><code>Pad Brightness</code> and <code>Pad Saturation</code> interact with the Bitwig track colors used by <code>DRUM</code> and <code>PERFORM</code>, so the same settings can read differently across different project palettes.</p>
-      <p><code>Melodic Seed Mode</code> controls how <code>Melodic Step</code> chooses its initial generator seed when the controller session starts. <code>Random</code> starts each session from a new seed. <code>Fixed</code> starts from the configured <code>Melodic Fixed Seed</code> value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each <code>Generate</code> press still advances forward from that starting point.</p>
+      <p><code>Melodic Seed Mode</code> controls how <code>Melo Gen</code> chooses its initial generator seed when the controller session starts. <code>Random</code> starts each session from a new seed. <code>Fixed</code> starts from the configured <code>Melodic Fixed Seed</code> value, which makes the sequence of generated melodic phrases reproducible across reconnects or reloads. Each <code>Generate</code> press still advances forward from that starting point.</p>
       <p>The melodic seed controls are grouped into their own <code>Generative control</code> preference section so they stay together in Bitwig's settings UI.</p>
       <h2>Troubleshooting</h2>
       <h3>The wrong device is being controlled</h3>

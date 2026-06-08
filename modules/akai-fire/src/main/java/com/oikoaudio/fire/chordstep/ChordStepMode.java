@@ -414,7 +414,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return;
         }
         if (pressed) {
-            driver.enterMelodicStepMode();
+            driver.enterPlainStepPressTarget();
         }
     }
 
@@ -498,8 +498,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void toggleBuilderNoteOffset(final int sourcePadIndex) {
-                ChordStepMode.this.toggleBuilderNoteOffset(sourcePadIndex);
+            public boolean handleBuilderSourcePad(final int sourcePadIndex, final boolean pressed) {
+                return ChordStepMode.this.handleBuilderSourcePad(sourcePadIndex, pressed);
             }
 
             @Override
@@ -647,13 +647,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void enterFugueStepMode() {
-                driver.enterFugueStepMode();
-            }
-
-            @Override
-            public void enterMelodicStepMode() {
-                driver.enterMelodicStepMode();
+            public void enterPlainStepPressTarget() {
+                driver.enterPlainStepPressTarget();
             }
 
             @Override
@@ -757,6 +752,21 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             @Override
             public void page(final int direction) {
                 pageChordSteps(direction);
+            }
+
+            @Override
+            public void showPageInfo() {
+                showChordPageInfo();
+            }
+
+            @Override
+            public boolean isShiftHeld() {
+                return driver.isGlobalShiftHeld();
+            }
+
+            @Override
+            public void setBuilderLatchEnabled(final boolean enabled) {
+                ChordStepMode.this.setBuilderLatchEnabled(enabled);
             }
 
             @Override
@@ -885,6 +895,16 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             @Override
             public void adjustChordInterpretation(final int amount) {
                 ChordStepMode.this.adjustChordInterpretation(amount);
+            }
+
+            @Override
+            public void setBuilderLayoutInKey(final boolean inKey) {
+                ChordStepMode.this.setBuilderLayoutInKey(inKey);
+            }
+
+            @Override
+            public void showBuilderLayoutInfo() {
+                ChordStepMode.this.showBuilderLayoutInfo();
             }
 
             @Override
@@ -1148,7 +1168,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         clearTranslation();
         syncEncoderLayers();
         refreshChordStepObservation();
-        ensureBuilderSeededIfEmpty();
         if (chordPageCount() > 1) {
             showChordPageInfo();
         } else {
@@ -1335,6 +1354,15 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private void toggleBuilderLayout() {
         chordBuilder.toggleLayout();
+        showBuilderLayoutInfo();
+    }
+
+    private void setBuilderLayoutInKey(final boolean inKey) {
+        chordBuilder.setInKey(inKey);
+        showBuilderLayoutInfo();
+    }
+
+    private void showBuilderLayoutInfo() {
         oled.valueInfo("Builder Layout", chordBuilder.layoutDisplayName());
         driver.notifyPopup("Builder Layout", chordBuilder.layoutDisplayName());
     }
@@ -1429,9 +1457,17 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void showCurrentChord() {
+        if (isBuilderFamily()) {
+            showBuilderContents();
+            return;
+        }
         oled.valueInfo("%s %d/%d".formatted(currentChordFamilyLabel(), chordSelection.page() + 1,
                         currentChordPageCount()),
                 "%s %s".formatted(currentChordName(), chordInterpretationSuffix()));
+    }
+
+    private void showBuilderContents() {
+        oled.valueInfo("Builder", currentChordName());
     }
 
     private String currentChordDisplay() {
@@ -1444,10 +1480,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private int[] renderSelectedChord() {
         return chordSelection.renderSelectedChord(getScale(), getRootNote());
-    }
-
-    private void ensureBuilderSeededIfEmpty() {
-        chordBuilder.ensureSeededIfEmpty();
     }
 
     private int getChordRootMidi() {
@@ -1474,8 +1506,14 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         return chordSelection.chordName();
     }
 
-    private void toggleBuilderNoteOffset(final int padIndex) {
-        chordBuilder.toggleNoteOffset(padIndex);
+    private boolean handleBuilderSourcePad(final int padIndex, final boolean pressed) {
+        return chordBuilder.handleSourcePad(padIndex, pressed);
+    }
+
+    private void setBuilderLatchEnabled(final boolean enabled) {
+        chordBuilder.setLatchEnabled(enabled);
+        oled.valueInfo("Latch", chordBuilder.latchDisplayName());
+        driver.notifyPopup("Latch", chordBuilder.latchDisplayName());
     }
 
     private void showChordOctaveInfo() {

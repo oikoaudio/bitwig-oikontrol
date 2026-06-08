@@ -15,6 +15,8 @@ import com.bitwig.extensions.framework.Layer;
  * queued, and empty clip slots.
  */
 public class ClipRowHandler {
+    private static final String DEFAULT_LAUNCH_QUANTIZATION = "default";
+    private static final String FROM_START_LAUNCH_MODE = "from_start";
 
     private final SeqClipRowHost host;
     private final PinnableCursorClip cursorClip;
@@ -151,7 +153,7 @@ public class ClipRowHandler {
             case CYCLE_COLOR -> slot.color().set(getSlotColor(slot));
             case SELECT_AND_LAUNCH -> {
                 slot.select();
-                slot.launch();
+                slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
             }
             case CREATE_EMPTY -> {
                 slot.createEmptyClip(host.getClipCreateLengthBeats());

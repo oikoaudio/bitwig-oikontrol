@@ -23,6 +23,7 @@ import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -161,7 +162,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.noteInput = driver.getNoteInput();
 
         final ControllerHost host = driver.getHost();
-        this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melodic Step", 8, CLIP_ROW_PAD_COUNT, true);
+        this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melo Gen", 8, CLIP_ROW_PAD_COUNT, true);
         this.cursorTrack.name().markInterested();
         this.cursorTrack.canHoldNoteData().markInterested();
         this.clipSlotBank = cursorTrack.clipLauncherSlotBank();
@@ -176,7 +177,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             rebuildCachedPattern();
         });
         final PinnableCursorDevice cursorDevice = cursorTrack.createCursorDevice("MELODIC_STEP_DEVICE",
-                "Melodic Step Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
+                "Melo Gen Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.remoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
         for (int i = 0; i < remoteControlsPage.getParameterCount(); i++) {
             ParameterEncoderBinding.markInterested(remoteControlsPage.getParameter(i));
@@ -2024,6 +2025,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
                 "1: Engine\n2: Density\n3: Pool Oct\n4: Mut Type",
+                EncoderFooterLegend.of("Engn", "Dens", "Pool", "MutT"),
                 new EncoderSlotBinding[]{
                         engineSlot(),
                         densitySlot(),
@@ -2041,6 +2043,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch",
+                EncoderFooterLegend.of("Velo", "Pres", "Timb", "Ptch"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.VELOCITY),
                         noteAccessSlot(NoteStepAccess.PRESSURE),
@@ -2049,6 +2052,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Gate Len\n2: Chance\n3: Vel Spread\n4: Repeat",
+                EncoderFooterLegend.of("GLen", "Chnc", "VSpr", "Rpt"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.DURATION),
                         noteAccessSlot(NoteStepAccess.CHANCE),

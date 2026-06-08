@@ -10,6 +10,7 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
@@ -161,7 +162,8 @@ final class ChordStepEncoderControls {
     private EncoderBankLayout createLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Octave/Root\n2: Velocity\n3: Chord Family\n4: Interpret/Invert",
+                "1: Oct/Root/Scale\n2: Velocity\n3: Chord Family\n4: Int/Inv/Layout",
+                EncoderFooterLegend.of("RScO", "Velo", "Chrd", "Intr"),
                 new EncoderSlotBinding[]{
                         chordPitchContextSlot(),
                         chordBuildVelocitySlot(),
@@ -186,6 +188,7 @@ final class ChordStepEncoderControls {
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
+                EncoderFooterLegend.of("Velo", "Pres", "Timb", "PExp"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.VELOCITY),
                         noteAccessSlot(NoteStepAccess.PRESSURE),
@@ -194,6 +197,7 @@ final class ChordStepEncoderControls {
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
+                EncoderFooterLegend.of("Len", "Chnc", "VSpr", "Rpt"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.DURATION),
                         noteAccessSlot(NoteStepAccess.CHANCE),
@@ -229,6 +233,14 @@ final class ChordStepEncoderControls {
             public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
+                    final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                    if (scaleContext) {
+                        if (inc != 0) {
+                            handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
+                            host.adjustChordSharedScale(inc);
+                        }
+                        return;
+                    }
                     final boolean rootContext = driver.isGlobalAltHeld();
                     final EncoderStepAccumulator accumulator = rootContext ? chordRootEncoder : chordOctaveEncoder;
                     final int amount = accumulator.consume(inc);
@@ -245,6 +257,16 @@ final class ChordStepEncoderControls {
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
+                        final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                        if (scaleContext) {
+                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset",
+                                    () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
+                                return;
+                            }
+                            handler.beginTouchReset(slotIndex, () -> { });
+                            oled.valueInfo("Scale", host.getScaleDisplayName());
+                            return;
+                        }
                         final boolean rootContext = driver.isGlobalAltHeld();
                         if (driver.handleKnobModeEncoderReset(true, true, rootContext ? "Root" : "Octave",
                                 "No reset", () -> {
@@ -410,8 +432,8 @@ final class ChordStepEncoderControls {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0) {
                         handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                        if (driver.isGlobalShiftHeld()) {
-                            host.adjustChordSharedScale(inc);
+                        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                            host.setBuilderLayoutInKey(inc > 0);
                         } else if (driver.isGlobalAltHeld()) {
                             host.invertCurrentChord(inc > 0 ? 1 : -1);
                         } else {
@@ -421,13 +443,13 @@ final class ChordStepEncoderControls {
                 });
                 encoder.bindTouched(layer, touched -> {
                     if (touched) {
-                        if (driver.isGlobalShiftHeld()) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset",
-                                    () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
+                        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                            if (driver.handleKnobModeEncoderReset(true, false, "Builder Layout", "No reset",
+                                    () -> { }, host::showBuilderLayoutInfo)) {
                                 return;
                             }
                             handler.beginTouchReset(slotIndex, () -> { });
-                            oled.valueInfo("Scale", host.getScaleDisplayName());
+                            host.showBuilderLayoutInfo();
                             return;
                         }
                         if (driver.isGlobalAltHeld()) {
@@ -498,6 +520,10 @@ final class ChordStepEncoderControls {
         void invertCurrentChord(int direction);
 
         void adjustChordInterpretation(int amount);
+
+        void setBuilderLayoutInKey(boolean inKey);
+
+        void showBuilderLayoutInfo();
 
         void resetChordInterpretation();
 

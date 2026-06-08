@@ -10,6 +10,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -122,6 +123,7 @@ public final class FugueStepMode extends Layer {
                 regenerateAllDerivedLines();
             }
         }, () -> BiColorLightState.AMBER_HALF);
+        applyEncoderFooterLegend();
         showEncoderModeInfo();
         oled.clearScreenDelayed();
     }
@@ -131,6 +133,7 @@ public final class FugueStepMode extends Layer {
         active = false;
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
+        oled.setFooterLegend(null);
     }
 
     private PadBankRowControlBindings.Host fugueStepControlBindingsHost() {
@@ -813,6 +816,7 @@ public final class FugueStepMode extends Layer {
 
     private void selectEncoderMode(final EncoderMode mode) {
         activeEncoderMode = mode;
+        applyEncoderFooterLegend();
         showEncoderModeInfo();
         oled.clearScreenDelayed();
     }
@@ -823,6 +827,12 @@ public final class FugueStepMode extends Layer {
             return;
         }
         oled.detailInfo(lineLabel(activeLineIndex()), "1 Dir\n2 Tempo\n3 Start\n4 Pitch");
+    }
+
+    private void applyEncoderFooterLegend() {
+        oled.setFooterLegend(activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL
+                ? EncoderFooterLegend.of("Root", "Scal", "Lgth", "Strt")
+                : EncoderFooterLegend.of("Dir", "Temp", "Strt", "Ptch"));
     }
 
     private void selectLine(final int line) {

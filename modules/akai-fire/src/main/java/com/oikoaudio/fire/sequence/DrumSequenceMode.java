@@ -8,6 +8,7 @@ import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -891,6 +892,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     public boolean showIdleInfoIfNeeded() {
         if (!shouldShowDrumMeters()) {
+            resetDrumMeterDisplay();
             return false;
         }
         showDrumMeterDisplay();
@@ -921,10 +923,13 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private void refreshDrumMetersIfVisible(final int blinkTicks) {
         if (!shouldShowDrumMeters()) {
-            drumMeterDisplayActive = false;
+            resetDrumMeterDisplay();
             return;
         }
         if (System.currentTimeMillis() < drumMeterSuppressedUntilMs) {
+            return;
+        }
+        if (shouldShowDrumContextIdle() && drumMeterDisplayActive) {
             return;
         }
         if (!drumMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
@@ -937,14 +942,42 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private void showDrumMeterDisplay() {
         if (encoderLayer.getEncoderMode() == EncoderMode.MIXER) {
             padHandler.showSelectedPadMeterDisplay();
+        } else if (shouldShowDrumContextIdle()) {
+            padHandler.showSelectedPadContextDisplay(getEncoderFooterLegend(encoderLayer.getEncoderMode()));
         } else {
-            padHandler.showDrumPadMeterDisplay();
+            padHandler.showDrumPadMeterDisplay(getEncoderFooterLegend(encoderLayer.getEncoderMode()));
         }
     }
 
+    private void resetDrumMeterDisplay() {
+        drumMeterDisplayActive = false;
+        padHandler.resetSelectedPadMeterDisplay();
+    }
+
     private boolean shouldShowDrumMeters() {
-        return active && !shiftActive.get() && !muteMode.get() && !soloMode.get()
-                && !selectHeld.get() && !copyHeld.get() && !deleteHeld.get();
+        return shouldShowDrumMeters(active, shiftActive.get(), muteMode.get(), soloMode.get(),
+                selectHeld.get(), copyHeld.get(), deleteHeld.get(),
+                driver.shouldShowMeterIdleDisplay() && !oled.hasPendingTransientMessage());
+    }
+
+    static boolean shouldShowDrumMeters(final boolean active,
+                                        final boolean shiftActive,
+                                        final boolean muteMode,
+                                        final boolean soloMode,
+                                        final boolean selectHeld,
+                                        final boolean copyHeld,
+                                        final boolean deleteHeld,
+                                        final boolean meterIdleAllowed) {
+        return active && !shiftActive && !muteMode && !soloMode
+                && !selectHeld && !copyHeld && !deleteHeld && meterIdleAllowed;
+    }
+
+    private boolean shouldShowDrumContextIdle() {
+        return shouldShowDrumContextIdle(encoderLayer.getEncoderMode(), driver.isIdleOledMetersEnabled());
+    }
+
+    static boolean shouldShowDrumContextIdle(final EncoderMode mode, final boolean idleMetersEnabled) {
+        return mode != EncoderMode.MIXER && !idleMetersEnabled;
     }
 
     public OledDisplay getOled() {
@@ -1295,10 +1328,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         stepPadSurface.clearRecurrenceHold();
     }
 
-    public void retrigger() {
-        cursorClip.launch();
-    }
-
     public StepViewPosition getPositionHandler() {
         return positionHandler;
     }
@@ -1426,6 +1455,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
         banks.put(EncoderMode.CHANNEL, new EncoderBank(
                 "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
+                EncoderFooterLegend.of("Len", "Chnc", "VSpr", "Rpt"),
                 new EncoderSlotBinding[]{
                         noteAccessSlot(NoteStepAccess.DURATION),
                         noteAccessSlot(NoteStepAccess.CHANCE),
@@ -1442,6 +1472,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 }));
         banks.put(EncoderMode.USER_1, new EncoderBank(
                 "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
+                EncoderFooterLegend.of("Velo", "Pres", "Timb", "PExp"),
                 new EncoderSlotBinding[]{
                         drumExpressionSlot(NoteStepAccess.VELOCITY, this::showDefaultVelocity, this::resetDefaultVelocity,
                                 (handler, inc) -> adjustUser1Velocity(handler, inc), 0.25),
@@ -1454,6 +1485,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 }));
         banks.put(EncoderMode.USER_2, new EncoderBank(
                 "1: Euclid Len\n2: Euclid Pulses\n3: Euclid Rotation\n4: Accent Density",
+                EncoderFooterLegend.of("ELen", "EPul", "ERot", "ADen"),
                 new EncoderSlotBinding[]{
                         euclidSlot(0),
                         euclidSlot(1),
@@ -1492,7 +1524,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     if (padHandler.adjustMixerParameter(index, inc)) {
                         padHandler.showMixerDisplay(index, name);
                     } else {
-                        suppressDrumMeterDisplay();
                         oled.valueInfo("Mixer", "Select Pad");
                     }
                 });
@@ -1506,7 +1537,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         }
                         padHandler.showMixerDisplay(index, name);
                     } else {
-                        suppressDrumMeterDisplay();
                         oled.clearScreenDelayed();
                     }
                 });
@@ -1646,7 +1676,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return;
         }
         if (pressed) {
-            driver.enterMelodicStepMode();
+            driver.enterPlainStepPressTarget();
         }
     }
 

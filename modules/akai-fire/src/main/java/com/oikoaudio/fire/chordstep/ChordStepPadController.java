@@ -36,7 +36,7 @@ public final class ChordStepPadController {
 
         void showCurrentChord();
 
-        void toggleBuilderNoteOffset(int sourcePadIndex);
+        boolean handleBuilderSourcePad(int sourcePadIndex, boolean pressed);
 
         void applyBuilderToHeldSteps();
 
@@ -150,9 +150,10 @@ public final class ChordStepPadController {
     private void handleBuilderSourcePadPress(final int sourcePadIndex, final boolean pressed) {
         if (!pressed) {
             host.stopAuditionNotes();
+        }
+        if (!host.handleBuilderSourcePad(sourcePadIndex, pressed)) {
             return;
         }
-        host.toggleBuilderNoteOffset(sourcePadIndex);
         host.applyBuilderToHeldSteps();
         if (host.isStepAuditionEnabled()) {
             host.startAuditionSelectedChord();

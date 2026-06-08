@@ -20,15 +20,15 @@ class TopLevelModeStateTest {
     }
 
     @Test
-    void melodicExitReturnsToPreviousNonStepMode() {
+    void melodicExitFallsBackToNotePlayIfPreviousWasChordStep() {
         final TopLevelModeState state = new TopLevelModeState();
         state.activateChordStep();
 
         state.enterMelodicStepMode();
 
         assertEquals(TopLevelModeState.Mode.MELODIC_STEP, state.activeMode());
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.exitMelodicStepMode());
-        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.activeMode());
+        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.exitMelodicStepMode());
+        assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.activeMode());
     }
 
     @Test
@@ -49,6 +49,71 @@ class TopLevelModeStateTest {
         state.enterMelodicStepMode();
 
         assertEquals(TopLevelModeState.Mode.NOTE_PLAY, state.exitMelodicStepMode());
+    }
+
+    @Test
+    void plainStepPressCycleStartsWithChordStepThenMelodicGeneratorThenFugue() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.plainStepPressTarget());
+
+        state.activateChordStep();
+        assertEquals(TopLevelModeState.Mode.MELODIC_STEP, state.plainStepPressTarget());
+
+        state.enterMelodicStepMode();
+        assertEquals(TopLevelModeState.Mode.FUGUE_STEP, state.plainStepPressTarget());
+
+        state.activateFugueStep();
+        assertEquals(TopLevelModeState.Mode.CHORD_STEP, state.plainStepPressTarget());
+    }
+
+    @Test
+    void stepButtonRestoresLastStepModeWhenReEnteringStepFamily() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        state.activateFugueStep();
+        state.activatePerform();
+
+        assertEquals(TopLevelModeState.Mode.FUGUE_STEP, state.plainStepPressTarget());
+    }
+
+    @Test
+    void drumButtonRestoresLastDrumModeWhenReEnteringDrumFamily() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        assertEquals(TopLevelModeState.DrumMode.STANDARD, state.activeDrumMode());
+        state.cycleDrumMode();
+        assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.activeDrumMode());
+
+        state.activatePerform();
+        state.activateDrum();
+
+        assertEquals(TopLevelModeState.Mode.DRUM, state.activeMode());
+        assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.activeDrumMode());
+    }
+
+    @Test
+    void performButtonRestoresLastPerformModeWhenReEnteringPerformFamily() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        assertEquals(TopLevelModeState.PerformMode.LAUNCHER, state.activePerformMode());
+
+        state.activatePerform(TopLevelModeState.PerformMode.MIX);
+        state.activateDrum();
+        state.activatePerform();
+
+        assertEquals(TopLevelModeState.Mode.PERFORM, state.activeMode());
+        assertEquals(TopLevelModeState.PerformMode.MIX, state.activePerformMode());
+    }
+
+    @Test
+    void startupCanSetPerformDefaultWithoutLosingLauncherDefaultForOtherSessions() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        state.activatePerform(TopLevelModeState.PerformMode.MIX);
+
+        assertEquals(TopLevelModeState.Mode.PERFORM, state.activeMode());
+        assertEquals(TopLevelModeState.PerformMode.MIX, state.activePerformMode());
     }
 
     @Test

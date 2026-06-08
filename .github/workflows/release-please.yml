@@ -25,13 +25,9 @@ jobs:
         if: steps.release.outputs.release_created == 'true'
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up mise
         if: steps.release.outputs.release_created == 'true'
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: gradle
+        uses: jdx/mise-action@v2
 
       - name: Install just
         if: steps.release.outputs.release_created == 'true'

@@ -26,6 +26,7 @@ import com.bitwig.extensions.framework.Layer;
 public class StepSequencerEncoderLayer extends Layer {
     private static final long TOUCH_RESET_HOLD_MS = 750L;
     private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
+    private static final long MODE_INFO_HOLD_MS = 2000L;
     private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private final StepSequencerHost parent;
     private final AkaiFireOikontrolExtension driver;
@@ -196,6 +197,7 @@ public class StepSequencerEncoderLayer extends Layer {
             return;
         }
 		if (parent.isSelectHeld()) { // display encoder details on select + mode
+            applyFooterLegend();
 			oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
 		} else {
 			switchMode(nextMode());
@@ -210,8 +212,9 @@ public class StepSequencerEncoderLayer extends Layer {
 		currentLayer.activate();
 		applyResolution(encoderMode);
 		parent.handleEncoderModeChanged(encoderMode);
+        applyFooterLegend();
 		oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
-		oled.clearScreenDelayed();
+		oled.clearScreenDelayed(MODE_INFO_HOLD_MS);
 	}
 
 
@@ -411,11 +414,17 @@ public class StepSequencerEncoderLayer extends Layer {
 	protected void onActivate() {
 		currentLayer.activate();
 		applyResolution(encoderMode);
+        applyFooterLegend();
 	}
 
 	@Override
 	protected void onDeactivate() {
 		currentLayer.deactivate();
+        oled.setFooterLegend(null);
 	}
+
+    private void applyFooterLegend() {
+        oled.setFooterLegend(parent.getEncoderFooterLegend(encoderMode));
+    }
 
 }

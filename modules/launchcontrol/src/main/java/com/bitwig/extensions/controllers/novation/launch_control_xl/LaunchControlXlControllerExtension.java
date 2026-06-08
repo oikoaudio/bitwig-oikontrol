@@ -67,8 +67,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    static final int[] TRACK_CONTROL_NOTES = {73, 74, 75, 76, 89, 90, 91, 92};
    static final int[] KNOB_CC_OFFSETS = {13, 29, 49};
    static final int SLIDER_CC_BASE = 77;
-   private static final int STRIP_COUNT = 8;
-   private static final int TRACK_BANK_WIDTH = 32;
+   static final int STRIP_COUNT = 8;
+   static final int TRACK_PAGE_SELECTION_DELAY_MS = 75;
    private static final int SEND_UP_CC = 104;
    private static final int SEND_DOWN_CC = 105;
    private static final int TRACK_LEFT_CC = 106;
@@ -206,13 +206,16 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          markParameterInterested(mProjectRemoteControlsCursor.getParameter(i));
       }
 
-      mTrackBank = mHost.createMainTrackBank(TRACK_BANK_WIDTH, 3, 0);
+      mTrackBank = mHost.createMainTrackBank(STRIP_COUNT, 3, 0);
       mTrackBank.followCursorTrack(mCursorTrack);
+      mTrackBank.setShouldShowClipLauncherFeedback(true);
+      applyTrackVisibilityPreference(mDrumSettings.showDeactivatedTracksEnabled());
+      mDrumSettings.showDeactivatedTracks().addValueObserver(this::applyTrackVisibilityPreference);
       mTrackBank.canScrollBackwards().markInterested();
       mTrackBank.canScrollForwards().markInterested();
 
       mTrackBank.cursorIndex().markInterested();
-      for (int i = 0; i < TRACK_BANK_WIDTH; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final Track track = mTrackBank.getItemAt(i);
          track.solo().markInterested();
@@ -500,8 +503,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          for (int i = 0; i < STRIP_COUNT; ++i)
             scrollSendBank(i, 1);
       });
-      mMainLayer.bindPressed(mBtTrackLeft, mTrackBank.scrollBackwardsAction());
-      mMainLayer.bindPressed(mBtTrackRight, mTrackBank.scrollForwardsAction());
+      mMainLayer.bindPressed(mBtTrackLeft, () -> scrollTrackBankPage(-1));
+      mMainLayer.bindPressed(mBtTrackRight, () -> scrollTrackBankPage(1));
       mMainLayer.bindPressed(mBtDevice, () -> setDeviceOn(true));
       mMainLayer.bindReleased(mBtDevice, () -> setDeviceOn(false));
       mMainLayer.bindPressed(mBtMute, () -> toggleTrackControl(TrackControl.Mute));
@@ -1033,6 +1036,31 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
    }
 
+   private void scrollTrackBankPage(final int direction)
+   {
+      if (direction < 0)
+      {
+         if (!mTrackBank.canScrollBackwards().get())
+         {
+            return;
+         }
+         mTrackBank.scrollPageBackwards();
+      }
+      else if (direction > 0)
+      {
+         if (!mTrackBank.canScrollForwards().get())
+         {
+            return;
+         }
+         mTrackBank.scrollPageForwards();
+      }
+      else
+      {
+         return;
+      }
+      mHost.scheduleTask(() -> selectTrackStrip(0), TRACK_PAGE_SELECTION_DELAY_MS);
+   }
+
    private void selectTrackStrip(final int stripIndex)
    {
       final Track track = trackForStrip(stripIndex);
@@ -1095,14 +1123,12 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
    private RemoteControl deviceParamForStrip(final int stripIndex, final int paramIndex)
    {
-      final int sourceTrackIndex = sourceTrackIndexForStrip(stripIndex);
-      return sourceTrackIndex >= 0 ? deviceParam(sourceTrackIndex, paramIndex) : null;
+      return trackForStrip(stripIndex) != null ? deviceParam(stripIndex, paramIndex) : null;
    }
 
    private RemoteControl trackParamForStrip(final int stripIndex, final int paramIndex)
    {
-      final int sourceTrackIndex = sourceTrackIndexForStrip(stripIndex);
-      return sourceTrackIndex >= 0 ? mTrackRemoteControls[sourceTrackIndex].getParameter(paramIndex) : null;
+      return trackForStrip(stripIndex) != null ? mTrackRemoteControls[stripIndex].getParameter(paramIndex) : null;
    }
 
    private SendBank sendBankForStrip(final int stripIndex)
@@ -1113,30 +1139,12 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
    private Track trackForStrip(final int stripIndex)
    {
-      final int sourceTrackIndex = sourceTrackIndexForStrip(stripIndex);
-      return sourceTrackIndex >= 0 ? mTrackBank.getItemAt(sourceTrackIndex) : null;
-   }
-
-   private int sourceTrackIndexForStrip(final int stripIndex)
-   {
       if (stripIndex < 0 || stripIndex >= STRIP_COUNT)
       {
-         return -1;
+         return null;
       }
-      int visible = 0;
-      for (int sourceTrackIndex = 0; sourceTrackIndex < TRACK_BANK_WIDTH; sourceTrackIndex++)
-      {
-         final Track track = mTrackBank.getItemAt(sourceTrackIndex);
-         if (isControllableTrack(track))
-         {
-            if (visible == stripIndex)
-            {
-               return sourceTrackIndex;
-            }
-            visible++;
-         }
-      }
-      return -1;
+      final Track track = mTrackBank.getItemAt(stripIndex);
+      return isControllableTrack(track) ? track : null;
    }
 
    private boolean isControllableTrack(final Track track)
@@ -1144,6 +1152,19 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       return track != null
          && track.exists().get()
          && (mDrumSettings != null && mDrumSettings.showDeactivatedTracksEnabled() || track.isActivated().get());
+   }
+
+   static boolean trackVisibilityShouldSkipDisabled(final boolean showDeactivatedTracks)
+   {
+      return !showDeactivatedTracks;
+   }
+
+   private void applyTrackVisibilityPreference(final boolean showDeactivatedTracks)
+   {
+      if (mTrackBank != null)
+      {
+         mTrackBank.setSkipDisabledItems(trackVisibilityShouldSkipDisabled(showDeactivatedTracks));
+      }
    }
 
    /**
@@ -1368,7 +1389,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
    private void setSizeOfSendBank(final int size)
    {
-      for (int i = 0; i < TRACK_BANK_WIDTH; ++i)
+      for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final Track track = mTrackBank.getItemAt(i);
          final SendBank sendBank = track.sendBank();
@@ -1497,11 +1518,10 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final int sourceTrackIndex = sourceTrackIndexForStrip(i);
-         final Track track = sourceTrackIndex >= 0 ? mTrackBank.getItemAt(sourceTrackIndex) : null;
+         final Track track = trackForStrip(i);
          final boolean trackExists = track != null;
          final int defaultFocusColor = trackExists
-            ? (selectedTrack == sourceTrackIndex ? SimpleLedColor.Amber.value() : SimpleLedColor.AmberLow.value())
+            ? (selectedTrack == i ? SimpleLedColor.Amber.value() : SimpleLedColor.AmberLow.value())
             : SimpleLedColor.Off.value();
          final int focusColor = mArpLayerController != null
             ? mArpLayerController.applyFocusColor(i, defaultFocusColor)
@@ -1839,9 +1859,9 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private PinnableCursorDevice mCursorDevice;
    private CursorRemoteControlsPage mRemoteControls;
    private final CursorRemoteControlsPage[] mDeviceRemotePages = new CursorRemoteControlsPage[7];
-   private final CursorDevice[] mTrackDeviceCursors = new CursorDevice[TRACK_BANK_WIDTH];
-   private final CursorRemoteControlsPage[] mTrackCursorDeviceRemoteControls = new CursorRemoteControlsPage[TRACK_BANK_WIDTH];
-   private final CursorRemoteControlsPage[] mTrackRemoteControls = new CursorRemoteControlsPage[TRACK_BANK_WIDTH];
+   private final CursorDevice[] mTrackDeviceCursors = new CursorDevice[STRIP_COUNT];
+   private final CursorRemoteControlsPage[] mTrackCursorDeviceRemoteControls = new CursorRemoteControlsPage[STRIP_COUNT];
+   private final CursorRemoteControlsPage[] mTrackRemoteControls = new CursorRemoteControlsPage[STRIP_COUNT];
    private boolean mDevicePerTrackSupported;
    private CursorRemoteControlsPage mProjectRemoteControlsCursor;
    private RhArpLayerController mArpLayerController;

@@ -33,8 +33,10 @@ import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.TouchResetGesture;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay;
+import com.oikoaudio.fire.display.PeakRmsOledView;
 import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.display.VuMeterPeakHold;
 import com.oikoaudio.fire.lights.BiColorLightState;
@@ -45,6 +47,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PerformClipLauncherMode extends Layer {
+    private static final String DEFAULT_LAUNCH_QUANTIZATION = "default";
+    private static final String FROM_START_LAUNCH_MODE = "from_start";
+
     private enum TrackActionRow {
         SELECT(0, "Select", new RgbLigthState(0, 96, 96, true)),
         SOLO(1, "Solo", new RgbLigthState(96, 96, 0, true)),
@@ -95,9 +100,6 @@ public class PerformClipLauncherMode extends Layer {
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
     private static final int METER_REFRESH_TICKS = 1;
-    private static final String SELECTED_TRACK_METER_LEGEND = "Peak        | RMS";
-    private static final String MIXER_ENCODER_FOOTER = "Vol  Pan  S1  S2";
-    private static final String BLANK_TEXT_ROW = "                    ";
     private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
     private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
     private static final RgbLigthState BIRDS_EYE_AVAILABLE = new RgbLigthState(0, 36, 84, true);
@@ -182,8 +184,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean birdsEyeMode = false;
     private boolean active = false;
     private boolean mixMeterDisplayActive = false;
-    private boolean selectedTrackMeterTextInitialized = false;
-    private boolean mixerEncoderFooterVisible = false;
+    private final PeakRmsOledView selectedTrackMeterView;
     private long mixMeterSuppressedUntilMs = 0;
     private PerformLayout layout = PerformLayout.vertical();
 
@@ -196,6 +197,7 @@ public class PerformClipLauncherMode extends Layer {
                 : PerformLayout.vertical();
         final ControllerHost host = driver.getHost();
         this.oled = driver.getOled();
+        this.selectedTrackMeterView = new PeakRmsOledView(oled);
         this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES, true);
         this.cursorTrack = driver.getViewControl().getCursorTrack();
         this.remoteCursorTrack = host.createCursorTrack("PERFORM_REMOTE_TRACK", "Perform Remote Track", 8, 0, true);
@@ -397,7 +399,7 @@ public class PerformClipLauncherMode extends Layer {
                         com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedMusicalContext.getRootNote()),
                         sharedMusicalContext.getScaleDisplayName(),
                         sharedMusicalContext.getOctave()));
-        clearTransientDisplayDelayed();
+        oled.clearScreenDelayed();
     }
 
     public boolean isSettingsMode() {
@@ -606,7 +608,7 @@ public class PerformClipLauncherMode extends Layer {
             final String label = fallbackLabels[i];
             ParameterEncoderBinding.bind(encoders[i], layer, index, parameter, label, this::isShiftHeld,
                     ParameterEncoderBinding.TouchResetControl.of(parameterResetHandler), mixerResetPolicy(index),
-                    driver.knobModeEncoderResetControl(), this::showTransientValueInfo, this::clearTransientDisplayDelayed);
+                    driver.knobModeEncoderResetControl(), this::showValueInfo, oled::clearScreenDelayed);
         }
     }
 
@@ -1147,13 +1149,13 @@ public class PerformClipLauncherMode extends Layer {
         }
 
         if (hasContent) {
-            slot.launch();
+            slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
             showValueInfo("Launch Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
             return;
         }
 
         slot.createEmptyClip(driver.getDefaultClipLengthBeats());
-        slot.launch();
+        slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
         showValueInfo("Create Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
     }
 
@@ -1698,11 +1700,12 @@ public class PerformClipLauncherMode extends Layer {
 
     private void switchEncoderMode(final EncoderMode newMode, final boolean showInfo) {
         encoderMode = newMode;
-        resetSelectedTrackMeterText();
+        resetMixMeterDisplay();
         currentEncoderLayer.deactivate();
         currentEncoderLayer = modeMapping.get(newMode);
         applyEncoderStepSizes();
         currentEncoderLayer.activate();
+        applyEncoderFooterLegend();
         if (showInfo) {
             if (isSettingsHeld()) {
                 showOverview();
@@ -1737,10 +1740,10 @@ public class PerformClipLauncherMode extends Layer {
             return "1: Root Key\n2: Scale\n3: Octave\n4: Global";
         }
         return switch (mode) {
-            case CHANNEL -> "1: Remote 1\n2: Remote 2\n3: Remote 3\n4: Remote 4";
+            case CHANNEL -> remoteModeInfo(projectRemoteControls, "Global Remotes", "G");
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
-            case USER_1 -> "1: Track Remote 1\n2: Track Remote 2\n3: Track Remote 3\n4: Track Remote 4";
-            case USER_2 -> "1: Device Remote 1\n2: Device Remote 2\n3: Device Remote 3\n4: Device Remote 4";
+            case USER_1 -> remoteModeInfo(trackRemoteControls, "Track Remotes", "T");
+            case USER_2 -> remoteModeInfo(deviceRemoteControls, "Device Remotes", "D");
         };
     }
 
@@ -1757,31 +1760,28 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showCurrentModeInfo() {
+        applyEncoderFooterLegend();
         if (birdsEyeMode) {
-            showTransientDetailInfo("Birds Eye", "Pads: Jump viewport\nSHIFT+ALT+PERFORM: Exit",
-                    driver.getScreenMessageHoldMs());
+            showTransientDetailInfo("Birds Eye", "Pads: Jump viewport\nSHIFT+ALT+PERFORM: Exit");
             return;
         }
         if (sceneActionMode) {
-            showTransientDetailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete",
-                    driver.getScreenMessageHoldMs());
+            showTransientDetailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete");
             return;
         }
-        showTransientDetailInfo(modeTitle(encoderMode), modeInfo(encoderMode), driver.getScreenMessageHoldMs());
+        showTransientDetailInfo(modeTitle(encoderMode), modeInfo(encoderMode));
     }
 
     private void showTrackActionInfo() {
         if (deviceLayerMixerMode) {
             showTransientDetailInfo("Device Layers",
-                    "Rows: Select/Solo/Mute/On\nPattern Up: Devices",
-                    driver.getScreenMessageHoldMs());
+                    "Rows: Select/Solo/Mute/On\nPattern Up: Devices");
             return;
         }
         if (mixDeviceToggleMode) {
             showTransientDetailInfo(mixDevicePageTitle(),
                     "Rows: %s\nPad: Select  ALT: On/Off\nPattern: Page/Mix/Layer"
-                            .formatted(mixDevicePageRangeLabel()),
-                    driver.getScreenMessageHoldMs());
+                            .formatted(mixDevicePageRangeLabel()));
             return;
         }
         showTransientDetailInfo("Mix",
@@ -1789,7 +1789,7 @@ public class PerformClipLauncherMode extends Layer {
                 TrackActionRow.SELECT.label,
                 TrackActionRow.SOLO.label,
                 TrackActionRow.MUTE.label,
-                TrackActionRow.ARM.label), driver.getScreenMessageHoldMs());
+                TrackActionRow.ARM.label));
     }
 
     private String mixDevicePageTitle() {
@@ -1803,6 +1803,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showPerformMeterDisplay() {
+        if (shouldShowPerformTrackLegendIdle()) {
+            showPerformTrackLegendIdle();
+            return;
+        }
         if (encoderMode == EncoderMode.MIXER) {
             showSelectedTrackMeterDisplay();
         } else {
@@ -1813,8 +1817,10 @@ public class PerformClipLauncherMode extends Layer {
     private void showVisibleTrackMeterDisplay() {
         resetSelectedTrackMeterText();
         trackPeakHoldMeters.decay();
-        oled.sendImage(OledMeterRenderer.verticalMeters(visibleTrackMeterValues(), visibleTrackPeakHoldValues(),
-                visibleTrackMutedValues(), visibleTrackCount()));
+        oled.sendImageWithFooter(OledMeterRenderer.verticalMetersWithFooter(
+                        visibleTrackMeterValues(), visibleTrackPeakHoldValues(),
+                        visibleTrackMutedValues(), visibleTrackCount(), oled.footerLegendPosition()),
+                encoderFooterLegend(encoderMode));
     }
 
     private void showSelectedTrackMeterDisplay() {
@@ -1834,16 +1840,7 @@ public class PerformClipLauncherMode extends Layer {
         final int maxRms = isSelectedMeterTrack(trackAddress) ? selectedTrackRmsMax : currentRms;
         final int currentPeak = trackPeakMeters[source];
         final int maxPeak = isSelectedMeterTrack(trackAddress) ? selectedTrackPeakMax : currentPeak;
-        if (!selectedTrackMeterTextInitialized) {
-            clearSelectedTrackMeterRows();
-            oled.sendString(0, OledDisplay.TextJustification.LEFT, 0, SELECTED_TRACK_METER_LEGEND);
-            showMixerEncoderFooter();
-            selectedTrackMeterTextInitialized = true;
-        }
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, 1,
-                VuMeterFormatter.meterPairLine(maxPeak, maxRms));
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, 4,
-                VuMeterFormatter.meterPairLine(currentPeak, currentRms));
+        selectedTrackMeterView.show(maxPeak, maxRms, currentPeak, currentRms, EncoderFooterLegend.MIXER);
     }
 
     private int[] visibleTrackMeterValues() {
@@ -1898,80 +1895,26 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showValueInfo(final String title, final String value) {
-        if (shouldPreserveMixerEncoderFooter()) {
-            clearRowsAboveMixerEncoderFooter();
-            selectedTrackMeterTextInitialized = false;
-        } else {
-            resetSelectedTrackMeterText();
-            oled.clearScreen();
-        }
-        oled.valueInfoNoClear(title, value);
+        applyEncoderFooterLegend();
+        selectedTrackMeterView.showValueInfo(title, value);
     }
 
     public boolean showGlobalActionInfo(final String title, final String value) {
         if (!active || encoderMode != EncoderMode.MIXER) {
             return false;
         }
-        suppressMixMeterDisplay();
         showValueInfo(title, value);
         return true;
     }
 
-    private boolean shouldPreserveMixerEncoderFooter() {
-        return active && encoderMode == EncoderMode.MIXER && mixerEncoderFooterVisible
-                && !sceneActionMode && !isSettingsHeld();
-    }
-
-    private void clearSelectedTrackMeterRows() {
-        if (mixerEncoderFooterVisible) {
-            clearRowsAboveMixerEncoderFooter();
-            return;
-        }
-        oled.clearScreen();
-    }
-
-    private void clearRowsAboveMixerEncoderFooter() {
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, 0, BLANK_TEXT_ROW);
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, 1, BLANK_TEXT_ROW);
-        oled.sendString(3, OledDisplay.TextJustification.LEFT, 2, BLANK_TEXT_ROW);
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, 4, BLANK_TEXT_ROW);
-        for (int row = 0; row < 7; row++) {
-            oled.sendString(0, OledDisplay.TextJustification.LEFT, row, BLANK_TEXT_ROW);
-        }
-    }
-
-    private void showMixerEncoderFooter() {
-        if (mixerEncoderFooterVisible) {
-            return;
-        }
-        oled.sendString(0, OledDisplay.TextJustification.LEFT, 7, MIXER_ENCODER_FOOTER);
-        mixerEncoderFooterVisible = true;
-    }
-
     private void resetSelectedTrackMeterText() {
-        selectedTrackMeterTextInitialized = false;
-        mixerEncoderFooterVisible = false;
-    }
-
-    private void showTransientValueInfo(final String title, final String value) {
-        suppressMixMeterDisplay();
-        showValueInfo(title, value);
+        selectedTrackMeterView.reset();
     }
 
     private void showTransientDetailInfo(final String title, final String lines) {
-        showTransientDetailInfo(title, lines, driver.getScreenMessageHoldMs());
-    }
-
-    private void showTransientDetailInfo(final String title, final String lines, final long suppressMs) {
-        suppressMixMeterDisplay(suppressMs);
         resetSelectedTrackMeterText();
         oled.clearScreen();
         oled.detailInfo(title, lines);
-    }
-
-    private void clearTransientDisplayDelayed() {
-        suppressMixMeterDisplay();
-        oled.clearScreenDelayed();
     }
 
     public void suppressMixMeterDisplay() {
@@ -1979,9 +1922,85 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void suppressMixMeterDisplay(final long suppressMs) {
+        resetMixMeterDisplay();
+        mixMeterSuppressedUntilMs = System.currentTimeMillis() + suppressMs;
+    }
+
+    private void resetMixMeterDisplay() {
         mixMeterDisplayActive = false;
         resetSelectedTrackMeterText();
-        mixMeterSuppressedUntilMs = System.currentTimeMillis() + suppressMs;
+    }
+
+    private boolean shouldShowPerformTrackLegendIdle() {
+        return shouldShowPerformTrackLegendIdle(encoderMode, driver.isIdleOledMetersEnabled());
+    }
+
+    private void showPerformTrackLegendIdle() {
+        resetSelectedTrackMeterText();
+        applyEncoderFooterLegend();
+        oled.clearScreen();
+        oled.valueInfoPersistentNoClear(activePageLabel(), selectedPerformTrackName());
+    }
+
+    private String selectedPerformTrackName() {
+        TrackAddress trackAddress = selectedMeterTrackAddress();
+        if (trackAddress == null) {
+            trackAddress = firstVisibleTrackAddress();
+        }
+        if (trackAddress == null) {
+            return "No visible track";
+        }
+        return trackLabel(trackAddress);
+    }
+
+    private void applyEncoderFooterLegend() {
+        if (isSettingsHeld()) {
+            oled.setFooterLegend(EncoderFooterLegend.of("Root", "Scal", "Octv", "Glob"));
+            return;
+        }
+        oled.setFooterLegend(encoderFooterLegend(encoderMode));
+    }
+
+    private String encoderFooterLegend(final EncoderMode mode) {
+        return switch (mode) {
+            case CHANNEL -> remoteFooterLegend(projectRemoteControls, "G");
+            case MIXER -> EncoderFooterLegend.MIXER;
+            case USER_1 -> remoteFooterLegend(trackRemoteControls, "T");
+            case USER_2 -> remoteFooterLegend(deviceRemoteControls, "D");
+        };
+    }
+
+    private String remoteFooterLegend(final CursorRemoteControlsPage page, final String scopePrefix) {
+        final int firstParameterIndex = remoteParameterIndex(0, isAltHeld());
+        return EncoderFooterLegend.remoteControls(scopePrefix, firstParameterIndex + 1,
+                remoteParameterNames(page, firstParameterIndex));
+    }
+
+    private String remoteModeInfo(final CursorRemoteControlsPage page,
+                                  final String scopeLabel,
+                                  final String scopePrefix) {
+        final int firstParameterIndex = remoteParameterIndex(0, isAltHeld());
+        return EncoderFooterLegend.remoteModeInfo(scopeLabel, scopePrefix, firstParameterIndex + 1,
+                remoteParameterNames(page, firstParameterIndex));
+    }
+
+    private String[] remoteParameterNames(final CursorRemoteControlsPage page, final int firstParameterIndex) {
+        final String[] names = new String[4];
+        for (int slot = 0; slot < names.length; slot++) {
+            final int parameterIndex = firstParameterIndex + slot;
+            if (page != null && parameterIndex < page.getParameterCount()) {
+                names[slot] = page.getParameter(parameterIndex).name().get();
+            }
+        }
+        return names;
+    }
+
+    static boolean shouldShowPerformTrackLegendIdle(final EncoderMode mode, final boolean idleMetersEnabled) {
+        return isRemoteEncoderMode(mode) && !idleMetersEnabled;
+    }
+
+    private static boolean isRemoteEncoderMode(final EncoderMode mode) {
+        return mode == EncoderMode.CHANNEL || mode == EncoderMode.USER_1 || mode == EncoderMode.USER_2;
     }
 
     private void adjustRemoteParameter(final int encoderIndex, final Parameter parameter, final String fallbackLabel,
@@ -1991,7 +2010,7 @@ public class PerformClipLauncherMode extends Layer {
         }
         parameterResetHandler.markAdjusted(encoderIndex, Math.abs(inc));
         ParameterEncoderBinding.adjustParameter(parameter, isShiftHeld(), inc);
-        ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showTransientValueInfo);
+        ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo);
     }
 
     private void handleRemoteParameterTouch(final int encoderIndex, final Parameter parameter,
@@ -2000,25 +2019,25 @@ public class PerformClipLauncherMode extends Layer {
             if (driver.handleKnobModeEncoderReset(true, ParameterEncoderBinding.isMapped(parameter),
                     fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset" : "Unmapped",
                     parameter::reset,
-                    () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showTransientValueInfo))) {
+                    () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo))) {
                 return;
             }
             parameterResetHandler.beginTouchReset(encoderIndex, () -> {
                 if (ParameterEncoderBinding.isMapped(parameter)) {
                     parameter.reset();
-                    ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showTransientValueInfo);
+                    ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo);
                 }
             });
             if (!ParameterEncoderBinding.isMapped(parameter)) {
-                showTransientValueInfo(fallbackLabel, "Unmapped");
+                showValueInfo(fallbackLabel, "Unmapped");
                 return;
             }
-            ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showTransientValueInfo);
+            ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo);
             return;
         }
 
         parameterResetHandler.endTouchReset(encoderIndex);
-        clearTransientDisplayDelayed();
+        oled.clearScreenDelayed();
     }
 
     private void markParameterInterested(final Parameter parameter) {
@@ -2048,7 +2067,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int trackScrollAmount() {
-        return layout.trackScrollAmount(isShiftHeld());
+        return isShiftHeld() ? 1 : visibleTrackCount();
     }
 
     private int sceneScrollAmount() {
@@ -2109,6 +2128,10 @@ public class PerformClipLauncherMode extends Layer {
         return altHeld != exclusiveTrackArmEnabled;
     }
 
+    static int visibleTrackCountForPage(final PerformLayout layout, final boolean trackActionMode) {
+        return trackActionMode ? PerformLayout.PAD_COLUMNS : layout.visibleTrackCount();
+    }
+
     private boolean canScrollTracks(final int direction) {
         final int current = trackBank.scrollPosition().get();
         return direction < 0 ? current > 0 : current < maxTrackOffset();
@@ -2124,7 +2147,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int maxTrackOffset() {
-        return layout.maxTrackOffset(totalTrackCount);
+        return Math.max(0, totalTrackCount - visibleTrackCount());
     }
 
     private int maxSceneOffset() {
@@ -2199,6 +2222,7 @@ public class PerformClipLauncherMode extends Layer {
 
     public boolean showIdleInfoIfNeeded() {
         if (!shouldShowPerformMeters()) {
+            resetMixMeterDisplay();
             return false;
         }
         showPerformMeterDisplay();
@@ -2209,10 +2233,13 @@ public class PerformClipLauncherMode extends Layer {
 
     private void refreshMixMetersIfVisible(final int blinkState) {
         if (!shouldShowPerformMeters()) {
-            mixMeterDisplayActive = false;
+            resetMixMeterDisplay();
             return;
         }
         if (System.currentTimeMillis() < mixMeterSuppressedUntilMs) {
+            return;
+        }
+        if (shouldShowPerformTrackLegendIdle() && mixMeterDisplayActive) {
             return;
         }
         if (!mixMeterDisplayActive || blinkState - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
@@ -2223,7 +2250,16 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean shouldShowPerformMeters() {
-        return active && !sceneActionMode && !birdsEyeMode && !isSettingsHeld();
+        return shouldShowPerformMeters(active, sceneActionMode, birdsEyeMode, isSettingsHeld(),
+                driver.shouldShowMeterIdleDisplay() && !oled.hasPendingTransientMessage());
+    }
+
+    static boolean shouldShowPerformMeters(final boolean active,
+                                           final boolean sceneActionMode,
+                                           final boolean birdsEyeMode,
+                                           final boolean settingsHeld,
+                                           final boolean meterIdleAllowed) {
+        return active && !sceneActionMode && !birdsEyeMode && !settingsHeld && meterIdleAllowed;
     }
 
     private void clearPendingSceneLaunchIfPlaying() {
@@ -2245,6 +2281,7 @@ public class PerformClipLauncherMode extends Layer {
         active = true;
         applyEncoderStepSizes();
         currentEncoderLayer.activate();
+        applyEncoderFooterLegend();
         if (isSettingsHeld()) {
             showOverview();
         } else {
@@ -2257,6 +2294,7 @@ public class PerformClipLauncherMode extends Layer {
         active = false;
         mixMeterDisplayActive = false;
         resetSelectedTrackMeterText();
+        oled.setFooterLegend(null);
         currentEncoderLayer.deactivate();
     }
 
@@ -2746,7 +2784,7 @@ public class PerformClipLauncherMode extends Layer {
                 suppressedTrackSelectionNotificationAbsoluteIndex,
                 lastTrackSelectionNotificationAbsoluteIndex)) {
             lastTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
-            showTransientValueInfo("Track Select", trackLabel(sourceTrackIndex, absoluteTrackIndex));
+            showValueInfo("Track Select", trackLabel(sourceTrackIndex, absoluteTrackIndex));
         }
     }
 
@@ -2799,7 +2837,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int visibleTrackCount() {
-        return layout.visibleTrackCount();
+        return visibleTrackCountForPage(layout, trackActionMode);
     }
 
     private int visibleSceneCount() {
