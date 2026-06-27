@@ -5,11 +5,9 @@ import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
-import com.oikoaudio.fire.control.EncoderTouchResetHandler;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
-import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.sequence.EncoderBank;
@@ -26,9 +24,6 @@ final class ChordStepEncoderControls {
     private static final int CHORD_ROOT_ENCODER_THRESHOLD = 16;
     private static final int CHORD_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final int CHORD_FAMILY_ENCODER_THRESHOLD = 8;
-    private static final long TOUCH_RESET_HOLD_MS = 750L;
-    private static final long TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300L;
-    private static final int TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
@@ -37,7 +32,6 @@ final class ChordStepEncoderControls {
     private final EncoderStepAccumulator chordRootEncoder = new EncoderStepAccumulator(CHORD_ROOT_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator chordOctaveEncoder = new EncoderStepAccumulator(CHORD_OCTAVE_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator chordFamilyEncoder = new EncoderStepAccumulator(CHORD_FAMILY_ENCODER_THRESHOLD);
-    private final EncoderTouchResetHandler encoderTouchResetHandler;
     private final EncoderBankLayout layout;
     private boolean mainEncoderPressConsumed = false;
 
@@ -49,13 +43,6 @@ final class ChordStepEncoderControls {
         this.oled = oled;
         this.cursorTrack = cursorTrack;
         this.host = host;
-        this.encoderTouchResetHandler = new EncoderTouchResetHandler(
-                new TouchResetGesture(4, TOUCH_RESET_HOLD_MS, TOUCH_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
-                        TOUCH_RESET_TOLERATED_ADJUSTMENT_UNITS),
-                driver::isEncoderTouchResetEnabled,
-                (task, delayMs) -> driver.getHost().scheduleTask(task, delayMs),
-                TOUCH_RESET_HOLD_MS,
-                oled::clearScreenDelayed);
         this.layout = createLayout();
     }
 
@@ -236,7 +223,6 @@ final class ChordStepEncoderControls {
                     final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
                     if (scaleContext) {
                         if (inc != 0) {
-                            handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
                             host.adjustChordSharedScale(inc);
                         }
                         return;
@@ -247,8 +233,6 @@ final class ChordStepEncoderControls {
                     if (amount == 0) {
                         return;
                     }
-                    handler.recordTouchAdjustment(slotIndex, Math.abs(amount));
-                    encoderTouchResetHandler.markAdjusted(rootContext ? 1 : 0);
                     if (rootContext) {
                         host.adjustChordRoot(amount);
                     } else {
@@ -263,7 +247,6 @@ final class ChordStepEncoderControls {
                                     () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
                                 return;
                             }
-                            handler.beginTouchReset(slotIndex, () -> { });
                             oled.valueInfo("Scale", host.getScaleDisplayName());
                             return;
                         }
@@ -285,16 +268,6 @@ final class ChordStepEncoderControls {
                                 })) {
                             return;
                         }
-                        handler.beginTouchReset(slotIndex, () -> {
-                            (rootContext ? chordRootEncoder : chordOctaveEncoder).reset();
-                            if (rootContext) {
-                                host.resetChordRoot();
-                                host.showChordRootInfo();
-                            } else {
-                                host.resetChordOctave();
-                                host.showChordOctaveInfo();
-                            }
-                        });
                         if (rootContext) {
                             host.showChordRootInfo();
                         } else {
@@ -302,7 +275,6 @@ final class ChordStepEncoderControls {
                         }
                         return;
                     }
-                    handler.endTouchReset(slotIndex);
                     oled.clearScreenDelayed();
                 });
             }
@@ -320,7 +292,6 @@ final class ChordStepEncoderControls {
             public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
-                    handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
                     if (driver.isGlobalShiftHeld()) {
                         host.adjustChordVelocityCenter(inc);
                     } else {
@@ -333,14 +304,9 @@ final class ChordStepEncoderControls {
                                 host::resetChordVelocityTargets, host::showChordVelocityInfo)) {
                             return;
                         }
-                        handler.beginTouchReset(slotIndex, () -> {
-                            host.resetChordVelocityTargets();
-                            host.showChordVelocityInfo();
-                        });
                         host.showChordVelocityInfo();
                         return;
                     }
-                    handler.endTouchReset(slotIndex);
                     oled.clearScreenDelayed();
                 });
             }
@@ -364,16 +330,14 @@ final class ChordStepEncoderControls {
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        handler.touchResetControl(), mixerResetPolicy(index), driver.knobModeEncoderResetControl(),
-                        oled::valueInfo, oled::clearScreenDelayed);
+                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), oled::valueInfo,
+                        oled::clearScreenDelayed);
             }
         };
     }
 
     private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
-        return index == 0
-                ? ParameterEncoderBinding.ResetPolicy.NONE
-                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
+        return ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT;
     }
 
     private EncoderSlotBinding chordSlot(final int slotIndex, final EncoderStepAccumulator accumulator,
@@ -391,8 +355,6 @@ final class ChordStepEncoderControls {
                 encoder.bindEncoder(layer, inc -> {
                     final int amount = accumulator.consume(inc);
                     if (amount != 0) {
-                        handler.recordTouchAdjustment(boundSlotIndex, Math.abs(amount));
-                        encoderTouchResetHandler.markAdjusted(slotIndex);
                         adjuster.adjust(amount);
                     }
                 });
@@ -404,15 +366,9 @@ final class ChordStepEncoderControls {
                         }, showInfo)) {
                             return;
                         }
-                        handler.beginTouchReset(boundSlotIndex, () -> {
-                            accumulator.reset();
-                            resetAction.run();
-                            showInfo.run();
-                        });
                         showInfo.run();
                         return;
                     }
-                    handler.endTouchReset(boundSlotIndex);
                     oled.clearScreenDelayed();
                 });
             }
@@ -431,7 +387,6 @@ final class ChordStepEncoderControls {
                              final int slotIndex) {
                 encoder.bindEncoder(layer, inc -> {
                     if (inc != 0) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
                         if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
                             host.setBuilderLayoutInKey(inc > 0);
                         } else if (driver.isGlobalAltHeld()) {
@@ -448,7 +403,6 @@ final class ChordStepEncoderControls {
                                     () -> { }, host::showBuilderLayoutInfo)) {
                                 return;
                             }
-                            handler.beginTouchReset(slotIndex, () -> { });
                             host.showBuilderLayoutInfo();
                             return;
                         }
@@ -457,7 +411,6 @@ final class ChordStepEncoderControls {
                                     () -> { }, () -> oled.valueInfo("Invert", "Turn encoder"))) {
                                 return;
                             }
-                            handler.beginTouchReset(slotIndex, () -> { });
                             oled.valueInfo("Invert", "Turn encoder");
                             return;
                         }
@@ -465,14 +418,9 @@ final class ChordStepEncoderControls {
                                 host::resetChordInterpretation, host::showChordInterpretationInfo)) {
                             return;
                         }
-                        handler.beginTouchReset(slotIndex, () -> {
-                            host.resetChordInterpretation();
-                            host.showChordInterpretationInfo();
-                        });
                         host.showChordInterpretationInfo();
                         return;
                     }
-                    handler.endTouchReset(slotIndex);
                     oled.clearScreenDelayed();
                 });
             }

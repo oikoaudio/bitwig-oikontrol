@@ -191,7 +191,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue screenMessageHoldPref;
     private SettableEnumValue idleOledPref;
     private SettableEnumValue encoderLegendPositionPref;
-    private SettableBooleanValue encoderTouchResetPref;
     private SettableBooleanValue showDeactivatedTracksPref;
     private SettableBooleanValue exclusiveTrackArmPref;
     private SettableRangedValue padBrightnessPref;
@@ -228,7 +227,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean performRecordPadGestureConsumed = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
-    private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
     private boolean exclusiveTrackArmEnabled = FireControlPreferences.EXCLUSIVE_TRACK_ARM_DEFAULT;
     private long screenMessageHoldMs = FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS;
     private long stoppedMeterRingOutUntilMs = 0;
@@ -525,13 +523,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             redrawRgbPads();
         });
         padSaturation = FireControlPreferences.normalizePadSaturation(padSaturationPref.getRaw());
-
-        encoderTouchResetPref = preferences.getBooleanSetting("Encoder touch reset",
-                FireControlPreferences.CATEGORY_HARDWARE,
-                FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT);
-        encoderTouchResetPref.markInterested();
-        encoderTouchResetEnabled = encoderTouchResetPref.get();
-        encoderTouchResetPref.addValueObserver(value -> encoderTouchResetEnabled = value);
 
         screenMessageHoldPref = preferences.getEnumSetting("Screen Message Hold",
                 FireControlPreferences.CATEGORY_HARDWARE,
@@ -1487,10 +1478,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public MultiStateHardwareLight[] getStateLights() {
         return stateLights;
-    }
-
-    public boolean isEncoderTouchResetEnabled() {
-        return encoderTouchResetEnabled;
     }
 
     public boolean isExclusiveTrackArmEnabled() {

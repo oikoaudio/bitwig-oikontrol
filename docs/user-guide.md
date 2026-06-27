@@ -155,9 +155,7 @@ When the popup browser is open, `SELECT` turn moves through results, `SELECT` pr
 
 When `KNOB MODE + PATTERN UP/DOWN` changes a remote page, the OLED shows the target page name and a bottom-row `N/M` count when there is more than one page. If the active encoder page has no remote target, the OLED reports `No remotes`. A single-page target reports `Page 1/1`, and page boundaries report `First page` or `Last page`. These chords are not treated as encoder-page cycles.
 
-Hold `KNOB MODE` and tap an encoder to reset the value under that encoder. The OLED reports `No reset` or `Unmapped` when the current encoder slot cannot reset, and the `KNOB MODE` tap is not treated as an encoder-page cycle. Volume controls are left without a reset action to avoid accidental jumps.
-
-When `Encoder touch reset` is enabled, touching and holding a resettable encoder also resets that value after a short hold. The explicit `KNOB MODE + touch encoder` chord is available separately as a deliberate reset gesture.
+Hold `KNOB MODE` and tap an encoder to reset the value under that encoder. The OLED reports `No reset` or `Unmapped` when the current encoder slot cannot reset, and the `KNOB MODE` tap is not treated as an encoder-page cycle. Parameter-like controls use their existing target defaults for reset.
 
 Use `PATTERN` for Bitwig 6's unified automation write toggle. `PATTERN` drives both arranger and launcher automation-write states together so the controller follows Bitwig 6's single Automation Write model. Use `ALT + REC` for arranger overdub, and use `ALT + PATTERN` for launcher overdub when adding data to existing Launcher clips. Turning launcher overdub on from the controller also enables automation write in touch mode; if that gesture enabled automation write, turning launcher overdub off turns automation write back off. `PATTERN + REC` is the quick launcher capture chord: it records the selected track into the next free launcher slot regardless of mode. Plain `REC` remains the arranger-record path from Perform Mix pages. Press `REC` again to stop a launcher recording started from either `PATTERN + REC` or `REC + pad`.
 
@@ -607,7 +605,6 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Melodic Fixed Seed`
 - `Pad Brightness`
 - `Pad Saturation`
-- `Encoder touch reset`: enables the touch-and-hold reset gesture on resettable encoders
 - `Screen Message Hold`
 - `Idle Perf & Drum OLED`: choose contextual idle text/values or visible-track/pad meters for Perform and Drum XOX
 - `Encoder Legend Position`: choose whether compact OLED encoder legends appear on the bottom or top row

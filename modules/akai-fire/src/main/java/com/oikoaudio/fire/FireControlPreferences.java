@@ -19,7 +19,6 @@ public final class FireControlPreferences {
     public static final double PAD_SATURATION_MAX = 150.0;
     public static final double PAD_SATURATION_STEP = 5.0;
     public static final double PAD_SATURATION_DEFAULT = 100.0;
-    public static final boolean ENCODER_TOUCH_RESET_DEFAULT = true;
     public static final String SCREEN_MESSAGE_HOLD_SHORT = "Short";
     public static final String SCREEN_MESSAGE_HOLD_NORMAL = "Normal";
     public static final String SCREEN_MESSAGE_HOLD_LONG = "Long";

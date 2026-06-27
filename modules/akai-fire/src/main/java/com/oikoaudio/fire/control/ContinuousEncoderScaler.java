@@ -1,5 +1,7 @@
 package com.oikoaudio.fire.control;
 
+import java.util.function.LongSupplier;
+
 /**
  * Scales rapid continuous encoder turns so slow turns stay precise while fast turns travel further.
  */
@@ -23,6 +25,7 @@ public final class ContinuousEncoderScaler {
     private static final long STREAK_RESET_NS = 220_000_000L;
 
     private final Profile profile;
+    private final LongSupplier clock;
     private long lastTurnNs = Long.MIN_VALUE;
     private int lastDirection = 0;
     private int streak = 0;
@@ -32,7 +35,12 @@ public final class ContinuousEncoderScaler {
     }
 
     public ContinuousEncoderScaler(final Profile profile) {
+        this(profile, System::nanoTime);
+    }
+
+    ContinuousEncoderScaler(final Profile profile, final LongSupplier clock) {
         this.profile = profile;
+        this.clock = clock;
     }
 
     public int scale(final int inc, final boolean fine) {
@@ -44,7 +52,7 @@ public final class ContinuousEncoderScaler {
             return inc;
         }
 
-        final long now = System.nanoTime();
+        final long now = clock.getAsLong();
         final int direction = Integer.signum(inc);
         final long delta = lastTurnNs == Long.MIN_VALUE ? Long.MAX_VALUE : now - lastTurnNs;
 

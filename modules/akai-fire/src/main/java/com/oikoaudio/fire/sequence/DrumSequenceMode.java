@@ -775,12 +775,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         }, showDefault)) {
                     return;
                 }
-                handler.beginTouchReset(index, () -> {
-                    if (resetDefault != null) {
-                        resetDefault.run();
-                        showDefault.run();
-                    }
-                });
                 showDefault.run();
                 return;
             }
@@ -788,11 +782,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     () -> handler.resetAccessorToDefault(accessor), () -> handler.showAccessorTouchValue(accessor))) {
                 return;
             }
-            handler.beginTouchReset(index, () -> handler.resetAccessorToDefault(accessor));
             handler.showAccessorTouchValue(accessor);
             return;
         }
-        handler.endTouchReset(index);
         oled.clearScreenDelayed();
     }
 
@@ -1563,7 +1555,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         default -> euclidAccentEncoder.consume(inc);
                     };
                     if (effective != 0) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(effective));
                         markUser2EncoderAdjusted(index);
                         handleEuclidAdjust(index, effective);
                     }
@@ -1592,7 +1583,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                              final int slotIndex) {
                 final var action = (java.util.function.IntConsumer) inc -> {
                     if (getExpressionTargetNotes().isEmpty()) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
                     }
                     adjuster.adjust(handler, inc);
                 };
@@ -1619,14 +1609,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     () -> oled.valueInfo(infoForIndex(index), valueForIndex(index)))) {
                 return;
             }
-            handler.beginTouchReset(index, () -> {
-                resetEuclidEncoder(index);
-                oled.valueInfo(infoForIndex(index), valueForIndex(index));
-            });
             oled.valueInfo(infoForIndex(index), valueForIndex(index));
             return;
         }
-        handler.endTouchReset(index);
         oled.clearScreenDelayed();
     }
 

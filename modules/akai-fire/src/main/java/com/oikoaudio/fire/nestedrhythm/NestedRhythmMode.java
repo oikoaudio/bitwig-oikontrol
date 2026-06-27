@@ -1631,16 +1631,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        handler.touchResetControl(), mixerResetPolicy(index), driver.knobModeEncoderResetControl(),
-                        oled::valueInfo, oled::clearScreenDelayed);
+                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), oled::valueInfo,
+                        oled::clearScreenDelayed);
             }
         };
     }
 
     private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
-        return index == 0
-                ? ParameterEncoderBinding.ResetPolicy.NONE
-                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
+        return ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT;
     }
 
     private void ignoreEncoder(final int amount) {
