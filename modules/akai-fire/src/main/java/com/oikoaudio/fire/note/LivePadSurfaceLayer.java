@@ -62,7 +62,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final int LIVE_NOTE_ENCODER_THRESHOLD = 4;
     private static final int LIVE_LAYOUT_ENCODER_THRESHOLD = 6;
     private static final int LIVE_VELOCITY_ENCODER_THRESHOLD = 1;
-    private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 6;
+    private static final int LIVE_PITCH_OFFSET_ENCODER_THRESHOLD = 3;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int MIN_VELOCITY = 1;
@@ -195,7 +195,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private double stepInputClipLengthBeats = 0.0;
     private final PeakRmsOledView selectedTrackMeterView;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator livePitchOffsetEncoder = new EncoderStepAccumulator(LIVE_PITCH_OFFSET_ENCODER_THRESHOLD);
+    private int livePitchOffsetEncoderCarry = 0;
+    private boolean livePitchOffsetFirstStepPending = true;
     private final EncoderStepAccumulator liveScaleEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator liveOctaveEncoder = new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator liveLayoutEncoder = new EncoderStepAccumulator(LIVE_LAYOUT_ENCODER_THRESHOLD);
@@ -423,6 +424,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
             lastMeterDisplayBlink = Integer.MIN_VALUE;
             return true;
         }
+        if (hasLivePitchGlissOffset()) {
+            resetLiveMeterDisplay();
+            showLiveTrackLegendIdle();
+            return true;
+        }
         resetLiveMeterDisplay();
         if (!shouldShowLiveTrackLegendIdle()) {
             return false;
@@ -448,7 +454,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean shouldShowLiveMeters() {
         return shouldShowLiveMeters(active, drumPadsOnly, isDrumMachineLiveMode(),
                 liveControls.currentEncoderMode(),
-                driver.shouldShowMeterIdleDisplay() && !oled.hasPendingTransientMessage());
+                driver.shouldShowMeterIdleDisplay()
+                        && !oled.hasPendingTransientMessage()
+                        && !hasLivePitchGlissOffset());
     }
 
     static boolean shouldShowLiveMeters(final boolean active,
@@ -587,21 +595,29 @@ public abstract class LivePadSurfaceLayer extends Layer {
         });
 
         encoders[2].bindEncoder(liveChannelLayer, this::handleLivePitchGlissEncoder);
-        encoders[2].bindTouched(liveChannelLayer, touched -> liveControls.handleResettableTouch(2, touched,
-                !isDrumMachineLiveMode() && !driver.isGlobalAltHeld(), "No reset",
-                () -> {
-                    if (isDrumMachineLiveMode()) {
-                        oled.valueInfo("Drum Pads", "--");
-                        return;
-                    }
-                    oled.valueInfo(driver.isGlobalAltHeld() ? "Gliss Mode" : "Pitch Gliss",
-                            driver.isGlobalAltHeld() ? livePitchGlissMode.displayName() : formatLivePitchOffsetDisplay());
-                },
-                () -> {
-                    if (!isDrumMachineLiveMode() && !driver.isGlobalAltHeld()) {
-                        livePitchOffsetEncoder.reset();
-                    }
-                }));
+        encoders[2].bindTouched(liveChannelLayer, touched -> {
+            if (touched) {
+                resetLivePitchOffsetEncoder();
+            }
+            liveControls.handleResettableTouch(2, touched,
+                    !isDrumMachineLiveMode(), "No reset",
+                    () -> {
+                        if (isDrumMachineLiveMode()) {
+                            oled.valueInfo("Drum Pads", "--");
+                            return;
+                        }
+                        if (driver.isGlobalAltHeld()) {
+                            showLivePitchGlissModeInfo();
+                        } else {
+                            showLivePitchGlissInfo();
+                        }
+                    },
+                    () -> {
+                        if (!isDrumMachineLiveMode()) {
+                            resetLivePitchGlissOffset();
+                        }
+                    });
+        });
 
         encoders[3].bindContinuousEncoder(liveChannelLayer, driver::isGlobalShiftHeld,
                 com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT, inc -> {
@@ -685,7 +701,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
             });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
-                    if (touched) {
+                if (touched) {
                     if (isHarmonicLiveMode()) {
                         if (handleHarmonicMixerReset(index)) {
                             return;
@@ -759,9 +775,16 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private void showLiveTrackLegendIdle() {
         applyLiveFooterLegend();
         oled.clearScreen();
-        oled.valueInfoPersistentNoClear(currentNoteSubModeLabel(), normalizedSelectedTrackName());
+        oled.valueInfoPersistentNoClear(liveContextTitle(), normalizedSelectedTrackName());
         liveContextDisplayActive = true;
         liveContextDisplayRevision = oled.layoutRevision();
+    }
+
+    private String liveContextTitle() {
+        if (!hasLivePitchGlissOffset()) {
+            return currentNoteSubModeLabel();
+        }
+        return "Gliss " + compactLivePitchOffsetDisplay();
     }
 
     private void refreshLiveContextIdleIfVisible() {
@@ -844,7 +867,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             case 0 -> oled.valueInfo("Notes", harmonicNoteCountDisplay());
             case 1 -> oled.valueInfo("Octaves", Integer.toString(harmonicOctaveSpan));
             case 2 -> oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off");
-            case 3 -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
+            case 3 -> showLivePitchGlissInfo();
             default -> oled.clearScreenDelayed();
         }
     }
@@ -861,11 +884,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     () -> retuneLivePads(() -> harmonicBassColumns = true),
                     () -> oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off"));
             case 3 -> driver.handleKnobModeEncoderReset(true, true, "Pitch Gliss", "No reset",
-                    () -> retuneLivePads(() -> {
-                        livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
-                        liveScaleDegreeGlissOffset = 0;
-                    }),
-                    () -> oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay()));
+                    this::resetLivePitchGlissOffset,
+                    this::showLivePitchGlissInfo);
             default -> false;
         };
     }
@@ -972,7 +992,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         }
         livePitchBend = next;
         liveExpressionControls.setTransientPitchBendValue(livePitchBend);
-        oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+        showLivePitchBendInfo();
         armLivePitchBendInactivityReturn();
     }
 
@@ -999,15 +1019,15 @@ public abstract class LivePadSurfaceLayer extends Layer {
         }
         final LivePitchGlissMode next = inc < 0 ? LivePitchGlissMode.FIFTH_OCTAVE : LivePitchGlissMode.SCALE_DEGREE;
         if (next == livePitchGlissMode) {
-            oled.valueInfo("Gliss Mode", livePitchGlissMode.displayName());
+            showLivePitchGlissModeInfo();
             return;
         }
         livePitchGlissMode = next;
-        oled.valueInfo("Gliss Mode", livePitchGlissMode.displayName());
+        showLivePitchGlissModeInfo();
     }
 
     private void adjustLivePitchOffset(final int inc) {
-        final int steps = livePitchOffsetEncoder.consume(inc);
+        final int steps = consumeLivePitchOffsetEncoder(inc);
         if (steps == 0) {
             return;
         }
@@ -1017,7 +1037,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 return;
             }
             retuneLivePads(() -> livePitchOffsetIndex = nextIndex);
-            oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
+            showLivePitchGlissInfo();
             return;
         }
         final int nextOffset = Math.max(MIN_SCALE_DEGREE_GLISS,
@@ -1026,7 +1046,46 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return;
         }
         retuneLivePads(() -> liveScaleDegreeGlissOffset = nextOffset);
+        showLivePitchGlissInfo();
+    }
+
+    private void showLivePitchGlissInfo() {
         oled.valueInfo("Pitch Gliss", formatLivePitchOffsetDisplay());
+    }
+
+    private void showLivePitchGlissModeInfo() {
+        oled.valueInfo("Gliss Mode", livePitchGlissMode.displayName());
+    }
+
+    private void showLivePitchBendInfo() {
+        oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+    }
+
+    private int consumeLivePitchOffsetEncoder(final int inc) {
+        if (inc == 0) {
+            return 0;
+        }
+        if (livePitchOffsetFirstStepPending) {
+            livePitchOffsetFirstStepPending = false;
+            return inc > 0 ? 1 : -1;
+        }
+        livePitchOffsetEncoderCarry += inc;
+        final int steps = livePitchOffsetEncoderCarry / LIVE_PITCH_OFFSET_ENCODER_THRESHOLD;
+        livePitchOffsetEncoderCarry %= LIVE_PITCH_OFFSET_ENCODER_THRESHOLD;
+        return steps;
+    }
+
+    private void resetLivePitchOffsetEncoder() {
+        livePitchOffsetEncoderCarry = 0;
+        livePitchOffsetFirstStepPending = true;
+    }
+
+    private void resetLivePitchGlissOffset() {
+        resetLivePitchOffsetEncoder();
+        retuneLivePads(() -> {
+            livePitchOffsetIndex = DEFAULT_LIVE_PITCH_OFFSET_INDEX;
+            liveScaleDegreeGlissOffset = 0;
+        });
     }
 
     private void adjustHarmonicNoteCount(final int inc) {
@@ -1095,6 +1154,17 @@ public abstract class LivePadSurfaceLayer extends Layer {
         final int value = displayPitchGlissValue(livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE,
                 getLivePitchOffset(), liveScaleDegreeGlissOffset);
         return "%s %s".formatted(livePitchGlissMode.displayName(), formatSignedValue(value));
+    }
+
+    private String compactLivePitchOffsetDisplay() {
+        final int value = displayPitchGlissValue(livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE,
+                getLivePitchOffset(), liveScaleDegreeGlissOffset);
+        return formatSignedValue(value);
+    }
+
+    private boolean hasLivePitchGlissOffset() {
+        return displayPitchGlissValue(livePitchGlissMode == LivePitchGlissMode.FIFTH_OCTAVE,
+                getLivePitchOffset(), liveScaleDegreeGlissOffset) != 0;
     }
 
     private String liveEncoderModeInfo(final EncoderMode mode) {
@@ -1172,10 +1242,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
                         livePitchBend = DEFAULT_LIVE_PITCH_BEND;
                         liveExpressionControls.setTransientPitchBendValue(livePitchBend);
                     },
-                    () -> oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND)))) {
+                    this::showLivePitchBendInfo)) {
                 return;
             }
-            oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+            showLivePitchBendInfo();
             return;
         }
         scheduleLivePitchBendReturn();
@@ -1200,7 +1270,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             livePitchBend = Math.max(DEFAULT_LIVE_PITCH_BEND, livePitchBend - LIVE_PITCH_BEND_RETURN_STEP);
         }
         liveExpressionControls.setTransientPitchBendValue(livePitchBend);
-        oled.valueInfo("Pitch Bend", formatSignedValue(livePitchBend - DEFAULT_LIVE_PITCH_BEND));
+        showLivePitchBendInfo();
         if (livePitchBend == DEFAULT_LIVE_PITCH_BEND) {
             oled.clearScreenDelayed();
             return;
