@@ -31,6 +31,7 @@ import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
+import com.oikoaudio.fire.control.RemoteParameterIndexes;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledMeterRenderer;
@@ -2064,7 +2065,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     static int remoteParameterIndex(final int encoderIndex, final boolean altHeld) {
-        return (altHeld ? 4 : 0) + encoderIndex;
+        return RemoteParameterIndexes.parameterIndex(encoderIndex, altHeld);
     }
 
     static double roundToNearestBar(final double beatLength, final int meterNumerator, final int meterDenominator) {

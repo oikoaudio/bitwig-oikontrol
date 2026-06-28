@@ -16,6 +16,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.VelocitySettings;
+import com.oikoaudio.fire.display.NoteChordOledView;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
@@ -77,6 +78,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
+    private final NoteChordOledView noteChordOledView;
     private final SharedPitchContextController pitchContext;
     private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
     private final ChordStepAccentControls chordStepAccentControls;
@@ -105,6 +107,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
     private boolean noteStepActive = false;
+    private boolean chordDisplayRefreshPending = false;
     private Integer selectedPresetStepIndex = null;
     private int playingStep = -1;
     private RgbLigthState chordStepBaseColor = OCCUPIED_STEP;
@@ -113,6 +116,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.driver = driver;
         this.pitchContext = driver.getSharedPitchContextController();
         this.oled = driver.getOled();
+        this.noteChordOledView = new NoteChordOledView(oled);
         this.chordStepVelocity = driver.getSharedVelocitySettings();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
         final ChordStepStepButtonControls chordStepStepButtonControls = new ChordStepStepButtonControls(
@@ -251,6 +255,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     public void notifyBlink(final int blinkTicks) {
         clipHandler.notifyBlink(blinkTicks);
+        if (noteStepActive && chordDisplayRefreshPending) {
+            showCurrentChord();
+        }
     }
 
     private void syncEncoderLayers() {
@@ -1197,7 +1204,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         for (final int stepIndex : stepIndexes) {
             chordStepClipEditor.writeChordAtStep(stepIndex, notes, appliedVelocity, STEP_LENGTH);
         }
-        oled.valueInfo(currentChordFamilyLabel(), currentChordName());
+        showCurrentChord();
         return true;
     }
 
@@ -1288,7 +1295,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private void startAuditionSelectedChord(final int velocity) {
         final int[] notes = renderSelectedChord();
         chordStepAudition.startAudition(notes, velocity);
-        oled.valueInfo(currentChordFamilyLabel(), currentChordName());
+        showCurrentChord();
     }
 
     private void stopAuditionNotes() {
@@ -1461,13 +1468,26 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             showBuilderContents();
             return;
         }
-        oled.valueInfo("%s %d/%d".formatted(currentChordFamilyLabel(), chordSelection.page() + 1,
-                        currentChordPageCount()),
-                "%s %s".formatted(currentChordName(), chordInterpretationSuffix()));
+        final int[] notes = renderSelectedChord();
+        if (notes.length == 0) {
+            chordDisplayRefreshPending = false;
+            oled.valueInfo("%s %d/%d".formatted(currentChordFamilyLabel(), chordSelection.page() + 1,
+                            currentChordPageCount()),
+                    "%s %s".formatted(currentChordName(), chordInterpretationSuffix()));
+            return;
+        }
+        chordDisplayRefreshPending = !noteChordOledView.show(notes,
+                "%s %d/%d".formatted(currentChordFamilyLabel(), chordSelection.page() + 1, currentChordPageCount()));
     }
 
     private void showBuilderContents() {
-        oled.valueInfo("Builder", currentChordName());
+        final int[] notes = renderSelectedChord();
+        if (notes.length == 0) {
+            chordDisplayRefreshPending = false;
+            oled.valueInfo("Builder", currentChordName());
+            return;
+        }
+        chordDisplayRefreshPending = !noteChordOledView.show(notes, "Builder");
     }
 
     private String currentChordDisplay() {
@@ -1856,6 +1876,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     protected void onDeactivate() {
         chordStepControlBindings.deactivatePatternButtons();
         noteStepActive = false;
+        chordDisplayRefreshPending = false;
         stopAuditionNotes();
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
