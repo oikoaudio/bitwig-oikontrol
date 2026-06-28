@@ -13,6 +13,8 @@ import java.util.Objects;
  * Do not ship until reuse permission/license is recorded or the detector is replaced.
  */
 public final class NoteChordOledView {
+    private static final long TRANSIENT_DISPLAY_QUIET_PERIOD_MS = 900L;
+
     private final OledDisplay oled;
     private final ChordDetector chordDetector = new ChordDetector();
     private String lastNotes = "";
@@ -41,6 +43,10 @@ public final class NoteChordOledView {
     }
 
     public boolean show(final List<Integer> midiNotes, final String footerLegend, final String statusLine) {
+        if (oled.hasRecentTransientMessage(TRANSIENT_DISPLAY_QUIET_PERIOD_MS)) {
+            reset();
+            return false;
+        }
         if (midiNotes == null || midiNotes.isEmpty()) {
             reset();
             return false;

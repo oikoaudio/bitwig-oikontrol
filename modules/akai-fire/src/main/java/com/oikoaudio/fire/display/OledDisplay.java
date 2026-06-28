@@ -34,6 +34,7 @@ public class OledDisplay {
 	private long clearTaskDelayMs = DEFAULT_CLEAR_DELAY_MS;
 	private long clearDelayMs = DEFAULT_CLEAR_DELAY_MS;
 	private long transientMessageUntilMs = -1;
+	private long transientMessageStartedAtMs = -1;
 	private long layoutRevision = 0;
 	private String footerLegend = null;
 	private EncoderLegendPosition footerLegendPosition = EncoderLegendPosition.BOTTOM;
@@ -81,6 +82,7 @@ public class OledDisplay {
 		}
 		clearTask = System.currentTimeMillis();
 		clearTaskDelayMs = Math.max(0, delayMs);
+		transientMessageStartedAtMs = clearTask;
 		transientMessageUntilMs = clearTask + clearTaskDelayMs;
 	}
 
@@ -90,6 +92,11 @@ public class OledDisplay {
 
 	public boolean hasPendingTransientMessage() {
 		return hasPendingClear() || System.currentTimeMillis() < transientMessageUntilMs;
+	}
+
+	public boolean hasRecentTransientMessage(final long quietPeriodMs) {
+		return transientMessageStartedAtMs > 0
+				&& System.currentTimeMillis() - transientMessageStartedAtMs < Math.max(0, quietPeriodMs);
 	}
 
 	public long layoutRevision() {
@@ -442,25 +449,29 @@ public class OledDisplay {
 
 	private void markTransientMessage() {
 		screenState = ScreenState.TRANSIENT_TEXT;
-		transientMessageUntilMs = System.currentTimeMillis() + clearDelayMs;
+		transientMessageStartedAtMs = System.currentTimeMillis();
+		transientMessageUntilMs = transientMessageStartedAtMs + clearDelayMs;
 	}
 
 	private void beginBlankScreen() {
 		screenState = ScreenState.BLANK;
 		clearTask = -1;
 		transientMessageUntilMs = -1;
+		transientMessageStartedAtMs = -1;
 	}
 
 	private void beginGraphicsScreen() {
 		screenState = ScreenState.GRAPHICS;
 		clearTask = -1;
 		transientMessageUntilMs = -1;
+		transientMessageStartedAtMs = -1;
 	}
 
 	private void beginPersistentTextScreen() {
 		screenState = ScreenState.PERSISTENT_TEXT;
 		clearTask = -1;
 		transientMessageUntilMs = -1;
+		transientMessageStartedAtMs = -1;
 	}
 
 	private void sendContentString(final int fontSize, final TextJustification justification, final int placement,
@@ -510,6 +521,7 @@ public class OledDisplay {
 		if (clearTask > 0 && System.currentTimeMillis() - clearTask > clearTaskDelayMs) {
 			clearTask = -1;
 			transientMessageUntilMs = -1;
+			transientMessageStartedAtMs = -1;
 			if (idleAction != null) {
 				idleAction.run();
 			} else {
