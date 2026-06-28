@@ -70,6 +70,9 @@ final class DrumStepPadSurface {
             }
             state.removeModified(stepIndex);
         }
+        if (state.isAdded(stepIndex)) {
+            state.removeModified(stepIndex);
+        }
         state.removeAdded(stepIndex);
         return StepReleaseAction.NONE;
     }

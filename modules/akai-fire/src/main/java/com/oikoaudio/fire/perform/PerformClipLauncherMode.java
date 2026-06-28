@@ -595,7 +595,8 @@ public class PerformClipLauncherMode extends Layer {
             final String label = fallbackLabels[i];
             final EncoderValueProfile profile = index == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
             ParameterEncoderBinding.bind(encoders[i], layer, index, parameter, label, this::isShiftHeld,
-                    mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, this::showValueInfo,
+                    mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, index == 1,
+                    this::showValueInfoWithBar,
                     oled::clearScreenDelayed);
         }
     }
@@ -1885,6 +1886,12 @@ public class PerformClipLauncherMode extends Layer {
     private void showValueInfo(final String title, final String value) {
         applyEncoderFooterLegend();
         selectedTrackMeterView.showValueInfo(title, value);
+    }
+
+    private void showValueInfoWithBar(final String title, final String value, final double normalizedValue,
+                                      final boolean biPolar) {
+        applyEncoderFooterLegend();
+        selectedTrackMeterView.showValueInfo(title, value, normalizedValue, biPolar);
     }
 
     public boolean showGlobalActionInfo(final String title, final String value) {

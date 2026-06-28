@@ -529,7 +529,9 @@ public class DrumPadHandler {
             return;
         }
         showMixerValue(selectedPad.mixerName(typeIndex, fallbackLabel),
-                selectedPad.mixerDisplayedValue(typeIndex));
+                selectedPad.mixerDisplayedValue(typeIndex),
+                selectedPad.mixerRawValue(typeIndex),
+                typeIndex == 1);
     }
 
     public void showDrumPadMeterDisplay(final String footerLegend) {
@@ -585,6 +587,11 @@ public class DrumPadHandler {
 
     public void showMixerValue(final String title, final String value) {
         selectedPadMeterView.showValueInfo(title, value);
+    }
+
+    public void showMixerValue(final String title, final String value, final double normalizedValue,
+                               final boolean biPolar) {
+        selectedPadMeterView.showValueInfo(title, value, normalizedValue, biPolar);
     }
 
     private void resetSelectedPadMeterText() {

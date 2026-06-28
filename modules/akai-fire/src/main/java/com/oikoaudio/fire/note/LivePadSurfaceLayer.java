@@ -633,7 +633,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                         oled.valueInfo("Drum Pads", "--");
                         return;
                     }
-                    oled.valueInfo("Timbre", Integer.toString(liveExpressionControls.timbre()));
+                    oled.valueInfo("TimbreCC", Integer.toString(liveExpressionControls.timbre()));
                 },
                 this::resetLiveTimbre));
     }
@@ -698,7 +698,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     return;
                 }
                 ParameterEncoderBinding.adjustParameter(parameter, fine, effective, profile);
-                ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
+                ParameterEncoderBinding.showValueWithBar(parameter, fallbackLabel, this::showLiveMixerValue, index == 1);
             });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
                 if (touched) {
@@ -726,13 +726,20 @@ public abstract class LivePadSurfaceLayer extends Layer {
                             && resetPolicy != ParameterEncoderBinding.ResetPolicy.NONE,
                     fallbackLabel, ParameterEncoderBinding.isMapped(parameter) ? "No reset" : "Unmapped",
                     () -> resetPolicy.reset(parameter),
-                    () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo))) {
+                    () -> ParameterEncoderBinding.showValueWithBar(parameter, fallbackLabel,
+                            this::showLiveMixerValue, encoderIndex == 1))) {
                 return;
             }
-            ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
+            ParameterEncoderBinding.showValueWithBar(parameter, fallbackLabel, this::showLiveMixerValue,
+                    encoderIndex == 1);
             return;
         }
         oled.clearScreenDelayed();
+    }
+
+    private void showLiveMixerValue(final String title, final String value, final double normalizedValue,
+                                    final boolean biPolar) {
+        selectedTrackMeterView.showValueInfo(title, value, normalizedValue, biPolar);
     }
 
     private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
@@ -943,14 +950,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 return;
             }
             applyLiveVelocity();
-            oled.paramInfo("Velocity Center", liveVelocity.centerVelocity(), "Live Note",
+            oled.paramInfo("Velocity Center", liveVelocity.centerVelocity(), "",
                     liveVelocity.minCenterVelocity(), liveVelocity.maxCenterVelocity());
             return;
         }
         if (!liveVelocity.adjustSensitivity(steps)) {
             return;
         }
-        oled.paramInfo("Velocity Sens", liveVelocity.sensitivity(), "Live Note", 0, 100);
+        oled.paramInfo("Velocity Sens", liveVelocity.sensitivity(), "", 0, 100);
     }
 
     private void handleDrumMachineLayoutEncoder(final int encoderIndex, final int inc) {
@@ -963,25 +970,25 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private void adjustLivePressure(final int inc) {
         if (liveExpressionControls.adjustPressure(inc)) {
-            oled.paramInfo("Aftertouch", liveExpressionControls.pressure(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+            oled.paramInfo("Aftertouch", liveExpressionControls.pressure(), "", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
         }
     }
 
     private void adjustLiveTimbre(final int inc) {
         if (liveExpressionControls.adjustTimbre(inc)) {
-            oled.paramInfo("Timbre", liveExpressionControls.timbre(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+            oled.paramInfo("TimbreCC", liveExpressionControls.timbre(), "", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
         }
     }
 
     private void adjustLiveModulation(final int inc) {
         if (liveExpressionControls.adjustModulation(inc)) {
-            oled.paramInfo("Mod", liveExpressionControls.modulation(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+            oled.paramInfo("Mod", liveExpressionControls.modulation(), "", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
         }
     }
 
     private void adjustLiveBreath(final int inc) {
         if (liveExpressionControls.adjustBreath(inc)) {
-            oled.paramInfo("Breath", liveExpressionControls.breath(), "Live Note", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
+            oled.paramInfo("Breath", liveExpressionControls.breath(), "", MIN_MIDI_VALUE, MAX_MIDI_VALUE);
         }
     }
 

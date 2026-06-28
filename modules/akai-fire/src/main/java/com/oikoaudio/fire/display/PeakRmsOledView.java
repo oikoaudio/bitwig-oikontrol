@@ -50,6 +50,17 @@ public final class PeakRmsOledView {
     }
 
     public void showValueInfo(final String title, final String value) {
+        prepareValueInfo();
+        oled.valueInfoNoClear(title, value);
+    }
+
+    public void showValueInfo(final String title, final String value, final double normalizedValue,
+                              final boolean biPolar) {
+        prepareValueInfo();
+        oled.valueInfoWithBarNoClear(title, value, normalizedValue, biPolar);
+    }
+
+    private void prepareValueInfo() {
         if (hasBottomLegend()) {
             clearRowsAroundLegend();
             initialized = false;
@@ -58,7 +69,6 @@ public final class PeakRmsOledView {
             reset();
             oled.clearScreen();
         }
-        oled.valueInfoNoClear(title, value);
     }
 
     public void reset() {

@@ -2329,8 +2329,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         ? EncoderValueProfile.PAN
                         : EncoderValueProfile.LARGE_RANGE;
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, oled::valueInfo,
-                        oled::clearScreenDelayed);
+                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, index == 1,
+                        oled::valueInfoWithBar, oled::clearScreenDelayed);
             }
         };
     }

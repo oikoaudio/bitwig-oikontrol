@@ -73,8 +73,43 @@ public final class ParameterEncoderBinding {
         });
     }
 
+    public static void bind(final TouchEncoder encoder,
+                            final Layer layer,
+                            final int encoderIndex,
+                            final Parameter parameter,
+                            final String fallbackLabel,
+                            final BooleanSupplier fineSupplier,
+                            final ResetPolicy resetPolicy,
+                            final ExplicitResetControl explicitReset,
+                            final EncoderValueProfile profile,
+                            final boolean biPolar,
+                            final ValueBarDisplay display,
+                            final Runnable clearDisplay) {
+        markInterested(parameter);
+        encoder.bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, inc -> {
+            if (!isMapped(parameter)) {
+                return;
+            }
+            adjustParameter(parameter, fineSupplier.getAsBoolean(), inc, profile);
+            showValueWithBar(parameter, fallbackLabel, display, biPolar);
+        });
+        encoder.bindTouched(layer, touched -> {
+            if (touched) {
+                handleTouchStartWithBar(parameter, fallbackLabel, resetPolicy, explicitReset, display, biPolar);
+            } else {
+                clearDisplay.run();
+            }
+        });
+    }
+
     public static void showValue(final Parameter parameter, final String fallbackLabel, final ValueDisplay display) {
         display.show(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
+    }
+
+    public static void showValueWithBar(final Parameter parameter, final String fallbackLabel,
+                                        final ValueBarDisplay display, final boolean biPolar) {
+        display.show(labelFor(parameter, fallbackLabel), parameter.displayedValue().get(), parameter.value().get(),
+                biPolar);
     }
 
     public static boolean isMapped(final Parameter parameter) {
@@ -112,6 +147,26 @@ public final class ParameterEncoderBinding {
             return;
         }
         showValue(parameter, fallbackLabel, display);
+    }
+
+    private static void handleTouchStartWithBar(final Parameter parameter,
+                                                final String fallbackLabel,
+                                                final ResetPolicy resetPolicy,
+                                                final ExplicitResetControl explicitReset,
+                                                final ValueBarDisplay display,
+                                                final boolean biPolar) {
+        if (handleExplicitResetTouch(true, explicitReset, isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
+                fallbackLabel, isMapped(parameter) ? "No reset" : "Unmapped",
+                () -> resetPolicy.reset(parameter),
+                () -> showValueWithBar(parameter, fallbackLabel, display, biPolar),
+                (title, value) -> display.show(title, value, 0.0, false))) {
+            return;
+        }
+        if (!isMapped(parameter)) {
+            display.show(fallbackLabel, "Unmapped", 0.0, false);
+            return;
+        }
+        showValueWithBar(parameter, fallbackLabel, display, biPolar);
     }
 
     public static boolean handleExplicitResetTouch(final boolean touched,
@@ -173,5 +228,10 @@ public final class ParameterEncoderBinding {
     @FunctionalInterface
     public interface ValueDisplay {
         void show(String title, String value);
+    }
+
+    @FunctionalInterface
+    public interface ValueBarDisplay {
+        void show(String title, String value, double normalizedValue, boolean biPolar);
     }
 }

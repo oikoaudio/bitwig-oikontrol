@@ -124,8 +124,16 @@ public class StepSequencerEncoderLayer extends Layer {
         handleMod(inc, accessor);
     }
 
+    public void handleExplicitNoteAccess(final int inc, final NoteStepAccess accessor, final List<NoteStep> notes) {
+        handleMod(inc, accessor, notes);
+    }
+
     public void showAccessorTouchValue(final NoteStepAccess accessor) {
         showTouchPress(accessor);
+    }
+
+    public void showAccessorTouchValue(final NoteStepAccess accessor, final List<NoteStep> notes) {
+        showTouchPress(accessor, notes);
     }
 
     public boolean resetAccessorToDefault(final NoteStepAccess accessor) {
@@ -133,6 +141,13 @@ public class StepSequencerEncoderLayer extends Layer {
             return false;
         }
         final List<NoteStep> activeNotes = activeNotesForAccess();
+        return resetAccessorToDefault(accessor, activeNotes);
+    }
+
+    public boolean resetAccessorToDefault(final NoteStepAccess accessor, final List<NoteStep> activeNotes) {
+        if (!accessor.canReset()) {
+            return false;
+        }
         if (activeNotes.isEmpty()) {
             return false;
         }
@@ -189,6 +204,10 @@ public class StepSequencerEncoderLayer extends Layer {
 
 	private void handleMod(final int inc, final NoteStepAccess accessor) {
 		final List<NoteStep> notes = activeNotesForAccess();
+        handleMod(inc, accessor, notes);
+	}
+
+	private void handleMod(final int inc, final NoteStepAccess accessor, final List<NoteStep> notes) {
 		if (notes.isEmpty()) {
 			return;
 		}
@@ -323,6 +342,10 @@ public class StepSequencerEncoderLayer extends Layer {
 
     private void showTouchPress(final NoteStepAccess accessor) {
         final List<NoteStep> activeNotes = activeNotesForAccess();
+        showTouchPress(accessor, activeNotes);
+    }
+
+    private void showTouchPress(final NoteStepAccess accessor, final List<NoteStep> activeNotes) {
         if (parent.getDeleteHeld().get() && accessor.canReset()) {
             accessor.applyReset(parent, activeNotes);
             oled.paramInfo("Reset:" + accessor.getName(), parent.getPadInfo());

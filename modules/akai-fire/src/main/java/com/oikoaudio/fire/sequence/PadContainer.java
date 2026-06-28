@@ -311,6 +311,11 @@ class PadContainer {
         return parameter != null ? parameter.displayedValue().get() : "";
     }
 
+    public double mixerRawValue(final int typeIndex) {
+        final Parameter parameter = mixerParameter(typeIndex);
+        return parameter != null ? parameter.value().get() : 0.0;
+    }
+
     public String mixerName(final int typeIndex, final String fallbackLabel) {
         final Parameter parameter = mixerParameter(typeIndex);
         if (parameter == null) {
