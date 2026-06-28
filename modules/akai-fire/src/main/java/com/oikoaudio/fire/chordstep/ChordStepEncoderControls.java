@@ -5,6 +5,7 @@ import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
@@ -329,8 +330,11 @@ final class ChordStepEncoderControls {
                     case 2 -> cursorTrack.sendBank().getItemAt(0);
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
+                final EncoderValueProfile profile = index == 1
+                        ? EncoderValueProfile.PAN
+                        : EncoderValueProfile.LARGE_RANGE;
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), oled::valueInfo,
+                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, oled::valueInfo,
                         oled::clearScreenDelayed);
             }
         };

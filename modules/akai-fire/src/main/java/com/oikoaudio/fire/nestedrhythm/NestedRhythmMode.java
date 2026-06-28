@@ -1630,8 +1630,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     case 2 -> cursorTrack.sendBank().getItemAt(0);
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
+                final EncoderValueProfile profile = index == 1
+                        ? EncoderValueProfile.PAN
+                        : EncoderValueProfile.LARGE_RANGE;
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), oled::valueInfo,
+                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, oled::valueInfo,
                         oled::clearScreenDelayed);
             }
         };

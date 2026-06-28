@@ -41,12 +41,27 @@ public final class ParameterEncoderBinding {
                             final ExplicitResetControl explicitReset,
                             final ValueDisplay display,
                             final Runnable clearDisplay) {
+        bind(encoder, layer, encoderIndex, parameter, fallbackLabel, fineSupplier, resetPolicy, explicitReset,
+                EncoderValueProfile.LARGE_RANGE, display, clearDisplay);
+    }
+
+    public static void bind(final TouchEncoder encoder,
+                            final Layer layer,
+                            final int encoderIndex,
+                            final Parameter parameter,
+                            final String fallbackLabel,
+                            final BooleanSupplier fineSupplier,
+                            final ResetPolicy resetPolicy,
+                            final ExplicitResetControl explicitReset,
+                            final EncoderValueProfile profile,
+                            final ValueDisplay display,
+                            final Runnable clearDisplay) {
         markInterested(parameter);
         encoder.bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, inc -> {
             if (!isMapped(parameter)) {
                 return;
             }
-            adjustParameter(parameter, fineSupplier.getAsBoolean(), inc);
+            adjustParameter(parameter, fineSupplier.getAsBoolean(), inc, profile);
             showValue(parameter, fallbackLabel, display);
         });
         encoder.bindTouched(layer, touched -> {
@@ -67,7 +82,12 @@ public final class ParameterEncoderBinding {
     }
 
     public static void adjustParameter(final Parameter parameter, final boolean fine, final int inc) {
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, fine, inc);
+        adjustParameter(parameter, fine, inc, EncoderValueProfile.LARGE_RANGE);
+    }
+
+    public static void adjustParameter(final Parameter parameter, final boolean fine, final int inc,
+                                       final EncoderValueProfile profile) {
+        profile.adjustParameter(parameter, fine, inc);
     }
 
     public static String labelFor(final Parameter parameter, final String fallbackLabel) {

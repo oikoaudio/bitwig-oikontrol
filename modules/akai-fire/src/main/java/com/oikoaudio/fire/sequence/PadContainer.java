@@ -290,7 +290,10 @@ class PadContainer {
         if (parameter == null) {
             return false;
         }
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, fine, inc);
+        final EncoderValueProfile profile = typeIndex == 1
+                ? EncoderValueProfile.PAN
+                : EncoderValueProfile.LARGE_RANGE;
+        profile.adjustParameter(parameter, fine, inc);
         return true;
     }
 

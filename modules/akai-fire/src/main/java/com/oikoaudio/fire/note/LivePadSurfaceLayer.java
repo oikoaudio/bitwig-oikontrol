@@ -24,8 +24,10 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
+import com.oikoaudio.fire.control.EncoderTurnBehavior;
 import com.oikoaudio.fire.control.EncoderTouchDisplayHandler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
@@ -657,6 +659,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
         for (int i = 0; i < encoders.length; i++) {
             final int index = i;
             final com.bitwig.extension.controller.api.Parameter parameter = params.get(i);
+            final EncoderTurnBehavior turnBehavior = EncoderTurnBehavior.acceleratedValue();
+            final EncoderValueProfile profile = mixerEncoderValueProfile(index);
             final String fallbackLabel = switch (i) {
                 case 0 -> "Volume";
                 case 1 -> "Pan";
@@ -664,8 +668,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 default -> "Send 2";
             };
             encoders[i].bindRelativeMagnitudeEncoder(liveMixerLayer, rawUnits -> {
-                final int inc = RelativeEncoderMagnitude.toStandardTurnStep(rawUnits);
                 final boolean fine = driver.isGlobalShiftHeld();
+                final int inc = RelativeEncoderMagnitude.toStandardTurnStep(rawUnits, fine);
                 if (inc == 0) {
                     return;
                 }
@@ -673,7 +677,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     handleHarmonicMixerEncoder(index, inc);
                     return;
                 }
-                ParameterEncoderBinding.adjustParameter(parameter, fine, inc);
+                final int effective = turnBehavior.apply(inc, fine);
+                if (effective == 0) {
+                    return;
+                }
+                ParameterEncoderBinding.adjustParameter(parameter, fine, effective, profile);
                 ParameterEncoderBinding.showValue(parameter, fallbackLabel, oled::valueInfo);
             });
             encoders[i].bindTouched(liveMixerLayer, touched -> {
@@ -713,6 +721,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
         return ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT;
+    }
+
+    private EncoderValueProfile mixerEncoderValueProfile(final int index) {
+        return index == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
     }
 
     private void showLiveMeterDisplay() {

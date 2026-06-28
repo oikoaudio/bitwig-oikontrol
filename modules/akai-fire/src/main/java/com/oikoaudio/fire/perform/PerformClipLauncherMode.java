@@ -27,6 +27,7 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
@@ -592,8 +593,9 @@ public class PerformClipLauncherMode extends Layer {
             final int index = i;
             final Parameter parameter = parameters[i];
             final String label = fallbackLabels[i];
+            final EncoderValueProfile profile = index == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
             ParameterEncoderBinding.bind(encoders[i], layer, index, parameter, label, this::isShiftHeld,
-                    mixerResetPolicy(index), driver.knobModeEncoderResetControl(), this::showValueInfo,
+                    mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, this::showValueInfo,
                     oled::clearScreenDelayed);
         }
     }
