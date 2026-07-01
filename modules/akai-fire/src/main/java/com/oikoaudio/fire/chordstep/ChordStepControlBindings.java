@@ -1,9 +1,11 @@
 package com.oikoaudio.fire.chordstep;
 
+import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 
@@ -22,6 +24,7 @@ final class ChordStepControlBindings {
         PadBankRowControlBindings.velocitySensitivePads(driver, layer, padBankRowHost(),
                 new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.STEP_SEQ,
                         host::handleStepSeqPressed, host::stepSeqLightState)).bind();
+        bindEditStatusLights();
     }
 
     void activatePatternButtons() {
@@ -82,6 +85,24 @@ final class ChordStepControlBindings {
                     default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
                 };
             }
+        };
+    }
+
+    private void bindEditStatusLights() {
+        final MultiStateHardwareLight[] stateLights = driver.getStateLights();
+        for (int index = 0; index < stateLights.length; index++) {
+            final int lightIndex = index;
+            layer.bindLightState(() -> editStatusLightState(lightIndex), stateLights[lightIndex]);
+        }
+    }
+
+    private BiColorLightState editStatusLightState(final int index) {
+        return switch (index) {
+            case 0 -> TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(host.mute1LightState()));
+            case 1 -> TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(host.mute2LightState()));
+            case 2 -> TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(host.mute3LightState()));
+            case 3 -> TrackSelectIndicatorLights.red(BiColorLightState.GREEN_FULL.equals(host.mute4LightState()));
+            default -> throw new IllegalArgumentException("Unsupported edit status light index: " + index);
         };
     }
 

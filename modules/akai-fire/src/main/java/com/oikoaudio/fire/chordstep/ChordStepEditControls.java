@@ -76,15 +76,15 @@ public final class ChordStepEditControls {
     }
 
     public BiColorLightState mute2LightState() {
-        return fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+        return fixedLengthHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     public BiColorLightState mute3LightState() {
-        return copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
+        return copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     public BiColorLightState mute4LightState() {
-        return deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+        return deleteHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     public BooleanValueObject deleteHeldValue() {

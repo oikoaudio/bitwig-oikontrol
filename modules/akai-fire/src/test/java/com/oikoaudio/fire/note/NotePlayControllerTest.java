@@ -53,7 +53,7 @@ class NotePlayControllerTest {
         mode.deactivate(() -> events.add("release"));
 
         assertEquals(BiColorLightState.GREEN_HALF, mode.mute1LightState());
-        assertEquals(BiColorLightState.OFF, mode.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, mode.mute2LightState());
         assertEquals(BiColorLightState.GREEN_FULL, mode.mute3LightState());
         assertEquals(List.of("sustain:127", "sostenuto:127", "repeat", "on:60:100", "release", "sustain:0", "sostenuto:0"),
                 events.stream().filter(s -> !s.startsWith("deactivate:") && !s.startsWith("activate:")).toList());

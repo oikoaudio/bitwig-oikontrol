@@ -3,7 +3,9 @@ package com.oikoaudio.fire.sequence;
 import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
+import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.lights.BiColorLightState;
 
 /**
@@ -51,13 +53,10 @@ public final class SequencerEditButtonBinder {
                         alternateInfo,
                         pressed,
                         feedback),
-                () -> button.isPressed() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF);
+                () -> button.isPressed() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF);
         layer.bindLightState(() -> {
             final boolean active = button.isPressed() && !shiftActive.get();
-            if (alternateFunctionActive.get()) {
-                return active ? BiColorLightState.RED_FULL : BiColorLightState.RED_HALF;
-            }
-            return active ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return statusLightFor(button, active || alternateFunctionActive.get());
         }, stateLight);
     }
 
@@ -65,12 +64,18 @@ public final class SequencerEditButtonBinder {
                             final BooleanValueObject value,
                             final MultiStateHardwareLight stateLight) {
         final FunctionInfo info = FunctionInfo.INFO1.get(button.getNoteAssign());
-        button.bind(layer, value, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
-        layer.bindLightState(() -> BiColorLightState.AMBER_HALF, stateLight);
+        button.bind(layer, value, BiColorLightState.GREEN_FULL, BiColorLightState.GREEN_HALF);
+        layer.bindLightState(() -> statusLightFor(button, false), stateLight);
         value.addValueObserver(active -> SequencerEditButtonLogic.handleValueChanged(
                 active, info, shiftActive.get(), feedback));
         layer.bindLightState(
-                () -> button.isPressed() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF, stateLight);
+                () -> statusLightFor(button, button.isPressed()), stateLight);
+    }
+
+    private static BiColorLightState statusLightFor(final BiColorButton button, final boolean active) {
+        return button.getNoteAssign() == NoteAssign.MUTE_4
+                ? TrackSelectIndicatorLights.red(active)
+                : TrackSelectIndicatorLights.green(active);
     }
 
     public interface EditFunctionFeedback {

@@ -2,6 +2,7 @@ package com.oikoaudio.fire.fugue;
 
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
@@ -9,6 +10,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -98,6 +100,7 @@ public final class FugueStepMode extends Layer {
         new PadBankRowControlBindings(driver, this, fugueStepControlBindingsHost(),
                 new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
                         this::handleEncoderModeButton, this::encoderModeLight)).bind();
+        bindLineStatusLights();
         bindEncoders();
         bindMainEncoder();
     }
@@ -867,10 +870,19 @@ public final class FugueStepMode extends Layer {
     }
 
     private BiColorLightState lineLight(final int line) {
-        if (line == activeLineIndex()) {
-            return lineEnabled[line] ? BiColorLightState.GREEN_FULL : BiColorLightState.RED_FULL;
+        return lineEnabled[line] ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+    }
+
+    private void bindLineStatusLights() {
+        final MultiStateHardwareLight[] stateLights = driver.getStateLights();
+        for (int index = 0; index < stateLights.length; index++) {
+            final int lightIndex = index;
+            bindLightState(() -> lineStatusLight(lightIndex), stateLights[lightIndex]);
         }
-        return lineEnabled[line] ? BiColorLightState.GREEN_HALF : BiColorLightState.RED_HALF;
+    }
+
+    private BiColorLightState lineStatusLight(final int line) {
+        return lineEnabled[line] ? TrackSelectIndicatorLights.green(true) : TrackSelectIndicatorLights.red(false);
     }
 
     private void toggleLineEnabled(final int line, final boolean pressed) {

@@ -81,7 +81,7 @@ final class NoteLivePerformanceControls {
     }
 
     BiColorLightState mute2LightState() {
-        return sostenutoActive ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+        return sostenutoActive ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     BiColorLightState mute3LightState() {
@@ -89,7 +89,7 @@ final class NoteLivePerformanceControls {
     }
 
     BiColorLightState mute4LightState() {
-        return holdActive.getAsBoolean() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+        return holdActive.getAsBoolean() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     void resetToggles() {

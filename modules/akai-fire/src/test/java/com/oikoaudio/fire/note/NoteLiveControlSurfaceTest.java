@@ -104,8 +104,54 @@ class NoteLiveControlSurfaceTest {
         surface.handleMute3(true);
 
         assertEquals(BiColorLightState.GREEN_FULL, surface.mute1LightState());
-        assertEquals(BiColorLightState.AMBER_FULL, surface.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, surface.mute2LightState());
         assertEquals(BiColorLightState.GREEN_FULL, surface.mute3LightState());
+    }
+
+    @Test
+    void muteLightsUseConsistentDimOffStates() {
+        final AtomicBoolean repeatActive = new AtomicBoolean();
+        final AtomicBoolean holdActive = new AtomicBoolean();
+        final NoteLiveControlSurface surface = new NoteLiveControlSurface(
+                new NoteLivePerformanceControls(
+                        ignored -> {},
+                        ignored -> {},
+                        () -> repeatActive.set(!repeatActive.get()),
+                        repeatActive::get,
+                        () -> {
+                            holdActive.set(!holdActive.get());
+                            return holdActive.get();
+                        },
+                        holdActive::get,
+                        (title, detail) -> {}),
+                createEncoderControls(new ArrayList<>()),
+                createTouchDisplayHandler(new ArrayList<>()),
+                (title, detail) -> {},
+                (title, detail) -> {},
+                () -> {});
+
+        assertEquals(BiColorLightState.GREEN_HALF, surface.mute1LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, surface.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, surface.mute3LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, surface.mute4LightState());
+
+        surface.handleMute1(true);
+        surface.handleMute2(true);
+        surface.handleMute3(true);
+        surface.handleMute4(true);
+
+        assertEquals(BiColorLightState.GREEN_FULL, surface.mute1LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, surface.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, surface.mute3LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, surface.mute4LightState());
+    }
+
+    @Test
+    void performanceStatusLightsUseTrackSelectGreenValues() {
+        assertEquals(BiColorLightState.AMBER_HALF,
+                LivePadSurfaceLayer.performanceStatusLightState(BiColorLightState.GREEN_HALF));
+        assertEquals(BiColorLightState.AMBER_FULL,
+                LivePadSurfaceLayer.performanceStatusLightState(BiColorLightState.GREEN_FULL));
     }
 
     private static NoteLiveControlSurface createSurface(final List<String> events) {

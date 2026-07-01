@@ -121,7 +121,7 @@ class NoteLivePadPerformerTest {
     }
 
     @Test
-    void holdModeKeepsPadSoundingAfterReleaseUntilPressedAgain() {
+    void holdModeDoesNotLatchPadsPressedAfterActivation() {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer = new NoteLivePadPerformer(
                 new TestMidiOut(events),
@@ -129,8 +129,6 @@ class NoteLivePadPerformerTest {
                 (configured, raw) -> raw);
 
         performer.toggleHoldMode();
-        performer.handlePadPress(2, true, 99, 100);
-        performer.handlePadPress(2, false, 0, 100);
         performer.handlePadPress(2, true, 99, 100);
         performer.handlePadPress(2, false, 0, 100);
 
@@ -146,8 +144,8 @@ class NoteLivePadPerformerTest {
                 pad -> new int[]{60 + pad},
                 (configured, raw) -> raw);
 
-        assertTrue(performer.toggleHoldMode());
         performer.handlePadPress(1, true, 80, 100);
+        assertTrue(performer.toggleHoldMode());
         performer.handlePadPress(1, false, 0, 100);
 
         assertFalse(performer.toggleHoldMode());
@@ -170,6 +168,44 @@ class NoteLivePadPerformerTest {
 
         assertEquals(List.of("on:63:70"), events);
         assertTrue(performer.isPadHeld(3));
+        assertTrue(performer.isPadHeldByHoldMode(3));
+    }
+
+    @Test
+    void holdModeReleasesCapturedPadWhenPressedAgain() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad},
+                (configured, raw) -> raw);
+
+        performer.handlePadPress(3, true, 70, 100);
+        performer.toggleHoldMode();
+        performer.handlePadPress(3, false, 0, 100);
+        performer.handlePadPress(3, true, 70, 100);
+
+        assertEquals(List.of("on:63:70", "off:63"), events);
+        assertFalse(performer.isPadHeldByHoldMode(3));
+    }
+
+    @Test
+    void disablingHoldModeDoesNotReleaseLaterMomentaryPadStillDown() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad},
+                (configured, raw) -> raw);
+
+        performer.handlePadPress(1, true, 80, 100);
+        performer.toggleHoldMode();
+        performer.handlePadPress(1, false, 0, 100);
+        performer.handlePadPress(2, true, 90, 100);
+
+        performer.toggleHoldMode();
+        performer.handlePadPress(2, false, 0, 100);
+
+        assertEquals(List.of("on:61:80", "on:62:90", "off:61", "off:62"), events);
+        assertFalse(performer.isPadHeld(2));
     }
 
     private record TestMidiOut(List<String> events) implements NoteLivePadPerformer.MidiOut {
