@@ -70,6 +70,44 @@ class NoteLivePerformanceControlsTest {
     }
 
     @Test
+    void mute4TogglesHoldAndShowsStatus() {
+        final List<String> status = new ArrayList<>();
+        final AtomicBoolean active = new AtomicBoolean();
+        final NoteLivePerformanceControls controls = new NoteLivePerformanceControls(
+                ignored -> {},
+                ignored -> {},
+                () -> {},
+                () -> false,
+                () -> {
+                    active.set(!active.get());
+                    return active.get();
+                },
+                active::get,
+                (title, detail) -> status.add(title + ":" + detail));
+
+        controls.handleMute4(false);
+        controls.handleMute4(true);
+        controls.handleMute4(true);
+
+        assertEquals(List.of("Hold:On", "Hold:Off"), status);
+        assertEquals(BiColorLightState.OFF, controls.mute4LightState());
+    }
+
+    @Test
+    void activeHoldLightsMute4() {
+        final NoteLivePerformanceControls controls = new NoteLivePerformanceControls(
+                ignored -> {},
+                ignored -> {},
+                () -> {},
+                () -> false,
+                () -> true,
+                () -> true,
+                (title, detail) -> {});
+
+        assertEquals(BiColorLightState.AMBER_FULL, controls.mute4LightState());
+    }
+
+    @Test
     void resetTogglesSendsZeroForActiveCcStates() {
         final List<Integer> sustainValues = new ArrayList<>();
         final List<Integer> sostenutoValues = new ArrayList<>();

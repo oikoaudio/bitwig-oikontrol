@@ -29,6 +29,13 @@ class LivePadSurfaceLayerIdleDisplayTest {
     }
 
     @Test
+    void noteChordDisplayStaysVisibleDuringShortNoteGaps() {
+        assertEquals(true, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(true, 1_000, 1_500));
+        assertEquals(false, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(true, 1_500, 1_500));
+        assertEquals(false, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(false, 1_000, 1_500));
+    }
+
+    @Test
     void estimatesStepInputTotalStepsFromClipLength() {
         assertEquals(16, LivePadSurfaceLayer.estimatedStepInputTotalSteps(4.0, 0.25));
         assertEquals(1, LivePadSurfaceLayer.estimatedStepInputTotalSteps(0.25, 0.25));

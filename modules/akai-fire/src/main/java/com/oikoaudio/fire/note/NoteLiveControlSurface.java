@@ -72,6 +72,10 @@ final class NoteLiveControlSurface {
         performanceControls.handleMute3(pressed);
     }
 
+    void handleMute4(final boolean pressed) {
+        performanceControls.handleMute4(pressed);
+    }
+
     BiColorLightState mute1LightState() {
         return performanceControls.mute1LightState();
     }
@@ -82,6 +86,10 @@ final class NoteLiveControlSurface {
 
     BiColorLightState mute3LightState() {
         return performanceControls.mute3LightState();
+    }
+
+    BiColorLightState mute4LightState() {
+        return performanceControls.mute4LightState();
     }
 
     void handleModeAdvance(final boolean pressed, final boolean noteStepActive) {

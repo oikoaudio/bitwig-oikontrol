@@ -1,11 +1,11 @@
 package com.personal.chords;
 
 /*
- * Local spike copy from BitX by Per-Sonal:
- * ref/BitX/src/main/java/com/personal/chords/ChordDetector.java
+ * Adapted from ChordDetector in BitX by Wim van den Borre:
+ * https://github.com/wimvandenborre/BitX
  *
- * Used here to evaluate Akai Fire note/chord OLED display. Do not publish or
- * ship this file until reuse permission/license has been recorded.
+ * Local changes keep the detector focused on Akai Fire note/chord OLED display
+ * and align MIDI note names with Bitwig's octave labels.
  */
 
 import java.util.ArrayList;
@@ -118,7 +118,7 @@ public final class ChordDetector {
 
     public static String midiNoteName(int midiNote) {
         int pitchClass = pitchClass(midiNote);
-        int octave = (midiNote / 12) - 1;
+        int octave = (midiNote / 12) - 2;
         return NOTE_NAMES[pitchClass] + octave;
     }
 

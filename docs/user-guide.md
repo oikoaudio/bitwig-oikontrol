@@ -165,14 +165,14 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 
 | Page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Pitch` | Shared root key | Shared scale | Shared octave | -- |
+| `Pitch` | Shared root key | Shared scale | Shared octave | Note OLED notes/chords: pads only or pads plus DAW |
 | `Input` | Global velocity sensitivity | Global velocity center | Pad brightness | Pad saturation |
 | `Clip` | `Create`: default empty-clip length | `Record`: launcher record length | -- | -- |
 | `Pins` | Pin track | Pin device | Pin clip | -- |
 
 On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Chord Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
-The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data.
+The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data. The `Note OLED Notes/Chords` hardware preference defaults to `Pads`: live Note pads show notes/chords on the OLED, while selected-track DAW playback notes do not take over the idle display. Set it to `Pads + DAW` if you also want playing clip notes/chords to appear during playback.
 
 Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Chord Step, Nested Rhythm, and Fugue. The `Encoder Legend Position` hardware preference defaults to `Bottom`; set it to `Top` if the top row is easier to read in your controller setup.
 
@@ -316,6 +316,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
 | `MUTE_3` | Note Repeat toggle |
+| `MUTE_4` | Hold pad notes until pressed again or Hold is turned off |
 | `KNOB MODE` | Cycle live-note encoder pages |
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
@@ -325,7 +326,7 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Breath | Pitch expression |
 | `User 2` | Selected device remote 1 | Device remote 2 | Device remote 3 | Device remote 4 |
 
-When live `NOTE` is idle, the OLED returns to useful selected-track context after transient encoder values. On the `Mixer` page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS with the compact encoder legend. On `Channel`, `User 1`, and `User 2`, it falls back to the selected track name with the current encoder-page legend. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the legend falls back to `D1`-style labels.
+When live `NOTE` is idle, the OLED returns to useful selected-track context after transient encoder values. Playing Fire pads show the current note or detected chord on the OLED and hold that display briefly across short gaps so repeated notes do not flash the screen. On the `Mixer` page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS with the compact encoder legend. On `Channel`, `User 1`, and `User 2`, it falls back to the selected track name with the current encoder-page legend. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the legend falls back to `D1`-style labels.
 
 `SHIFT + STEP` opens the selected launcher clip in Bitwig's Detail Editor, selects Bitwig's Step Input tool, and tries to move the editor position to the first item. The OLED shows `Step Input`, an estimated one-based `Step N/M` position, and the current encoder footer. Fire pad note/chord gestures advance the estimate once per released note-entry gesture. While the helper is active, `BANK RIGHT` sends Bitwig's right-arrow command for rest/advance or held-note extension, and `BANK LEFT` sends left-arrow for back. Press `SHIFT + STEP` again to return Bitwig to the Pointer tool.
 
@@ -608,6 +609,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Screen Message Hold`
 - `Idle Perf & Drum OLED`: choose contextual idle text/values or visible-track/pad meters for Perform and Drum XOX
 - `Encoder Legend Position`: choose whether compact OLED encoder legends appear on the bottom or top row
+- `Note OLED Notes/Chords`: choose whether live Note pad notes/chords stay pad-only or also follow selected-track DAW playback notes
 - `Euclid Scope`
 - `Drum Mode Pinning`
 - `Exclusive Track Arm`: arm pads select the armed track and disarm other visible tracks when enabled; defaults off for standard multi-arm behavior
@@ -642,6 +644,8 @@ The melodic seed controls are grouped into their own `Generative control` prefer
 - `rhbitwig` by Richie Hawtin and Eric Ahrens provided the Akai Fire drum sequencer which has been adapted for use here, as well as the arp workflow used on the LCXL User Template 8.
 
 - The fine-grid step nudging is based on Wim Van den Borre's `AkaiFireNudger` fork of `rhbitwig`, and developed further here.
+
+- Note/chord OLED detection is adapted from Wim van den Borre's `BitX`: https://github.com/wimvandenborre/BitX
 
 - The `Barker` chord family is adapted from Sam Barker's Octatrack chord-chain MIDI/sample workflow: https://www.voltek-labs.net/octatrack
 

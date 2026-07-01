@@ -20,6 +20,7 @@ final class NoteLivePadPerformer {
     private final Consumer<List<Integer>> soundingNotesListener;
     private final Set<Integer> heldPads = new HashSet<>();
     private final Map<Integer, LivePadNote> soundingNotesByPad = new HashMap<>();
+    private boolean holdModeActive;
 
     NoteLivePadPerformer(final MidiOut midiOut,
                          final java.util.function.IntFunction<int[]> midiNotesResolver,
@@ -54,6 +55,10 @@ final class NoteLivePadPerformer {
     }
 
     void handlePadPress(final int padIndex, final boolean pressed, final int rawVelocity, final int configuredVelocity) {
+        if (holdModeActive) {
+            handleHoldPadPress(padIndex, pressed, rawVelocity, configuredVelocity);
+            return;
+        }
         if (pressed) {
             heldPads.add(padIndex);
             noteOn(padIndex, rawVelocity, configuredVelocity);
@@ -64,7 +69,20 @@ final class NoteLivePadPerformer {
         notifySoundingNotesChanged();
     }
 
+    boolean toggleHoldMode() {
+        holdModeActive = !holdModeActive;
+        if (!holdModeActive) {
+            releaseHeldNotes();
+        }
+        return holdModeActive;
+    }
+
+    boolean isHoldModeActive() {
+        return holdModeActive;
+    }
+
     void releaseHeldNotes() {
+        holdModeActive = false;
         for (final int padIndex : new ArrayList<>(soundingNotesByPad.keySet())) {
             noteOff(padIndex);
         }
@@ -121,6 +139,22 @@ final class NoteLivePadPerformer {
         }
     }
 
+    private void handleHoldPadPress(final int padIndex, final boolean pressed, final int rawVelocity,
+                                    final int configuredVelocity) {
+        if (!pressed) {
+            notifySoundingNotesChanged();
+            return;
+        }
+        if (soundingNotesByPad.containsKey(padIndex)) {
+            heldPads.remove(padIndex);
+            noteOff(padIndex);
+        } else {
+            heldPads.add(padIndex);
+            noteOn(padIndex, rawVelocity, configuredVelocity);
+        }
+        notifySoundingNotesChanged();
+    }
+
     private void stopOtherPadsSoundingAny(final int padIndex, final int[] midiNotes) {
         final Set<Integer> targetNotes = new HashSet<>();
         for (final int midiNote : midiNotes) {
@@ -136,7 +170,10 @@ final class NoteLivePadPerformer {
                 .filter(entry -> entry.getValue().midiNotes().stream().anyMatch(targetNotes::contains))
                 .map(Map.Entry::getKey)
                 .toList();
-        duplicatePads.forEach(this::noteOff);
+        duplicatePads.forEach(duplicatePad -> {
+            heldPads.remove(duplicatePad);
+            noteOff(duplicatePad);
+        });
     }
 
     private void noteOff(final int padIndex) {

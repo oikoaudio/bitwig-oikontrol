@@ -13,6 +13,8 @@ final class NoteLivePerformanceControls {
     private final Consumer<Integer> sostenutoSender;
     private final Runnable noteRepeatToggle;
     private final BooleanSupplier noteRepeatActive;
+    private final HoldToggle holdToggle;
+    private final BooleanSupplier holdActive;
     private final StatusDisplay statusDisplay;
     private boolean sustainActive;
     private boolean sostenutoActive;
@@ -22,10 +24,23 @@ final class NoteLivePerformanceControls {
                                 final Runnable noteRepeatToggle,
                                 final BooleanSupplier noteRepeatActive,
                                 final StatusDisplay statusDisplay) {
+        this(sustainSender, sostenutoSender, noteRepeatToggle, noteRepeatActive, () -> false, () -> false,
+                statusDisplay);
+    }
+
+    NoteLivePerformanceControls(final Consumer<Integer> sustainSender,
+                                final Consumer<Integer> sostenutoSender,
+                                final Runnable noteRepeatToggle,
+                                final BooleanSupplier noteRepeatActive,
+                                final HoldToggle holdToggle,
+                                final BooleanSupplier holdActive,
+                                final StatusDisplay statusDisplay) {
         this.sustainSender = sustainSender;
         this.sostenutoSender = sostenutoSender;
         this.noteRepeatToggle = noteRepeatToggle;
         this.noteRepeatActive = noteRepeatActive;
+        this.holdToggle = holdToggle;
+        this.holdActive = holdActive;
         this.statusDisplay = statusDisplay;
     }
 
@@ -53,6 +68,14 @@ final class NoteLivePerformanceControls {
         }
     }
 
+    void handleMute4(final boolean pressed) {
+        if (!pressed) {
+            return;
+        }
+        final boolean active = holdToggle.toggle();
+        statusDisplay.show("Hold", active ? "On" : "Off");
+    }
+
     BiColorLightState mute1LightState() {
         return sustainActive ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
@@ -63,6 +86,10 @@ final class NoteLivePerformanceControls {
 
     BiColorLightState mute3LightState() {
         return noteRepeatActive.getAsBoolean() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+    }
+
+    BiColorLightState mute4LightState() {
+        return holdActive.getAsBoolean() ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
     }
 
     void resetToggles() {
@@ -79,5 +106,10 @@ final class NoteLivePerformanceControls {
     @FunctionalInterface
     interface StatusDisplay {
         void show(String title, String detail);
+    }
+
+    @FunctionalInterface
+    interface HoldToggle {
+        boolean toggle();
     }
 }

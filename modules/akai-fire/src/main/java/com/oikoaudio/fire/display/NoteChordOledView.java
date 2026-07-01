@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * SPIKE ONLY: renders BitX ChordDetector output on the Fire OLED for note/chord display.
- *
- * Chord naming currently uses a local copy of Per-Sonal's BitX ChordDetector.
- * Do not ship until reuse permission/license is recorded or the detector is replaced.
+ * Renders note/chord names on the Fire OLED using a local detector adapted from
+ * BitX by Wim van den Borre.
  */
 public final class NoteChordOledView {
     private static final long TRANSIENT_DISPLAY_QUIET_PERIOD_MS = 900L;

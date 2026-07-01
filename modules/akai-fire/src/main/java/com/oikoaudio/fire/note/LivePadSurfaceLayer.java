@@ -88,6 +88,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final int MIN_SCALE_DEGREE_GLISS = -14;
     private static final int MAX_SCALE_DEGREE_GLISS = 14;
     private static final int METER_REFRESH_TICKS = 1;
+    private static final long LIVE_PAD_NOTE_CHORD_RELEASE_HOLD_MS = 900L;
+    private static final long DAW_NOTE_CHORD_RELEASE_HOLD_MS = 2000L;
     private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
     private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
     private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
@@ -201,6 +203,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private List<Integer> selectedTrackPlayingNotes = List.of();
     private List<Integer> livePadSoundingNotes = List.of();
     private boolean liveNoteChordDisplayActive = false;
+    private long liveNoteChordHoldUntilMs = 0;
     private final EncoderStepAccumulator liveVelocityEncoder = new EncoderStepAccumulator(LIVE_VELOCITY_ENCODER_THRESHOLD);
     private int livePitchOffsetEncoderCarry = 0;
     private boolean livePitchOffsetFirstStepPending = true;
@@ -279,16 +282,6 @@ public abstract class LivePadSurfaceLayer extends Layer {
         this.liveRemoteControlsPage.pageCount().markInterested();
         this.liveRemoteControlsPage.pageNames().markInterested();
         this.liveRemoteControlsPage.getName().markInterested();
-        final NoteLivePerformanceControls livePerformanceControls = new NoteLivePerformanceControls(
-                value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, value),
-                value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, value),
-                noteRepeatHandler::toggleActive,
-                () -> noteRepeatHandler.getNoteRepeatActive().get(),
-                this::showLiveValueInfo);
-        this.liveControls = new NoteLiveControlSurface(livePerformanceControls, liveEncoderControls,
-                encoderTouchDisplayHandler, this::showLiveValueInfo, this::showLiveDetailInfo,
-                oled::clearScreenDelayed,
-                driver.knobModeEncoderResetControl());
         this.livePadPerformer = new NoteLivePadPerformer(
                 new NoteLivePadPerformer.MidiOut() {
                     @Override
@@ -310,6 +303,18 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 (padIndex, configuredVelocity, rawVelocity) -> resolveLivePadVelocity(padIndex, configuredVelocity, rawVelocity),
                 this::resolveLivePadTimbre,
                 this::handleLivePadSoundingNotes);
+        final NoteLivePerformanceControls livePerformanceControls = new NoteLivePerformanceControls(
+                value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SUSTAIN, value),
+                value -> noteInput.sendRawMidiEvent(Midi.CC, MIDI_CC_SOSTENUTO, value),
+                noteRepeatHandler::toggleActive,
+                () -> noteRepeatHandler.getNoteRepeatActive().get(),
+                livePadPerformer::toggleHoldMode,
+                livePadPerformer::isHoldModeActive,
+                this::showLiveValueInfo);
+        this.liveControls = new NoteLiveControlSurface(livePerformanceControls, liveEncoderControls,
+                encoderTouchDisplayHandler, this::showLiveValueInfo, this::showLiveDetailInfo,
+                oled::clearScreenDelayed,
+                driver.knobModeEncoderResetControl());
         noteInput.assignPolyphonicAftertouchToExpression(0, NoteInput.NoteExpression.TIMBRE_UP, 1);
         this.liveExpressionControls = new NoteLiveExpressionControls(new NoteLiveExpressionControls.MidiExpressionOut() {
             @Override
@@ -423,7 +428,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         if (!active) {
             return;
         }
-        refreshLiveNoteChordDisplay(selectedTrackPlayingNotes);
+        refreshPreferredLiveNoteChordDisplay();
     }
 
     private void handleLivePadSoundingNotes(final List<Integer> midiNotes) {
@@ -431,11 +436,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return;
         }
         livePadSoundingNotes = midiNotes == null ? List.of() : midiNotes;
-        if (midiNotes == null || midiNotes.isEmpty()) {
-            refreshLiveNoteChordDisplay(selectedTrackPlayingNotes);
-            return;
-        }
-        refreshLiveNoteChordDisplay(midiNotes);
+        refreshPreferredLiveNoteChordDisplay();
     }
 
     private List<Integer> playingNotesFrom(final PlayingNote[] playingNotes) {
@@ -455,12 +456,16 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 .toList();
     }
 
-    private boolean refreshLiveNoteChordDisplay(final List<Integer> midiNotes) {
+    private boolean refreshLiveNoteChordDisplay(final List<Integer> midiNotes, final long releaseHoldMs) {
         if (!shouldShowLiveNoteChordDisplay()) {
             resetLiveNoteChordDisplay();
             return false;
         }
         if (midiNotes == null || midiNotes.isEmpty()) {
+            if (shouldHoldLiveNoteChordDisplay(liveNoteChordDisplayActive, System.currentTimeMillis(),
+                    liveNoteChordHoldUntilMs)) {
+                return true;
+            }
             resetLiveNoteChordDisplay();
             refreshLiveContextIdleIfVisible();
             return false;
@@ -470,7 +475,31 @@ public abstract class LivePadSurfaceLayer extends Layer {
         liveNoteChordDisplayActive = liveNoteChordOledView.show(midiNotes,
                 liveEncoderModeLegend(liveControls.currentEncoderMode()),
                 liveNoteChordStatusLine());
+        if (liveNoteChordDisplayActive) {
+            liveNoteChordHoldUntilMs = System.currentTimeMillis() + releaseHoldMs;
+        }
         return liveNoteChordDisplayActive;
+    }
+
+    private boolean refreshPreferredLiveNoteChordDisplay() {
+        return refreshLiveNoteChordDisplay(preferredLiveNoteChordNotes(), preferredLiveNoteChordReleaseHoldMs());
+    }
+
+    private List<Integer> preferredLiveNoteChordNotes() {
+        if (!livePadSoundingNotes.isEmpty()) {
+            return livePadSoundingNotes;
+        }
+        if (driver.shouldShowPlaybackNoteChordDisplay()) {
+            return selectedTrackPlayingNotes;
+        }
+        return List.of();
+    }
+
+    private long preferredLiveNoteChordReleaseHoldMs() {
+        if (!livePadSoundingNotes.isEmpty()) {
+            return LIVE_PAD_NOTE_CHORD_RELEASE_HOLD_MS;
+        }
+        return DAW_NOTE_CHORD_RELEASE_HOLD_MS;
     }
 
     private boolean shouldShowLiveNoteChordDisplay() {
@@ -479,18 +508,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     public void notifyBlink(final int blinkTicks) {
         if (liveNoteChordDisplayActive) {
-            if (!selectedTrackPlayingNotes.isEmpty()) {
-                refreshLiveNoteChordDisplay(selectedTrackPlayingNotes);
-            } else if (!livePadSoundingNotes.isEmpty()) {
-                refreshLiveNoteChordDisplay(livePadSoundingNotes);
-            }
-            return;
-        }
-        if (!selectedTrackPlayingNotes.isEmpty()) {
-            if (refreshLiveNoteChordDisplay(selectedTrackPlayingNotes)) {
+            if (refreshPreferredLiveNoteChordDisplay()) {
                 return;
             }
-        } else if (!livePadSoundingNotes.isEmpty() && refreshLiveNoteChordDisplay(livePadSoundingNotes)) {
+        }
+        if (refreshPreferredLiveNoteChordDisplay()) {
             return;
         }
         refreshLiveMetersIfVisible(blinkTicks);
@@ -502,7 +524,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             showStepInputDisplay();
             return true;
         }
-        if (refreshLiveNoteChordDisplay(selectedTrackPlayingNotes)) {
+        if (refreshPreferredLiveNoteChordDisplay()) {
             return true;
         }
         if (hasLivePitchGlissOffset()) {
@@ -544,7 +566,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 driver.shouldShowMeterIdleDisplay()
                         && !oled.hasPendingTransientMessage()
                         && !liveNoteChordDisplayActive
-                        && selectedTrackPlayingNotes.isEmpty()
+                        && preferredLiveNoteChordNotes().isEmpty()
                         && !hasLivePitchGlissOffset());
     }
 
@@ -896,6 +918,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     private void resetLiveNoteChordDisplay() {
         liveNoteChordDisplayActive = false;
+        liveNoteChordHoldUntilMs = 0;
         liveNoteChordOledView.reset();
     }
 
@@ -949,6 +972,12 @@ public abstract class LivePadSurfaceLayer extends Layer {
                                                 final boolean pendingTransientMessage,
                                                 final boolean trackLegendIdleAllowed) {
         return !contextDisplayActive && !pendingTransientMessage && trackLegendIdleAllowed;
+    }
+
+    static boolean shouldHoldLiveNoteChordDisplay(final boolean noteChordDisplayActive,
+                                                  final long nowMs,
+                                                  final long holdUntilMs) {
+        return noteChordDisplayActive && nowMs < holdUntilMs;
     }
 
     private String normalizedSelectedTrackName() {
@@ -1462,6 +1491,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void handleMute4Button(final boolean pressed) {
+        notePlayController.handleMute4(pressed);
     }
 
     private BiColorLightState getMute1LightState() {
@@ -1477,7 +1507,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private BiColorLightState getMute4LightState() {
-        return BiColorLightState.OFF;
+        return notePlayController.mute4LightState();
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
