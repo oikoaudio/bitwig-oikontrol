@@ -2125,7 +2125,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     if (driver.isGlobalAltHeld()) {
                         final int effective = altScaler.scale(inc, driver.isGlobalShiftHeld());
                         if (effective != 0) {
-                            handler.recordTouchAdjustment(slotIndex, Math.abs(effective));
                             adjustMutateIntensity(effective);
                         }
                         return;
@@ -2326,17 +2325,18 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                     case 2 -> cursorTrack.sendBank().getItemAt(0);
                     default -> cursorTrack.sendBank().getItemAt(1);
                 };
+                final EncoderValueProfile profile = index == 1
+                        ? EncoderValueProfile.PAN
+                        : EncoderValueProfile.LARGE_RANGE;
                 ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        handler.touchResetControl(), mixerResetPolicy(index), driver.knobModeEncoderResetControl(),
-                        oled::valueInfo, oled::clearScreenDelayed);
+                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, index == 1,
+                        oled::valueInfoWithBar, oled::clearScreenDelayed);
             }
         };
     }
 
     private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
-        return index == 0
-                ? ParameterEncoderBinding.ResetPolicy.NONE
-                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
+        return ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT;
     }
 
     private EncoderSlotBinding actionSlot(final String label, final java.util.function.IntConsumer adjuster) {

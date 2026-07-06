@@ -47,6 +47,10 @@ final class NotePlayController {
         controls.handleMute3(pressed);
     }
 
+    void handleMute4(final boolean pressed) {
+        controls.handleMute4(pressed);
+    }
+
     BiColorLightState mute1LightState() {
         return controls.mute1LightState();
     }
@@ -57,6 +61,10 @@ final class NotePlayController {
 
     BiColorLightState mute3LightState() {
         return controls.mute3LightState();
+    }
+
+    BiColorLightState mute4LightState() {
+        return controls.mute4LightState();
     }
 
     void handleModeAdvance(final boolean pressed, final boolean noteStepActive) {

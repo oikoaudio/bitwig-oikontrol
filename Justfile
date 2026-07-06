@@ -41,14 +41,14 @@ fire-extension:
 fire-install:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:akai-fire:jar
     mkdir -p "{{bitwig_extensions_dir}}"
-    cp "$(find modules/akai-fire/build/libs -maxdepth 1 -type f -name 'FireOikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
-    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'FireOikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+    cp modules/akai-fire/build/libs/FireOikontrol.bwextension "{{bitwig_extensions_dir}}/"
+    @ls -l "{{bitwig_extensions_dir}}/FireOikontrol.bwextension"
 
 fire-build-install:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:akai-fire:build
     mkdir -p "{{bitwig_extensions_dir}}"
-    cp "$(find modules/akai-fire/build/libs -maxdepth 1 -type f -name 'FireOikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
-    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'FireOikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+    cp modules/akai-fire/build/libs/FireOikontrol.bwextension "{{bitwig_extensions_dir}}/"
+    @ls -l "{{bitwig_extensions_dir}}/FireOikontrol.bwextension"
 
 launchcontrol-build:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:launchcontrol:build
@@ -76,14 +76,14 @@ oikontrol-extension:
 oikontrol-install:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:jar
     mkdir -p "{{bitwig_extensions_dir}}"
-    cp "$(find modules/oikontrol/build/libs -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
-    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+    cp modules/oikontrol/build/libs/Oikontrol.bwextension "{{bitwig_extensions_dir}}/"
+    @ls -l "{{bitwig_extensions_dir}}/Oikontrol.bwextension"
 
 oikontrol-build-install:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:oikontrol:build
     mkdir -p "{{bitwig_extensions_dir}}"
-    cp "$(find modules/oikontrol/build/libs -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-)" "{{bitwig_extensions_dir}}/"
-    @find "{{bitwig_extensions_dir}}" -maxdepth 1 -type f -name 'Oikontrol.bwextension' -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d' ' -f2-
+    cp modules/oikontrol/build/libs/Oikontrol.bwextension "{{bitwig_extensions_dir}}/"
+    @ls -l "{{bitwig_extensions_dir}}/Oikontrol.bwextension"
 
 artifacts:
     @find modules -type f \( -name '*.bwextension' -o -name '*.jar' \) | sort

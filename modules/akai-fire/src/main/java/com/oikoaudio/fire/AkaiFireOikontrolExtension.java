@@ -191,7 +191,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private SettableEnumValue screenMessageHoldPref;
     private SettableEnumValue idleOledPref;
     private SettableEnumValue encoderLegendPositionPref;
-    private SettableBooleanValue encoderTouchResetPref;
+    private SettableEnumValue noteChordDisplayPref;
     private SettableBooleanValue showDeactivatedTracksPref;
     private SettableBooleanValue exclusiveTrackArmPref;
     private SettableRangedValue padBrightnessPref;
@@ -228,7 +228,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean performRecordPadGestureConsumed = false;
     private double padBrightness = FireControlPreferences.PAD_BRIGHTNESS_DEFAULT;
     private double padSaturation = FireControlPreferences.PAD_SATURATION_DEFAULT;
-    private boolean encoderTouchResetEnabled = FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT;
     private boolean exclusiveTrackArmEnabled = FireControlPreferences.EXCLUSIVE_TRACK_ARM_DEFAULT;
     private long screenMessageHoldMs = FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS;
     private long stoppedMeterRingOutUntilMs = 0;
@@ -526,13 +525,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         });
         padSaturation = FireControlPreferences.normalizePadSaturation(padSaturationPref.getRaw());
 
-        encoderTouchResetPref = preferences.getBooleanSetting("Encoder touch reset",
-                FireControlPreferences.CATEGORY_HARDWARE,
-                FireControlPreferences.ENCODER_TOUCH_RESET_DEFAULT);
-        encoderTouchResetPref.markInterested();
-        encoderTouchResetEnabled = encoderTouchResetPref.get();
-        encoderTouchResetPref.addValueObserver(value -> encoderTouchResetEnabled = value);
-
         screenMessageHoldPref = preferences.getEnumSetting("Screen Message Hold",
                 FireControlPreferences.CATEGORY_HARDWARE,
                 FireControlPreferences.SCREEN_MESSAGE_HOLDS,
@@ -554,6 +546,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         encoderLegendPositionPref.markInterested();
         encoderLegendPositionPref.addValueObserver(this::applyEncoderLegendPositionPreference);
         applyEncoderLegendPositionPreference(encoderLegendPositionPref.get());
+
+        noteChordDisplayPref = preferences.getEnumSetting("Note OLED Notes/Chords",
+                FireControlPreferences.CATEGORY_HARDWARE,
+                FireControlPreferences.NOTE_CHORD_DISPLAY_MODES,
+                FireControlPreferences.NOTE_CHORD_DISPLAY_PADS);
+        noteChordDisplayPref.markInterested();
 
         showDeactivatedTracksPref = preferences.getBooleanSetting("Show deactivated tracks",
                 FireControlPreferences.CATEGORY_FUNCTIONALITIES,
@@ -744,6 +742,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean shouldShowMeterIdleDisplay() {
         return isTransportPlaying() || System.currentTimeMillis() < stoppedMeterRingOutUntilMs;
+    }
+
+    public boolean shouldShowPlaybackNoteChordDisplay() {
+        return FireControlPreferences.shouldShowPlaybackNoteChordDisplay(noteChordDisplayLabel());
     }
 
     private void handleTransportPlayingChanged(final boolean playing) {
@@ -1487,10 +1489,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public MultiStateHardwareLight[] getStateLights() {
         return stateLights;
-    }
-
-    public boolean isEncoderTouchResetEnabled() {
-        return encoderTouchResetEnabled;
     }
 
     public boolean isExclusiveTrackArmEnabled() {
@@ -2247,11 +2245,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         oled.detailInfo("Global Settings",
-                "Page: %s\n1: Root %s\n2: Scale %s\n3: Oct %d\n4: --\nTracks: %s".formatted(
+                "Page: %s\n1: Root %s\n2: Scale %s\n3: Oct %d\n4: Note OLED %s\nTracks: %s".formatted(
                         globalSettingsPageLabel(),
                         com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
                         sharedPitchContext.getScaleDisplayName(),
                         sharedPitchContext.getOctave(),
+                        noteChordDisplayLabel(),
                         showDeactivatedTracks() ? "All" : "Active"));
     }
 
@@ -2285,6 +2284,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (encoderIndex == 2) {
             sharedPitchContext.adjustOctave(inc);
             oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
+            return;
+        }
+        if (encoderIndex == 3) {
+            adjustNoteChordDisplayPreference(inc);
             return;
         }
         showGlobalSettingsOverview();
@@ -2323,6 +2326,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
             return;
         }
+        if (encoderIndex == 3) {
+            oled.valueInfo("Note OLED", noteChordDisplayLabel());
+            return;
+        }
         showGlobalSettingsOverview();
     }
 
@@ -2346,6 +2353,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case 2 -> handleKnobModeEncoderReset(true, true, "Octave", "No reset",
                     () -> sharedPitchContext.setOctave(getDefaultNoteInputOctavePreference()),
                     () -> oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave())));
+            case 3 -> handleKnobModeEncoderReset(true, noteChordDisplayPref != null, "Note OLED", "No reset",
+                    () -> noteChordDisplayPref.set(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS),
+                    () -> oled.valueInfo("Note OLED", noteChordDisplayLabel()));
             default -> false;
         };
     }
@@ -2647,6 +2657,24 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Record Len", FireControlPreferences.LAUNCHER_RECORD_LENGTHS[nextIndex]);
     }
 
+    private void adjustNoteChordDisplayPreference(final int inc) {
+        if (noteChordDisplayPref == null || inc == 0) {
+            return;
+        }
+        final String current = FireControlPreferences.normalizeNoteChordDisplay(noteChordDisplayPref.get());
+        int currentIndex = 0;
+        for (int i = 0; i < FireControlPreferences.NOTE_CHORD_DISPLAY_MODES.length; i++) {
+            if (FireControlPreferences.NOTE_CHORD_DISPLAY_MODES[i].equals(current)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        final int nextIndex = Math.max(0,
+                Math.min(FireControlPreferences.NOTE_CHORD_DISPLAY_MODES.length - 1, currentIndex + inc));
+        noteChordDisplayPref.set(FireControlPreferences.NOTE_CHORD_DISPLAY_MODES[nextIndex]);
+        oled.valueInfo("Note OLED", noteChordDisplayLabel());
+    }
+
     private String defaultClipLengthLabel() {
         return FireControlPreferences.normalizeDefaultClipLength(defaultClipLengthPref == null
                 ? FireControlPreferences.CLIP_LENGTH_2_BARS
@@ -2657,6 +2685,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return FireControlPreferences.normalizeLauncherRecordLength(launcherRecordLengthPref == null
                 ? FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_2_BARS
                 : launcherRecordLengthPref.get());
+    }
+
+    private String noteChordDisplayLabel() {
+        return FireControlPreferences.normalizeNoteChordDisplay(noteChordDisplayPref == null
+                ? FireControlPreferences.NOTE_CHORD_DISPLAY_PADS
+                : noteChordDisplayPref.get());
     }
 
     private String padBrightnessLabel() {

@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.note;
 
-import com.oikoaudio.fire.control.EncoderTouchResetHandler;
+import com.oikoaudio.fire.control.EncoderTouchDisplayHandler;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -11,7 +11,7 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 final class NoteLiveControlSurface {
     private final NoteLivePerformanceControls performanceControls;
     private final NoteLiveEncoderModeControls encoderModeControls;
-    private final EncoderTouchResetHandler touchResetHandler;
+    private final EncoderTouchDisplayHandler touchDisplayHandler;
     private final ValueDisplay valueDisplay;
     private final DetailDisplay detailDisplay;
     private final Runnable clearDisplay;
@@ -19,14 +19,14 @@ final class NoteLiveControlSurface {
 
     NoteLiveControlSurface(final NoteLivePerformanceControls performanceControls,
                            final NoteLiveEncoderModeControls encoderModeControls,
-                           final EncoderTouchResetHandler touchResetHandler,
+                           final EncoderTouchDisplayHandler touchDisplayHandler,
                            final ValueDisplay valueDisplay,
                            final DetailDisplay detailDisplay,
                            final Runnable clearDisplay,
                            final ParameterEncoderBinding.ExplicitResetControl explicitResetControl) {
         this.performanceControls = performanceControls;
         this.encoderModeControls = encoderModeControls;
-        this.touchResetHandler = touchResetHandler;
+        this.touchDisplayHandler = touchDisplayHandler;
         this.valueDisplay = valueDisplay;
         this.detailDisplay = detailDisplay;
         this.clearDisplay = clearDisplay;
@@ -35,11 +35,11 @@ final class NoteLiveControlSurface {
 
     NoteLiveControlSurface(final NoteLivePerformanceControls performanceControls,
                            final NoteLiveEncoderModeControls encoderModeControls,
-                           final EncoderTouchResetHandler touchResetHandler,
+                           final EncoderTouchDisplayHandler touchDisplayHandler,
                            final ValueDisplay valueDisplay,
                            final DetailDisplay detailDisplay,
                            final Runnable clearDisplay) {
-        this(performanceControls, encoderModeControls, touchResetHandler, valueDisplay, detailDisplay, clearDisplay,
+        this(performanceControls, encoderModeControls, touchDisplayHandler, valueDisplay, detailDisplay, clearDisplay,
                 ParameterEncoderBinding.ExplicitResetControl.none());
     }
 
@@ -72,6 +72,10 @@ final class NoteLiveControlSurface {
         performanceControls.handleMute3(pressed);
     }
 
+    void handleMute4(final boolean pressed) {
+        performanceControls.handleMute4(pressed);
+    }
+
     BiColorLightState mute1LightState() {
         return performanceControls.mute1LightState();
     }
@@ -82,6 +86,10 @@ final class NoteLiveControlSurface {
 
     BiColorLightState mute3LightState() {
         return performanceControls.mute3LightState();
+    }
+
+    BiColorLightState mute4LightState() {
+        return performanceControls.mute4LightState();
     }
 
     void handleModeAdvance(final boolean pressed, final boolean noteStepActive) {
@@ -122,11 +130,7 @@ final class NoteLiveControlSurface {
                 "Reset", unavailableDetail, resetAction, showInfo, valueDisplay::show)) {
             return;
         }
-        touchResetHandler.handleResettableTouch(encoderIndex, touched, showInfo, resetAction);
-    }
-
-    void markEncoderAdjusted(final int encoderIndex) {
-        touchResetHandler.markAdjusted(encoderIndex);
+        touchDisplayHandler.handleTouch(touched, showInfo);
     }
 
     @FunctionalInterface

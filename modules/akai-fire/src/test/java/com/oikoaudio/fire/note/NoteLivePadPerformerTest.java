@@ -120,6 +120,58 @@ class NoteLivePadPerformerTest {
         assertEquals(List.of("on:60:70", "off:60", "on:60:90", "off:60"), events);
     }
 
+    @Test
+    void holdModeKeepsPadSoundingAfterReleaseUntilPressedAgain() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad},
+                (configured, raw) -> raw);
+
+        performer.toggleHoldMode();
+        performer.handlePadPress(2, true, 99, 100);
+        performer.handlePadPress(2, false, 0, 100);
+        performer.handlePadPress(2, true, 99, 100);
+        performer.handlePadPress(2, false, 0, 100);
+
+        assertEquals(List.of("on:62:99", "off:62"), events);
+        assertFalse(performer.isPadHeld(2));
+    }
+
+    @Test
+    void disablingHoldModeReleasesLatchedPads() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad},
+                (configured, raw) -> raw);
+
+        assertTrue(performer.toggleHoldMode());
+        performer.handlePadPress(1, true, 80, 100);
+        performer.handlePadPress(1, false, 0, 100);
+
+        assertFalse(performer.toggleHoldMode());
+
+        assertEquals(List.of("on:61:80", "off:61"), events);
+        assertFalse(performer.isPadHeld(1));
+    }
+
+    @Test
+    void enablingHoldModeWhilePadIsDownKeepsItSoundingAfterRelease() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
+                new TestMidiOut(events),
+                pad -> new int[]{60 + pad},
+                (configured, raw) -> raw);
+
+        performer.handlePadPress(3, true, 70, 100);
+        performer.toggleHoldMode();
+        performer.handlePadPress(3, false, 0, 100);
+
+        assertEquals(List.of("on:63:70"), events);
+        assertTrue(performer.isPadHeld(3));
+    }
+
     private record TestMidiOut(List<String> events) implements NoteLivePadPerformer.MidiOut {
         @Override
         public void noteOn(final int midiNote, final int velocity) {

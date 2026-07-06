@@ -19,7 +19,6 @@ public final class FireControlPreferences {
     public static final double PAD_SATURATION_MAX = 150.0;
     public static final double PAD_SATURATION_STEP = 5.0;
     public static final double PAD_SATURATION_DEFAULT = 100.0;
-    public static final boolean ENCODER_TOUCH_RESET_DEFAULT = true;
     public static final String SCREEN_MESSAGE_HOLD_SHORT = "Short";
     public static final String SCREEN_MESSAGE_HOLD_NORMAL = "Normal";
     public static final String SCREEN_MESSAGE_HOLD_LONG = "Long";
@@ -27,6 +26,10 @@ public final class FireControlPreferences {
     public static final String IDLE_OLED_METERS = "Meters";
     public static final String ENCODER_LEGEND_POSITION_BOTTOM = "Bottom";
     public static final String ENCODER_LEGEND_POSITION_TOP = "Top";
+    public static final String NOTE_CHORD_DISPLAY_PADS = "Pads";
+    public static final String NOTE_CHORD_DISPLAY_PADS_AND_DAW = "Pads + DAW";
+    private static final String NOTE_CHORD_DISPLAY_LIVE_LEGACY = "Live";
+    private static final String NOTE_CHORD_DISPLAY_LIVE_AND_PLAYBACK_LEGACY = "Live + Playback";
     public static final long SCREEN_MESSAGE_HOLD_SHORT_MS = 750;
     public static final long SCREEN_MESSAGE_HOLD_NORMAL_MS = 1500;
     public static final long SCREEN_MESSAGE_HOLD_LONG_MS = 3000;
@@ -42,6 +45,10 @@ public final class FireControlPreferences {
     public static final String[] ENCODER_LEGEND_POSITIONS = {
             ENCODER_LEGEND_POSITION_BOTTOM,
             ENCODER_LEGEND_POSITION_TOP
+    };
+    public static final String[] NOTE_CHORD_DISPLAY_MODES = {
+            NOTE_CHORD_DISPLAY_PADS,
+            NOTE_CHORD_DISPLAY_PADS_AND_DAW
     };
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
@@ -417,6 +424,25 @@ public final class FireControlPreferences {
             }
         }
         return ENCODER_LEGEND_POSITION_BOTTOM;
+    }
+
+    public static String normalizeNoteChordDisplay(final String preferenceValue) {
+        if (NOTE_CHORD_DISPLAY_LIVE_LEGACY.equals(preferenceValue)) {
+            return NOTE_CHORD_DISPLAY_PADS;
+        }
+        if (NOTE_CHORD_DISPLAY_LIVE_AND_PLAYBACK_LEGACY.equals(preferenceValue)) {
+            return NOTE_CHORD_DISPLAY_PADS_AND_DAW;
+        }
+        for (final String value : NOTE_CHORD_DISPLAY_MODES) {
+            if (value.equals(preferenceValue)) {
+                return value;
+            }
+        }
+        return NOTE_CHORD_DISPLAY_PADS;
+    }
+
+    public static boolean shouldShowPlaybackNoteChordDisplay(final String preferenceValue) {
+        return NOTE_CHORD_DISPLAY_PADS_AND_DAW.equals(normalizeNoteChordDisplay(preferenceValue));
     }
 
     public static String normalizeDefaultClipLength(final String preferenceValue) {

@@ -71,7 +71,7 @@ final class NoteLiveEncoderModeControls {
 
     static String modeInfo(final EncoderMode mode) {
         return switch (mode) {
-            case CHANNEL -> "1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Timbre";
+            case CHANNEL -> "1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: TimbreCC";
             case MIXER -> "1: Volume\n2: Pan\n3: Send 1\n4: Send 2";
             case USER_1 -> "1: Velocity\n2: Aftertouch\n3: Breath\n4: Pitch Expr";
             case USER_2 -> EncoderFooterLegend.remoteModeInfo("Device Remotes", "D", 1);
@@ -80,7 +80,7 @@ final class NoteLiveEncoderModeControls {
 
     static String modeLegend(final EncoderMode mode) {
         return switch (mode) {
-            case CHANNEL -> EncoderFooterLegend.of("Mod", "Bend", "Glis", "Timb");
+            case CHANNEL -> EncoderFooterLegend.of("Mod", "Bend", "Glis", "TCC");
             case MIXER -> EncoderFooterLegend.MIXER;
             case USER_1 -> EncoderFooterLegend.of("Velo", "Aft", "Brth", "PExp");
             case USER_2 -> EncoderFooterLegend.remoteControls("D", 1);

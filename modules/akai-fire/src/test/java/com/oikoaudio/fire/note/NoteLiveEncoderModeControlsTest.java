@@ -23,7 +23,7 @@ class NoteLiveEncoderModeControlsTest {
 
         assertEquals(EncoderMode.CHANNEL, controls.mode());
         assertEquals(BiColorLightState.MODE_CHANNEL, controls.lightState());
-        assertEquals("1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: Timbre", controls.modeInfo());
+        assertEquals("1: Mod\n2: Pitch Bend\n3: Pitch Gliss\n4: TimbreCC", controls.modeInfo());
         assertEquals(List.of(
                 "deactivate:CHANNEL",
                 "deactivate:MIXER",
@@ -80,7 +80,7 @@ class NoteLiveEncoderModeControlsTest {
 
     @Test
     void shorthandLegendsFitTheOledBottomRow() {
-        assertEquals("Mod  Bend Glis Timb", NoteLiveEncoderModeControls.modeLegend(EncoderMode.CHANNEL));
+        assertEquals("Mod  Bend Glis TCC", NoteLiveEncoderModeControls.modeLegend(EncoderMode.CHANNEL));
         assertEquals("Vol  Pan  S1  S2", NoteLiveEncoderModeControls.modeLegend(EncoderMode.MIXER));
         assertEquals("Velo Aft  Brth PExp", NoteLiveEncoderModeControls.modeLegend(EncoderMode.USER_1));
         assertEquals("Dev1 Dev2 Dev3 Dev4", NoteLiveEncoderModeControls.modeLegend(EncoderMode.USER_2));

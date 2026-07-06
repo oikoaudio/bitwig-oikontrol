@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.note;
 
-import com.oikoaudio.fire.control.EncoderTouchResetHandler;
-import com.oikoaudio.fire.control.TouchResetGesture;
+import com.oikoaudio.fire.control.EncoderTouchDisplayHandler;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
@@ -46,7 +45,7 @@ class NoteLiveControlSurfaceTest {
         final NoteLiveControlSurface surface = new NoteLiveControlSurface(
                 performanceControls,
                 createEncoderControls(layerEvents),
-                createTouchResetHandler(new ArrayList<>()),
+                createTouchDisplayHandler(new ArrayList<>()),
                 (title, detail) -> {},
                 (title, detail) -> {},
                 () -> {});
@@ -71,7 +70,7 @@ class NoteLiveControlSurfaceTest {
         final NoteLiveControlSurface surface = new NoteLiveControlSurface(
                 new NoteLivePerformanceControls(ignored -> {}, ignored -> {}, () -> {}, () -> false, (title, detail) -> {}),
                 createEncoderControls(new ArrayList<>()),
-                createTouchResetHandler(new ArrayList<>()),
+                createTouchDisplayHandler(new ArrayList<>()),
                 (title, detail) -> {},
                 (title, detail) -> details.add(title + ":" + detail),
                 () -> {});
@@ -95,7 +94,7 @@ class NoteLiveControlSurfaceTest {
                         repeatActive::get,
                         (title, detail) -> {}),
                 createEncoderControls(new ArrayList<>()),
-                createTouchResetHandler(new ArrayList<>()),
+                createTouchDisplayHandler(new ArrayList<>()),
                 (title, detail) -> {},
                 (title, detail) -> {},
                 () -> {});
@@ -113,7 +112,7 @@ class NoteLiveControlSurfaceTest {
         return new NoteLiveControlSurface(
                 new NoteLivePerformanceControls(ignored -> {}, ignored -> {}, () -> {}, () -> false, (title, detail) -> {}),
                 createEncoderControls(events),
-                createTouchResetHandler(new ArrayList<>()),
+                createTouchDisplayHandler(new ArrayList<>()),
                 (title, detail) -> {},
                 (title, detail) -> {},
                 () -> {});
@@ -125,7 +124,7 @@ class NoteLiveControlSurfaceTest {
         final NoteLiveControlSurface surface = new NoteLiveControlSurface(
                 new NoteLivePerformanceControls(ignored -> {}, ignored -> {}, () -> {}, () -> false, (title, detail) -> {}),
                 createEncoderControls(new ArrayList<>()),
-                createTouchResetHandler(new ArrayList<>()),
+                createTouchDisplayHandler(new ArrayList<>()),
                 (title, detail) -> events.add("value:" + title + ":" + detail),
                 (title, detail) -> {},
                 () -> events.add("clear"));
@@ -139,29 +138,18 @@ class NoteLiveControlSurfaceTest {
     @Test
     void resettableTouchAndAdjustmentDelegateToTouchHandler() {
         final List<String> events = new ArrayList<>();
-        final Runnable[] scheduledTask = new Runnable[1];
         final NoteLiveControlSurface surface = new NoteLiveControlSurface(
                 new NoteLivePerformanceControls(ignored -> {}, ignored -> {}, () -> {}, () -> false, (title, detail) -> {}),
                 createEncoderControls(new ArrayList<>()),
-                new EncoderTouchResetHandler(
-                        new TouchResetGesture(4, 1000L, 300L, 2),
-                        () -> true,
-                        (task, delayMs) -> {
-                            events.add("schedule:" + delayMs);
-                            scheduledTask[0] = task;
-                        },
-                        1000L,
-                        () -> events.add("clear")),
+                new EncoderTouchDisplayHandler(() -> events.add("clear")),
                 (title, detail) -> {},
                 (title, detail) -> {},
                 () -> {});
 
         surface.handleResettableTouch(3, true, () -> events.add("show"), () -> events.add("reset"));
-        surface.markEncoderAdjusted(3);
-        scheduledTask[0].run();
         surface.handleResettableTouch(3, false, () -> events.add("show"), () -> events.add("reset"));
 
-        assertEquals(List.of("schedule:1000", "show", "clear"), events);
+        assertEquals(List.of("show", "clear"), events);
     }
 
     private static NoteLiveEncoderModeControls createEncoderControls(final List<String> events) {
@@ -174,12 +162,8 @@ class NoteLiveControlSurfaceTest {
                 NoteLiveEncoderModeControls::modeInfo);
     }
 
-    private static EncoderTouchResetHandler createTouchResetHandler(final List<String> events) {
-        return new EncoderTouchResetHandler(
-                new TouchResetGesture(4, 0L, 0L, 2),
-                () -> false,
-                (task, delayMs) -> { },
-                0L,
+    private static EncoderTouchDisplayHandler createTouchDisplayHandler(final List<String> events) {
+        return new EncoderTouchDisplayHandler(
                 () -> events.add("clear"));
     }
 

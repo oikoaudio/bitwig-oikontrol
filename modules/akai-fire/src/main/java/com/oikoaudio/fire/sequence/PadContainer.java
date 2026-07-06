@@ -290,7 +290,10 @@ class PadContainer {
         if (parameter == null) {
             return false;
         }
-        EncoderValueProfile.LARGE_RANGE.adjustParameter(parameter, fine, inc);
+        final EncoderValueProfile profile = typeIndex == 1
+                ? EncoderValueProfile.PAN
+                : EncoderValueProfile.LARGE_RANGE;
+        profile.adjustParameter(parameter, fine, inc);
         return true;
     }
 
@@ -306,6 +309,11 @@ class PadContainer {
     public String mixerDisplayedValue(final int typeIndex) {
         final Parameter parameter = mixerParameter(typeIndex);
         return parameter != null ? parameter.displayedValue().get() : "";
+    }
+
+    public double mixerRawValue(final int typeIndex) {
+        final Parameter parameter = mixerParameter(typeIndex);
+        return parameter != null ? parameter.value().get() : 0.0;
     }
 
     public String mixerName(final int typeIndex, final String fallbackLabel) {

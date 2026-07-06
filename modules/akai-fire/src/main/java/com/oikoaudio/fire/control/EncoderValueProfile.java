@@ -9,6 +9,7 @@ import com.bitwig.extension.controller.api.SettableRangedValue;
 public enum EncoderValueProfile {
     LARGE_RANGE(0.01, 0.0025),
     COMPACT_RANGE(0.005, 0.00125),
+    PAN(0.005, 0.0025),
     SEMITONE_PARAMETER(0.0416667, 0.0416667),
     PITCH_PARAMETER(0.0138889, 0.0138889);
 

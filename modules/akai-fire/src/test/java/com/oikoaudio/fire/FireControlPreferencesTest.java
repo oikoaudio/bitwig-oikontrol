@@ -138,6 +138,33 @@ class FireControlPreferencesTest {
     }
 
     @Test
+    void normalizesNoteChordDisplayPreferenceValues() {
+        assertEquals(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS,
+                FireControlPreferences.normalizeNoteChordDisplay(
+                        FireControlPreferences.NOTE_CHORD_DISPLAY_PADS));
+        assertEquals(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS_AND_DAW,
+                FireControlPreferences.normalizeNoteChordDisplay(
+                        FireControlPreferences.NOTE_CHORD_DISPLAY_PADS_AND_DAW));
+        assertEquals(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS,
+                FireControlPreferences.normalizeNoteChordDisplay("Live"));
+        assertEquals(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS_AND_DAW,
+                FireControlPreferences.normalizeNoteChordDisplay("Live + Playback"));
+        assertEquals(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS,
+                FireControlPreferences.normalizeNoteChordDisplay("unexpected"));
+    }
+
+    @Test
+    void detectsWhenPlaybackNotesShouldUseNoteChordDisplay() {
+        assertEquals(false,
+                FireControlPreferences.shouldShowPlaybackNoteChordDisplay(
+                        FireControlPreferences.NOTE_CHORD_DISPLAY_PADS));
+        assertEquals(true,
+                FireControlPreferences.shouldShowPlaybackNoteChordDisplay(
+                        FireControlPreferences.NOTE_CHORD_DISPLAY_PADS_AND_DAW));
+        assertEquals(false, FireControlPreferences.shouldShowPlaybackNoteChordDisplay("unexpected"));
+    }
+
+    @Test
     void mapsScreenMessageHoldPreferenceValuesToMilliseconds() {
         assertEquals(750,
                 FireControlPreferences.toScreenMessageHoldMillis(FireControlPreferences.SCREEN_MESSAGE_HOLD_SHORT));

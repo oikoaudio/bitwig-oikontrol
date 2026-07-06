@@ -18,6 +18,12 @@ class EncoderValueProfileTest {
     }
 
     @Test
+    void panMovesOneDisplayedPercentPerSlowTick() {
+        assertEquals(0.005, EncoderValueProfile.PAN.delta(false, 1), 0.0000001);
+        assertEquals(0.16, EncoderValueProfile.PAN.delta(false, 32), 0.0000001);
+    }
+
+    @Test
     void semitoneAndPitchProfilesStaySymmetricInFineMode() {
         assertEquals(EncoderValueProfile.SEMITONE_PARAMETER.delta(false, 1),
                 EncoderValueProfile.SEMITONE_PARAMETER.delta(true, 1), 0.0000001);

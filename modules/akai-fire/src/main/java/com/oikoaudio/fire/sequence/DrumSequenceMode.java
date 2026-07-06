@@ -98,6 +98,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private int defaultVelocity = 100;
     private double defaultPressure = 0.0;
     private double defaultTimbre = 0.0;
+    private final Map<Integer, Integer> pendingAddedVelocity = new HashMap<>();
+    private final Map<Integer, Double> pendingAddedPressure = new HashMap<>();
+    private final Map<Integer, Double> pendingAddedTimbre = new HashMap<>();
+    private final Map<Integer, Double> pendingAddedPitch = new HashMap<>();
+    private final Set<Integer> initializedAddedSteps = new HashSet<>();
     private final EncoderBankLayout encoderBankLayout;
     private boolean selectedClipHasContent = false;
     private boolean active = false;
@@ -317,6 +322,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 }
                 case CLEAR_STEP -> cursorClip.clearStep(index, 0);
             }
+            if (releaseAction == DrumStepPadSurface.StepReleaseAction.CLEAR_STEP) {
+                clearPendingAddedValues(index);
+            }
+            initializedAddedSteps.remove(index);
         } else {
             final DrumStepPadSurface.StepPressAction pressAction = stepPadSurface.handleStepPress(index, note,
                     fixedLengthHeld.get(), copyHeld.get(), accentGesture);
@@ -331,11 +340,14 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     if (!ensureSelectedClip()) {
                         stepPadSurface.cancelPressedStep(index);
                         heldStepFineStarts.remove(index);
+                        clearPendingAddedValues(index);
+                        initializedAddedSteps.remove(index);
                         return;
                     }
                     cursorClip.setStep(index, 0, accentHandler.getCurrentVelocity(),
                             positionHandler.getGridResolution() * gatePercent);
                     stepPadSurface.markAdded(index);
+                    initializedAddedSteps.remove(index);
                     heldStepFineStarts.put(index, coarseLower(index));
                 }
             }
@@ -666,7 +678,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private List<NoteStep> getExpressionTargetNotes() {
-        return isPadBeingHeld() ? getHeldNotes() : getOnNotes();
+        return getHeldNotes();
     }
 
     private void adjustDefaultVelocity(final int inc) {
@@ -732,34 +744,202 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void adjustUser1Velocity(final StepSequencerEncoderLayer handler, final int inc) {
-        if (getExpressionTargetNotes().isEmpty()) {
+        final List<NoteStep> targets = getExpressionTargetNotes();
+        if (targets.isEmpty()) {
+            if (adjustPendingAddedVelocity(inc)) {
+                return;
+            }
             adjustDefaultVelocity(inc);
             return;
         }
-        handler.handleExplicitNoteAccess(inc, NoteStepAccess.VELOCITY);
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.VELOCITY, targets);
     }
 
     private void adjustUser1Pressure(final StepSequencerEncoderLayer handler, final int inc) {
-        if (getExpressionTargetNotes().isEmpty()) {
+        final List<NoteStep> targets = getExpressionTargetNotes();
+        if (targets.isEmpty()) {
+            if (adjustPendingAddedPressure(inc)) {
+                return;
+            }
             adjustDefaultPressure(inc);
             return;
         }
-        handler.handleExplicitNoteAccess(inc, NoteStepAccess.PRESSURE);
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.PRESSURE, targets);
     }
 
     private void adjustUser1Timbre(final StepSequencerEncoderLayer handler, final int inc) {
-        if (getExpressionTargetNotes().isEmpty()) {
+        final List<NoteStep> targets = getExpressionTargetNotes();
+        if (targets.isEmpty()) {
+            if (adjustPendingAddedTimbre(inc)) {
+                return;
+            }
             adjustDefaultTimbre(inc);
             return;
         }
-        handler.handleExplicitNoteAccess(inc, NoteStepAccess.TIMBRE);
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.TIMBRE, targets);
     }
 
     private void adjustUser1Pitch(final StepSequencerEncoderLayer handler, final int inc) {
-        if (getExpressionTargetNotes().isEmpty()) {
+        final List<NoteStep> targets = getExpressionTargetNotes();
+        if (targets.isEmpty()) {
+            adjustPendingAddedPitch(inc);
             return;
         }
-        handler.handleExplicitNoteAccess(inc, NoteStepAccess.PITCH);
+        handler.handleExplicitNoteAccess(inc, NoteStepAccess.PITCH, targets);
+    }
+
+    private boolean adjustPendingAddedVelocity(final int inc) {
+        final List<Integer> targets = pendingAddedExpressionTargets();
+        if (targets.isEmpty()) {
+            return false;
+        }
+        Integer displayValue = null;
+        for (final int stepIndex : targets) {
+            final int current = pendingAddedVelocity.getOrDefault(stepIndex, defaultVelocity);
+            final int next = Math.max(1, Math.min(accentHandler.getAccentedVelocity() - 1, current + inc));
+            pendingAddedVelocity.put(stepIndex, next);
+            displayValue = next;
+        }
+        if (displayValue != null) {
+            oled.paramInfo("Velocity", displayValue, getDetailsForStepIndexes(targets),
+                    1, accentHandler.getAccentedVelocity() - 1);
+        }
+        return true;
+    }
+
+    private boolean adjustPendingAddedPressure(final int inc) {
+        final List<Integer> targets = pendingAddedExpressionTargets();
+        if (targets.isEmpty()) {
+            return false;
+        }
+        Double displayValue = null;
+        for (final int stepIndex : targets) {
+            final double current = pendingAddedPressure.getOrDefault(stepIndex, defaultPressure);
+            final double next = Math.max(0.0, Math.min(1.0, current + inc * 0.01));
+            pendingAddedPressure.put(stepIndex, next);
+            displayValue = next;
+        }
+        if (displayValue != null) {
+            oled.paramInfoPercent("Pressure", displayValue, getDetailsForStepIndexes(targets), 0, 1);
+        }
+        return true;
+    }
+
+    private boolean adjustPendingAddedTimbre(final int inc) {
+        final List<Integer> targets = pendingAddedExpressionTargets();
+        if (targets.isEmpty()) {
+            return false;
+        }
+        Double displayValue = null;
+        for (final int stepIndex : targets) {
+            final double current = pendingAddedTimbre.getOrDefault(stepIndex, defaultTimbre);
+            final double next = Math.max(-1.0, Math.min(1.0, current + inc * 0.01));
+            pendingAddedTimbre.put(stepIndex, next);
+            displayValue = next;
+        }
+        if (displayValue != null) {
+            oled.paramInfoPercent("Timbre", displayValue, getDetailsForStepIndexes(targets), -1, 1);
+        }
+        return true;
+    }
+
+    private boolean adjustPendingAddedPitch(final int inc) {
+        final List<Integer> targets = pendingAddedExpressionTargets();
+        if (targets.isEmpty()) {
+            return false;
+        }
+        Double displayValue = null;
+        for (final int stepIndex : targets) {
+            final double current = pendingAddedPitch.getOrDefault(stepIndex, 0.0);
+            final double next = Math.max(NoteStepAccess.PITCH.getMin(),
+                    Math.min(NoteStepAccess.PITCH.getMax(), current + inc));
+            pendingAddedPitch.put(stepIndex, next);
+            displayValue = next;
+        }
+        if (displayValue != null) {
+            oled.paramInfoDouble("Pitch", displayValue, getDetailsForStepIndexes(targets),
+                    NoteStepAccess.PITCH.getMin(), NoteStepAccess.PITCH.getMax());
+        }
+        return true;
+    }
+
+    private List<Integer> pendingAddedExpressionTargets() {
+        return stepPadSurface.heldStepStream()
+                .filter(stepIndex -> stepIndex >= 0 && stepIndex < assignments.length)
+                .filter(stepIndex -> assignments[stepIndex] == null
+                        || assignments[stepIndex].state() != State.NoteOn)
+                .collect(Collectors.toList());
+    }
+
+    private String getDetailsForStepIndexes(final List<Integer> stepIndexes) {
+        return getPadInfo() + " <" + stepIndexes.size() + ">";
+    }
+
+    private boolean hasPendingAddedValues(final int stepIndex) {
+        return pendingAddedVelocity.containsKey(stepIndex)
+                || pendingAddedPressure.containsKey(stepIndex)
+                || pendingAddedTimbre.containsKey(stepIndex)
+                || pendingAddedPitch.containsKey(stepIndex);
+    }
+
+    private void applyPendingAddedValues(final NoteStep noteStep) {
+        final int stepIndex = noteStep.x();
+        final Integer velocity = pendingAddedVelocity.remove(stepIndex);
+        if (velocity != null) {
+            noteStep.setVelocity(velocity / 127.0);
+        }
+        final Double pressure = pendingAddedPressure.remove(stepIndex);
+        noteStep.setPressure(pressure != null ? pressure : defaultPressure);
+        final Double timbre = pendingAddedTimbre.remove(stepIndex);
+        noteStep.setTimbre(timbre != null ? timbre : defaultTimbre);
+        final Double pitch = pendingAddedPitch.remove(stepIndex);
+        if (pitch != null) {
+            noteStep.setTranspose(pitch);
+        }
+    }
+
+    private void clearPendingAddedValues(final int stepIndex) {
+        pendingAddedVelocity.remove(stepIndex);
+        pendingAddedPressure.remove(stepIndex);
+        pendingAddedTimbre.remove(stepIndex);
+        pendingAddedPitch.remove(stepIndex);
+    }
+
+    private void resetPendingAddedValue(final NoteStepAccess accessor, final List<Integer> stepIndexes) {
+        for (final int stepIndex : stepIndexes) {
+            switch (accessor) {
+                case VELOCITY -> pendingAddedVelocity.remove(stepIndex);
+                case PRESSURE -> pendingAddedPressure.remove(stepIndex);
+                case TIMBRE -> pendingAddedTimbre.remove(stepIndex);
+                case PITCH -> pendingAddedPitch.remove(stepIndex);
+                default -> {
+                }
+            }
+        }
+        showPendingAddedValue(accessor, stepIndexes);
+    }
+
+    private void showPendingAddedValue(final NoteStepAccess accessor, final List<Integer> stepIndexes) {
+        if (stepIndexes.isEmpty()) {
+            return;
+        }
+        final int stepIndex = stepIndexes.get(0);
+        final String details = getDetailsForStepIndexes(stepIndexes);
+        switch (accessor) {
+            case VELOCITY -> oled.paramInfo("Velocity",
+                    pendingAddedVelocity.getOrDefault(stepIndex, defaultVelocity),
+                    details, 1, accentHandler.getAccentedVelocity() - 1);
+            case PRESSURE -> oled.paramInfoPercent("Pressure",
+                    pendingAddedPressure.getOrDefault(stepIndex, defaultPressure),
+                    details, 0, 1);
+            case TIMBRE -> oled.paramInfoPercent("Timbre",
+                    pendingAddedTimbre.getOrDefault(stepIndex, defaultTimbre),
+                    details, -1, 1);
+            case PITCH -> oled.paramInfoDouble("Pitch",
+                    pendingAddedPitch.getOrDefault(stepIndex, 0.0),
+                    details, NoteStepAccess.PITCH.getMin(), NoteStepAccess.PITCH.getMax());
+            default -> oled.paramInfo(accessor.getName(), details);
+        }
     }
 
     private void handleUser1Touch(final StepSequencerEncoderLayer handler, final boolean touched, final int index,
@@ -767,6 +947,16 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                                   final Runnable resetDefault) {
         if (touched) {
             if (getExpressionTargetNotes().isEmpty()) {
+                final List<Integer> pendingTargets = pendingAddedExpressionTargets();
+                if (!pendingTargets.isEmpty()) {
+                    if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(),
+                            "No reset", () -> resetPendingAddedValue(accessor, pendingTargets),
+                            () -> showPendingAddedValue(accessor, pendingTargets))) {
+                        return;
+                    }
+                    showPendingAddedValue(accessor, pendingTargets);
+                    return;
+                }
                 if (driver.handleKnobModeEncoderReset(true, resetDefault != null, accessor.getName(),
                         "No reset", () -> {
                             if (resetDefault != null) {
@@ -775,24 +965,17 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         }, showDefault)) {
                     return;
                 }
-                handler.beginTouchReset(index, () -> {
-                    if (resetDefault != null) {
-                        resetDefault.run();
-                        showDefault.run();
-                    }
-                });
                 showDefault.run();
                 return;
             }
             if (driver.handleKnobModeEncoderReset(true, accessor.canReset(), accessor.getName(), "No reset",
-                    () -> handler.resetAccessorToDefault(accessor), () -> handler.showAccessorTouchValue(accessor))) {
+                    () -> handler.resetAccessorToDefault(accessor, getExpressionTargetNotes()),
+                    () -> handler.showAccessorTouchValue(accessor, getExpressionTargetNotes()))) {
                 return;
             }
-            handler.beginTouchReset(index, () -> handler.resetAccessorToDefault(accessor));
-            handler.showAccessorTouchValue(accessor);
+            handler.showAccessorTouchValue(accessor, getExpressionTargetNotes());
             return;
         }
-        handler.endTouchReset(index);
         oled.clearScreenDelayed();
     }
 
@@ -1264,7 +1447,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void handleNoteStep(final NoteStep noteStep) {
-       int jaja =  noteStep.x();
         final int newStep = noteStep.x();
 
         assignments[newStep] = noteStep;
@@ -1272,9 +1454,16 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             final NoteStep previousStep = expectedNoteChanges.get(newStep);
             expectedNoteChanges.remove(newStep);
             applyValues(noteStep, previousStep);
-        } else if (stepPadSurface.shouldApplyDefaultsToObservedStep(noteStep)) {
-            noteStep.setPressure(defaultPressure);
-            noteStep.setTimbre(defaultTimbre);
+        } else if (noteStep.state() == State.NoteOn && hasPendingAddedValues(newStep)) {
+            initializedAddedSteps.add(newStep);
+            applyPendingAddedValues(noteStep);
+        } else if (noteStep.state() == State.NoteOn
+                && stepPadSurface.shouldApplyDefaultsToObservedStep(noteStep)
+                && initializedAddedSteps.add(newStep)) {
+            applyPendingAddedValues(noteStep);
+        } else if (noteStep.state() == State.Empty) {
+            clearPendingAddedValues(newStep);
+            initializedAddedSteps.remove(newStep);
         }
     }
 
@@ -1563,7 +1752,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                         default -> euclidAccentEncoder.consume(inc);
                     };
                     if (effective != 0) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(effective));
                         markUser2EncoderAdjusted(index);
                         handleEuclidAdjust(index, effective);
                     }
@@ -1591,9 +1779,6 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
                              final int slotIndex) {
                 final var action = (java.util.function.IntConsumer) inc -> {
-                    if (getExpressionTargetNotes().isEmpty()) {
-                        handler.recordTouchAdjustment(slotIndex, Math.abs(inc));
-                    }
                     adjuster.adjust(handler, inc);
                 };
                 if (accessor.accelerationProfile() == com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT) {
@@ -1619,14 +1804,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     () -> oled.valueInfo(infoForIndex(index), valueForIndex(index)))) {
                 return;
             }
-            handler.beginTouchReset(index, () -> {
-                resetEuclidEncoder(index);
-                oled.valueInfo(infoForIndex(index), valueForIndex(index));
-            });
             oled.valueInfo(infoForIndex(index), valueForIndex(index));
             return;
         }
-        handler.endTouchReset(index);
         oled.clearScreenDelayed();
     }
 

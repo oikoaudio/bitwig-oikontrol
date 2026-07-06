@@ -34,6 +34,7 @@ public class OledDisplay {
 	private long clearTaskDelayMs = DEFAULT_CLEAR_DELAY_MS;
 	private long clearDelayMs = DEFAULT_CLEAR_DELAY_MS;
 	private long transientMessageUntilMs = -1;
+	private long transientMessageStartedAtMs = -1;
 	private long layoutRevision = 0;
 	private String footerLegend = null;
 	private EncoderLegendPosition footerLegendPosition = EncoderLegendPosition.BOTTOM;
@@ -81,6 +82,7 @@ public class OledDisplay {
 		}
 		clearTask = System.currentTimeMillis();
 		clearTaskDelayMs = Math.max(0, delayMs);
+		transientMessageStartedAtMs = clearTask;
 		transientMessageUntilMs = clearTask + clearTaskDelayMs;
 	}
 
@@ -90,6 +92,11 @@ public class OledDisplay {
 
 	public boolean hasPendingTransientMessage() {
 		return hasPendingClear() || System.currentTimeMillis() < transientMessageUntilMs;
+	}
+
+	public boolean hasRecentTransientMessage(final long quietPeriodMs) {
+		return transientMessageStartedAtMs > 0
+				&& System.currentTimeMillis() - transientMessageStartedAtMs < Math.max(0, quietPeriodMs);
 	}
 
 	public long layoutRevision() {
@@ -225,7 +232,7 @@ public class OledDisplay {
 		oledBar[12] = (byte) offset;
 		oledBar[13] = (byte) start;
 		oledBar[14] = (byte) end;
-		midiOut.sendSysex(oledBar);
+		midiOut.sendSysex(Arrays.copyOf(oledBar, oledBar.length));
 		invalidateImageCache();
 	}
 
@@ -332,15 +339,28 @@ public class OledDisplay {
 		sendContentString(0, TextJustification.CENTER, 5, "");
 
 		final int range = max - min;
-		final double unit = (double) GENERAL_BAR_WIDTH / (double) range;
-		final int bar = (int) Math.round(min + unit * (value - min));
-		showBar(true, GENERAL_BAR_WIDTH, 1, Fill.Fifty, Fill.Empty, 6, 0, bar);
+		if (range > 0) {
+			rangeBarValue(value, min, max);
+		}
 		renderFooterLegend();
 	}
 
 	public void valueInfo(final String title, final String value) {
 		clearScreen();
 		valueInfoNoClear(title, value);
+	}
+
+	public void valueInfoWithBar(final String title, final String value, final double normalizedValue,
+			final boolean biPolar) {
+		clearScreen();
+		valueInfoWithBarNoClear(title, value, normalizedValue, biPolar);
+	}
+
+	public void valueInfoWithBarNoClear(final String title, final String value, final double normalizedValue,
+			final boolean biPolar) {
+		markTransientMessage();
+		drawValueInfoWithBarNoClear(title, value);
+		compactBarValue(normalizedValue, biPolar);
 	}
 
 	public void valueInfoNoClear(final String title, final String value) {
@@ -358,6 +378,13 @@ public class OledDisplay {
 		sendContentString(2, TextJustification.CENTER, 0, title);
 		sendContentString(3, TextJustification.CENTER, 2, value);
 		sendContentString(5, TextJustification.CENTER, 5, "");
+		renderFooterLegend();
+	}
+
+	private void drawValueInfoWithBarNoClear(final String title, final String value) {
+		sendContentString(2, TextJustification.CENTER, 0, title);
+		sendContentString(2, TextJustification.CENTER, 3, value);
+		sendContentString(0, TextJustification.CENTER, 5, "");
 		renderFooterLegend();
 	}
 
@@ -396,22 +423,34 @@ public class OledDisplay {
 	}
 
 	private void barValue(final double value, final double min, final double max) {
+		rangeBarValue(value, min, max);
+	}
+
+	private void rangeBarValue(final double value, final double min, final double max) {
 		final double range = max - min;
-		final double unit = GENERAL_BAR_WIDTH / range;
-		int start = 0;
-		int end = 0;
-		if (min < 0) {
-			if (value < 0) {
-				end = GENERAL_BAR_WIDTH / 2;
-				start = end + (int) Math.round(unit * value);
-			} else {
-				start = GENERAL_BAR_WIDTH / 2;
-				end = start + (int) Math.round(unit * value);
-			}
-		} else {
-			end = (int) Math.round(unit * value);
+		if (range <= 0) {
+			return;
 		}
-		showBar(true, GENERAL_BAR_WIDTH, 1, Fill.Fifty, Fill.Empty, 6, start, end);
+		final double bounded = Math.max(min, Math.min(max, value));
+		compactBarValue((bounded - min) / range, min < 0 && max > 0);
+	}
+
+	private void compactBarValue(final double normalizedValue, final boolean biPolar) {
+		final double bounded = Math.max(0.0, Math.min(1.0, normalizedValue));
+		final int center = GENERAL_BAR_WIDTH / 2;
+		final int offset = compactBarOffset();
+		if (biPolar) {
+			final int end = (int) Math.round(bounded * GENERAL_BAR_WIDTH);
+			showBar(false, GENERAL_BAR_WIDTH, 1, Fill.Solid, Fill.Empty, offset,
+					Math.min(center, end), Math.max(center, end));
+			return;
+		}
+		final int end = (int) Math.round(bounded * GENERAL_BAR_WIDTH);
+		showBar(false, GENERAL_BAR_WIDTH, 1, Fill.Fifty, Fill.Empty, offset, 0, end);
+	}
+
+	private int compactBarOffset() {
+		return footerLegendPosition == EncoderLegendPosition.TOP ? 7 : 6;
 	}
 
 	private void renderFooterLegend() {
@@ -442,25 +481,29 @@ public class OledDisplay {
 
 	private void markTransientMessage() {
 		screenState = ScreenState.TRANSIENT_TEXT;
-		transientMessageUntilMs = System.currentTimeMillis() + clearDelayMs;
+		transientMessageStartedAtMs = System.currentTimeMillis();
+		transientMessageUntilMs = transientMessageStartedAtMs + clearDelayMs;
 	}
 
 	private void beginBlankScreen() {
 		screenState = ScreenState.BLANK;
 		clearTask = -1;
 		transientMessageUntilMs = -1;
+		transientMessageStartedAtMs = -1;
 	}
 
 	private void beginGraphicsScreen() {
 		screenState = ScreenState.GRAPHICS;
 		clearTask = -1;
 		transientMessageUntilMs = -1;
+		transientMessageStartedAtMs = -1;
 	}
 
 	private void beginPersistentTextScreen() {
 		screenState = ScreenState.PERSISTENT_TEXT;
 		clearTask = -1;
 		transientMessageUntilMs = -1;
+		transientMessageStartedAtMs = -1;
 	}
 
 	private void sendContentString(final int fontSize, final TextJustification justification, final int placement,
@@ -510,6 +553,7 @@ public class OledDisplay {
 		if (clearTask > 0 && System.currentTimeMillis() - clearTask > clearTaskDelayMs) {
 			clearTask = -1;
 			transientMessageUntilMs = -1;
+			transientMessageStartedAtMs = -1;
 			if (idleAction != null) {
 				idleAction.run();
 			} else {

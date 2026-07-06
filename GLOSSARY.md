@@ -126,7 +126,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Velocity Settings**: The shared Akai Fire input-velocity policy used by modes that map pad velocity through adjustable sensitivity and centre targets.
 
-**Encoder Touch Reset**: The Akai Fire touch-and-hold reset behaviour for resettable encoder targets.
+**Encoder Touch Reset**: The explicit Akai Fire `KNOB MODE + touch encoder` gesture for resetting the current encoder target when that target supports reset.
 
 **OLED Feedback**: Akai Fire screen feedback for persistent mode state, meters, encoder targets, and transient action messages.
 

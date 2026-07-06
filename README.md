@@ -152,4 +152,6 @@ Current artifact names:
 
 - Fine-grid step nudging is based on Wim Van den Borre's [Akai Fire Nudger](https://github.com/wimvandenborre/AkaiFireNudger/), adapted and developed further here for the sequencer workflows.
 
+- Akai Fire note/chord OLED detection is adapted from Wim van den Borre's [BitX](https://github.com/wimvandenborre/BitX).
+
 Please keep these acknowledgements if you redistribute or build on this project.

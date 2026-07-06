@@ -27,12 +27,12 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.EncoderTouchResetHandler;
+import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
+import com.oikoaudio.fire.control.RemoteParameterIndexes;
 import com.oikoaudio.fire.control.TouchEncoder;
-import com.oikoaudio.fire.control.TouchResetGesture;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -88,9 +88,6 @@ public class PerformClipLauncherMode extends Layer {
     private record TrackAddress(int visibleIndex, int sourceIndex, int absoluteIndex, Track track) {
     }
 
-    private static final long PARAMETER_RESET_TOUCH_HOLD_MS = 750;
-    private static final long PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS = 300;
-    private static final int PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS = 2;
     private static final int MAX_TRACKS = 16;
     private static final int MAX_SCENES = 16;
     private static final int MIX_DEVICE_ROWS = 4;
@@ -148,7 +145,6 @@ public class PerformClipLauncherMode extends Layer {
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
-    private final EncoderTouchResetHandler parameterResetHandler;
     private Layer currentEncoderLayer;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
     private EncoderMode encoderModeBeforeMixDeviceMode;
@@ -234,14 +230,6 @@ public class PerformClipLauncherMode extends Layer {
         this.user1Layer = new Layer(driver.getLayers(), "PERFORM_ENC_USER1");
         this.user2Layer = new Layer(driver.getLayers(), "PERFORM_ENC_USER2");
         this.currentEncoderLayer = channelLayer;
-        this.parameterResetHandler = new EncoderTouchResetHandler(
-                new TouchResetGesture(4, PARAMETER_RESET_TOUCH_HOLD_MS, PARAMETER_RESET_RECENT_ADJUSTMENT_SUPPRESS_MS,
-                        PARAMETER_RESET_TOLERATED_ADJUSTMENT_UNITS),
-                driver::isEncoderTouchResetEnabled,
-                (task, delayMs) -> driver.getHost().scheduleTask(task, delayMs),
-                PARAMETER_RESET_TOUCH_HOLD_MS,
-                oled::clearScreenDelayed);
-
         trackBank.channelCount().markInterested();
         trackBank.channelCount().addValueObserver(count -> totalTrackCount = count);
         trackBank.scrollPosition().markInterested();
@@ -606,9 +594,11 @@ public class PerformClipLauncherMode extends Layer {
             final int index = i;
             final Parameter parameter = parameters[i];
             final String label = fallbackLabels[i];
+            final EncoderValueProfile profile = index == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
             ParameterEncoderBinding.bind(encoders[i], layer, index, parameter, label, this::isShiftHeld,
-                    ParameterEncoderBinding.TouchResetControl.of(parameterResetHandler), mixerResetPolicy(index),
-                    driver.knobModeEncoderResetControl(), this::showValueInfo, oled::clearScreenDelayed);
+                    mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, index == 1,
+                    this::showValueInfoWithBar,
+                    oled::clearScreenDelayed);
         }
     }
 
@@ -1899,6 +1889,12 @@ public class PerformClipLauncherMode extends Layer {
         selectedTrackMeterView.showValueInfo(title, value);
     }
 
+    private void showValueInfoWithBar(final String title, final String value, final double normalizedValue,
+                                      final boolean biPolar) {
+        applyEncoderFooterLegend();
+        selectedTrackMeterView.showValueInfo(title, value, normalizedValue, biPolar);
+    }
+
     public boolean showGlobalActionInfo(final String title, final String value) {
         if (!active || encoderMode != EncoderMode.MIXER) {
             return false;
@@ -2008,7 +2004,6 @@ public class PerformClipLauncherMode extends Layer {
         if (!ParameterEncoderBinding.isMapped(parameter)) {
             return;
         }
-        parameterResetHandler.markAdjusted(encoderIndex, Math.abs(inc));
         ParameterEncoderBinding.adjustParameter(parameter, isShiftHeld(), inc);
         ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo);
     }
@@ -2022,12 +2017,6 @@ public class PerformClipLauncherMode extends Layer {
                     () -> ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo))) {
                 return;
             }
-            parameterResetHandler.beginTouchReset(encoderIndex, () -> {
-                if (ParameterEncoderBinding.isMapped(parameter)) {
-                    parameter.reset();
-                    ParameterEncoderBinding.showValue(parameter, fallbackLabel, this::showValueInfo);
-                }
-            });
             if (!ParameterEncoderBinding.isMapped(parameter)) {
                 showValueInfo(fallbackLabel, "Unmapped");
                 return;
@@ -2036,7 +2025,6 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        parameterResetHandler.endTouchReset(encoderIndex);
         oled.clearScreenDelayed();
     }
 
@@ -2061,9 +2049,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private ParameterEncoderBinding.ResetPolicy mixerResetPolicy(final int index) {
-        return index == 0
-                ? ParameterEncoderBinding.ResetPolicy.NONE
-                : ParameterEncoderBinding.ResetPolicy.ORIGIN;
+        return ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT;
     }
 
     private int trackScrollAmount() {
@@ -2079,7 +2065,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     static int remoteParameterIndex(final int encoderIndex, final boolean altHeld) {
-        return (altHeld ? 4 : 0) + encoderIndex;
+        return RemoteParameterIndexes.parameterIndex(encoderIndex, altHeld);
     }
 
     static double roundToNearestBar(final double beatLength, final int meterNumerator, final int meterDenominator) {
