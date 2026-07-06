@@ -39,6 +39,22 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.20.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.19.0...oikontrol-v2.20.0) (2026-07-06)
+
+
+### Features
+
+* **akai-fire:** add compact OLED mixer value bars ([2f6a96f](https://github.com/oikoaudio/bitwig-oikontrol/commit/2f6a96fe0db4d8b214dce53ade55e2e73e8501cb))
+* **akai-fire:** add live note chord OLED and pad hold ([4689087](https://github.com/oikoaudio/bitwig-oikontrol/commit/468908732df8d22cbfc2450ebaee7ac2715acb91))
+* **akai-fire:** add note and chord OLED display ([ade85c2](https://github.com/oikoaudio/bitwig-oikontrol/commit/ade85c2d23a81709ed2928db568e5a422c364caf))
+* **akai-fire:** map alt encoders to second remote bank ([397c692](https://github.com/oikoaudio/bitwig-oikontrol/commit/397c69256560804598ec8d6dd1674e7719db78ea))
+
+
+### Bug Fixes
+
+* **akai-fire:** make gliss state visible and resettable ([586fc39](https://github.com/oikoaudio/bitwig-oikontrol/commit/586fc3963c838aac6570fc025fc24dc759126fd9))
+* **akai-fire:** tune pan encoder response ([5b1cbf7](https://github.com/oikoaudio/bitwig-oikontrol/commit/5b1cbf7fd25950ba0dcf06b579d9357d3fddcd8f))
+
 ## [2.19.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.18.0...oikontrol-v2.19.0) (2026-06-08)
 
 
