@@ -8,6 +8,7 @@ import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extension.controller.api.NoteStep;
+import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
@@ -22,6 +23,7 @@ import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
+import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -186,6 +188,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.clipHandler = new ClipRowHandler(this);
         this.padSurface = new MelodicStepPadSurface(new MelodicPadCallbacks());
         new PadBankRowControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
+        bindEditStatusLights();
         bindMainEncoder();
         this.encoderBankLayout = createEncoderBankLayout();
         this.encoderLayer = new StepSequencerEncoderLayer(this, driver);
@@ -255,10 +258,28 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private BiColorLightState muteLightState(final int index) {
         return switch (index) {
             case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
-            case 1 -> fixedLengthHeld.get() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
-            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
-            case 3 -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+            case 1 -> fixedLengthHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 3 -> deleteHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
             default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        };
+    }
+
+    private void bindEditStatusLights() {
+        final MultiStateHardwareLight[] stateLights = driver.getStateLights();
+        for (int index = 0; index < stateLights.length; index++) {
+            final int lightIndex = index;
+            bindLightState(() -> editStatusLightState(lightIndex), stateLights[lightIndex]);
+        }
+    }
+
+    private BiColorLightState editStatusLightState(final int index) {
+        return switch (index) {
+            case 0 -> TrackSelectIndicatorLights.green(selectHeld.get());
+            case 1 -> TrackSelectIndicatorLights.green(fixedLengthHeld.get());
+            case 2 -> TrackSelectIndicatorLights.green(copyHeld.get());
+            case 3 -> TrackSelectIndicatorLights.red(deleteHeld.get());
+            default -> throw new IllegalArgumentException("Unsupported edit status light index: " + index);
         };
     }
 

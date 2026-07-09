@@ -5,7 +5,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 ## Unreleased
 
 - Akai Fire live Note now shows played pad notes/chords on the OLED, with chord detection adapted from Wim van den Borre's BitX.
-- Akai Fire live Note now maps `MUTE_4` to Hold, latching pad notes/chords until the pad is pressed again or Hold is turned off.
+- Akai Fire live Note now maps `MUTE_4` to Hold, latching only the pad notes/chords already down when Hold turns on; held pads blink until pressed again or Hold is turned off.
 - Launch Control XL factory modes now use an eight-track factory bank again and explicitly own Bitwig's controller feedback box, so the red box matches the eight faders/knob columns; Track Left/Right pages by eight tracks and selects the first strip after paging while still honoring the `Show deactivated tracks` preference.
 - Akai Fire Perform now uses a flat track bank for launcher and Mix pages, so expanded group children appear in the visible track window.
 - `SHIFT + PERFORM` is now presented as the Mix page, and its track-select pads use the corresponding Bitwig track colors.

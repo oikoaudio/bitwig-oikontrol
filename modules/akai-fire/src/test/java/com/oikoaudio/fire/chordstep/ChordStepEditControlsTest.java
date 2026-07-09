@@ -42,9 +42,9 @@ class ChordStepEditControlsTest {
         final ChordStepEditControls controls = new ChordStepEditControls((title, detail) -> {}, () -> {});
 
         assertEquals(BiColorLightState.GREEN_HALF, controls.mute1LightState());
-        assertEquals(BiColorLightState.AMBER_HALF, controls.mute2LightState());
-        assertEquals(BiColorLightState.OFF, controls.mute3LightState());
-        assertEquals(BiColorLightState.OFF, controls.mute4LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, controls.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, controls.mute3LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, controls.mute4LightState());
 
         controls.handleMute1(true);
         controls.handleMute2(true);
@@ -52,9 +52,9 @@ class ChordStepEditControlsTest {
         controls.handleMute4(true);
 
         assertEquals(BiColorLightState.GREEN_FULL, controls.mute1LightState());
-        assertEquals(BiColorLightState.AMBER_FULL, controls.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, controls.mute2LightState());
         assertEquals(BiColorLightState.GREEN_FULL, controls.mute3LightState());
-        assertEquals(BiColorLightState.RED_FULL, controls.mute4LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, controls.mute4LightState());
     }
 
     @Test

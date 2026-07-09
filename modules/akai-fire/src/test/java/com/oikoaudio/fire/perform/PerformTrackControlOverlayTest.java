@@ -98,12 +98,28 @@ class PerformTrackControlOverlayTest {
                 PerformClipLauncherMode.mixStatusLightState(false, true, true, 1));
         assertEquals(BiColorLightState.AMBER_FULL,
                 PerformClipLauncherMode.mixStatusLightState(true, true, false, 1));
-        assertEquals(BiColorLightState.OFF,
+        assertEquals(BiColorLightState.AMBER_HALF,
                 PerformClipLauncherMode.mixStatusLightState(true, false, true, 1));
         assertEquals(BiColorLightState.AMBER_FULL,
                 PerformClipLauncherMode.mixStatusLightState(true, false, true, 2));
-        assertEquals(BiColorLightState.OFF,
+        assertEquals(BiColorLightState.AMBER_HALF,
                 PerformClipLauncherMode.mixStatusLightState(true, true, false, 2));
+    }
+
+    @Test
+    void clipModifierStatusLedsReserveRedForDelete() {
+        assertEquals(BiColorLightState.AMBER_HALF,
+                PerformClipLauncherMode.clipModifierStatusLightState(false, false, false, false, 0));
+        assertEquals(BiColorLightState.AMBER_FULL,
+                PerformClipLauncherMode.clipModifierStatusLightState(true, false, false, false, 0));
+        assertEquals(BiColorLightState.AMBER_FULL,
+                PerformClipLauncherMode.clipModifierStatusLightState(false, true, false, false, 1));
+        assertEquals(BiColorLightState.AMBER_FULL,
+                PerformClipLauncherMode.clipModifierStatusLightState(false, false, true, false, 2));
+        assertEquals(BiColorLightState.GREEN_HALF,
+                PerformClipLauncherMode.clipModifierStatusLightState(false, false, false, false, 3));
+        assertEquals(BiColorLightState.GREEN_FULL,
+                PerformClipLauncherMode.clipModifierStatusLightState(false, false, false, true, 3));
     }
 
     @Test

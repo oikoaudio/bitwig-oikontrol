@@ -13,6 +13,7 @@ import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.PlayingNote;
+import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extension.controller.api.SettableRangedValue;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extensions.framework.Layer;
@@ -35,6 +36,7 @@ import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.RelativeEncoderMagnitude;
 import com.oikoaudio.fire.control.RemoteParameterIndexes;
+import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
@@ -187,6 +189,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private int selectedTrackRmsMeter = 0;
     private int selectedTrackPeakMax = 0;
     private int selectedTrackRmsMax = 0;
+    private int blinkState = 0;
     private int lastMeterDisplayBlink = Integer.MIN_VALUE;
     private boolean active = false;
     private boolean liveMeterDisplayActive = false;
@@ -507,6 +510,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     public void notifyBlink(final int blinkTicks) {
+        blinkState = blinkTicks;
         if (liveNoteChordDisplayActive) {
             if (refreshPreferredLiveNoteChordDisplay()) {
                 return;
@@ -617,6 +621,19 @@ public abstract class LivePadSurfaceLayer extends Layer {
             }
         }, new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.STEP_SEQ,
                 this::handleStepSeqPressed, this::getStepSeqLightState)).bind();
+        bindPerformanceStatusLights();
+    }
+
+    private void bindPerformanceStatusLights() {
+        final MultiStateHardwareLight[] stateLights = driver.getStateLights();
+        for (int index = 0; index < stateLights.length; index++) {
+            final int lightIndex = index;
+            bindLightState(() -> performanceStatusLightState(muteLightState(lightIndex)), stateLights[lightIndex]);
+        }
+    }
+
+    static BiColorLightState performanceStatusLightState(final BiColorLightState functionLightState) {
+        return TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(functionLightState));
     }
 
     private void bindButtons() {
@@ -2306,7 +2323,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
         final LiveNoteLayout layout = createLayout();
         if (isDrumMachineLiveMode() && layout instanceof DrumMachinePadLayout drumMachinePadLayout) {
             final RgbLigthState base = getDrumMachinePadBaseLight(padIndex, drumMachinePadLayout);
-            return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
+            return heldLivePadLight(base, livePadPerformer.isPadHeld(padIndex),
+                    livePadPerformer.isPadHeldByHoldMode(padIndex), blinkState);
         }
         final int midiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
         final RgbLigthState base;
@@ -2324,7 +2342,21 @@ public abstract class LivePadSurfaceLayer extends Layer {
                 case UNAVAILABLE -> RgbLigthState.OFF;
             };
         }
-        return livePadPerformer.isPadHeld(padIndex) ? base.getBrightest() : base;
+        return heldLivePadLight(base, livePadPerformer.isPadHeld(padIndex),
+                livePadPerformer.isPadHeldByHoldMode(padIndex), blinkState);
+    }
+
+    static RgbLigthState heldLivePadLight(final RgbLigthState base,
+                                          final boolean padHeld,
+                                          final boolean heldByHoldMode,
+                                          final int blinkState) {
+        if (!padHeld) {
+            return base;
+        }
+        if (heldByHoldMode) {
+            return blinkState % 8 < 4 ? base.getBrightest() : base;
+        }
+        return base.getBrightest();
     }
 
     private RgbLigthState getDrumMachinePadBaseLight(final int padIndex, final DrumMachinePadLayout layout) {

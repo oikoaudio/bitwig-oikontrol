@@ -45,7 +45,7 @@ class NoteLivePerformanceControlsTest {
 
         assertEquals(List.of(127), sostenutoValues);
         assertEquals(List.of("Sostenuto:On"), status);
-        assertEquals(BiColorLightState.AMBER_FULL, controls.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, controls.mute2LightState());
     }
 
     @Test
@@ -90,7 +90,7 @@ class NoteLivePerformanceControlsTest {
         controls.handleMute4(true);
 
         assertEquals(List.of("Hold:On", "Hold:Off"), status);
-        assertEquals(BiColorLightState.OFF, controls.mute4LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, controls.mute4LightState());
     }
 
     @Test
@@ -104,7 +104,7 @@ class NoteLivePerformanceControlsTest {
                 () -> true,
                 (title, detail) -> {});
 
-        assertEquals(BiColorLightState.AMBER_FULL, controls.mute4LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, controls.mute4LightState());
     }
 
     @Test
@@ -125,6 +125,6 @@ class NoteLivePerformanceControlsTest {
         assertEquals(List.of(127, 0), sustainValues);
         assertEquals(List.of(127, 0), sostenutoValues);
         assertEquals(BiColorLightState.GREEN_HALF, controls.mute1LightState());
-        assertEquals(BiColorLightState.OFF, controls.mute2LightState());
+        assertEquals(BiColorLightState.GREEN_HALF, controls.mute2LightState());
     }
 }

@@ -32,6 +32,7 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.RemoteParameterIndexes;
+import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledMeterRenderer;
@@ -627,9 +628,10 @@ public class PerformClipLauncherMode extends Layer {
         final MultiStateHardwareLight[] stateLights = driver.getStateLights();
         for (int index = 0; index < stateLights.length; index++) {
             final int lightIndex = index;
-            bindLightState(() -> mixStatusLightState(trackActionMode,
-                    project.hasSoloedTracks().get(),
-                    project.hasMutedTracks().get(),
+            bindLightState(() -> trackActionMode
+                    ? mixStatusLightState(true, project.hasSoloedTracks().get(), project.hasMutedTracks().get(),
+                    lightIndex)
+                    : clipModifierStatusLightState(selectHeld.get(), duplicateHeld, copyHeld.get(), deleteHeld.get(),
                     lightIndex), stateLights[lightIndex]);
         }
     }
@@ -773,10 +775,10 @@ public class PerformClipLauncherMode extends Layer {
             return mixStatusLightState(true, project.hasSoloedTracks().get(), project.hasMutedTracks().get(), index);
         }
         return switch (index) {
-            case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
-            case 1 -> duplicateHeld ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
-            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.OFF;
-            case 3 -> deleteHeld.get() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
+            case 0 -> selectHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 1 -> duplicateHeld ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 2 -> copyHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+            case 3 -> deleteHeld.get() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
             default -> throw new IllegalArgumentException("Unsupported pad action button index: " + index);
         };
     }
@@ -2576,10 +2578,25 @@ public class PerformClipLauncherMode extends Layer {
                                                  final boolean hasMutedTracks,
                                                  final int index) {
         return switch (index) {
-            case 0, 3 -> BiColorLightState.OFF;
-            case 1 -> trackActionMode && hasSoloedTracks ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
-            case 2 -> trackActionMode && hasMutedTracks ? BiColorLightState.AMBER_FULL : BiColorLightState.OFF;
+            case 0 -> trackActionMode ? TrackSelectIndicatorLights.green(false) : TrackSelectIndicatorLights.off();
+            case 1 -> trackActionMode ? TrackSelectIndicatorLights.green(hasSoloedTracks) : TrackSelectIndicatorLights.off();
+            case 2 -> trackActionMode ? TrackSelectIndicatorLights.green(hasMutedTracks) : TrackSelectIndicatorLights.off();
+            case 3 -> trackActionMode ? TrackSelectIndicatorLights.green(false) : TrackSelectIndicatorLights.off();
             default -> throw new IllegalArgumentException("Unsupported mix status light index: " + index);
+        };
+    }
+
+    static BiColorLightState clipModifierStatusLightState(final boolean selectHeld,
+                                                          final boolean duplicateHeld,
+                                                          final boolean copyHeld,
+                                                          final boolean deleteHeld,
+                                                          final int index) {
+        return switch (index) {
+            case 0 -> TrackSelectIndicatorLights.green(selectHeld);
+            case 1 -> TrackSelectIndicatorLights.green(duplicateHeld);
+            case 2 -> TrackSelectIndicatorLights.green(copyHeld);
+            case 3 -> TrackSelectIndicatorLights.red(deleteHeld);
+            default -> throw new IllegalArgumentException("Unsupported clip modifier status light index: " + index);
         };
     }
 

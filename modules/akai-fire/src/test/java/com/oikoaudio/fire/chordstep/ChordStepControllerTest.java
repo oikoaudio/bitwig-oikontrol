@@ -48,7 +48,7 @@ class ChordStepControllerTest {
         assertTrue(mode.isSelectHeld());
         assertTrue(mode.isDeleteHeld());
         assertEquals(BiColorLightState.GREEN_FULL, mode.mute1LightState());
-        assertEquals(BiColorLightState.RED_FULL, mode.mute4LightState());
+        assertEquals(BiColorLightState.GREEN_FULL, mode.mute4LightState());
         assertTrue(mode.ensureSelectedClip());
         assertNotNull(mode.color());
         assertEquals(2, mode.slotIndex());

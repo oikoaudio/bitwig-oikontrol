@@ -233,7 +233,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         editButtonBinder.bind(driver.getButton(NoteAssign.MUTE_3), copyHeld, stateLights[2], null, null);
         editButtonBinder.bind(driver.getButton(NoteAssign.MUTE_4), deleteHeld, stateLights[3], null, null);
         final BiColorButton deleteButton = driver.getButton(NoteAssign.MUTE_4);
-        deleteButton.bind(mainLayer, deleteHeld, BiColorLightState.GREEN_FULL, BiColorLightState.OFF);
+        deleteButton.bind(mainLayer, deleteHeld, BiColorLightState.GREEN_FULL, BiColorLightState.GREEN_HALF);
     }
 
     private void initButtonBehaviour(final AkaiFireOikontrolExtension driver) {

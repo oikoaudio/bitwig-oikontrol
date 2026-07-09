@@ -18,7 +18,8 @@ final class NoteLivePadPerformer {
     private final VelocityResolver velocityResolver;
     private final ExpressionResolver timbreResolver;
     private final Consumer<List<Integer>> soundingNotesListener;
-    private final Set<Integer> heldPads = new HashSet<>();
+    private final Set<Integer> physicalHeldPads = new HashSet<>();
+    private final Set<Integer> holdCapturedPads = new HashSet<>();
     private final Map<Integer, LivePadNote> soundingNotesByPad = new HashMap<>();
     private boolean holdModeActive;
 
@@ -60,10 +61,10 @@ final class NoteLivePadPerformer {
             return;
         }
         if (pressed) {
-            heldPads.add(padIndex);
+            physicalHeldPads.add(padIndex);
             noteOn(padIndex, rawVelocity, configuredVelocity);
         } else {
-            heldPads.remove(padIndex);
+            physicalHeldPads.remove(padIndex);
             noteOff(padIndex);
         }
         notifySoundingNotesChanged();
@@ -71,8 +72,13 @@ final class NoteLivePadPerformer {
 
     boolean toggleHoldMode() {
         holdModeActive = !holdModeActive;
-        if (!holdModeActive) {
-            releaseHeldNotes();
+        if (holdModeActive) {
+            holdCapturedPads.clear();
+            soundingNotesByPad.keySet().stream()
+                    .filter(physicalHeldPads::contains)
+                    .forEach(holdCapturedPads::add);
+        } else {
+            releaseHoldCapturedNotes();
         }
         return holdModeActive;
     }
@@ -87,7 +93,8 @@ final class NoteLivePadPerformer {
             noteOff(padIndex);
         }
         soundingNotesByPad.clear();
-        heldPads.clear();
+        physicalHeldPads.clear();
+        holdCapturedPads.clear();
         notifySoundingNotesChanged();
     }
 
@@ -96,14 +103,18 @@ final class NoteLivePadPerformer {
         heldNotes.keySet().forEach(this::noteOff);
         stateChange.run();
         heldNotes.keySet().stream()
-                .filter(heldPads::contains)
+                .filter(this::shouldRestartAfterRetune)
                 .sorted()
                 .forEach(padIndex -> noteOn(padIndex, heldNotes.get(padIndex).velocity(), configuredVelocity));
         notifySoundingNotesChanged();
     }
 
     boolean isPadHeld(final int padIndex) {
-        return heldPads.contains(padIndex);
+        return physicalHeldPads.contains(padIndex) || holdCapturedPads.contains(padIndex);
+    }
+
+    boolean isPadHeldByHoldMode(final int padIndex) {
+        return holdCapturedPads.contains(padIndex) && soundingNotesByPad.containsKey(padIndex);
     }
 
     boolean isMidiNoteSounding(final int midiNote) {
@@ -142,14 +153,19 @@ final class NoteLivePadPerformer {
     private void handleHoldPadPress(final int padIndex, final boolean pressed, final int rawVelocity,
                                     final int configuredVelocity) {
         if (!pressed) {
+            physicalHeldPads.remove(padIndex);
+            if (!holdCapturedPads.contains(padIndex)) {
+                noteOff(padIndex);
+            }
             notifySoundingNotesChanged();
             return;
         }
-        if (soundingNotesByPad.containsKey(padIndex)) {
-            heldPads.remove(padIndex);
+        if (holdCapturedPads.contains(padIndex) && soundingNotesByPad.containsKey(padIndex)) {
+            holdCapturedPads.remove(padIndex);
+            physicalHeldPads.remove(padIndex);
             noteOff(padIndex);
         } else {
-            heldPads.add(padIndex);
+            physicalHeldPads.add(padIndex);
             noteOn(padIndex, rawVelocity, configuredVelocity);
         }
         notifySoundingNotesChanged();
@@ -171,9 +187,24 @@ final class NoteLivePadPerformer {
                 .map(Map.Entry::getKey)
                 .toList();
         duplicatePads.forEach(duplicatePad -> {
-            heldPads.remove(duplicatePad);
+            physicalHeldPads.remove(duplicatePad);
+            holdCapturedPads.remove(duplicatePad);
             noteOff(duplicatePad);
         });
+    }
+
+    private void releaseHoldCapturedNotes() {
+        for (final int padIndex : new ArrayList<>(holdCapturedPads)) {
+            if (!physicalHeldPads.contains(padIndex)) {
+                noteOff(padIndex);
+            }
+        }
+        holdCapturedPads.clear();
+        notifySoundingNotesChanged();
+    }
+
+    private boolean shouldRestartAfterRetune(final int padIndex) {
+        return physicalHeldPads.contains(padIndex) || holdCapturedPads.contains(padIndex);
     }
 
     private void noteOff(final int padIndex) {
