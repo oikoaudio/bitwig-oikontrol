@@ -87,9 +87,9 @@ class PerformTrackControlOverlayTest {
     void selectRowUsesTrackColorForAvailableTracks() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 
-        assertEquals(trackColor, PerformClipLauncherMode.mixSelectPadColor(trackColor, false, false));
-        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixSelectPadColor(trackColor, false, true));
-        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixSelectPadColor(trackColor, true, true));
+        assertEquals(trackColor, PerformPadRenderer.mixSelect(trackColor, false, false));
+        assertEquals(trackColor.getDimmed(), PerformPadRenderer.mixSelect(trackColor, false, true));
+        assertEquals(trackColor.getBrightest(), PerformPadRenderer.mixSelect(trackColor, true, true));
     }
 
     @Test
@@ -176,10 +176,10 @@ class PerformTrackControlOverlayTest {
     void mixDevicePadColorShowsEnabledState() {
         final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
 
-        assertEquals(trackColor.getBrightest(), PerformClipLauncherMode.mixDevicePadColor(trackColor, true, true));
-        assertEquals(trackColor, PerformClipLauncherMode.mixDevicePadColor(trackColor, true, false));
-        assertEquals(trackColor.getDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false, false));
-        assertEquals(trackColor.getSoftDimmed(), PerformClipLauncherMode.mixDevicePadColor(trackColor, false, true));
+        assertEquals(trackColor.getBrightest(), mixDeviceColor(trackColor, true, true));
+        assertEquals(trackColor, mixDeviceColor(trackColor, true, false));
+        assertEquals(trackColor.getDimmed(), mixDeviceColor(trackColor, false, false));
+        assertEquals(trackColor.getSoftDimmed(), mixDeviceColor(trackColor, false, true));
     }
 
     @Test
@@ -259,30 +259,46 @@ class PerformTrackControlOverlayTest {
 
     @Test
     void birdsEyePadColorHighlightsCurrentBlock() {
-        assertEquals(RgbLigthState.OFF, PerformClipLauncherMode.birdsEyePadColor(false, false));
+        assertEquals(RgbLigthState.OFF, PerformPadRenderer.birdsEye(false, false));
         assertEquals(new RgbLigthState(0, 36, 84, true),
-                PerformClipLauncherMode.birdsEyePadColor(true, false));
+                PerformPadRenderer.birdsEye(true, false));
         assertEquals(new RgbLigthState(0, 108, 127, true),
-                PerformClipLauncherMode.birdsEyePadColor(true, true));
+                PerformPadRenderer.birdsEye(true, true));
     }
 
     @Test
     void deviceLayerMixerPadColorsFollowLayerRows() {
         final RgbLigthState layerColor = new RgbLigthState(12, 80, 44, true);
 
-        assertEquals(layerColor, PerformClipLauncherMode.deviceLayerPadColorForPad(0, layerColor, false, false, true));
+        assertEquals(layerColor, deviceLayerColor(0, layerColor, false, false, true));
         assertEquals(new RgbLigthState(96, 96, 0, true),
-                PerformClipLauncherMode.deviceLayerPadColorForPad(16, layerColor, true, false, true));
+                deviceLayerColor(16, layerColor, true, false, true));
         assertEquals(RgbLigthState.OFF,
-                PerformClipLauncherMode.deviceLayerPadColorForPad(16, layerColor, false, false, true));
+                deviceLayerColor(16, layerColor, false, false, true));
         assertEquals(new RgbLigthState(110, 48, 0, true),
-                PerformClipLauncherMode.deviceLayerPadColorForPad(32, layerColor, false, true, true));
+                deviceLayerColor(32, layerColor, false, true, true));
         assertEquals(new RgbLigthState(110, 0, 0, true),
-                PerformClipLauncherMode.deviceLayerPadColorForPad(48, layerColor, false, false, true));
+                deviceLayerColor(48, layerColor, false, false, true));
         assertEquals(new RgbLigthState(110, 0, 0, true).getSoftDimmed(),
-                PerformClipLauncherMode.deviceLayerPadColorForPad(48, layerColor, false, false, false));
+                deviceLayerColor(48, layerColor, false, false, false));
         assertEquals(layerColor.getSoftDimmed(),
-                PerformClipLauncherMode.deviceLayerPadColorForPad(0, layerColor, false, false, false));
+                deviceLayerColor(0, layerColor, false, false, false));
+    }
+
+    private static RgbLigthState mixDeviceColor(final RgbLigthState trackColor,
+                                                final boolean enabled,
+                                                final boolean selected) {
+        return PerformPadRenderer.mixDevice(
+                new PerformPadRenderer.MixDeviceSnapshot(true, trackColor, enabled, selected));
+    }
+
+    private static RgbLigthState deviceLayerColor(final int padIndex,
+                                                  final RgbLigthState layerColor,
+                                                  final boolean solo,
+                                                  final boolean muted,
+                                                  final boolean active) {
+        return PerformPadRenderer.deviceLayer(new PerformPadRenderer.DeviceLayerSnapshot(
+                PerformPadRenderer.TrackAction.fromPadIndex(padIndex), true, layerColor, solo, muted, active));
     }
 
 }
