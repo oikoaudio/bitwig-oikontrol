@@ -82,8 +82,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double LAST_TOUCHED_ENCODER_FINE_STEP = 0.01;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
     private static final int CUE_MARKER_BANK_SIZE = 128;
-    private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
-    private static final int BROWSER_OPEN_DEFER_MS = 40;
     private static final int GLOBAL_VELOCITY_CENTER_DEFAULT = 100;
     private static final int GLOBAL_VELOCITY_MIN = 1;
     private static final int GLOBAL_VELOCITY_MAX = 126;
@@ -143,8 +141,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private LastClickedParameter lastClickedParameter;
     private Groove groove;
     private final BooleanValueObject altActive = new BooleanValueObject();
-    private PopupBrowser popupBrowser;
-    private BrowserResultsItem browserResultsCursor;
+    private PopupBrowserController popupBrowserController;
     private final boolean[] cueMarkerExists = new boolean[CUE_MARKER_BANK_SIZE];
     private final double[] cueMarkerPositions = new double[CUE_MARKER_BANK_SIZE];
     private final String[] cueMarkerNames = new String[CUE_MARKER_BANK_SIZE];
@@ -169,7 +166,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
     private String lastRecordQuantizationGrid = RECORD_QUANTIZATION_DEFAULT_ON;
-    private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
     private int transportTimeSignatureDenominator = 4;
     private double cueMarkerNavigationPosition = Double.NaN;
@@ -231,12 +227,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         groove.getShuffleAmount().name().markInterested();
         groove.getShuffleAmount().displayedValue().markInterested();
         groove.getShuffleAmount().value().markInterested();
-        popupBrowser = host.createPopupBrowser();
-        popupBrowser.exists().markInterested();
-        browserResultsCursor = popupBrowser.resultsColumn().createCursorItem();
-        browserResultsCursor.exists().markInterested();
-        browserResultsCursor.isSelected().markInterested();
-        browserResultsCursor.name().markInterested();
         application.recordQuantizationGrid().markInterested();
         application.recordQuantizationGrid().addValueObserver(this::handleRecordQuantizationChanged);
 
@@ -254,6 +244,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
         mainLayer = new Layer(layers, "Main");
         oled = new OledDisplay(midiOut);
+        initPopupBrowserController();
         noteRepeatHandler = new NoteRepeatHandler(
                 noteInput,
                 oled,
@@ -533,6 +524,68 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 });
     }
 
+    private void initPopupBrowserController() {
+        popupBrowserController = PopupBrowserController.create(host, viewControl, oled,
+                new PopupBrowserController.Host() {
+                    @Override
+                    public boolean browserButtonPressed() {
+                        final BiColorButton button = getButton(NoteAssign.BROWSER);
+                        return button != null && button.isPressed();
+                    }
+
+                    @Override
+                    public boolean shiftHeld() {
+                        return isGlobalShiftHeld();
+                    }
+
+                    @Override
+                    public boolean altHeld() {
+                        return isGlobalAltHeld();
+                    }
+
+                    @Override
+                    public boolean overlayActive() {
+                        return isGlobalSettingsOverlayActive();
+                    }
+
+                    @Override
+                    public boolean overlayLatched() {
+                        return globalSettingsOverlay != null && globalSettingsOverlay.isLatched();
+                    }
+
+                    @Override
+                    public void toggleOverlayLatch() {
+                        if (globalSettingsOverlay != null) {
+                            globalSettingsOverlay.toggleLatch();
+                        }
+                    }
+
+                    @Override
+                    public void closeOverlayLatch() {
+                        if (globalSettingsOverlay != null) {
+                            globalSettingsOverlay.closeLatch();
+                        }
+                    }
+
+                    @Override
+                    public void deactivateOverlay() {
+                        if (globalSettingsOverlay != null) {
+                            globalSettingsOverlay.deactivate();
+                        }
+                    }
+
+                    @Override
+                    public void refreshOverlayState() {
+                        updateGlobalSettingsOverlayState();
+                    }
+
+                    @Override
+                    public void notifyAction(final String title, final String value) {
+                        AkaiFireOikontrolExtension.this.notifyAction(title, value);
+                    }
+                });
+    }
+
     private BiColorButton addButton(final NoteAssign which, final int ccLightValue) {
         final BiColorButton button = new BiColorButton(which, this, ccLightValue);
         controlButtons.put(which, button);
@@ -685,8 +738,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void stopAction(final boolean pressed) {
         if (browserTransportAction(isPopupBrowserActive(), NoteAssign.STOP, pressed) == BrowserTransportAction.CANCEL) {
-            popupBrowser.cancel();
-            notifyAction("Browser", "Closed");
+            popupBrowserController.cancel();
             return;
         }
         if (!pressed) {
@@ -1100,8 +1152,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void togglePlay(final boolean pressed) {
         if (browserTransportAction(isPopupBrowserActive(), NoteAssign.PLAY, pressed) == BrowserTransportAction.COMMIT) {
-            popupBrowser.commit();
-            notifyAction("Browser", "Commit");
+            popupBrowserController.commit();
             return;
         }
         if (!pressed) {
@@ -1967,7 +2018,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean isPopupBrowserActive() {
-        return popupBrowser != null && popupBrowser.exists().get();
+        return popupBrowserController != null && popupBrowserController.isActive();
     }
 
     public BiColorLightState getBrowserLightState() {
@@ -2254,145 +2305,23 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void handleBrowserPressed(final boolean pressed) {
-        if (!pressed) {
-            browserPressToken++;
-            updateGlobalSettingsOverlayState();
-            if (!isGlobalSettingsOverlayActive()) {
-                oled.clearScreenDelayed();
-            }
-            return;
-        }
-        if (isGlobalSettingsOverlayActive() && !isGlobalShiftHeld()) {
-            globalSettingsOverlay.closeLatch();
-            updateGlobalSettingsOverlayState();
-            notifyAction("Settings", "Closed");
-            return;
-        }
-        if (isPopupBrowserActive()) {
-            popupBrowser.cancel();
-            notifyAction("Browser", "Closed");
-            return;
-        }
-        if (isGlobalShiftHeld() && !isGlobalAltHeld()) {
-            final boolean wasLatched = globalSettingsOverlay.isLatched();
-            globalSettingsOverlay.toggleLatch();
-            if (wasLatched) {
-                globalSettingsOverlay.deactivate();
-                notifyAction("Settings", "Closed");
-                return;
-            }
-            updateGlobalSettingsOverlayState();
-            notifyAction("Settings", "Latched");
-            return;
-        }
-        updateGlobalSettingsOverlayState();
-        final int pressToken = ++browserPressToken;
-        host.scheduleTask(() -> maybeOpenPopupBrowser(pressToken), BROWSER_OPEN_DEFER_MS);
-    }
-
-    private void maybeOpenPopupBrowser(final int pressToken) {
-        if (pressToken != browserPressToken) {
-            return;
-        }
-        final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
-        if (browserButton == null || !browserButton.isPressed()) {
-            return;
-        }
-        if (isGlobalSettingsOverlayActive() || isPopupBrowserActive()) {
-            return;
-        }
-        openPopupBrowser();
-    }
-
-    private void openPopupBrowser() {
-        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
-        final boolean shiftHeld = getButton(NoteAssign.SHIFT).isPressed();
-        final boolean altHeld = getButton(NoteAssign.ALT).isPressed();
-        if (shiftHeld && altHeld) {
-            if (primaryDevice.exists().get()) {
-                primaryDevice.beforeDeviceInsertionPoint().browse();
-            } else {
-                viewControl.getCursorTrack().startOfDeviceChainInsertionPoint().browse();
-            }
-            scheduleBrowserResultsSelectionPrime();
-            notifyAction("Browser", "Before");
-            return;
-        }
-        if (altHeld) {
-            if (primaryDevice.exists().get()) {
-                primaryDevice.afterDeviceInsertionPoint().browse();
-            } else {
-                viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
-            }
-            scheduleBrowserResultsSelectionPrime();
-            notifyAction("Browser", "After");
-            return;
-        }
-        if (primaryDevice.exists().get()) {
-            primaryDevice.replaceDeviceInsertionPoint().browse();
-            scheduleBrowserResultsSelectionPrime();
-            notifyAction("Browser", "Replace");
-        } else {
-            viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
-            scheduleBrowserResultsSelectionPrime();
-            notifyAction("Browser", "Add");
-        }
-    }
-
-    private void scheduleBrowserResultsSelectionPrime() {
-        for (final int delayMs : BROWSER_RESULTS_PRIME_DELAYS_MS) {
-            host.scheduleTask(this::primeBrowserResultsSelection, delayMs);
-        }
-    }
-
-    private void primeBrowserResultsSelection() {
-        if (!isPopupBrowserActive()) {
-            return;
-        }
-        if (browserResultsCursor.exists().get()) {
-            if (!browserResultsCursor.isSelected().get()) {
-                browserResultsCursor.isSelected().set(true);
-            }
-            return;
-        }
-        popupBrowser.selectFirstFile();
-        if (browserResultsCursor.exists().get()) {
-            browserResultsCursor.isSelected().set(true);
-        }
+        popupBrowserController.handleBrowserPressed(pressed);
     }
 
     private void handleGlobalMainEncoder(final int inc) {
-        if (!isPopupBrowserActive()) {
-            return;
-        }
-        if (inc > 0) {
-            for (int i = 0; i < inc; i++) {
-                popupBrowser.selectNextFile();
-            }
-        } else if (inc < 0) {
-            for (int i = 0; i < -inc; i++) {
-                popupBrowser.selectPreviousFile();
-            }
-        }
-        oled.valueInfo("Browser", browserResultsCursor.exists().get() ? browserResultsCursor.name().get() : "No Results");
+        popupBrowserController.adjustSelection(inc);
     }
 
     public void routeBrowserMainEncoder(final int inc) {
-        handleGlobalMainEncoder(inc);
+        popupBrowserController.adjustSelection(inc);
     }
 
-    private void handleGlobalMainEncoderPress(final boolean press) {
-        if (!isPopupBrowserActive()) {
-            return;
-        }
-        if (press) {
-            popupBrowser.commit();
-            notifyAction("Browser", "Commit");
-        }
+    private void handleGlobalMainEncoderPress(final boolean pressed) {
+        popupBrowserController.handleMainEncoderPress(pressed);
     }
 
-    public void routeBrowserMainEncoderPress(final boolean press) {
-        handleGlobalMainEncoderPress(press);
+    public void routeBrowserMainEncoderPress(final boolean pressed) {
+        popupBrowserController.handleMainEncoderPress(pressed);
     }
 
     public boolean isKnobModeHeld() {
