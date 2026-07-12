@@ -133,6 +133,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private DrumSequenceMode drumSequenceMode;
     private ViewCursorControl viewControl;
     private FireDeviceLocator deviceLocator;
+    private DrumAutoPinController drumAutoPinController;
 
     private final BooleanValueObject shiftActive = new BooleanValueObject();
     private OledDisplay oled;
@@ -204,10 +205,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private FirePreferences firePreferences;
     private String tempoDisplayValue = "";
     private boolean tempoDisplayPending = false;
-    private boolean drumAutoPinApplied = false;
-    private boolean drumTrackPinnedBeforeAutoPin = false;
-    private boolean drumDevicePinnedBeforeAutoPin = false;
-    private int drumTrackIndexBeforeAutoPin = -1;
     private boolean knobModeGestureConsumed = false;
     private boolean patternPressed = false;
     private boolean patternGestureConsumed = false;
@@ -292,6 +289,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         noteInput.setShouldConsumeEvents(false);
         viewControl = new ViewCursorControl(host, 16);
         deviceLocator = new FireDeviceLocator(host, DEVICE_DISCOVERY_WIDTH);
+        initDrumAutoPinController();
 
         mainLayer = new Layer(layers, "Main");
         oled = new OledDisplay(midiOut);
@@ -1788,72 +1786,69 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void syncDrumPinningForActiveMode() {
-        if (modeState.activeMode() == Mode.DRUM) {
-            if (shouldAutoPinStandardDrumMode()) {
-                applyDrumPinningIfEnabled();
-            } else {
-                releaseAutoPinnedDrumContext(true);
-            }
-            return;
-        }
-        releaseAutoPinnedDrumContext(true);
+        drumAutoPinController.sync();
     }
 
     private void applyDrumPinningIfEnabled() {
-        if (!shouldAutoPinStandardDrumMode() || drumAutoPinApplied || deviceLocator == null || viewControl == null) {
-            return;
-        }
-
-        final CursorTrack cursorTrack = viewControl.getCursorTrack();
-        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
-        drumTrackPinnedBeforeAutoPin = cursorTrack.isPinned().get();
-        drumDevicePinnedBeforeAutoPin = primaryDevice.isPinned().get();
-        drumTrackIndexBeforeAutoPin = cursorTrack.position().get();
-
-        if (!deviceLocator.focusFirstDrumMachine(viewControl)) {
-            return;
-        }
-
-        cursorTrack.isPinned().set(true);
-        primaryDevice.isPinned().set(true);
-        drumAutoPinApplied = true;
+        drumAutoPinController.applyIfEnabled();
     }
 
     private void ensureDrumPinningStillValid() {
-        if (!shouldAutoPinStandardDrumMode() || !drumAutoPinApplied
-                || viewControl == null || deviceLocator == null) {
-            return;
-        }
-
-        final CursorTrack cursorTrack = viewControl.getCursorTrack();
-        final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
-        final boolean invalidTrackPin = !cursorTrack.isPinned().get();
-        final boolean invalidDevicePin = !primaryDevice.isPinned().get();
-        final boolean invalidDrumContext = !primaryDevice.exists().get() || !primaryDevice.hasDrumPads().get();
-        if (!invalidTrackPin && !invalidDevicePin && !invalidDrumContext) {
-            return;
-        }
-
-        if (deviceLocator.focusFirstDrumMachine(viewControl)) {
-            cursorTrack.isPinned().set(true);
-            primaryDevice.isPinned().set(true);
-        }
+        drumAutoPinController.validate();
     }
 
     private void releaseAutoPinnedDrumContext(final boolean restorePreviousState) {
-        if (!drumAutoPinApplied || viewControl == null) {
-            return;
-        }
+        drumAutoPinController.release(restorePreviousState);
+    }
 
-        if (restorePreviousState) {
-            viewControl.getCursorTrack().isPinned().set(drumTrackPinnedBeforeAutoPin);
-            viewControl.getPrimaryDevice().isPinned().set(drumDevicePinnedBeforeAutoPin);
-            restoreTrackSelection(drumTrackIndexBeforeAutoPin);
-        } else {
-            viewControl.getCursorTrack().isPinned().set(false);
-            viewControl.getPrimaryDevice().isPinned().set(false);
-        }
-        drumAutoPinApplied = false;
+    private void initDrumAutoPinController() {
+        drumAutoPinController = new DrumAutoPinController(this::shouldAutoPinStandardDrumMode,
+                new DrumAutoPinController.Port() {
+                    @Override
+                    public boolean isTrackPinned() {
+                        return viewControl.getCursorTrack().isPinned().get();
+                    }
+
+                    @Override
+                    public boolean isDevicePinned() {
+                        return viewControl.getPrimaryDevice().isPinned().get();
+                    }
+
+                    @Override
+                    public int selectedTrackIndex() {
+                        return viewControl.getCursorTrack().position().get();
+                    }
+
+                    @Override
+                    public boolean focusFirstDrumMachine() {
+                        return deviceLocator.focusFirstDrumMachine(viewControl);
+                    }
+
+                    @Override
+                    public void setTrackPinned(final boolean pinned) {
+                        viewControl.getCursorTrack().isPinned().set(pinned);
+                    }
+
+                    @Override
+                    public void setDevicePinned(final boolean pinned) {
+                        viewControl.getPrimaryDevice().isPinned().set(pinned);
+                    }
+
+                    @Override
+                    public boolean focusedDeviceExists() {
+                        return viewControl.getPrimaryDevice().exists().get();
+                    }
+
+                    @Override
+                    public boolean focusedDeviceHasDrumPads() {
+                        return viewControl.getPrimaryDevice().hasDrumPads().get();
+                    }
+
+                    @Override
+                    public void restoreTrackSelection(final int trackIndex) {
+                        AkaiFireOikontrolExtension.this.restoreTrackSelection(trackIndex);
+                    }
+                });
     }
 
     private void restoreTrackSelection(final int trackIndex) {
