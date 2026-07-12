@@ -142,6 +142,61 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private Groove groove;
     private final BooleanValueObject altActive = new BooleanValueObject();
     private PopupBrowserController popupBrowserController;
+    private GlobalMainEncoderController globalMainEncoderController;
+    private final GlobalMainEncoderController.RoleActions globalMainEncoderRoleActions =
+            new GlobalMainEncoderController.RoleActions() {
+                @Override
+                public void adjustTempo(final int inc, final boolean fine) {
+                    AkaiFireOikontrolExtension.this.adjustTempo(inc, fine);
+                }
+
+                @Override
+                public void adjustShuffle(final int inc, final boolean fine) {
+                    adjustGrooveShuffleAmount(inc, fine);
+                }
+
+                @Override
+                public void adjustTrackSelection(final int inc, final boolean pageStep) {
+                    adjustSelectedTrack(inc, pageStep);
+                }
+
+                @Override
+                public void adjustPlaybackStart(final int inc) {
+                    adjustPlaybackStartPositionByGrid(inc);
+                }
+            };
+    private final GlobalMainEncoderController.GlobalChordActions globalMainEncoderChordActions =
+            new GlobalMainEncoderController.GlobalChordActions() {
+                @Override
+                public void consumePatternGesture() {
+                    patternGestureConsumed = true;
+                }
+
+                @Override
+                public void adjustPlaybackStartByGrid(final int inc) {
+                    adjustPlaybackStartPositionByGrid(inc);
+                }
+
+                @Override
+                public void adjustPlaybackStartFine(final int inc) {
+                    adjustPlaybackStartPositionFine(inc);
+                }
+
+                @Override
+                public void jumpToCueMarker(final int inc) {
+                    AkaiFireOikontrolExtension.this.jumpToCueMarker(inc);
+                }
+
+                @Override
+                public void zoomTimelineHorizontally(final int inc) {
+                    AkaiFireOikontrolExtension.this.zoomTimelineHorizontally(inc);
+                }
+
+                @Override
+                public void zoomTimelineVertically(final int inc) {
+                    AkaiFireOikontrolExtension.this.zoomTimelineVertically(inc);
+                }
+            };
     private final boolean[] cueMarkerExists = new boolean[CUE_MARKER_BANK_SIZE];
     private final double[] cueMarkerPositions = new double[CUE_MARKER_BANK_SIZE];
     private final String[] cueMarkerNames = new String[CUE_MARKER_BANK_SIZE];
@@ -153,8 +208,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean drumTrackPinnedBeforeAutoPin = false;
     private boolean drumDevicePinnedBeforeAutoPin = false;
     private int drumTrackIndexBeforeAutoPin = -1;
-    private boolean mainEncoderPressed = false;
-    private boolean mainEncoderTurnedWhilePressed = false;
     private boolean knobModeGestureConsumed = false;
     private boolean patternPressed = false;
     private boolean patternGestureConsumed = false;
@@ -193,8 +246,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
     private final TopLevelModeState modeState = new TopLevelModeState();
-    private String currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
-    private String alternateMainEncoderRole = FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
 
     protected AkaiFireOikontrolExtension(final AkaiFireOikontrolDefinition definition, final ControllerHost host) {
         super(definition, host);
@@ -245,6 +296,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         mainLayer = new Layer(layers, "Main");
         oled = new OledDisplay(midiOut);
         initPopupBrowserController();
+        globalMainEncoderController = new GlobalMainEncoderController(
+                this::isDrumGridRoleAvailable,
+                this::shouldAutoPinFirstDrumMachine);
         noteRepeatHandler = new NoteRepeatHandler(
                 noteInput,
                 oled,
@@ -1525,57 +1579,27 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public String getMainEncoderRolePreference() {
-        return resolveMainEncoderRoleForActiveMode(currentMainEncoderRole);
+        return globalMainEncoderController.currentRole();
     }
 
     private void applyMainEncoderStartupPreference(final String preferenceValue) {
-        final String startupState = FireControlPreferences.normalizeMainEncoderStartupState(preferenceValue);
-        currentMainEncoderRole = FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED.equals(startupState)
-                ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
-                : FireControlPreferences.normalizeMainEncoderRole(alternateMainEncoderRole);
+        globalMainEncoderController.applyStartupPreference(preferenceValue);
     }
 
     public String cycleMainEncoderRolePreference() {
-        final String cycleSource = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(getMainEncoderRolePreference())
-                ? alternateMainEncoderRole
-                : getMainEncoderRolePreference();
-        final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(cycleSource, isDrumGridRoleAvailable());
-        currentMainEncoderRole = nextRole;
-        alternateMainEncoderRole = nextRole;
-        final String effectiveRole = getMainEncoderRolePreference();
+        final String effectiveRole = globalMainEncoderController.cycleRole();
         notifyAction("Encoder Role", mainEncoderRoleDisplayName(effectiveRole));
         return effectiveRole;
     }
 
     public String toggleMainEncoderRolePreference() {
-        final String normalizedCurrentRole = getMainEncoderRolePreference();
-        final String normalizedAlternateRole = resolveMainEncoderRoleForActiveMode(alternateMainEncoderRole);
-        final String nextRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(normalizedCurrentRole)
-                ? (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(normalizedAlternateRole)
-                ? FireControlPreferences.MAIN_ENCODER_TRACK_SELECT
-                : normalizedAlternateRole)
-                : FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
-        currentMainEncoderRole = nextRole;
-        final String effectiveRole = getMainEncoderRolePreference();
+        final String effectiveRole = globalMainEncoderController.toggleRole();
         notifyAction("Encoder Role", mainEncoderRoleDisplayName(effectiveRole));
         return effectiveRole;
     }
 
     private boolean isDrumGridRoleAvailable() {
         return modeState.activeMode() == Mode.DRUM && modeState.activeDrumMode() == DrumMode.STANDARD;
-    }
-
-    private String resolveMainEncoderRoleForActiveMode(final String role) {
-        final String normalizedRole = FireControlPreferences.normalizeMainEncoderRole(role);
-        if (FireControlPreferences.MAIN_ENCODER_TRACK_SELECT.equals(normalizedRole)
-                && isDrumGridRoleAvailable()
-                && shouldAutoPinFirstDrumMachine()) {
-            return FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
-        }
-        if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(normalizedRole) && !isDrumGridRoleAvailable()) {
-            return FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
-        }
-        return normalizedRole;
     }
 
     private String mainEncoderRoleDisplayName(final String role) {
@@ -2077,61 +2101,33 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public void setMainEncoderPressed(final boolean pressed) {
-        mainEncoderPressed = pressed;
-        if (pressed) {
-            mainEncoderTurnedWhilePressed = false;
-        }
+        globalMainEncoderController.setPressed(pressed);
     }
 
     public boolean isMainEncoderPressed() {
-        return mainEncoderPressed;
+        return globalMainEncoderController.isPressed();
     }
 
     public void markMainEncoderTurned() {
-        if (mainEncoderPressed) {
-            mainEncoderTurnedWhilePressed = true;
-        }
+        globalMainEncoderController.markTurned();
     }
 
     public boolean wasMainEncoderTurnedWhilePressed() {
-        return mainEncoderTurnedWhilePressed;
+        return globalMainEncoderController.wasTurnedWhilePressed();
     }
 
     public boolean handleMainEncoderGlobalChord(final int inc) {
-        final MainEncoderGlobalChord.Action action = MainEncoderGlobalChord.resolve(
+        return globalMainEncoderController.handleGlobalChord(
                 inc,
                 isPopupBrowserActive(),
                 patternPressed,
                 isGlobalShiftHeld(),
-                isGlobalAltHeld());
-        switch (action) {
-            case PLAYBACK_START_GRID -> {
-                adjustPlaybackStartPositionByGrid(inc);
-                return true;
-            }
-            case PLAYBACK_START_FINE -> {
-                patternGestureConsumed = true;
-                adjustPlaybackStartPositionFine(inc);
-                return true;
-            }
-            case CUE_MARKER -> {
-                patternGestureConsumed = true;
-                jumpToCueMarker(inc);
-                return true;
-            }
-            case TIMELINE_ZOOM_HORIZONTAL -> {
-                zoomTimelineHorizontally(inc);
-                return true;
-            }
-            case TIMELINE_ZOOM_VERTICAL -> {
-                zoomTimelineVertically(inc);
-                return true;
-            }
-            case NONE -> {
-                return false;
-            }
-        }
-        return false;
+                isGlobalAltHeld(),
+                globalMainEncoderChordActions);
+    }
+
+    public boolean routeGlobalMainEncoderRole(final int inc, final boolean fine) {
+        return globalMainEncoderController.routeRoleTurn(inc, fine, globalMainEncoderRoleActions);
     }
 
     private void jumpToCueMarker(final int inc) {
@@ -2166,26 +2162,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                                        final boolean[] exists,
                                        final double[] positions,
                                        final int itemCount) {
-        final int observedLimit = itemCount > 0 ? itemCount : exists.length;
-        final int limit = Math.min(Math.min(exists.length, positions.length), observedLimit);
-        if (inc == 0 || limit == 0) {
-            return -1;
-        }
-        final double epsilon = 0.000001;
-        if (inc > 0) {
-            for (int index = 0; index < limit; index++) {
-                if (exists[index] && positions[index] > reference + epsilon) {
-                    return index;
-                }
-            }
-            return -1;
-        }
-        for (int index = limit - 1; index >= 0; index--) {
-            if (exists[index] && positions[index] < reference - epsilon) {
-                return index;
-            }
-        }
-        return -1;
+        return GlobalMainEncoderController.cueMarkerIndexAfterTurn(reference, inc, exists, positions, itemCount);
     }
 
     private void zoomTimelineHorizontally(final int inc) {
@@ -2443,29 +2420,17 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     static int remotePageIndexAfterTurn(final int currentPage, final int pageCount, final int direction) {
-        if (pageCount <= 0) {
-            return currentPage;
-        }
-        return Math.max(0, Math.min(pageCount - 1, currentPage + direction));
+        return GlobalMainEncoderController.remotePageIndexAfterTurn(currentPage, pageCount, direction);
     }
 
     static String remotePageCountLabel(final int pageIndex, final int pageCount) {
-        return pageCount > 1 ? (pageIndex + 1) + "/" + pageCount : "";
+        return GlobalMainEncoderController.remotePageCountLabel(pageIndex, pageCount);
     }
 
     static BiColorLightState remotePageNavigationLightState(final int currentPage,
                                                             final int pageCount,
                                                             final int direction) {
-        if (pageCount <= 1) {
-            return BiColorLightState.OFF;
-        }
-        if (direction < 0) {
-            return currentPage > 0 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
-        }
-        if (direction > 0) {
-            return currentPage < pageCount - 1 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
-        }
-        return BiColorLightState.OFF;
+        return GlobalMainEncoderController.remotePageNavigationLightState(currentPage, pageCount, direction);
     }
 
     static BrowserTransportAction browserTransportAction(final boolean browserActive,

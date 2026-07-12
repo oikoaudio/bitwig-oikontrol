@@ -68,16 +68,10 @@ final class ChordStepEncoderControls {
         }
         final boolean fine = driver.isGlobalShiftHeld();
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
-        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+        if (driver.routeGlobalMainEncoderRole(inc, fine)) {
+            return;
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
             oled.valueInfo("Note Repeat", "Live only");
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
-            driver.adjustTempo(inc, fine);
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
-            driver.adjustGrooveShuffleAmount(inc, fine);
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
-            driver.adjustSelectedTrack(inc, driver.isMainEncoderPressed());
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(mainEncoderRole)) {
-            driver.adjustPlaybackStartPositionByGrid(inc);
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
             oled.valueInfo("Drum Grid", "Drum only");
         } else {
