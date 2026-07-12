@@ -99,7 +99,7 @@ public class PerformClipLauncherMode extends Layer {
     private final DeviceLayerBank deviceLayerBank;
     private final String[] deviceLayerNames = new String[MAX_TRACKS];
     private final RgbLigthState[] deviceLayerColors = new RgbLigthState[MAX_TRACKS];
-    private final Map<Integer, Integer> rememberedDeviceByTrack = new HashMap<>();
+    private final PerformMixController mixController = new PerformMixController();
     private final String[] sceneNames = new String[MAX_SCENES];
     private final int[] trackPeakMeters = new int[MAX_TRACKS];
     private final int[] trackRmsMeters = new int[MAX_TRACKS];
@@ -687,7 +687,7 @@ public class PerformClipLauncherMode extends Layer {
             oled.clearScreenDelayed();
             return;
         }
-        final int deviceIndex = mixDeviceIndexForRow(rowIndex, pageState.mixDevicePageIndex());
+        final int deviceIndex = PerformMixController.deviceIndexForRow(rowIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
             return;
         }
@@ -711,7 +711,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        final boolean targetEnabled = rowWideDeviceToggleTarget(anyEnabled);
+        final boolean targetEnabled = PerformMixController.rowWideToggleTarget(anyEnabled);
         for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
             final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
             if (trackAddress == null) {
@@ -816,8 +816,9 @@ public class PerformClipLauncherMode extends Layer {
         if (!pressed) {
             return;
         }
-        final PerformPadRenderer.TrackAction actionRow = PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
-        if (actionRow == null) {
+        final PerformMixController.TrackAction action = PerformMixController.trackAction(
+                padIndex, isAltHeld(), driver.isExclusiveTrackArmEnabled());
+        if (action == PerformMixController.TrackAction.NONE) {
             return;
         }
         final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
@@ -827,13 +828,14 @@ public class PerformClipLauncherMode extends Layer {
         }
         final Track track = trackAddress.track();
         final String trackLabel = trackLabel(trackAddress);
-        switch (actionRow) {
+        switch (action) {
+            case NONE -> {
+            }
+            case STOP -> {
+                track.stop();
+                showValueInfo("Mix Stop", trackLabel);
+            }
             case SELECT -> {
-                if (isAltHeld()) {
-                    track.stop();
-                    showValueInfo("Mix Stop", trackLabel);
-                    return;
-                }
                 selectMixTrack(trackAddress);
                 track.selectInEditor();
                 restoreRememberedMixDevice(trackAddress);
@@ -847,9 +849,9 @@ public class PerformClipLauncherMode extends Layer {
                 track.mute().toggle();
                 showValueInfo(track.mute().get() ? "Mix Mute" : "Mix Unmute", trackLabel);
             }
-            case ARM -> {
-                final boolean armed = toggleMixArm(trackAddress,
-                        trackArmUsesExclusive(isAltHeld(), driver.isExclusiveTrackArmEnabled()));
+            case ARM, ARM_EXCLUSIVE -> {
+                final boolean armed = toggleMixArm(
+                        trackAddress, action == PerformMixController.TrackAction.ARM_EXCLUSIVE);
                 showValueInfo(armed ? "Mix Arm" : "Mix Disarm", trackLabel);
             }
         }
@@ -889,7 +891,7 @@ public class PerformClipLauncherMode extends Layer {
         if (!pressed) {
             return;
         }
-        final int deviceIndex = mixDeviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
+        final int deviceIndex = PerformMixController.deviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
             return;
         }
@@ -904,38 +906,44 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         selectMeterTrack(trackAddress.sourceIndex(), true);
-        if (isAltHeld()) {
-            final boolean enabled = !device.isEnabled().get();
-            device.isEnabled().set(enabled);
-            showValueInfo(mixDeviceActionTitle(true, enabled), mixDeviceName(trackAddress, deviceIndex));
-            return;
+        final PerformMixController.DeviceAction action =
+                PerformMixController.deviceAction(isAltHeld(), driver.isMainEncoderPressed());
+        switch (action) {
+            case TOGGLE_ENABLED -> {
+                final boolean enabled = !device.isEnabled().get();
+                device.isEnabled().set(enabled);
+                showValueInfo(mixDeviceActionTitle(true, enabled), mixDeviceName(trackAddress, deviceIndex));
+            }
+            case SELECT, TOGGLE_WINDOW -> {
+                selectTrackInMixerFromController(trackAddress.track(), trackAddress.absoluteIndex());
+                trackAddress.track().selectInEditor();
+                selectMixDevice(trackAddress, device, deviceIndex);
+                if (action == PerformMixController.DeviceAction.TOGGLE_WINDOW) {
+                    driver.toggleCurrentDeviceWindow();
+                } else {
+                    showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()),
+                            mixDeviceName(trackAddress, deviceIndex));
+                }
+            }
         }
-        selectTrackInMixerFromController(trackAddress.track(), trackAddress.absoluteIndex());
-        trackAddress.track().selectInEditor();
-        selectMixDevice(trackAddress, device, deviceIndex);
-        if (mixDevicePadShouldToggleWindow(driver.isMainEncoderPressed(), isAltHeld())) {
-            driver.toggleCurrentDeviceWindow();
-            return;
-        }
-        showValueInfo(mixDeviceActionTitle(false, device.isEnabled().get()), mixDeviceName(trackAddress, deviceIndex));
     }
 
     private void selectMixDevice(final TrackAddress trackAddress, final Device device, final int deviceIndex) {
         remoteCursorDevice.selectDevice(device);
         selectedRemoteTrackIndex = trackAddress.absoluteIndex();
         selectedRemoteDeviceIndex = deviceIndex;
-        rememberMixDeviceSelection(rememberedDeviceByTrack, trackAddress.absoluteIndex(), deviceIndex);
+        mixController.rememberDevice(trackAddress.absoluteIndex(), deviceIndex);
         device.selectInEditor();
     }
 
     private void restoreRememberedMixDevice(final TrackAddress trackAddress) {
-        final int deviceIndex = rememberedMixDeviceSelection(rememberedDeviceByTrack, trackAddress.absoluteIndex());
+        final int deviceIndex = mixController.rememberedDevice(trackAddress.absoluteIndex());
         if (deviceIndex < 0) {
             return;
         }
         final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
         if (device == null || !device.exists().get()) {
-            rememberedDeviceByTrack.remove(trackAddress.absoluteIndex());
+            mixController.forgetDevice(trackAddress.absoluteIndex());
             return;
         }
         remoteCursorDevice.selectDevice(device);
@@ -948,8 +956,8 @@ public class PerformClipLauncherMode extends Layer {
         if (!pressed) {
             return;
         }
-        final PerformPadRenderer.TrackAction actionRow = PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
-        if (actionRow == null) {
+        final PerformDeviceLayersController.Action action = PerformDeviceLayersController.actionForPad(padIndex);
+        if (action == PerformDeviceLayersController.Action.NONE) {
             return;
         }
         final int layerIndex = padIndex % PerformLayout.PAD_COLUMNS;
@@ -959,7 +967,9 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
         final String layerName = deviceLayerName(layerIndex);
-        switch (actionRow) {
+        switch (action) {
+            case NONE -> {
+            }
             case SELECT -> {
                 layer.selectInEditor();
                 showValueInfo("Layer Select", layerName);
@@ -972,7 +982,7 @@ public class PerformClipLauncherMode extends Layer {
                 layer.mute().toggle();
                 showValueInfo(layer.mute().get() ? "Layer Mute" : "Layer Unmute", layerName);
             }
-            case ARM -> {
+            case TOGGLE_ACTIVE -> {
                 layer.isActivated().toggle();
                 showValueInfo(layer.isActivated().get() ? "Layer On" : "Layer Off", layerName);
             }
@@ -2367,7 +2377,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private RgbLigthState getMixDevicePadState(final int padIndex) {
-        final int deviceIndex = mixDeviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
+        final int deviceIndex = PerformMixController.deviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
             return RgbLigthState.OFF;
         }
@@ -2384,17 +2394,6 @@ public class PerformClipLauncherMode extends Layer {
                 device != null && isMixDeviceSelected(trackAddress, deviceIndex)));
     }
 
-    static int mixDeviceIndexForPad(final int padIndex, final int devicePageIndex) {
-        final int row = padIndex / PerformLayout.PAD_COLUMNS;
-        return mixDeviceIndexForRow(row, devicePageIndex);
-    }
-
-    static int mixDeviceIndexForRow(final int row, final int devicePageIndex) {
-        return row >= 0 && row < MIX_DEVICE_ROWS
-                ? (clamp(devicePageIndex, 0, MIX_DEVICE_PAGE_COUNT - 1) * MIX_DEVICE_ROWS) + row
-                : -1;
-    }
-
     static String mixDeviceActionTitle(final boolean altHeld, final boolean enabled) {
         if (!altHeld) {
             return "Device Select";
@@ -2402,33 +2401,8 @@ public class PerformClipLauncherMode extends Layer {
         return enabled ? "Device On" : "Device Off";
     }
 
-    static boolean rowWideDeviceToggleTarget(final boolean anyEnabled) {
-        return !anyEnabled;
-    }
-
     static String rowWideDeviceToggleTitle(final boolean enabled) {
         return enabled ? "Device Row On" : "Device Row Off";
-    }
-
-    static void rememberMixDeviceSelection(final Map<Integer, Integer> rememberedDeviceByTrack,
-                                           final int absoluteTrackIndex,
-                                           final int deviceIndex) {
-        if (absoluteTrackIndex < 0 || deviceIndex < 0 || deviceIndex >= MIX_DEVICE_SLOTS) {
-            return;
-        }
-        rememberedDeviceByTrack.put(absoluteTrackIndex, deviceIndex);
-    }
-
-    static int rememberedMixDeviceSelection(final Map<Integer, Integer> rememberedDeviceByTrack,
-                                            final int absoluteTrackIndex) {
-        if (absoluteTrackIndex < 0) {
-            return -1;
-        }
-        return rememberedDeviceByTrack.getOrDefault(absoluteTrackIndex, -1);
-    }
-
-    static boolean mixDevicePadShouldToggleWindow(final boolean mainEncoderPressed, final boolean altHeld) {
-        return mainEncoderPressed && !altHeld;
     }
 
     static boolean birdsEyePadAvailable(final int padIndex,

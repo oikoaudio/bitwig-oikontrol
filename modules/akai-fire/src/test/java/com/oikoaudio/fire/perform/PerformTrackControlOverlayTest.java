@@ -5,9 +5,6 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PerformTrackControlOverlayTest {
@@ -152,24 +149,24 @@ class PerformTrackControlOverlayTest {
 
     @Test
     void mixDevicePadsMapRowsToPagedTrackDevices() {
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(0, 0));
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForPad(15, 0));
-        assertEquals(1, PerformClipLauncherMode.mixDeviceIndexForPad(16, 0));
-        assertEquals(2, PerformClipLauncherMode.mixDeviceIndexForPad(32, 0));
-        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForPad(48, 0));
-        assertEquals(4, PerformClipLauncherMode.mixDeviceIndexForPad(0, 1));
-        assertEquals(5, PerformClipLauncherMode.mixDeviceIndexForPad(16, 1));
-        assertEquals(6, PerformClipLauncherMode.mixDeviceIndexForPad(32, 1));
-        assertEquals(7, PerformClipLauncherMode.mixDeviceIndexForPad(48, 1));
+        assertEquals(0, PerformMixController.deviceIndexForPad(0, 0));
+        assertEquals(0, PerformMixController.deviceIndexForPad(15, 0));
+        assertEquals(1, PerformMixController.deviceIndexForPad(16, 0));
+        assertEquals(2, PerformMixController.deviceIndexForPad(32, 0));
+        assertEquals(3, PerformMixController.deviceIndexForPad(48, 0));
+        assertEquals(4, PerformMixController.deviceIndexForPad(0, 1));
+        assertEquals(5, PerformMixController.deviceIndexForPad(16, 1));
+        assertEquals(6, PerformMixController.deviceIndexForPad(32, 1));
+        assertEquals(7, PerformMixController.deviceIndexForPad(48, 1));
     }
 
     @Test
     void mixDeviceRowsMapToPagedTrackDevices() {
-        assertEquals(0, PerformClipLauncherMode.mixDeviceIndexForRow(0, 0));
-        assertEquals(3, PerformClipLauncherMode.mixDeviceIndexForRow(3, 0));
-        assertEquals(4, PerformClipLauncherMode.mixDeviceIndexForRow(0, 1));
-        assertEquals(7, PerformClipLauncherMode.mixDeviceIndexForRow(3, 1));
-        assertEquals(-1, PerformClipLauncherMode.mixDeviceIndexForRow(4, 1));
+        assertEquals(0, PerformMixController.deviceIndexForRow(0, 0));
+        assertEquals(3, PerformMixController.deviceIndexForRow(3, 0));
+        assertEquals(4, PerformMixController.deviceIndexForRow(0, 1));
+        assertEquals(7, PerformMixController.deviceIndexForRow(3, 1));
+        assertEquals(-1, PerformMixController.deviceIndexForRow(4, 1));
     }
 
     @Test
@@ -191,39 +188,20 @@ class PerformTrackControlOverlayTest {
 
     @Test
     void rowWideDeviceToggleTurnsOffWhenAnyVisibleDeviceIsEnabled() {
-        assertEquals(false, PerformClipLauncherMode.rowWideDeviceToggleTarget(true));
-        assertEquals(true, PerformClipLauncherMode.rowWideDeviceToggleTarget(false));
+        assertEquals(false, PerformMixController.rowWideToggleTarget(true));
+        assertEquals(true, PerformMixController.rowWideToggleTarget(false));
         assertEquals("Device Row Off", PerformClipLauncherMode.rowWideDeviceToggleTitle(false));
         assertEquals("Device Row On", PerformClipLauncherMode.rowWideDeviceToggleTitle(true));
     }
 
     @Test
-    void deviceSelectionMemoryStoresValidDeviceSlotsByAbsoluteTrack() {
-        final Map<Integer, Integer> memory = new HashMap<>();
-
-        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 19, 5);
-
-        assertEquals(5, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 19));
-        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 18));
-    }
-
-    @Test
-    void deviceSelectionMemoryIgnoresInvalidAddresses() {
-        final Map<Integer, Integer> memory = new HashMap<>();
-
-        PerformClipLauncherMode.rememberMixDeviceSelection(memory, -1, 2);
-        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 3, -1);
-        PerformClipLauncherMode.rememberMixDeviceSelection(memory, 3, 8);
-
-        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, -1));
-        assertEquals(-1, PerformClipLauncherMode.rememberedMixDeviceSelection(memory, 3));
-    }
-
-    @Test
     void mixDevicePadTogglesWindowWhenMainEncoderIsHeldWithoutAlt() {
-        assertEquals(true, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(true, false));
-        assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(true, true));
-        assertEquals(false, PerformClipLauncherMode.mixDevicePadShouldToggleWindow(false, false));
+        assertEquals(PerformMixController.DeviceAction.TOGGLE_WINDOW,
+                PerformMixController.deviceAction(false, true));
+        assertEquals(PerformMixController.DeviceAction.TOGGLE_ENABLED,
+                PerformMixController.deviceAction(true, true));
+        assertEquals(PerformMixController.DeviceAction.SELECT,
+                PerformMixController.deviceAction(false, false));
     }
 
     @Test
