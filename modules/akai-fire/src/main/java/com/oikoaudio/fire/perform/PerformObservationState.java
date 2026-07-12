@@ -65,6 +65,7 @@ public final class PerformObservationState {
     public void setLayerColor(final int index, final RgbLigthState color) { if (track(index)) layerColors[index] = color; }
     public RgbLigthState layerColor(final int index) { return track(index) ? layerColors[index] : null; }
     public void selectSlot(final int absoluteTrackIndex, final int absoluteSceneIndex) { selectedAbsoluteTrackIndex = absoluteTrackIndex; selectedAbsoluteSceneIndex = absoluteSceneIndex; }
+    public void selectTrack(final int absoluteTrackIndex) { selectedAbsoluteTrackIndex = absoluteTrackIndex; }
     public int selectedAbsoluteTrackIndex() { return selectedAbsoluteTrackIndex; }
     public int selectedAbsoluteSceneIndex() { return selectedAbsoluteSceneIndex; }
     public void updatePeak(final int sourceIndex, final int value) { if (track(sourceIndex)) { peakMeters[sourceIndex] = clampMeter(value); peakHold.update(sourceIndex, value); } }

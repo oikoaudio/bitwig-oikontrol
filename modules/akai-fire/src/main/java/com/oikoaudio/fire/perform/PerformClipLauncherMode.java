@@ -2613,7 +2613,7 @@ public class PerformClipLauncherMode extends Layer {
 
     private void handleHostTrackSelection(final int sourceTrackIndex) {
         final int absoluteTrackIndex = trackBank.scrollPosition().get() + sourceTrackIndex;
-        observationState.selectSlot(absoluteTrackIndex, observationState.selectedAbsoluteSceneIndex());
+        observationState.selectTrack(absoluteTrackIndex);
         selectMeterTrack(sourceTrackIndex, false);
         if (absoluteTrackIndex == suppressedTrackSelectionNotificationAbsoluteIndex) {
             lastTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
