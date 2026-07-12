@@ -96,7 +96,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
     private final ClipRowHandler clipHandler;
     private final MelodicStepPadSurface padSurface;
-    private final Set<Integer> auditioningPoolPitches = new HashSet<>();
+    private final MelodicPitchPoolController pitchPool;
     private final MotifGenerator motifGenerator = new MotifGenerator();
     private final CallResponseGenerator callResponseGenerator = new CallResponseGenerator();
     private final AcidGenerator acidGenerator = new AcidGenerator();
@@ -109,9 +109,6 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private int selectedClipSlotIndex = -1;
     private RgbLigthState selectedClipColor = MelodicRenderer.ACTIVE_STEP;
     private int loopSteps = DEFAULT_LOOP_STEPS;
-    private final LinkedHashSet<Integer> allowedPitches = new LinkedHashSet<>();
-    private boolean poolUserEdited = false;
-    private Generator poolGeneratorSource = null;
     private final AccentLatchState accentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
     private double density = 0.45;
@@ -162,6 +159,22 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.patternButtons = driver.getPatternButtons();
         this.noteRepeatHandler = noteRepeatHandler;
         this.noteInput = driver.getNoteInput();
+        this.pitchPool = new MelodicPitchPoolController(new MelodicPitchPoolController.AuditionPort() {
+            @Override
+            public boolean enabled() {
+                return driver.isStepSeqPadAuditionEnabled();
+            }
+
+            @Override
+            public void noteOn(final int pitch) {
+                noteInput.sendRawMidiEvent(Midi.NOTE_ON, pitch, AUDITION_VELOCITY);
+            }
+
+            @Override
+            public void noteOff(final int pitch) {
+                noteInput.sendRawMidiEvent(Midi.NOTE_OFF, pitch, 0);
+            }
+        });
 
         final ControllerHost host = driver.getHost();
         this.cursorTrack = host.createCursorTrack("MELODIC_STEP", "Melo Gen", 8, CLIP_ROW_PAD_COUNT, true);
@@ -370,48 +383,21 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (pitch < 0) {
             return;
         }
-        startPitchPoolAudition(pitch);
-        if (heldStep != null) {
-            assignPitchToStep(heldStep, pitch);
-            return;
+        switch (pitchPool.pressPitch(pitch, heldStep, this::assignPitchToStep)) {
+            case ENABLED -> oled.valueInfo("Pool +", pitchName(pitch));
+            case DISABLED -> oled.valueInfo("Pool -", pitchName(pitch));
+            case ASSIGNED, INVALID -> {
+            }
         }
-        if (allowedPitches.contains(pitch)) {
-            allowedPitches.remove(pitch);
-            oled.valueInfo("Pool -", pitchName(pitch));
-        } else {
-            allowedPitches.add(pitch);
-            oled.valueInfo("Pool +", pitchName(pitch));
-        }
-        poolUserEdited = true;
-    }
-
-    private void startPitchPoolAudition(final int pitch) {
-        if (!driver.isStepSeqPadAuditionEnabled() || pitch < 0 || pitch > 127 || auditioningPoolPitches.contains(pitch)) {
-            return;
-        }
-        noteInput.sendRawMidiEvent(Midi.NOTE_ON, pitch, AUDITION_VELOCITY);
-        auditioningPoolPitches.add(pitch);
     }
 
     private void stopPitchPoolAudition(final int padIndex) {
-        if (!driver.isStepSeqPadAuditionEnabled()) {
-            return;
-        }
         final int pitch = pitchPoolPitch(padIndex);
-        if (!auditioningPoolPitches.remove(pitch)) {
-            return;
-        }
-        noteInput.sendRawMidiEvent(Midi.NOTE_OFF, pitch, 0);
+        pitchPool.stopAudition(pitch);
     }
 
     private void stopPitchPoolAuditions() {
-        if (auditioningPoolPitches.isEmpty()) {
-            return;
-        }
-        for (final int pitch : auditioningPoolPitches) {
-            noteInput.sendRawMidiEvent(Midi.NOTE_OFF, pitch, 0);
-        }
-        auditioningPoolPitches.clear();
+        pitchPool.stopAllAuditions();
     }
 
     private void assignPitchToStep(final int stepIndex, final int pitch) {
@@ -491,13 +477,13 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             generatePitchPool();
             return;
         }
-        if (allowedPitches.isEmpty()) {
+        if (pitchPool.pitches().isEmpty()) {
             generatePitchPool();
             return;
         }
         final long mutationSeed = seed;
         final Random random = new Random(mutationSeed);
-        final LinkedHashSet<Integer> mutated = new LinkedHashSet<>(allowedPitches);
+        final LinkedHashSet<Integer> mutated = new LinkedHashSet<>(pitchPool.pitches());
         final List<Integer> ordered = new ArrayList<>(layout);
         List<Integer> selected = new ArrayList<>(mutated);
         Collections.sort(selected);
@@ -516,9 +502,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             Collections.sort(selected);
         }
 
-        allowedPitches.clear();
-        allowedPitches.addAll(mutated);
-        poolUserEdited = true;
+        pitchPool.replaceUserEdited(mutated);
         seed = nextSeed(mutationSeed);
         revoiceCurrentPatternToPool("Pool", "Mutated");
     }
@@ -589,8 +573,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final Random random = new Random(poolSeed);
         final List<Integer> layout = pitchPoolLayoutPitches();
         if (layout.isEmpty()) {
-            allowedPitches.clear();
-            allowedPitches.add(phraseContext().baseMidiNote());
+            pitchPool.replaceObserved(List.of(phraseContext().baseMidiNote()));
             oled.valueInfo("Pool", "Base note");
             if (advanceSeed) {
                 seed = nextSeed(poolSeed);
@@ -649,12 +632,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             if (tension >= 0.65 && density >= 0.9 && random.nextDouble() < 0.35) {
                 generatedPool.add(layout.get(Math.min(layout.size() - 1, rollingRootIndex + 5)));
             }
-            allowedPitches.clear();
-            allowedPitches.addAll(generatedPool);
-            poolUserEdited = false;
-            poolGeneratorSource = generator;
-            oled.valueInfo("Pool", "%d notes".formatted(allowedPitches.size()));
-            driver.notifyPopup("Pitch Pool", "%d notes".formatted(allowedPitches.size()));
+            pitchPool.replaceGenerated(generatedPool, generator);
+            oled.valueInfo("Pool", "%d notes".formatted(pitchPool.pitches().size()));
+            driver.notifyPopup("Pitch Pool", "%d notes".formatted(pitchPool.pitches().size()));
             if (advanceSeed) {
                 seed = nextSeed(poolSeed);
             }
@@ -696,12 +676,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (generatedPool.isEmpty()) {
             generatedPool.add(layout.get(baseIndex));
         }
-        allowedPitches.clear();
-        allowedPitches.addAll(generatedPool);
-        poolUserEdited = false;
-        poolGeneratorSource = generator;
-        oled.valueInfo("Pool", "%d notes".formatted(allowedPitches.size()));
-        driver.notifyPopup("Pitch Pool", "%d notes".formatted(allowedPitches.size()));
+        pitchPool.replaceGenerated(generatedPool, generator);
+        oled.valueInfo("Pool", "%d notes".formatted(pitchPool.pitches().size()));
+        driver.notifyPopup("Pitch Pool", "%d notes".formatted(pitchPool.pitches().size()));
         if (advanceSeed) {
             seed = nextSeed(poolSeed);
         }
@@ -734,7 +711,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
         final long generationSeed = seed;
         final MelodicPhraseContext context = phraseContext();
-        if (allowedPitches.isEmpty() || (!poolUserEdited && poolGeneratorSource != generator)) {
+        if (pitchPool.isEmpty() || (!pitchPool.userEdited() && !pitchPool.generatedBy(generator))) {
             buildGeneratedPitchPool(generationSeed, false);
         }
         final MelodicGenerator.GenerateParameters parameters = generatorParametersForCurrentEngine(generationSeed);
@@ -947,7 +924,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                                 final boolean syncPoolFromPattern) {
         if (syncPoolFromPattern) {
             seedPitchPoolFromPattern(pattern);
-            poolUserEdited = true;
+            pitchPool.markUserEdited();
         }
         patternState.setBasePattern(pattern);
         applyPattern(pattern, label, value);
@@ -1168,10 +1145,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             return;
         }
         poolLayoutRootPitch = shiftedPoolLayoutRootPitch(amount);
-        if (allowedPitches.isEmpty()) {
+        if (pitchPool.pitches().isEmpty()) {
             buildGeneratedPitchPool(seed, false);
         }
-        if (allowedPitches.isEmpty()) {
+        if (pitchPool.pitches().isEmpty()) {
             oled.valueInfo("Pool Oct", "No pool");
             return;
         }
@@ -1180,17 +1157,15 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             return;
         }
         final LinkedHashSet<Integer> shifted = new LinkedHashSet<>();
-        for (final int pitch : allowedPitches) {
+        for (final int pitch : pitchPool.pitches()) {
             final int targetPitch = Math.max(0, Math.min(127, pitch + amount * 12));
             shifted.add(nearestLayoutPitch(targetPitch, layout));
         }
-        if (shifted.equals(allowedPitches)) {
+        if (shifted.equals(pitchPool.pitches())) {
             oled.valueInfo("Pool Oct", poolOctaveSummary());
             return;
         }
-        allowedPitches.clear();
-        allowedPitches.addAll(shifted);
-        poolUserEdited = true;
+        pitchPool.replaceUserEdited(shifted);
         oled.valueInfo("Pool Oct", poolOctaveSummary());
         driver.notifyPopup("Pool Oct", poolOctaveSummary());
     }
@@ -1252,7 +1227,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             final MelodicPattern.Step current = pattern.step(i);
             final MelodicPattern.Step base = patternState.basePattern().step(i);
             if (!current.active() && base.active()) {
-                final MelodicPattern.Step restored = allowedPitches.isEmpty() || base.pitch() == null
+                final MelodicPattern.Step restored = pitchPool.pitches().isEmpty() || base.pitch() == null
                         ? base.withIndex(i)
                         : base.withIndex(i).withPitch(nearestAllowedPitch(base.pitch()));
                 return pattern.withStep(restored);
@@ -1330,8 +1305,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private int defaultPoolPitch() {
-        if (!allowedPitches.isEmpty()) {
-            return allowedPitches.iterator().next();
+        if (!pitchPool.pitches().isEmpty()) {
+            return pitchPool.pitches().iterator().next();
         }
         return phraseContext().baseMidiNote();
     }
@@ -1343,21 +1318,22 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private void seedPitchPoolFromPattern(final MelodicPattern pattern) {
         final List<Integer> layout = pitchPoolLayoutPitches();
-        allowedPitches.clear();
+        final LinkedHashSet<Integer> observed = new LinkedHashSet<>();
         for (int i = 0; i < pattern.loopSteps(); i++) {
             final MelodicPattern.Step step = pattern.step(i);
             if (!step.active() || step.pitch() == null) {
                 continue;
             }
-            allowedPitches.add(nearestLayoutPitch(step.pitch(), layout));
+            observed.add(nearestLayoutPitch(step.pitch(), layout));
         }
+        pitchPool.replaceObserved(observed);
     }
 
     private MelodicPattern constrainPatternToPool(final MelodicPattern pattern) {
-        if (allowedPitches.isEmpty()) {
+        if (pitchPool.pitches().isEmpty()) {
             return pattern;
         }
-        final List<Integer> orderedPool = new ArrayList<>(allowedPitches);
+        final List<Integer> orderedPool = new ArrayList<>(pitchPool.pitches());
         Collections.sort(orderedPool);
         final Map<Integer, Integer> broadPoolMapping = orderedPool.size() >= 2
                 ? buildBroadPoolMapping(pattern, orderedPool)
@@ -1376,7 +1352,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private MelodicPattern constrainPatternToPoolLocally(final MelodicPattern pattern) {
-        if (allowedPitches.isEmpty()) {
+        if (pitchPool.pitches().isEmpty()) {
             return pattern;
         }
         final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
@@ -1393,12 +1369,12 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     private MelodicPattern revoicePatternToPoolVariant(final MelodicPattern pattern, final double intensity,
                                                        final long seedValue) {
-        if (allowedPitches.isEmpty()) {
+        if (pitchPool.pitches().isEmpty()) {
             return pattern;
         }
         MelodicPattern out = constrainPatternToPoolLocally(pattern);
         final MelodicPatternAnalyzer.Analysis analysis = MelodicPatternAnalyzer.analyze(out);
-        final List<Integer> orderedPool = new ArrayList<>(allowedPitches);
+        final List<Integer> orderedPool = new ArrayList<>(pitchPool.pitches());
         Collections.sort(orderedPool);
         final List<Integer> candidates = new ArrayList<>();
         for (final int stepIndex : analysis.activeSteps()) {
@@ -1564,14 +1540,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 default -> 7;
             };
         };
-        if (!allowedPitches.isEmpty()) {
+        if (!pitchPool.pitches().isEmpty()) {
             return nearestAllowedPitch(target);
         }
         return Math.max(0, Math.min(127, target));
     }
 
     private int nearestAllowedPitch(final int targetPitch) {
-        return nearestPitch(targetPitch, allowedPitches);
+        return nearestPitch(targetPitch, pitchPool.pitches());
     }
 
     private int nearestLayoutPitch(final int targetPitch, final List<Integer> layout) {
@@ -1610,35 +1586,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private List<Integer> pitchPoolLayoutPitches() {
-        final MelodicPhraseContext context = phraseContext();
-        final int rootPitch = currentPoolLayoutRootPitch();
-        final List<Integer> notes = new ArrayList<>(PITCH_POOL_PAD_COUNT);
-        int candidate = rootPitch - 1;
-        while (notes.size() < 4 && candidate >= 0) {
-            if (context.scale().isMidiNoteInScale(context.rootNote(), candidate)) {
-                notes.add(0, candidate);
-            }
-            candidate--;
-        }
-        notes.add(rootPitch);
-        candidate = rootPitch + 1;
-        while (notes.size() < PITCH_POOL_PAD_COUNT && candidate <= 127) {
-            if (context.scale().isMidiNoteInScale(context.rootNote(), candidate)) {
-                notes.add(candidate);
-            }
-            candidate++;
-        }
-        candidate = notes.isEmpty() ? rootPitch - 1 : notes.get(0) - 1;
-        while (notes.size() < PITCH_POOL_PAD_COUNT && candidate >= 0) {
-            if (context.scale().isMidiNoteInScale(context.rootNote(), candidate)) {
-                notes.add(0, candidate);
-            }
-            candidate--;
-        }
-        while (notes.size() < PITCH_POOL_PAD_COUNT) {
-            notes.add(notes.isEmpty() ? Math.max(0, Math.min(127, rootPitch)) : notes.get(notes.size() - 1));
-        }
-        return notes;
+        return MelodicPitchPoolController.layout(
+                phraseContext(), currentPoolLayoutRootPitch(), PITCH_POOL_PAD_COUNT);
     }
 
     private int currentPoolLayoutRootPitch() {
@@ -1992,7 +1941,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         if (pitch < 0) {
             return RgbLigthState.OFF;
         }
-        final boolean enabled = allowedPitches.contains(pitch);
+        final boolean enabled = pitchPool.pitches().contains(pitch);
         final boolean root = phraseContext().scale().isRootMidiNote(phraseContext().rootNote(), pitch);
         final boolean usedInPattern = patternPitchSet().contains(pitch);
         return MelodicRenderer.pitchPoolLight(enabled, root, usedInPattern);
