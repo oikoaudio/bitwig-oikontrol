@@ -278,6 +278,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         application.recordQuantizationGrid().markInterested();
         application.recordQuantizationGrid().addValueObserver(this::handleRecordQuantizationChanged);
 
+        // Host-backed resources and shared cursor state must exist before global collaborators.
         layers = new Layers(this);
         midiIn = host.getMidiInPort(0);
         midiIn.setMidiCallback((ShortMidiMessageReceivedCallback) this::onMidi0);
@@ -303,13 +304,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 () -> drumSequenceMode != null ? drumSequenceMode.getActiveRemoteControlsPage() : null,
                 () -> drumSequenceMode != null ? drumSequenceMode.getAccentHandler().getCurrentVelocity() : 100);
 
-
+        // Hardware bindings precede live preference callbacks and shared musical-state initialization.
         setUpHardware();
         setUpTransportControl();
         setUpPreferences();
         initializeSharedPitchContext();
         initializeSharedVelocitySettings();
 
+        // Modes are composed only after all shared controls, preferences, and state owners are ready.
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
