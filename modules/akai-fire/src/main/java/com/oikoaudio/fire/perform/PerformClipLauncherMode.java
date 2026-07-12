@@ -39,13 +39,10 @@ import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.display.PeakRmsOledView;
 import com.oikoaudio.fire.display.VuMeterFormatter;
-import com.oikoaudio.fire.display.VuMeterPeakHold;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class PerformClipLauncherMode extends Layer {
     private static final String DEFAULT_LAUNCH_QUANTIZATION = "default";
@@ -88,35 +85,20 @@ public class PerformClipLauncherMode extends Layer {
     private final Layer mixerLayer;
     private final Layer user1Layer;
     private final Layer user2Layer;
-    private final Map<EncoderMode, Layer> modeMapping = new HashMap<>();
 
-    private final RgbLigthState[] slotColors = new RgbLigthState[MAX_TRACKS * MAX_SCENES];
-    private final RgbLigthState[] sceneColors = new RgbLigthState[MAX_SCENES];
-    private final RgbLigthState[] trackColors = new RgbLigthState[MAX_TRACKS];
-    private final String[] trackNames = new String[MAX_TRACKS];
+    private final PerformObservationState observationState =
+            new PerformObservationState(MAX_TRACKS, MAX_SCENES, MIX_DEVICE_SLOTS);
     private final DeviceBank[] trackDeviceBanks = new DeviceBank[MAX_TRACKS];
-    private final String[][] trackDeviceNames = new String[MAX_TRACKS][MIX_DEVICE_SLOTS];
     private final DeviceLayerBank deviceLayerBank;
-    private final String[] deviceLayerNames = new String[MAX_TRACKS];
-    private final RgbLigthState[] deviceLayerColors = new RgbLigthState[MAX_TRACKS];
     private final PerformMixController mixController = new PerformMixController();
-    private final String[] sceneNames = new String[MAX_SCENES];
-    private final int[] trackPeakMeters = new int[MAX_TRACKS];
-    private final int[] trackRmsMeters = new int[MAX_TRACKS];
-    private final VuMeterPeakHold trackPeakHoldMeters = new VuMeterPeakHold(MAX_TRACKS);
-    private final boolean[] selectedVisibleTracks = new boolean[MAX_TRACKS];
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();
     private final BooleanValueObject deleteHeld = new BooleanValueObject();
-    private Layer currentEncoderLayer;
-    private EncoderMode encoderMode = EncoderMode.CHANNEL;
-    private EncoderMode encoderModeBeforeMixDeviceMode;
+    private final PerformEncoderControls encoderControls = new PerformEncoderControls();
     private boolean duplicateHeld;
     private int blinkState;
     private int totalTrackCount = MAX_TRACKS;
     private int totalSceneCount = MAX_SCENES;
-    private int selectedTrackIndex = -1;
-    private int selectedSceneIndex = -1;
     private int selectedMeterSourceIndex = -1;
     private int selectedMeterAbsoluteIndex = -1;
     private int selectedRemoteTrackIndex = -1;
@@ -187,7 +169,6 @@ public class PerformClipLauncherMode extends Layer {
         this.mixerLayer = new Layer(driver.getLayers(), "PERFORM_ENC_MIXER");
         this.user1Layer = new Layer(driver.getLayers(), "PERFORM_ENC_USER1");
         this.user2Layer = new Layer(driver.getLayers(), "PERFORM_ENC_USER2");
-        this.currentEncoderLayer = channelLayer;
         trackBank.channelCount().markInterested();
         trackBank.channelCount().addValueObserver(count -> totalTrackCount = count);
         trackBank.scrollPosition().markInterested();
@@ -224,10 +205,11 @@ public class PerformClipLauncherMode extends Layer {
             scene.name().markInterested();
             scene.color().markInterested();
             final int row = sceneIndex;
-            scene.name().addValueObserver(name -> sceneNames[row] = name);
-            scene.color().addValueObserver((r, g, b) -> sceneColors[row] = ColorLookup.getColor(r, g, b));
-            sceneNames[row] = scene.name().get();
-            sceneColors[row] = ColorLookup.getColor(scene.color().get());
+            scene.name().addValueObserver(name -> observationState.setSceneName(row, name));
+            scene.color().addValueObserver((r, g, b) ->
+                    observationState.setSceneColor(row, ColorLookup.getColor(r, g, b)));
+            observationState.setSceneName(row, scene.name().get());
+            observationState.setSceneColor(row, ColorLookup.getColor(scene.color().get()));
         }
 
         for (int trackIndex = 0; trackIndex < MAX_TRACKS; trackIndex++) {
@@ -243,19 +225,20 @@ public class PerformClipLauncherMode extends Layer {
             track.isStopped().markInterested();
             track.isQueuedForStop().markInterested();
             final int column = trackIndex;
-            track.name().addValueObserver(name -> trackNames[column] = name);
-            track.color().addValueObserver((r, g, b) -> trackColors[column] = ColorLookup.getColor(r, g, b));
-            trackNames[column] = track.name().get();
-            trackColors[column] = ColorLookup.getColor(track.color().get());
+            track.name().addValueObserver(name -> observationState.setTrackName(column, name));
+            track.color().addValueObserver((r, g, b) ->
+                    observationState.setTrackColor(column, ColorLookup.getColor(r, g, b)));
+            observationState.setTrackName(column, track.name().get());
+            observationState.setTrackColor(column, ColorLookup.getColor(track.color().get()));
             track.addIsSelectedInMixerObserver(selected -> {
-                selectedVisibleTracks[column] = selected;
+                observationState.setSelectedVisibleTrack(column, selected);
                 if (selected) {
                     handleHostTrackSelection(column);
                 }
             });
             track.addIsSelectedInEditorObserver(selected -> {
                 if (selected) {
-                    selectedVisibleTracks[column] = true;
+                    observationState.setSelectedVisibleTrack(column, true);
                     handleHostTrackSelection(column);
                 }
             });
@@ -269,12 +252,11 @@ public class PerformClipLauncherMode extends Layer {
                 device.exists().markInterested();
                 device.name().markInterested();
                 device.isEnabled().markInterested();
-                device.name().addValueObserver(name -> trackDeviceNames[column][row] = name);
-                trackDeviceNames[column][row] = device.name().get();
+                device.name().addValueObserver(name -> observationState.setDeviceName(column, row, name));
+                observationState.setDeviceName(column, row, device.name().get());
             }
 
             for (int sceneIndex = 0; sceneIndex < MAX_SCENES; sceneIndex++) {
-                final int slotIndex = toSlotIndex(trackIndex, sceneIndex);
                 final int row = sceneIndex;
                 final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(sceneIndex);
                 slot.exists().markInterested();
@@ -286,15 +268,17 @@ public class PerformClipLauncherMode extends Layer {
                 slot.isRecordingQueued().markInterested();
                 slot.isStopQueued().markInterested();
                 slot.color().markInterested();
-                slot.color().addValueObserver((r, g, b) -> slotColors[slotIndex] = ColorLookup.getColor(r, g, b));
+                slot.color().addValueObserver((r, g, b) ->
+                        observationState.setSlotColor(column, row, ColorLookup.getColor(r, g, b)));
                 slot.isSelected().addValueObserver(selected -> {
                     if (selected) {
-                        selectedTrackIndex = trackBank.scrollPosition().get() + column;
-                        selectedSceneIndex = trackBank.sceneBank().scrollPosition().get() + row;
+                        observationState.selectSlot(
+                                trackBank.scrollPosition().get() + column,
+                                trackBank.sceneBank().scrollPosition().get() + row);
                     }
                 });
                 slot.isRecording().addValueObserver(recording -> handleSlotRecordingChanged(column, row, recording));
-                slotColors[slotIndex] = ColorLookup.getColor(slot.color().get());
+                observationState.setSlotColor(column, row, ColorLookup.getColor(slot.color().get()));
             }
         }
     }
@@ -310,18 +294,19 @@ public class PerformClipLauncherMode extends Layer {
             layer.mute().markInterested();
             layer.solo().markInterested();
             layer.isActivated().markInterested();
-            layer.name().addValueObserver(name -> deviceLayerNames[column] = name);
-            layer.color().addValueObserver((r, g, b) -> deviceLayerColors[column] = ColorLookup.getColor(r, g, b));
-            deviceLayerNames[column] = layer.name().get();
-            deviceLayerColors[column] = ColorLookup.getColor(layer.color().get());
+            layer.name().addValueObserver(name -> observationState.setLayerName(column, name));
+            layer.color().addValueObserver((r, g, b) ->
+                    observationState.setLayerColor(column, ColorLookup.getColor(r, g, b)));
+            observationState.setLayerName(column, layer.name().get());
+            observationState.setLayerColor(column, ColorLookup.getColor(layer.color().get()));
         }
     }
 
     private void initEncoderPages() {
-        modeMapping.put(EncoderMode.CHANNEL, channelLayer);
-        modeMapping.put(EncoderMode.MIXER, mixerLayer);
-        modeMapping.put(EncoderMode.USER_1, user1Layer);
-        modeMapping.put(EncoderMode.USER_2, user2Layer);
+        encoderControls.registerLayer(EncoderMode.CHANNEL, channelLayer);
+        encoderControls.registerLayer(EncoderMode.MIXER, mixerLayer);
+        encoderControls.registerLayer(EncoderMode.USER_1, user1Layer);
+        encoderControls.registerLayer(EncoderMode.USER_2, user2Layer);
 
         markRemotePageInterested(projectRemoteControls);
         markRemotePageInterested(trackRemoteControls);
@@ -360,7 +345,7 @@ public class PerformClipLauncherMode extends Layer {
         if (!enabled) {
             leaveMixDeviceMode();
         } else {
-            encoderModeBeforeMixDeviceMode = null;
+            encoderControls.forgetModeBeforeMixDevice();
         }
         pageState = pageState.withTrackActionMode(enabled);
         if (enabled) {
@@ -373,7 +358,7 @@ public class PerformClipLauncherMode extends Layer {
         if (!enabled) {
             leaveMixDeviceMode();
         } else {
-            encoderModeBeforeMixDeviceMode = null;
+            encoderControls.forgetModeBeforeMixDevice();
         }
         pageState = pageState.withTrackActionMode(enabled);
         if (pageState.isTrackActionMode()) {
@@ -1083,7 +1068,8 @@ public class PerformClipLauncherMode extends Layer {
             case COPY -> {
                 final ClipLauncherSlot source = getSelectedVisibleSlot();
                 if (source != null
-                        && (selectedTrackIndex != absoluteTrackIndex || selectedSceneIndex != absoluteSceneIndex)) {
+                        && (observationState.selectedAbsoluteTrackIndex() != absoluteTrackIndex
+                        || observationState.selectedAbsoluteSceneIndex() != absoluteSceneIndex)) {
                     slot.replaceInsertionPoint().copySlotsOrScenes(source);
                     final String sourceLabel = selectedSlotLabel();
                     final String destinationLabel = slotLabel(absoluteTrackIndex, absoluteSceneIndex);
@@ -1305,6 +1291,8 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
+        final int selectedTrackIndex = observationState.selectedAbsoluteTrackIndex();
+        final int selectedSceneIndex = observationState.selectedAbsoluteSceneIndex();
         final TrackAddress trackAddress = trackAddressForAbsoluteTrack(selectedTrackIndex);
         final int visibleSceneIndex = selectedSceneIndex - trackBank.sceneBank().scrollPosition().get();
         if (trackAddress == null || visibleSceneIndex < 0 || visibleSceneIndex >= visibleSceneCount()) {
@@ -1414,8 +1402,9 @@ public class PerformClipLauncherMode extends Layer {
         }
         suppressMixMeterDisplay();
         if (enabled) {
-            encoderModeBeforeMixDeviceMode = encoderMode;
-            switchEncoderMode(EncoderMode.USER_2, false);
+            final Layer previousLayer = encoderControls.currentLayer();
+            encoderControls.enterMixDeviceMode();
+            activateEncoderMode(encoderControls.mode(), previousLayer, false);
             pageState = pageState.withMixDeviceMode(true);
         } else {
             leaveMixDeviceMode();
@@ -1425,9 +1414,10 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void leaveMixDeviceMode() {
-        if (encoderModeBeforeMixDeviceMode != null) {
-            switchEncoderMode(encoderModeBeforeMixDeviceMode, false);
-            encoderModeBeforeMixDeviceMode = null;
+        if (encoderControls.hasModeBeforeMixDevice()) {
+            final Layer previousLayer = encoderControls.currentLayer();
+            encoderControls.leaveMixDeviceMode();
+            activateEncoderMode(encoderControls.mode(), previousLayer, false);
         }
         pageState = pageState.leaveMixDeviceMode();
     }
@@ -1611,11 +1601,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private CursorRemoteControlsPage remotePageForCurrentEncoderMode() {
-        return switch (encoderMode) {
-            case CHANNEL -> projectRemoteControls;
-            case USER_1 -> trackRemoteControls;
-            case USER_2 -> deviceRemoteControls;
-            case MIXER -> null;
+        return switch (encoderControls.remoteTarget()) {
+            case PROJECT -> projectRemoteControls;
+            case TRACK -> trackRemoteControls;
+            case DEVICE -> deviceRemoteControls;
+            case NONE -> null;
         };
     }
 
@@ -1626,11 +1616,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private String remotePageLabelForCurrentEncoderMode() {
-        return switch (encoderMode) {
-            case CHANNEL -> "Project";
-            case USER_1 -> "Track";
-            case USER_2 -> "Device";
-            case MIXER -> "Mixer";
+        return switch (encoderControls.remoteTarget()) {
+            case PROJECT -> "Project";
+            case TRACK -> "Track";
+            case DEVICE -> "Device";
+            case NONE -> "Mixer";
         };
     }
 
@@ -1651,12 +1641,18 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void switchEncoderMode(final EncoderMode newMode, final boolean showInfo) {
-        encoderMode = newMode;
+        final Layer previousLayer = encoderControls.currentLayer();
+        activateEncoderMode(newMode, previousLayer, showInfo);
+    }
+
+    private void activateEncoderMode(final EncoderMode newMode,
+                                     final Layer previousLayer,
+                                     final boolean showInfo) {
+        encoderControls.switchMode(newMode);
         resetMixMeterDisplay();
-        currentEncoderLayer.deactivate();
-        currentEncoderLayer = modeMapping.get(newMode);
+        previousLayer.deactivate();
         applyEncoderStepSizes();
-        currentEncoderLayer.activate();
+        encoderControls.currentLayer().activate();
         applyEncoderFooterLegend();
         if (showInfo) {
             if (isSettingsHeld()) {
@@ -1675,16 +1671,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private EncoderMode nextMode() {
-        return switch (encoderMode) {
-            case CHANNEL -> EncoderMode.MIXER;
-            case MIXER -> EncoderMode.USER_1;
-            case USER_1 -> EncoderMode.USER_2;
-            case USER_2 -> EncoderMode.CHANNEL;
-        };
+        return encoderControls.nextMode();
     }
 
     private BiColorLightState modeLightState() {
-        return encoderMode.getState();
+        return encoderControls.mode().getState();
     }
 
     private String modeInfo(final EncoderMode mode) {
@@ -1721,7 +1712,7 @@ public class PerformClipLauncherMode extends Layer {
             showTransientDetailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete");
             return;
         }
-        showTransientDetailInfo(modeTitle(encoderMode), modeInfo(encoderMode));
+        showTransientDetailInfo(modeTitle(encoderControls.mode()), modeInfo(encoderControls.mode()));
     }
 
     private void showTrackActionInfo() {
@@ -1759,7 +1750,7 @@ public class PerformClipLauncherMode extends Layer {
             showPerformTrackLegendIdle();
             return;
         }
-        if (encoderMode == EncoderMode.MIXER) {
+        if (encoderControls.mode() == EncoderMode.MIXER) {
             showSelectedTrackMeterDisplay();
         } else {
             showVisibleTrackMeterDisplay();
@@ -1768,11 +1759,11 @@ public class PerformClipLauncherMode extends Layer {
 
     private void showVisibleTrackMeterDisplay() {
         resetSelectedTrackMeterText();
-        trackPeakHoldMeters.decay();
+        observationState.decayPeakHold();
         oled.sendImageWithFooter(OledMeterRenderer.verticalMetersWithFooter(
                         visibleTrackMeterValues(), visibleTrackPeakHoldValues(),
                         visibleTrackMutedValues(), visibleTrackCount(), oled.footerLegendPosition()),
-                encoderFooterLegend(encoderMode));
+                encoderFooterLegend(encoderControls.mode()));
     }
 
     private void showSelectedTrackMeterDisplay() {
@@ -1788,9 +1779,9 @@ public class PerformClipLauncherMode extends Layer {
         }
 
         final int source = trackAddress.sourceIndex();
-        final int currentRms = trackRmsMeters[source];
+        final int currentRms = observationState.rms(source);
         final int maxRms = isSelectedMeterTrack(trackAddress) ? selectedTrackRmsMax : currentRms;
-        final int currentPeak = trackPeakMeters[source];
+        final int currentPeak = observationState.peak(source);
         final int maxPeak = isSelectedMeterTrack(trackAddress) ? selectedTrackPeakMax : currentPeak;
         selectedTrackMeterView.show(maxPeak, maxRms, currentPeak, currentRms, EncoderFooterLegend.MIXER);
     }
@@ -1799,7 +1790,7 @@ public class PerformClipLauncherMode extends Layer {
         final int[] values = new int[visibleTrackCount()];
         for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
             final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
-            values[visibleTrackIndex] = trackAddress == null ? 0 : trackRmsMeters[trackAddress.sourceIndex()];
+            values[visibleTrackIndex] = trackAddress == null ? 0 : observationState.rms(trackAddress.sourceIndex());
         }
         return values;
     }
@@ -1808,7 +1799,7 @@ public class PerformClipLauncherMode extends Layer {
         final int[] values = new int[visibleTrackCount()];
         for (int visibleTrackIndex = 0; visibleTrackIndex < visibleTrackCount(); visibleTrackIndex++) {
             final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
-            values[visibleTrackIndex] = trackAddress == null ? 0 : trackPeakHoldMeters.valueAt(trackAddress.sourceIndex());
+            values[visibleTrackIndex] = trackAddress == null ? 0 : observationState.peakHold(trackAddress.sourceIndex());
         }
         return values;
     }
@@ -1830,8 +1821,8 @@ public class PerformClipLauncherMode extends Layer {
                 return address;
             }
         }
-        if (selectedTrackIndex >= 0) {
-            return trackAddressForAbsoluteTrack(selectedTrackIndex);
+        if (observationState.selectedAbsoluteTrackIndex() >= 0) {
+            return trackAddressForAbsoluteTrack(observationState.selectedAbsoluteTrackIndex());
         }
         return null;
     }
@@ -1858,7 +1849,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public boolean showGlobalActionInfo(final String title, final String value) {
-        if (!active || encoderMode != EncoderMode.MIXER) {
+        if (!active || encoderControls.mode() != EncoderMode.MIXER) {
             return false;
         }
         showValueInfo(title, value);
@@ -1890,7 +1881,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean shouldShowPerformTrackLegendIdle() {
-        return shouldShowPerformTrackLegendIdle(encoderMode, driver.isIdleOledMetersEnabled());
+        return shouldShowPerformTrackLegendIdle(encoderControls.mode(), driver.isIdleOledMetersEnabled());
     }
 
     private void showPerformTrackLegendIdle() {
@@ -1916,7 +1907,7 @@ public class PerformClipLauncherMode extends Layer {
             oled.setFooterLegend(EncoderFooterLegend.of("Root", "Scal", "Octv", "Glob"));
             return;
         }
-        oled.setFooterLegend(encoderFooterLegend(encoderMode));
+        oled.setFooterLegend(encoderFooterLegend(encoderControls.mode()));
     }
 
     private String encoderFooterLegend(final EncoderMode mode) {
@@ -2111,6 +2102,8 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private ClipLauncherSlot getSelectedVisibleSlot() {
+        final int selectedTrackIndex = observationState.selectedAbsoluteTrackIndex();
+        final int selectedSceneIndex = observationState.selectedAbsoluteSceneIndex();
         if (selectedTrackIndex < 0 || selectedSceneIndex < 0) {
             return null;
         }
@@ -2228,7 +2221,7 @@ public class PerformClipLauncherMode extends Layer {
     protected void onActivate() {
         active = true;
         applyEncoderStepSizes();
-        currentEncoderLayer.activate();
+        encoderControls.currentLayer().activate();
         applyEncoderFooterLegend();
         if (isSettingsHeld()) {
             showOverview();
@@ -2243,7 +2236,7 @@ public class PerformClipLauncherMode extends Layer {
         mixMeterDisplayActive = false;
         resetSelectedTrackMeterText();
         oled.setFooterLegend(null);
-        currentEncoderLayer.deactivate();
+        encoderControls.currentLayer().deactivate();
     }
 
     private RgbLigthState getPadState(final int padIndex) {
@@ -2330,10 +2323,11 @@ public class PerformClipLauncherMode extends Layer {
             return PerformPadRenderer.settingsLogo(toPadIndex(trackAddress.visibleIndex(), visibleSceneIndex));
         }
 
-        final int slotColorIndex = toSlotIndex(trackAddress.sourceIndex(), visibleSceneIndex);
-        final RgbLigthState baseColor = slotColors[slotColorIndex] == null
+        final RgbLigthState observedColor = observationState.slotColor(
+                trackAddress.sourceIndex(), visibleSceneIndex);
+        final RgbLigthState baseColor = observedColor == null
                 ? RgbLigthState.WHITE
-                : slotColors[slotColorIndex];
+                : observedColor;
         return PerformPadRenderer.slot(new PerformPadRenderer.SlotSnapshot(
                 slot.exists().get(),
                 slot.hasContent().get(),
@@ -2347,9 +2341,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private RgbLigthState sceneColor(final int visibleSceneIndex) {
-        final RgbLigthState color = visibleSceneIndex >= 0 && visibleSceneIndex < sceneColors.length
-                ? sceneColors[visibleSceneIndex]
-                : null;
+        final RgbLigthState color = observationState.sceneColor(visibleSceneIndex);
         return color == null || RgbLigthState.OFF.equals(color) ? RgbLigthState.PURPLE : color;
     }
 
@@ -2499,16 +2491,14 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private RgbLigthState trackColor(final int sourceTrackIndex) {
-        final RgbLigthState color = sourceTrackIndex >= 0 && sourceTrackIndex < trackColors.length
-                ? trackColors[sourceTrackIndex]
-                : null;
+        final RgbLigthState color = observationState.trackColor(sourceTrackIndex);
         return color == null || RgbLigthState.OFF.equals(color)
                 ? PerformPadRenderer.TrackAction.SELECT.color()
                 : color;
     }
 
     private boolean isTrackSelected(final TrackAddress trackAddress) {
-        return selectedVisibleTracks[trackAddress.sourceIndex()];
+        return observationState.isSelectedVisibleTrack(trackAddress.sourceIndex());
     }
 
     private boolean isMixDeviceSelected(final TrackAddress trackAddress, final int deviceIndex) {
@@ -2521,21 +2511,26 @@ public class PerformClipLauncherMode extends Layer {
         final int visibleSceneIndex = absoluteSceneIndex - trackBank.sceneBank().scrollPosition().get();
         final TrackAddress trackAddress = trackAddressForAbsoluteTrack(absoluteTrackIndex);
         final String trackName = trackAddress != null
-                ? nameOrFallback(trackNames[trackAddress.sourceIndex()], "Track " + (absoluteTrackIndex + 1))
+                ? nameOrFallback(observationState.trackName(trackAddress.sourceIndex()),
+                "Track " + (absoluteTrackIndex + 1))
                 : "Track " + (absoluteTrackIndex + 1);
         final String sceneName = visibleSceneIndex >= 0 && visibleSceneIndex < MAX_SCENES
-                ? nameOrFallback(sceneNames[visibleSceneIndex], "Scene " + (absoluteSceneIndex + 1))
+                ? nameOrFallback(observationState.sceneName(visibleSceneIndex),
+                "Scene " + (absoluteSceneIndex + 1))
                 : "Scene " + (absoluteSceneIndex + 1);
         return trackName + " / " + sceneName;
     }
 
     private String sceneLabel(final int absoluteSceneIndex, final int visibleSceneIndex) {
         return visibleSceneIndex >= 0 && visibleSceneIndex < MAX_SCENES
-                ? nameOrFallback(sceneNames[visibleSceneIndex], "Scene " + (absoluteSceneIndex + 1))
+                ? nameOrFallback(observationState.sceneName(visibleSceneIndex),
+                "Scene " + (absoluteSceneIndex + 1))
                 : "Scene " + (absoluteSceneIndex + 1);
     }
 
     private String selectedSlotLabel() {
+        final int selectedTrackIndex = observationState.selectedAbsoluteTrackIndex();
+        final int selectedSceneIndex = observationState.selectedAbsoluteSceneIndex();
         if (selectedTrackIndex < 0 || selectedSceneIndex < 0) {
             return "None";
         }
@@ -2543,28 +2538,27 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private String trackLabel(final TrackAddress trackAddress) {
-        return nameOrFallback(trackNames[trackAddress.sourceIndex()], "Track " + (trackAddress.absoluteIndex() + 1));
+        return nameOrFallback(observationState.trackName(trackAddress.sourceIndex()),
+                "Track " + (trackAddress.absoluteIndex() + 1));
     }
 
     private String trackLabel(final int sourceTrackIndex, final int absoluteTrackIndex) {
-        return nameOrFallback(trackNames[sourceTrackIndex], "Track " + (absoluteTrackIndex + 1));
+        return nameOrFallback(observationState.trackName(sourceTrackIndex), "Track " + (absoluteTrackIndex + 1));
     }
 
     private String mixDeviceName(final TrackAddress trackAddress, final int deviceIndex) {
-        return nameOrFallback(trackDeviceNames[trackAddress.sourceIndex()][deviceIndex],
+        return nameOrFallback(observationState.deviceName(trackAddress.sourceIndex(), deviceIndex),
                 "Device " + (deviceIndex + 1));
     }
 
     private String deviceLayerName(final int layerIndex) {
-        return layerIndex >= 0 && layerIndex < deviceLayerNames.length
-                ? nameOrFallback(deviceLayerNames[layerIndex], "Layer " + (layerIndex + 1))
+        return layerIndex >= 0 && layerIndex < MAX_TRACKS
+                ? nameOrFallback(observationState.layerName(layerIndex), "Layer " + (layerIndex + 1))
                 : "Layer " + (layerIndex + 1);
     }
 
     private RgbLigthState deviceLayerColor(final int layerIndex) {
-        final RgbLigthState color = layerIndex >= 0 && layerIndex < deviceLayerColors.length
-                ? deviceLayerColors[layerIndex]
-                : null;
+        final RgbLigthState color = observationState.layerColor(layerIndex);
         return color == null || RgbLigthState.OFF.equals(color)
                 ? PerformPadRenderer.TrackAction.SELECT.color()
                 : color;
@@ -2587,7 +2581,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handleRmsMeterChanged(final int sourceTrackIndex, final int value) {
-        trackRmsMeters[sourceTrackIndex] = value;
+        observationState.updateRms(sourceTrackIndex, value);
         if (sourceTrackIndex == selectedMeterSourceIndex
                 && trackBank.scrollPosition().get() + sourceTrackIndex == selectedMeterAbsoluteIndex) {
             selectedTrackRmsMax = Math.max(selectedTrackRmsMax, value);
@@ -2595,8 +2589,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handlePeakMeterChanged(final int sourceTrackIndex, final int value) {
-        trackPeakMeters[sourceTrackIndex] = value;
-        trackPeakHoldMeters.update(sourceTrackIndex, value);
+        observationState.updatePeak(sourceTrackIndex, value);
         if (sourceTrackIndex == selectedMeterSourceIndex
                 && trackBank.scrollPosition().get() + sourceTrackIndex == selectedMeterAbsoluteIndex) {
             selectedTrackPeakMax = Math.max(selectedTrackPeakMax, value);
@@ -2613,14 +2606,14 @@ public class PerformClipLauncherMode extends Layer {
         selectedMeterSourceIndex = sourceTrackIndex;
         selectedMeterAbsoluteIndex = absoluteTrackIndex;
         if (resetMax || changed) {
-            selectedTrackRmsMax = trackRmsMeters[sourceTrackIndex];
-            selectedTrackPeakMax = trackPeakMeters[sourceTrackIndex];
+            selectedTrackRmsMax = observationState.rms(sourceTrackIndex);
+            selectedTrackPeakMax = observationState.peak(sourceTrackIndex);
         }
     }
 
     private void handleHostTrackSelection(final int sourceTrackIndex) {
         final int absoluteTrackIndex = trackBank.scrollPosition().get() + sourceTrackIndex;
-        selectedTrackIndex = absoluteTrackIndex;
+        observationState.selectSlot(absoluteTrackIndex, observationState.selectedAbsoluteSceneIndex());
         selectMeterTrack(sourceTrackIndex, false);
         if (absoluteTrackIndex == suppressedTrackSelectionNotificationAbsoluteIndex) {
             lastTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
@@ -2702,10 +2695,6 @@ public class PerformClipLauncherMode extends Layer {
 
     private int toPadIndex(final int visibleTrackIndex, final int visibleSceneIndex) {
         return layout.toPadIndex(visibleTrackIndex, visibleSceneIndex);
-    }
-
-    private int toSlotIndex(final int trackIndex, final int sceneIndex) {
-        return sceneIndex * MAX_TRACKS + trackIndex;
     }
 
     private TrackAddress trackAddressForVisibleTrack(final int visibleTrackIndex) {
