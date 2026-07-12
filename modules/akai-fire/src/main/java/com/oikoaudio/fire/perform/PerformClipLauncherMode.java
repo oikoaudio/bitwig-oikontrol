@@ -773,17 +773,21 @@ public class PerformClipLauncherMode extends Layer {
         if (pressed) {
             suppressMixMeterDisplay();
         }
-        if (pageState.isTrackActionMode()) {
-            handleTrackActionPadPressed(padIndex, pressed);
-            return;
-        }
-        if (pageState.isBirdsEye()) {
-            handleBirdsEyePadPressed(padIndex, pressed);
-            return;
-        }
-        if (pageState.isSceneLaunch()) {
-            handleSceneActionPadPressed(padIndex, pressed);
-            return;
+        switch (PerformLauncherNavigationController.route(pageState)) {
+            case MIX -> {
+                handleTrackActionPadPressed(padIndex, pressed);
+                return;
+            }
+            case BIRDS_EYE -> {
+                handleBirdsEyePadPressed(padIndex, pressed);
+                return;
+            }
+            case SCENE -> {
+                handleSceneActionPadPressed(padIndex, pressed);
+                return;
+            }
+            case LAUNCHER -> {
+            }
         }
         final int visibleTrackIndex = visibleTrackIndexForPad(padIndex);
         final int visibleSceneIndex = visibleSceneIndexForPad(padIndex);
@@ -989,49 +993,54 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
-        if (deleteHeld.get()) {
-            scene.deleteObject();
-            showValueInfo("Delete Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
-            return;
-        }
-
-        if (copyHeld.get()) {
-            final int sourceVisibleSceneIndex = resolveSceneCopySource();
-            if (sourceVisibleSceneIndex >= 0 && sourceVisibleSceneIndex != visibleSceneIndex) {
-                final Scene source = trackBank.sceneBank().getScene(sourceVisibleSceneIndex);
-                scene.replaceInsertionPoint().copySlotsOrScenes(source);
-                final String sourceLabel = sceneLabel(trackBank.sceneBank().scrollPosition().get() + sourceVisibleSceneIndex,
-                        sourceVisibleSceneIndex);
-                final String destinationLabel = sceneLabel(absoluteSceneIndex, visibleSceneIndex);
-                showValueInfo("Copy Scene", "Select target");
-                driver.notifyPopup("Copy Scene", sourceLabel + " -> " + destinationLabel);
-            } else {
-                showValueInfo("Copy Scene", "Select source first");
+        switch (PerformLauncherNavigationController.sceneAction(
+                pressed, true, deleteHeld.get(), copyHeld.get(), selectHeld.get())) {
+            case NONE -> {
             }
-            return;
+            case DELETE -> {
+                scene.deleteObject();
+                showValueInfo("Delete Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
+            }
+            case COPY -> {
+                final int sourceVisibleSceneIndex = resolveSceneCopySource();
+                if (sourceVisibleSceneIndex >= 0 && sourceVisibleSceneIndex != visibleSceneIndex) {
+                    final Scene source = trackBank.sceneBank().getScene(sourceVisibleSceneIndex);
+                    scene.replaceInsertionPoint().copySlotsOrScenes(source);
+                    final String sourceLabel = sceneLabel(
+                            trackBank.sceneBank().scrollPosition().get() + sourceVisibleSceneIndex,
+                            sourceVisibleSceneIndex);
+                    final String destinationLabel = sceneLabel(absoluteSceneIndex, visibleSceneIndex);
+                    showValueInfo("Copy Scene", "Select target");
+                    driver.notifyPopup("Copy Scene", sourceLabel + " -> " + destinationLabel);
+                } else {
+                    showValueInfo("Copy Scene", "Select source first");
+                }
+            }
+            case SELECT -> {
+                selectedSceneActionIndex = absoluteSceneIndex;
+                showValueInfo("Select Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
+            }
+            case LAUNCH -> {
+                scene.launch();
+                pendingSceneLaunchIndex = absoluteSceneIndex;
+                showValueInfo("Launch Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
+            }
         }
-
-        if (selectHeld.get()) {
-            selectedSceneActionIndex = absoluteSceneIndex;
-            showValueInfo("Select Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
-            return;
-        }
-
-        scene.launch();
-        pendingSceneLaunchIndex = absoluteSceneIndex;
-        showValueInfo("Launch Scene", sceneLabel(absoluteSceneIndex, visibleSceneIndex));
     }
 
     private void handleBirdsEyePadPressed(final int padIndex, final boolean pressed) {
         if (!pressed) {
             return;
         }
-        if (!birdsEyePadAvailable(padIndex, layout, totalTrackCount, totalSceneCount)) {
+        final PerformLauncherNavigationController.BirdsEyeJump jump =
+                PerformLauncherNavigationController.birdsEyeJump(
+                        padIndex, layout, totalTrackCount, totalSceneCount);
+        if (!jump.available()) {
             showValueInfo("Birds Eye", "No block");
             return;
         }
-        final int trackOffset = birdsEyeTrackOffsetForPad(padIndex, layout, totalTrackCount);
-        final int sceneOffset = birdsEyeSceneOffsetForPad(padIndex, layout, totalSceneCount);
+        final int trackOffset = jump.trackOffset();
+        final int sceneOffset = jump.sceneOffset();
         trackBank.scrollPosition().set(trackOffset);
         trackBank.sceneBank().scrollPosition().set(sceneOffset);
         showValueInfo("Birds Eye", "T%s S%s".formatted(
@@ -1042,68 +1051,61 @@ public class PerformClipLauncherMode extends Layer {
     private void handleSlotPressed(final TrackAddress trackAddress, final ClipLauncherSlot slot,
                                    final int visibleSceneIndex, final boolean pressed) {
         final Track track = trackAddress.track();
-        if (!pressed || !track.exists().get() || !slot.exists().get()) {
-            return;
-        }
-        if (isSettingsHeld()) {
-            showValueInfo("Settings", "Encoders adjust globals");
-            return;
-        }
-
         final int absoluteTrackIndex = trackAddress.absoluteIndex();
         final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
         final boolean hasContent = slot.hasContent().get();
-
-        if (driver.isPerformRecordTargetingHeld()) {
-            recordIntoSlot(track, slot, absoluteTrackIndex, absoluteSceneIndex);
-            return;
-        }
-
-        if (deleteHeld.get()) {
-            if (hasContent) {
-                slot.deleteObject();
-                showValueInfo("Delete Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+        final PerformLauncherNavigationController.SlotAction action =
+                PerformLauncherNavigationController.slotAction(new PerformLauncherNavigationController.SlotInput(
+                        pressed, track.exists().get(), slot.exists().get(), isSettingsHeld(),
+                        driver.isPerformRecordTargetingHeld(), deleteHeld.get(), copyHeld.get(), selectHeld.get(),
+                        slot.isRecording().get(), hasContent));
+        switch (action) {
+            case NONE -> {
             }
-            return;
-        }
-
-        if (copyHeld.get()) {
-            final ClipLauncherSlot source = getSelectedVisibleSlot();
-            if (source != null && (selectedTrackIndex != absoluteTrackIndex || selectedSceneIndex != absoluteSceneIndex)) {
-                slot.replaceInsertionPoint().copySlotsOrScenes(source);
-                final String sourceLabel = selectedSlotLabel();
-                final String destinationLabel = slotLabel(absoluteTrackIndex, absoluteSceneIndex);
-                showValueInfo("Copy Clip", "Select target");
-                driver.notifyPopup("Copy Clip", sourceLabel + " -> " + destinationLabel);
-            } else {
-                showValueInfo("Copy Clip", "Select source first");
+            case SETTINGS -> showValueInfo("Settings", "Encoders adjust globals");
+            case RECORD -> recordIntoSlot(track, slot, absoluteTrackIndex, absoluteSceneIndex);
+            case DELETE -> {
+                if (hasContent) {
+                    slot.deleteObject();
+                    showValueInfo("Delete Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+                }
             }
-            return;
+            case COPY -> {
+                final ClipLauncherSlot source = getSelectedVisibleSlot();
+                if (source != null
+                        && (selectedTrackIndex != absoluteTrackIndex || selectedSceneIndex != absoluteSceneIndex)) {
+                    slot.replaceInsertionPoint().copySlotsOrScenes(source);
+                    final String sourceLabel = selectedSlotLabel();
+                    final String destinationLabel = slotLabel(absoluteTrackIndex, absoluteSceneIndex);
+                    showValueInfo("Copy Clip", "Select target");
+                    driver.notifyPopup("Copy Clip", sourceLabel + " -> " + destinationLabel);
+                } else {
+                    showValueInfo("Copy Clip", "Select source first");
+                }
+            }
+            case SELECT, STOP_RECORDING, LAUNCH, CREATE -> {
+                selectTrackInMixerFromController(track, absoluteTrackIndex);
+                slot.select();
+                switch (action) {
+                    case SELECT -> showValueInfo("Select Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+                    case STOP_RECORDING -> {
+                        slot.launch();
+                        showValueInfo("Clip Record", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+                    }
+                    case LAUNCH -> {
+                        slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
+                        showValueInfo("Launch Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+                    }
+                    case CREATE -> {
+                        slot.createEmptyClip(driver.getDefaultClipLengthBeats());
+                        slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
+                        showValueInfo("Create Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
+                    }
+                    default -> {
+                    }
+                }
+            }
         }
-
-        selectTrackInMixerFromController(track, absoluteTrackIndex);
-        slot.select();
-
-        if (selectHeld.get()) {
-            showValueInfo("Select Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
-            return;
-        }
-
-        if (slot.isRecording().get()) {
-            slot.launch();
-            showValueInfo("Clip Record", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
-            return;
-        }
-
-        if (hasContent) {
-            slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
-            showValueInfo("Launch Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
-            return;
-        }
-
-        slot.createEmptyClip(driver.getDefaultClipLengthBeats());
-        slot.launchWithOptions(DEFAULT_LAUNCH_QUANTIZATION, FROM_START_LAUNCH_MODE);
-        showValueInfo("Create Clip", slotLabel(absoluteTrackIndex, absoluteSceneIndex));
     }
 
     private void recordIntoSlot(final Track track, final ClipLauncherSlot slot, final int absoluteTrackIndex,
@@ -1348,7 +1350,8 @@ public class PerformClipLauncherMode extends Layer {
         }
         final int increment = trackScrollAmount();
         final int current = trackBank.scrollPosition().get();
-        final int next = clamp(current + (direction * increment), 0, maxTrackOffset());
+        final int next = PerformLauncherNavigationController.nextOffsetBy(
+                current, totalTrackCount, visibleTrackCount(), direction, increment);
         if (next != current) {
             trackBank.scrollPosition().set(next);
             showValueInfo("Launcher Tracks", offsetLabel(next, totalTrackCount, visibleTrackCount()));
@@ -1453,7 +1456,8 @@ public class PerformClipLauncherMode extends Layer {
         }
         final int increment = sceneScrollAmount();
         final int current = trackBank.sceneBank().scrollPosition().get();
-        final int next = clamp(current + (direction * increment), 0, maxSceneOffset());
+        final int next = PerformLauncherNavigationController.nextOffsetBy(
+                current, totalSceneCount, visibleSceneCount(), direction, increment);
         if (next != current) {
             trackBank.sceneBank().scrollPosition().set(next);
             showValueInfo("Launcher Scenes", offsetLabel(next, totalSceneCount, visibleSceneCount()));
