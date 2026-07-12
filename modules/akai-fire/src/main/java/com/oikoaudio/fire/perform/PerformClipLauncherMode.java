@@ -161,7 +161,6 @@ public class PerformClipLauncherMode extends Layer {
     private int selectedRemoteDeviceIndex = -1;
     private int suppressedTrackSelectionNotificationAbsoluteIndex = -1;
     private int lastTrackSelectionNotificationAbsoluteIndex = -1;
-    private int mixDevicePageIndex = 0;
     private int selectedTrackRmsMax = 0;
     private int selectedTrackPeakMax = 0;
     private int lastMeterDisplayBlink = Integer.MIN_VALUE;
@@ -174,11 +173,7 @@ public class PerformClipLauncherMode extends Layer {
     private boolean manualRecordingWasRecording = false;
     private boolean manualRecordingShouldRound = false;
     private boolean manualRecordingUsesCursorTrack = false;
-    private boolean trackActionMode = false;
-    private boolean mixDeviceToggleMode = false;
-    private boolean deviceLayerMixerMode = false;
-    private boolean sceneActionMode = false;
-    private boolean birdsEyeMode = false;
+    private PerformPageState pageState = PerformPageState.launcher();
     private boolean active = false;
     private boolean mixMeterDisplayActive = false;
     private final PeakRmsOledView selectedTrackMeterView;
@@ -396,7 +391,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public boolean isTrackActionMode() {
-        return trackActionMode;
+        return pageState.isTrackActionMode();
     }
 
     public void setTrackActionMode(final boolean enabled) {
@@ -405,28 +400,24 @@ public class PerformClipLauncherMode extends Layer {
         } else {
             encoderModeBeforeMixDeviceMode = null;
         }
-        trackActionMode = enabled;
+        pageState = pageState.withTrackActionMode(enabled);
         if (enabled) {
-            sceneActionMode = false;
-            birdsEyeMode = false;
             clearClipModifierButtons();
         }
     }
 
     public void toggleTrackActionMode() {
-        final boolean enabled = !trackActionMode;
+        final boolean enabled = !pageState.isTrackActionMode();
         if (!enabled) {
             leaveMixDeviceMode();
         } else {
             encoderModeBeforeMixDeviceMode = null;
         }
-        trackActionMode = enabled;
-        if (trackActionMode) {
-            sceneActionMode = false;
-            birdsEyeMode = false;
+        pageState = pageState.withTrackActionMode(enabled);
+        if (pageState.isTrackActionMode()) {
             clearClipModifierButtons();
         }
-        if (trackActionMode) {
+        if (pageState.isTrackActionMode()) {
             showTrackActionInfo();
         } else {
             showCurrentModeInfo();
@@ -435,34 +426,34 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public boolean isSceneActionMode() {
-        return sceneActionMode;
+        return pageState.isSceneLaunch();
     }
 
     public boolean isBirdsEyeMode() {
-        return birdsEyeMode;
+        return pageState.isBirdsEye();
     }
 
     public void leaveBirdsEyeMode() {
-        birdsEyeMode = false;
+        pageState = pageState.leaveBirdsEye();
     }
 
     public void toggleSceneActionMode() {
-        sceneActionMode = !sceneActionMode;
-        if (sceneActionMode) {
-            trackActionMode = false;
-            birdsEyeMode = false;
+        final boolean entering = !pageState.isSceneLaunch();
+        if (entering) {
             leaveMixDeviceMode();
         }
+        pageState = pageState.toggleSceneLaunch();
         showCurrentModeInfo();
         oled.clearScreenDelayed();
     }
 
     public void toggleBirdsEyeMode() {
-        birdsEyeMode = !birdsEyeMode;
-        if (birdsEyeMode) {
-            trackActionMode = false;
-            sceneActionMode = false;
+        final boolean entering = !pageState.isBirdsEye();
+        if (entering) {
             leaveMixDeviceMode();
+        }
+        pageState = pageState.toggleBirdsEye();
+        if (pageState.isBirdsEye()) {
             clearClipModifierButtons();
         }
         showCurrentModeInfo();
@@ -480,16 +471,16 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     public String activePageLabel() {
-        if (trackActionMode) {
-            if (deviceLayerMixerMode) {
+        if (pageState.isTrackActionMode()) {
+            if (pageState.isDeviceLayers()) {
                 return "Device Layers";
             }
-            return mixDeviceToggleMode ? mixDevicePageTitle() : "Mix";
+            return pageState.isMixDeviceMode() ? mixDevicePageTitle() : "Mix";
         }
-        if (birdsEyeMode) {
+        if (pageState.isBirdsEye()) {
             return "Birds Eye";
         }
-        if (sceneActionMode) {
+        if (pageState.isSceneLaunch()) {
             return "Scene Launch";
         }
         return layout.label();
@@ -612,23 +603,25 @@ public class PerformClipLauncherMode extends Layer {
         final BiColorButton patternUp = driver.getButton(NoteAssign.PATTERN_UP);
         patternUp.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, -1),
                 () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(-1)
-                        : patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
-                        isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
-                        deviceRemoteControls.pageCount().getAsInt(), -1, canScrollScenes(-1)));
+                        : patternSceneNavigationLightState(pageState.isTrackActionMode(), pageState.isMixDeviceMode(),
+                                pageState.mixDevicePageIndex(),
+                                isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
+                                deviceRemoteControls.pageCount().getAsInt(), -1, canScrollScenes(-1)));
 
         final BiColorButton patternDown = driver.getButton(NoteAssign.PATTERN_DOWN);
         patternDown.bindPressed(this, pressed -> handlePatternSceneScroll(pressed, 1),
                 () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(1)
-                        : patternSceneNavigationLightState(trackActionMode, mixDeviceToggleMode, mixDevicePageIndex,
-                        isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
-                        deviceRemoteControls.pageCount().getAsInt(), 1, canScrollScenes(1)));
+                        : patternSceneNavigationLightState(pageState.isTrackActionMode(), pageState.isMixDeviceMode(),
+                                pageState.mixDevicePageIndex(),
+                                isAltHeld(), deviceRemoteControls.selectedPageIndex().get(),
+                                deviceRemoteControls.pageCount().getAsInt(), 1, canScrollScenes(1)));
     }
 
     private void bindMixStatusLights() {
         final MultiStateHardwareLight[] stateLights = driver.getStateLights();
         for (int index = 0; index < stateLights.length; index++) {
             final int lightIndex = index;
-            bindLightState(() -> trackActionMode
+            bindLightState(() -> pageState.isTrackActionMode()
                     ? mixStatusLightState(true, project.hasSoloedTracks().get(), project.hasMutedTracks().get(),
                     lightIndex)
                     : clipModifierStatusLightState(selectHeld.get(), duplicateHeld, copyHeld.get(), deleteHeld.get(),
@@ -679,8 +672,8 @@ public class PerformClipLauncherMode extends Layer {
 
     private void handlePadActionButton(final int index, final boolean pressed) {
         suppressMixMeterDisplay();
-        if (trackActionMode) {
-            if (mixDeviceToggleMode && isAltHeld()) {
+        if (pageState.isTrackActionMode()) {
+            if (pageState.isMixDeviceMode() && isAltHeld()) {
                 handleMixDeviceRowToggle(index, pressed);
                 return;
             }
@@ -732,7 +725,7 @@ public class PerformClipLauncherMode extends Layer {
             oled.clearScreenDelayed();
             return;
         }
-        final int deviceIndex = mixDeviceIndexForRow(rowIndex, mixDevicePageIndex);
+        final int deviceIndex = mixDeviceIndexForRow(rowIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
             return;
         }
@@ -771,7 +764,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private BiColorLightState padActionLightState(final int index) {
-        if (trackActionMode) {
+        if (pageState.isTrackActionMode()) {
             return mixStatusLightState(true, project.hasSoloedTracks().get(), project.hasMutedTracks().get(), index);
         }
         return switch (index) {
@@ -818,15 +811,15 @@ public class PerformClipLauncherMode extends Layer {
         if (pressed) {
             suppressMixMeterDisplay();
         }
-        if (trackActionMode) {
+        if (pageState.isTrackActionMode()) {
             handleTrackActionPadPressed(padIndex, pressed);
             return;
         }
-        if (birdsEyeMode) {
+        if (pageState.isBirdsEye()) {
             handleBirdsEyePadPressed(padIndex, pressed);
             return;
         }
-        if (sceneActionMode) {
+        if (pageState.isSceneLaunch()) {
             handleSceneActionPadPressed(padIndex, pressed);
             return;
         }
@@ -846,11 +839,11 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void handleTrackActionPadPressed(final int padIndex, final boolean pressed) {
-        if (deviceLayerMixerMode) {
+        if (pageState.isDeviceLayers()) {
             handleDeviceLayerPadPressed(padIndex, pressed);
             return;
         }
-        if (mixDeviceToggleMode) {
+        if (pageState.isMixDeviceMode()) {
             handleMixDevicePadPressed(padIndex, pressed);
             return;
         }
@@ -930,7 +923,7 @@ public class PerformClipLauncherMode extends Layer {
         if (!pressed) {
             return;
         }
-        final int deviceIndex = mixDeviceIndexForPad(padIndex, mixDevicePageIndex);
+        final int deviceIndex = mixDeviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
             return;
         }
@@ -1328,7 +1321,7 @@ public class PerformClipLauncherMode extends Layer {
             oled.clearScreenDelayed();
             return;
         }
-        if (sceneActionMode) {
+        if (pageState.isSceneLaunch()) {
             showValueInfo("Scene Launch", "MUTE_2 unused");
             return;
         }
@@ -1384,7 +1377,7 @@ public class PerformClipLauncherMode extends Layer {
         if (pressed) {
             suppressMixMeterDisplay();
         }
-        if (sceneActionMode) {
+        if (pageState.isSceneLaunch()) {
             handleSceneScroll(pressed, direction);
             return;
         }
@@ -1404,32 +1397,32 @@ public class PerformClipLauncherMode extends Layer {
         if (pressed && driver.handleKnobModePatternRemotePage(direction)) {
             return;
         }
-        if (trackActionMode) {
+        if (pageState.isTrackActionMode()) {
             if (pressed) {
-                if (deviceLayerMixerMode) {
+                if (pageState.isDeviceLayers()) {
                     if (direction < 0) {
                         setDeviceLayerMixerMode(false);
                     }
                     return;
                 }
-                if (mixDeviceToggleMode && isAltHeld()) {
+                if (pageState.isMixDeviceMode() && isAltHeld()) {
                     handleRemotePageNavigation(direction);
                     return;
                 }
                 if (direction > 0) {
-                    if (!mixDeviceToggleMode) {
+                    if (!pageState.isMixDeviceMode()) {
                         setMixDeviceMode(true);
-                    } else if (mixDevicePageIndex < MIX_DEVICE_PAGE_COUNT - 1) {
-                        setMixDevicePage(mixDevicePageIndex + 1);
+                    } else if (pageState.mixDevicePageIndex() < MIX_DEVICE_PAGE_COUNT - 1) {
+                        setMixDevicePage(pageState.mixDevicePageIndex() + 1);
                     } else if (canEnterDeviceLayerMixer()) {
                         setDeviceLayerMixerMode(true);
                     } else {
                         showValueInfo("Device Layers",
                                 remoteCursorDevice.exists().get() ? "No layers" : "Select device");
                     }
-                } else if (direction < 0 && mixDeviceToggleMode) {
-                    if (mixDevicePageIndex > 0) {
-                        setMixDevicePage(mixDevicePageIndex - 1);
+                } else if (direction < 0 && pageState.isMixDeviceMode()) {
+                    if (pageState.mixDevicePageIndex() > 0) {
+                        setMixDevicePage(pageState.mixDevicePageIndex() - 1);
                     } else {
                         setMixDeviceMode(false);
                     }
@@ -1441,18 +1434,17 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void setMixDeviceMode(final boolean enabled) {
-        if (enabled == mixDeviceToggleMode) {
+        if (enabled == pageState.isMixDeviceMode()) {
             return;
         }
         suppressMixMeterDisplay();
         if (enabled) {
-            mixDevicePageIndex = 0;
             encoderModeBeforeMixDeviceMode = encoderMode;
             switchEncoderMode(EncoderMode.USER_2, false);
+            pageState = pageState.withMixDeviceMode(true);
         } else {
             leaveMixDeviceMode();
         }
-        mixDeviceToggleMode = enabled;
         showTrackActionInfo();
         oled.clearScreenDelayed();
     }
@@ -1462,28 +1454,26 @@ public class PerformClipLauncherMode extends Layer {
             switchEncoderMode(encoderModeBeforeMixDeviceMode, false);
             encoderModeBeforeMixDeviceMode = null;
         }
-        mixDevicePageIndex = 0;
-        mixDeviceToggleMode = false;
-        deviceLayerMixerMode = false;
+        pageState = pageState.leaveMixDeviceMode();
     }
 
     private void setMixDevicePage(final int pageIndex) {
         final int nextPage = clamp(pageIndex, 0, MIX_DEVICE_PAGE_COUNT - 1);
-        if (nextPage == mixDevicePageIndex) {
+        if (nextPage == pageState.mixDevicePageIndex()) {
             return;
         }
         suppressMixMeterDisplay();
-        mixDevicePageIndex = nextPage;
+        pageState = pageState.withMixDevicePage(nextPage);
         showTrackActionInfo();
         oled.clearScreenDelayed();
     }
 
     private void setDeviceLayerMixerMode(final boolean enabled) {
-        if (enabled == deviceLayerMixerMode) {
+        if (enabled == pageState.isDeviceLayers()) {
             return;
         }
         suppressMixMeterDisplay();
-        deviceLayerMixerMode = enabled;
+        pageState = pageState.withDeviceLayers(enabled);
         showTrackActionInfo();
         oled.clearScreenDelayed();
     }
@@ -1747,11 +1737,11 @@ public class PerformClipLauncherMode extends Layer {
 
     private void showCurrentModeInfo() {
         applyEncoderFooterLegend();
-        if (birdsEyeMode) {
+        if (pageState.isBirdsEye()) {
             showTransientDetailInfo("Birds Eye", "Pads: Jump viewport\nSHIFT+ALT+PERFORM: Exit");
             return;
         }
-        if (sceneActionMode) {
+        if (pageState.isSceneLaunch()) {
             showTransientDetailInfo("Scene Launch", "Top row: Launch\nM1 Select  M3 Copy\nM4 Delete");
             return;
         }
@@ -1759,12 +1749,12 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private void showTrackActionInfo() {
-        if (deviceLayerMixerMode) {
+        if (pageState.isDeviceLayers()) {
             showTransientDetailInfo("Device Layers",
                     "Rows: Select/Solo/Mute/On\nPattern Up: Devices");
             return;
         }
-        if (mixDeviceToggleMode) {
+        if (pageState.isMixDeviceMode()) {
             showTransientDetailInfo(mixDevicePageTitle(),
                     "Rows: %s\nPad: Select  ALT: On/Off\nPattern: Page/Mix/Layer"
                             .formatted(mixDevicePageRangeLabel()));
@@ -1783,7 +1773,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private String mixDevicePageRangeLabel() {
-        final int first = (mixDevicePageIndex * MIX_DEVICE_ROWS) + 1;
+        final int first = (pageState.mixDevicePageIndex() * MIX_DEVICE_ROWS) + 1;
         final int last = first + MIX_DEVICE_ROWS - 1;
         return first + "-" + last;
     }
@@ -2125,7 +2115,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean canScrollBankLeftRight(final int direction) {
-        return sceneActionMode ? canScrollScenes(direction) : canScrollTracks(direction);
+        return pageState.isSceneLaunch() ? canScrollScenes(direction) : canScrollTracks(direction);
     }
 
     private int maxTrackOffset() {
@@ -2232,7 +2222,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private boolean shouldShowPerformMeters() {
-        return shouldShowPerformMeters(active, sceneActionMode, birdsEyeMode, isSettingsHeld(),
+        return shouldShowPerformMeters(active, pageState.isSceneLaunch(), pageState.isBirdsEye(), isSettingsHeld(),
                 driver.shouldShowMeterIdleDisplay() && !oled.hasPendingTransientMessage());
     }
 
@@ -2284,16 +2274,16 @@ public class PerformClipLauncherMode extends Layer {
         if (isSettingsHeld()) {
             return settingsLogoState(padIndex);
         }
-        if (trackActionMode) {
-            if (deviceLayerMixerMode) {
+        if (pageState.isTrackActionMode()) {
+            if (pageState.isDeviceLayers()) {
                 return getDeviceLayerPadState(padIndex);
             }
-            return mixDeviceToggleMode ? getMixDevicePadState(padIndex) : getTrackActionPadState(padIndex);
+            return pageState.isMixDeviceMode() ? getMixDevicePadState(padIndex) : getTrackActionPadState(padIndex);
         }
-        if (birdsEyeMode) {
+        if (pageState.isBirdsEye()) {
             return getBirdsEyePadState(padIndex);
         }
-        if (sceneActionMode) {
+        if (pageState.isSceneLaunch()) {
             return getSceneActionPadState(padIndex);
         }
         final int visibleTrackIndex = visibleTrackIndexForPad(padIndex);
@@ -2431,7 +2421,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private RgbLigthState getMixDevicePadState(final int padIndex) {
-        final int deviceIndex = mixDeviceIndexForPad(padIndex, mixDevicePageIndex);
+        final int deviceIndex = mixDeviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
             return RgbLigthState.OFF;
         }
@@ -2834,7 +2824,7 @@ public class PerformClipLauncherMode extends Layer {
     }
 
     private int visibleTrackCount() {
-        return visibleTrackCountForPage(layout, trackActionMode);
+        return visibleTrackCountForPage(layout, pageState.isTrackActionMode());
     }
 
     private int visibleSceneCount() {
