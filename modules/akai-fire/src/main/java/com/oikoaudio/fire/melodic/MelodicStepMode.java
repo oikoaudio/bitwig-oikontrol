@@ -25,13 +25,10 @@ import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
-import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
-import com.oikoaudio.fire.sequence.EncoderBank;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
-import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ModeButtonLights;
@@ -53,7 +50,6 @@ import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -86,7 +82,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final ClipLauncherSlotBank clipSlotBank;
     private final CursorRemoteControlsPage remoteControlsPage;
     private final StepSequencerEncoderLayer encoderLayer;
-    private final EncoderBankLayout encoderBankLayout;
+    private final MelodicStepEncoderControls encoderControls;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final MelodicStepClipWriter clipWriter = new MelodicStepClipWriter();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
@@ -203,7 +199,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         new PadBankRowControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
         bindEditStatusLights();
         bindMainEncoder();
-        this.encoderBankLayout = createEncoderBankLayout();
+        this.encoderControls = createEncoderControls();
         this.encoderLayer = new StepSequencerEncoderLayer(this, driver);
         this.seed = driver.initialMelodicSeed();
         this.poolLayoutRootPitch = nearestPhraseRootPitch(phraseContext().baseMidiNote());
@@ -1985,45 +1981,25 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         };
     }
 
-    private EncoderBankLayout createEncoderBankLayout() {
-        final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
-        banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Engine\n2: Density\n3: Pool Oct\n4: Mut Type",
-                EncoderFooterLegend.of("Engn", "Dens", "Pool", "MutT"),
-                new EncoderSlotBinding[]{
-                        engineSlot(),
-                        densitySlot(),
-                        poolContextSlot(),
-                        mutationModeSlot()
-                }));
-        banks.put(EncoderMode.MIXER, new EncoderBank(
-                "1: Length\n2: Swivel / Mirror x2\n3: Reverse\n4: Invert",
-                new EncoderSlotBinding[]{
-                        alternateActionSlot("Length", this::adjustLengthProcess, this::channelShapeLabel, this::adjustChannelShape),
+    private MelodicStepEncoderControls createEncoderControls() {
+        return new MelodicStepEncoderControls(
+                new EncoderSlotBinding[] {engineSlot(), densitySlot(), poolContextSlot(), mutationModeSlot()},
+                new EncoderSlotBinding[] {
+                        alternateActionSlot("Length", this::adjustLengthProcess,
+                                this::channelShapeLabel, this::adjustChannelShape),
                         alternateActionSlot("Mirror x2", this::adjustMirrorProcess, () -> "Tension", this::adjustTension),
                         alternateActionSlot("Reverse", this::adjustReverseProcess, () -> "Legato", this::adjustLegato),
-                        alternateActionSlot("Invert", this::adjustInvertProcess, () -> "Span via Row",
-                                this::showRecurrenceEditInfo)
-                }));
-        banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch",
-                EncoderFooterLegend.of("Velo", "Pres", "Timb", "Ptch"),
-                new EncoderSlotBinding[]{
-                        noteAccessSlot(NoteStepAccess.VELOCITY),
-                        noteAccessSlot(NoteStepAccess.PRESSURE),
-                        noteAccessSlot(NoteStepAccess.TIMBRE),
-                        noteAccessSlot(NoteStepAccess.PITCH)
-                }));
-        banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Gate Len\n2: Chance\n3: Vel Spread\n4: Repeat",
-                EncoderFooterLegend.of("GLen", "Chnc", "VSpr", "Rpt"),
-                new EncoderSlotBinding[]{
-                        noteAccessSlot(NoteStepAccess.DURATION),
-                        noteAccessSlot(NoteStepAccess.CHANCE),
-                        noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD),
-                        noteAccessSlot(NoteStepAccess.REPEATS)
-                }));
-        return new EncoderBankLayout(banks);
+                        alternateActionSlot("Invert", this::adjustInvertProcess,
+                                () -> "Span via Row", this::showRecurrenceEditInfo)
+                },
+                new EncoderSlotBinding[] {
+                        noteAccessSlot(NoteStepAccess.VELOCITY), noteAccessSlot(NoteStepAccess.PRESSURE),
+                        noteAccessSlot(NoteStepAccess.TIMBRE), noteAccessSlot(NoteStepAccess.PITCH)
+                },
+                new EncoderSlotBinding[] {
+                        noteAccessSlot(NoteStepAccess.DURATION), noteAccessSlot(NoteStepAccess.CHANCE),
+                        noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD), noteAccessSlot(NoteStepAccess.REPEATS)
+                });
     }
 
     private void cycleGenerator(final int direction) {
@@ -2608,7 +2584,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
-        return encoderBankLayout;
+        return encoderControls.layout();
     }
 
     @Override
