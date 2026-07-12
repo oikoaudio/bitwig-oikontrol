@@ -7,23 +7,17 @@ import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.ModeButtonLights;
-import com.oikoaudio.fire.control.PadBankRowControlBindings;
-import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
-import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLigthState;
 import com.oikoaudio.fire.melodic.MelodicPattern;
-import com.oikoaudio.fire.melodic.MelodicRenderer;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.utils.PatternButtons;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public final class FugueStepMode extends Layer {
@@ -32,8 +26,6 @@ public final class FugueStepMode extends Layer {
     private static final double STEP_LENGTH = 0.125;
     private static final int LINE_COUNT = 4;
     private static final int PAD_COLUMNS = 16;
-    private static final int ENCODER_THRESHOLD = 5;
-    private static final int ENCODER_FINE_THRESHOLD = 10;
     private static final int SOURCE_CHANGE_REBUILD_DELAY_MS = 20;
     private static final int BAR_STEPS = 32;
     private static final int MAX_LOOP_STEPS = STEP_COUNT;
@@ -54,7 +46,7 @@ public final class FugueStepMode extends Layer {
     private final PatternButtons patternButtons;
     private final PinnableCursorClip cursorClip;
     private final FugueTemplatePadController templatePads;
-    private final Map<Integer, Map<Integer, Map<Integer, NoteStep>>> noteStepsByChannel = new HashMap<>();
+    private final FugueObservationController observations = new FugueObservationController(STEP_COUNT);
     private final FugueLineSettings[] lineSettings = {
             FugueLineSettings.init(),
             FuguePreset.BASS_OCTAVE.settings(),
@@ -69,11 +61,9 @@ public final class FugueStepMode extends Layer {
     };
     private final boolean[] lineEnabled = {true, true, true, true};
 
-    private EncoderMode activeEncoderMode = EncoderMode.CHANNEL;
+    private final FugueEncoderControls encoderControls = new FugueEncoderControls();
     private int loopSteps = DEFAULT_LOOP_STEPS;
-    private int playingStep = -1;
     private boolean mainEncoderPressConsumed = false;
-    private boolean active = false;
 
     public FugueStepMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "FUGUE_STEP_MODE");
@@ -94,17 +84,15 @@ public final class FugueStepMode extends Layer {
         this.cursorClip.getLoopLength().addValueObserver(length ->
                 loopSteps = Math.max(1, Math.min(STEP_COUNT, (int) Math.round(length / STEP_LENGTH))));
         this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
-        this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
+        this.cursorClip.playingStep().addValueObserver(observations::updatePlayingStep);
         this.templatePads = new FugueTemplatePadController(new TemplatePadClipPort(), STEP_LENGTH,
                 this::defaultTemplatePitch,
                 (pitch, degrees) -> ScaleAwareTransposer.transposeByScaleDegrees(pitch, degrees,
                         driver.getSharedMusicalScale(), driver.getSharedRootNote()));
 
-        new PadBankRowControlBindings(driver, this, fugueStepControlBindingsHost(),
-                new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
-                        this::handleEncoderModeButton, this::encoderModeLight)).bind();
+        new FugueControlBindings(driver, this, new ControlPort());
         bindLineStatusLights();
-        bindEncoders();
+        encoderControls.bind(driver, this, new EncoderHandler());
         bindMainEncoder();
     }
 
@@ -117,7 +105,7 @@ public final class FugueStepMode extends Layer {
 
     @Override
     protected void onActivate() {
-        active = true;
+        observations.setActive(true);
         refreshSourceCacheFromClip();
         patternButtons.setUpCallback(pressed -> {
             if (pressed) {
@@ -136,44 +124,10 @@ public final class FugueStepMode extends Layer {
 
     @Override
     protected void onDeactivate() {
-        active = false;
+        observations.setActive(false);
         patternButtons.setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
         patternButtons.setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
         oled.setFooterLegend(null);
-    }
-
-    private PadBankRowControlBindings.Host fugueStepControlBindingsHost() {
-        return new PadBankRowControlBindings.Host() {
-            @Override
-            public void handlePadPress(final int padIndex, final boolean pressed) {
-                FugueStepMode.this.handlePadPress(padIndex, pressed);
-            }
-
-            @Override
-            public RgbLigthState padLight(final int padIndex) {
-                return FugueStepMode.this.getPadLight(padIndex);
-            }
-
-            @Override
-            public void handleBankButton(final boolean pressed, final int amount) {
-                FugueStepMode.this.handleBankButton(pressed, amount);
-            }
-
-            @Override
-            public BiColorLightState bankLightState() {
-                return BiColorLightState.HALF;
-            }
-
-            @Override
-            public void handleRowButton(final int index, final boolean pressed) {
-                toggleLineEnabled(index, pressed);
-            }
-
-            @Override
-            public BiColorLightState rowLightState(final int index) {
-                return FugueStepMode.this.lineLight(index);
-            }
-        };
     }
 
     private void handleBankButton(final boolean pressed, final int amount) {
@@ -189,50 +143,6 @@ public final class FugueStepMode extends Layer {
             return;
         }
         adjustStartOffset(activeLineIndex(), amount);
-    }
-
-    private void bindEncoders() {
-        final TouchEncoder[] encoders = driver.getEncoders();
-        encoders[0].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, inc -> {
-                    if (templatePads.isEditing()) {
-                        templatePads.adjustVelocity(inc);
-                        showTemplatePadEditEncoderValue(0);
-                    } else {
-                        adjustDirectionOrPreset(inc);
-                    }
-                });
-        encoders[0].bindTouched(this, touched -> showEncoderTouchValue(0, touched));
-        encoders[1].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, inc -> {
-                    if (templatePads.isEditing()) {
-                        templatePads.adjustChance(inc);
-                        showTemplatePadEditEncoderValue(1);
-                    } else {
-                        adjustSpeed(activeLineIndex(), inc);
-                    }
-                });
-        encoders[1].bindTouched(this, touched -> showEncoderTouchValue(1, touched));
-        encoders[2].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, inc -> {
-                    if (templatePads.isEditing()) {
-                        templatePads.adjustGate(inc);
-                        showTemplatePadEditEncoderValue(2);
-                    } else {
-                        adjustStartOffset(activeLineIndex(), inc);
-                    }
-                });
-        encoders[2].bindTouched(this, touched -> showEncoderTouchValue(2, touched));
-        encoders[3].bindThresholdedEncoder(this, ENCODER_THRESHOLD, ENCODER_FINE_THRESHOLD,
-                driver::isGlobalShiftHeld, inc -> {
-                    if (templatePads.isEditing()) {
-                        templatePads.transpose(inc);
-                        showTemplatePadEditEncoderValue(3);
-                    } else {
-                        adjustPitch(inc);
-                    }
-                });
-        encoders[3].bindTouched(this, touched -> showEncoderTouchValue(3, touched));
     }
 
     private void bindMainEncoder() {
@@ -578,18 +488,79 @@ public final class FugueStepMode extends Layer {
     }
 
     private void cacheSourceNote(final NoteStep note) {
-        if (note.state() != NoteStep.State.NoteOn) {
-            return;
+        observations.cacheSource(note);
+    }
+
+    private final class ControlPort implements FugueControlBindings.Port {
+        @Override
+        public void padPress(final int padIndex, final boolean pressed) {
+            handlePadPress(padIndex, pressed);
         }
-        noteStepsByChannel.computeIfAbsent(FugueClipAdapter.SOURCE_CHANNEL, ignored -> new HashMap<>())
-                .computeIfAbsent(note.x(), ignored -> new HashMap<>())
-                .put(note.y(), note);
+
+        @Override
+        public RgbLigthState padLight(final int padIndex) {
+            return getPadLight(padIndex);
+        }
+
+        @Override
+        public void bankButton(final boolean pressed, final int amount) {
+            handleBankButton(pressed, amount);
+        }
+
+        @Override
+        public void lineButton(final int index, final boolean pressed) {
+            toggleLineEnabled(index, pressed);
+        }
+
+        @Override
+        public BiColorLightState lineLight(final int index) {
+            return FugueStepMode.this.lineLight(index);
+        }
+
+        @Override
+        public void encoderModeButton(final boolean pressed) {
+            handleEncoderModeButton(pressed);
+        }
+
+        @Override
+        public BiColorLightState encoderModeLight() {
+            return FugueStepMode.this.encoderModeLight();
+        }
+    }
+
+    private final class EncoderHandler implements FugueEncoderControls.Handler {
+        @Override
+        public void turn(final int encoderIndex, final int increment) {
+            if (templatePads.isEditing()) {
+                switch (encoderIndex) {
+                    case 0 -> templatePads.adjustVelocity(increment);
+                    case 1 -> templatePads.adjustChance(increment);
+                    case 2 -> templatePads.adjustGate(increment);
+                    case 3 -> templatePads.transpose(increment);
+                    default -> { }
+                }
+                showTemplatePadEditEncoderValue(encoderIndex);
+                return;
+            }
+            switch (encoderIndex) {
+                case 0 -> adjustDirectionOrPreset(increment);
+                case 1 -> adjustSpeed(activeLineIndex(), increment);
+                case 2 -> adjustStartOffset(activeLineIndex(), increment);
+                case 3 -> adjustPitch(increment);
+                default -> { }
+            }
+        }
+
+        @Override
+        public void touch(final int encoderIndex, final boolean touched) {
+            showEncoderTouchValue(encoderIndex, touched);
+        }
     }
 
     private final class TemplatePadClipPort implements FugueTemplatePadController.ClipPort {
         @Override
         public java.util.Optional<FugueTemplatePadController.Note> findNote(final int start, final int end) {
-            return noteStepsByChannel.getOrDefault(FugueClipAdapter.SOURCE_CHANNEL, Map.of()).entrySet().stream()
+            return observations.steps().getOrDefault(FugueClipAdapter.SOURCE_CHANNEL, Map.of()).entrySet().stream()
                     .filter(entry -> entry.getKey() >= start && entry.getKey() < end)
                     .flatMap(entry -> entry.getValue().values().stream())
                     .filter(note -> note.state() == NoteStep.State.NoteOn)
@@ -616,20 +587,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private void removeCachedSourceNote(final int step, final int pitch) {
-        final Map<Integer, Map<Integer, NoteStep>> channelSteps = noteStepsByChannel.get(FugueClipAdapter.SOURCE_CHANNEL);
-        if (channelSteps == null) {
-            return;
-        }
-        final Map<Integer, NoteStep> notesAtStep = channelSteps.get(step);
-        if (notesAtStep != null) {
-            notesAtStep.remove(pitch);
-            if (notesAtStep.isEmpty()) {
-                channelSteps.remove(step);
-            }
-        }
-        if (channelSteps.isEmpty()) {
-            noteStepsByChannel.remove(FugueClipAdapter.SOURCE_CHANNEL);
-        }
+        observations.removeSource(step, pitch);
     }
 
     private RgbLigthState getPadLight(final int padIndex) {
@@ -638,50 +596,28 @@ public final class FugueStepMode extends Layer {
         if (line < 0 || line >= LINE_COUNT) {
             return RgbLigthState.OFF;
         }
-        final FuguePattern pattern = linePattern(line);
-        final boolean inLoop = column < activeBucketCount();
-        final boolean playing = playingBucket() == column;
-        final RgbLigthState color = line == activeLineIndex() ? LINE_COLORS[line].getBrightend() : LINE_COLORS[line];
-        final RgbLigthState rendered = MelodicRenderer.stepLight(bucketStep(pattern, column), false, inLoop, playing,
-                column, color);
-        final RgbLigthState lineLight = lineEnabled[line] ? rendered : rendered.getVeryDimmed();
-        return inLoop
-                ? StepPadLightHelper.renderClipStartColumnOverlay(column, shiftedClipStartColumn(), lineLight)
-                : lineLight;
+        return FugueRenderer.padLight(linePattern(line), column, loopSteps, observations.playingStep(),
+                shiftedClipStartColumn(), LINE_COLORS[line], line == activeLineIndex(), lineEnabled[line]);
     }
 
     private MelodicPattern.Step bucketStep(final FuguePattern pattern, final int column) {
-        if (column >= activeBucketCount()) {
-            return MelodicPattern.Step.rest(column);
-        }
-        final int start = bucketStart(column);
-        final int end = bucketEnd(column);
-        for (int step = start; step < end; step++) {
-            final MelodicPattern.Step candidate = pattern.step(step);
-            if (candidate.active() && !candidate.tieFromPrevious()) {
-                return candidate.withIndex(column);
-            }
-        }
-        return MelodicPattern.Step.rest(column);
+        return FugueRenderer.bucketStep(pattern, column, loopSteps);
     }
 
     private int activeBucketCount() {
-        return Math.max(1, Math.min(PAD_COLUMNS, loopSteps));
+        return FugueRenderer.activeBucketCount(loopSteps);
     }
 
     private int bucketStart(final int column) {
-        return column * loopSteps / PAD_COLUMNS;
+        return FugueRenderer.bucketStart(column, loopSteps);
     }
 
     private int bucketEnd(final int column) {
-        return Math.max(bucketStart(column) + 1, (column + 1) * loopSteps / PAD_COLUMNS);
+        return FugueRenderer.bucketEnd(column, loopSteps);
     }
 
     private int playingBucket() {
-        if (playingStep < 0 || playingStep >= loopSteps) {
-            return -1;
-        }
-        return Math.max(0, Math.min(PAD_COLUMNS - 1, playingStep * PAD_COLUMNS / loopSteps));
+        return FugueRenderer.playingBucket(observations.playingStep(), loopSteps);
     }
 
     private int shiftedClipStartColumn() {
@@ -716,7 +652,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private FuguePattern sourcePattern() {
-        return FugueClipAdapter.sourceFromChannelOne(noteStepsByChannel, loopSteps, STEP_LENGTH);
+        return FugueClipAdapter.sourceFromChannelOne(observations.steps(), loopSteps, STEP_LENGTH);
     }
 
     private void handleEncoderModeButton(final boolean pressed) {
@@ -727,63 +663,44 @@ public final class FugueStepMode extends Layer {
             oled.clearScreenDelayed();
             return;
         }
-        selectEncoderMode(nextEncoderMode(activeEncoderMode));
+        encoderControls.cycle();
+        encoderModeChanged();
     }
 
     private void selectEncoderMode(final EncoderMode mode) {
-        activeEncoderMode = mode;
+        encoderControls.select(mode);
+        encoderModeChanged();
+    }
+
+    private void encoderModeChanged() {
         applyEncoderFooterLegend();
         showEncoderModeInfo();
         oled.clearScreenDelayed();
     }
 
     private void showEncoderModeInfo() {
-        if (activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL) {
-            oled.detailInfo("Fugue Settings", "1 Root\n2 Scale\n3 Clip Len\n4 Clip Start");
-            return;
-        }
-        oled.detailInfo(lineLabel(activeLineIndex()), "1 Dir\n2 Tempo\n3 Start\n4 Pitch");
+        oled.detailInfo(encoderControls.title(), encoderControls.details());
     }
 
     private void applyEncoderFooterLegend() {
-        oled.setFooterLegend(activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL
-                ? EncoderFooterLegend.of("Root", "Scal", "Lgth", "Strt")
-                : EncoderFooterLegend.of("Dir", "Temp", "Strt", "Ptch"));
+        oled.setFooterLegend(encoderControls.footer());
     }
 
     private void selectLine(final int line) {
-        selectEncoderMode(switch (Math.max(0, Math.min(LINE_COUNT - 1, line))) {
-            case 1 -> EncoderMode.MIXER;
-            case 2 -> EncoderMode.USER_1;
-            case 3 -> EncoderMode.USER_2;
-            default -> EncoderMode.CHANNEL;
-        });
+        encoderControls.selectLine(line);
+        encoderModeChanged();
     }
 
     private int activeLineIndex() {
-        return switch (activeEncoderMode) {
-            case CHANNEL -> 0;
-            case MIXER -> 1;
-            case USER_1 -> 2;
-            case USER_2 -> 3;
-        };
-    }
-
-    private EncoderMode nextEncoderMode(final EncoderMode mode) {
-        return switch (mode) {
-            case CHANNEL -> EncoderMode.MIXER;
-            case MIXER -> EncoderMode.USER_1;
-            case USER_1 -> EncoderMode.USER_2;
-            case USER_2 -> EncoderMode.CHANNEL;
-        };
+        return encoderControls.selectedLine();
     }
 
     private BiColorLightState encoderModeLight() {
-        return activeEncoderMode.getState();
+        return encoderControls.light();
     }
 
     private BiColorLightState lineLight(final int line) {
-        return lineEnabled[line] ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        return FugueRenderer.lineLight(lineEnabled[line]);
     }
 
     private void bindLineStatusLights() {
@@ -795,7 +712,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private BiColorLightState lineStatusLight(final int line) {
-        return lineEnabled[line] ? TrackSelectIndicatorLights.green(true) : TrackSelectIndicatorLights.red(false);
+        return FugueRenderer.lineStatusLight(lineEnabled[line]);
     }
 
     private void toggleLineEnabled(final int line, final boolean pressed) {
@@ -942,7 +859,7 @@ public final class FugueStepMode extends Layer {
 
     private void forEachSourceNote(final java.util.function.Consumer<NoteStep> action) {
         final Map<Integer, Map<Integer, NoteStep>> channelSteps =
-                noteStepsByChannel.getOrDefault(FugueClipAdapter.SOURCE_CHANNEL, Map.of());
+                observations.steps().getOrDefault(FugueClipAdapter.SOURCE_CHANNEL, Map.of());
         for (final Map<Integer, NoteStep> notesAtStep : channelSteps.values()) {
             for (final NoteStep note : notesAtStep.values()) {
                 if (note.state() == NoteStep.State.NoteOn) {
@@ -1095,7 +1012,7 @@ public final class FugueStepMode extends Layer {
         }
         final int newLoopSteps = Math.min(MAX_LOOP_STEPS, currentLoopSteps * 2);
         cursorClip.getLoopLength().set(newLoopSteps * STEP_LENGTH);
-        FugueClipAdapter.duplicateChannelRange(cursorClip, noteStepsByChannel, FugueClipAdapter.SOURCE_CHANNEL,
+        FugueClipAdapter.duplicateChannelRange(cursorClip, observations.steps(), FugueClipAdapter.SOURCE_CHANNEL,
                 0, currentLoopSteps, currentLoopSteps);
         loopSteps = newLoopSteps;
         hostRebuildAfterClipLengthChange("Length", formatSteps(newLoopSteps));
@@ -1142,7 +1059,7 @@ public final class FugueStepMode extends Layer {
             return;
         }
         if (!lineEnabled[line]) {
-            FugueClipAdapter.clearChannel(cursorClip, noteStepsByChannel, line);
+            FugueClipAdapter.clearChannel(cursorClip, observations.steps(), line);
             return;
         }
         final FuguePattern source = sourcePattern();
@@ -1151,51 +1068,16 @@ public final class FugueStepMode extends Layer {
         }
         final FuguePattern transformed = MelodicLineTransformer.transform(source, lineSettings[line],
                 driver.getSharedMusicalScale(), driver.getSharedRootNote());
-        FugueClipAdapter.writeDerivedLine(cursorClip, noteStepsByChannel, line, transformed, STEP_LENGTH);
+        FugueClipAdapter.writeDerivedLine(cursorClip, observations.steps(), line, transformed, STEP_LENGTH);
     }
 
     private void handleNoteStepObject(final NoteStep noteStep) {
-        if (!active) {
-            return;
-        }
-        final int channel = noteStep.channel();
-        final int x = noteStep.x();
-        final int y = noteStep.y();
-        final Map<Integer, Map<Integer, NoteStep>> channelSteps =
-                noteStepsByChannel.computeIfAbsent(channel, ignored -> new HashMap<>());
-        final Map<Integer, NoteStep> notesAtStep = channelSteps.computeIfAbsent(x, ignored -> new HashMap<>());
-        if (noteStep.state() == NoteStep.State.Empty) {
-            notesAtStep.remove(y);
-            if (notesAtStep.isEmpty()) {
-                channelSteps.remove(x);
-            }
-            if (channelSteps.isEmpty()) {
-                noteStepsByChannel.remove(channel);
-            }
-            return;
-        }
-        notesAtStep.put(y, noteStep);
+        observations.observe(noteStep);
     }
 
     private void refreshSourceCacheFromClip() {
-        noteStepsByChannel.clear();
-        final Map<Integer, Map<Integer, NoteStep>> sourceSteps =
-                noteStepsByChannel.computeIfAbsent(FugueClipAdapter.SOURCE_CHANNEL, ignored -> new HashMap<>());
-        for (int x = 0; x < FuguePattern.MAX_STEPS; x++) {
-            for (int y = 0; y < 128; y++) {
-                final NoteStep step = cursorClip.getStep(FugueClipAdapter.SOURCE_CHANNEL, x, y);
-                if (step.state() == NoteStep.State.NoteOn) {
-                    sourceSteps.computeIfAbsent(x, ignored -> new HashMap<>()).put(y, step);
-                }
-            }
-        }
-        if (sourceSteps.isEmpty()) {
-            noteStepsByChannel.remove(FugueClipAdapter.SOURCE_CHANNEL);
-        }
-    }
-
-    private void handlePlayingStep(final int clipPlayingStep) {
-        this.playingStep = clipPlayingStep >= 0 && clipPlayingStep < STEP_COUNT ? clipPlayingStep : -1;
+        observations.refreshSource((step, pitch) ->
+                cursorClip.getStep(FugueClipAdapter.SOURCE_CHANNEL, step, pitch));
     }
 
     private boolean hasSourceNotes() {
