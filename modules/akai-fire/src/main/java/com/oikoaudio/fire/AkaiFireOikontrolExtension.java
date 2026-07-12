@@ -1,7 +1,6 @@
 package com.oikoaudio.fire;
 
 import com.oikoaudio.fire.control.BiColorButton;
-import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.RgbButton;
@@ -85,25 +84,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final int CUE_MARKER_BANK_SIZE = 128;
     private static final int[] BROWSER_RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
     private static final int BROWSER_OPEN_DEFER_MS = 40;
-    private static final int SETTINGS_PAD_COLUMNS = 16;
-    private static final int SETTINGS_PAD_ROWS = 4;
-    private static final int SETTINGS_SHOW_DEACTIVATED_TRACKS_PAD = 63;
-    private static final int GLOBAL_ROOT_ENCODER_THRESHOLD = 16;
-    private static final int GLOBAL_SCALE_ENCODER_THRESHOLD = 8;
-    private static final int GLOBAL_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final int GLOBAL_VELOCITY_CENTER_DEFAULT = 100;
     private static final int GLOBAL_VELOCITY_MIN = 1;
     private static final int GLOBAL_VELOCITY_MAX = 126;
-    private static final RgbLigthState SETTINGS_LOGO_ON = new RgbLigthState(127, 20, 0, true);
-    private static final RgbLigthState SETTINGS_LOGO_OFF = RgbLigthState.OFF;
-    private static final RgbLigthState SETTINGS_TOGGLE_ON = new RgbLigthState(0, 96, 96, true);
-    private static final RgbLigthState SETTINGS_TOGGLE_OFF = new RgbLigthState(0, 32, 32, true);
-    private static final boolean[][] SETTINGS_LOGO = {
-            {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
-            {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
-            {true, true, false, false, false, true, false, false, true, true, false, false, true, true, true, false},
-            {true, false, false, false, true, true, true, false, true, false, true, false, true, true, true, true}
-    };
     public static final String MAIN_ENCODER_LAST_TOUCHED_ROLE = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
     public static final String MAIN_ENCODER_SHUFFLE_ROLE = FireControlPreferences.MAIN_ENCODER_SHUFFLE;
     public static final String MAIN_ENCODER_TEMPO_ROLE = FireControlPreferences.MAIN_ENCODER_TEMPO;
@@ -143,13 +126,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final RgbLigthState[] currentPadStates = new RgbLigthState[64];
 
     private Layer mainLayer;
-    private Layer globalSettingsLayer;
-    private final EncoderStepAccumulator[] globalSettingsAccumulators = new EncoderStepAccumulator[]{
-            new EncoderStepAccumulator(GLOBAL_ROOT_ENCODER_THRESHOLD),
-            new EncoderStepAccumulator(GLOBAL_SCALE_ENCODER_THRESHOLD),
-            new EncoderStepAccumulator(GLOBAL_OCTAVE_ENCODER_THRESHOLD),
-            new EncoderStepAccumulator(GLOBAL_SCALE_ENCODER_THRESHOLD)
-    };
+    private GlobalSettingsOverlayController globalSettingsOverlay;
     private final RgbButton[] rgbButtons = new RgbButton[64];
     private final TouchEncoder[] encoders = new TouchEncoder[4];
     private final MultiStateHardwareLight[] stateLights = new MultiStateHardwareLight[4];
@@ -191,9 +168,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private boolean recordGestureConsumed = false;
     private boolean suppressNextMelodicStepRelease = false;
     private boolean drumPinPreferenceObserved = false;
-    private boolean globalSettingsOverlayActive = false;
-    private final GlobalSettingsOverlayLatch globalSettingsOverlayLatch = new GlobalSettingsOverlayLatch();
-    private EncoderMode globalSettingsEncoderMode = EncoderMode.CHANNEL;
     private String lastRecordQuantizationGrid = RECORD_QUANTIZATION_DEFAULT_ON;
     private int browserPressToken = 0;
     private int transportTimeSignatureNumerator = 4;
@@ -279,7 +253,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         deviceLocator = new FireDeviceLocator(host, DEVICE_DISCOVERY_WIDTH);
 
         mainLayer = new Layer(layers, "Main");
-        globalSettingsLayer = new Layer(layers, "GlobalSettings");
         oled = new OledDisplay(midiOut);
         noteRepeatHandler = new NoteRepeatHandler(
                 noteInput,
@@ -496,26 +469,68 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void initGlobalSettingsOverlay() {
-        for (int index = 0; index < encoders.length; index++) {
-            final int encoderIndex = index;
-            encoders[index].bindEncoder(globalSettingsLayer, inc -> {
-                final int steps = globalSettingsAccumulators[encoderIndex].consume(inc);
-                if (steps != 0) {
-                    adjustGlobalSettings(encoderIndex, steps);
-                }
-            });
-            encoders[index].bindTouched(globalSettingsLayer,
-                    touched -> handleGlobalSettingsTouch(encoderIndex, touched));
-        }
-        for (int padIndex = 0; padIndex < rgbButtons.length; padIndex++) {
-            final int currentPad = padIndex;
-            rgbButtons[padIndex].bindPressed(globalSettingsLayer, pressed -> {
-                handleGlobalSettingsPad(currentPad, pressed);
-            }, () -> globalSettingsPadState(currentPad));
-        }
-        getButton(NoteAssign.KNOB_MODE).bindPressed(globalSettingsLayer,
-                this::handleGlobalSettingsModeAdvance,
-                this::globalSettingsModeLightState);
+        globalSettingsOverlay = new GlobalSettingsOverlayController(
+                layers,
+                encoders,
+                rgbButtons,
+                getButton(NoteAssign.KNOB_MODE),
+                oled,
+                sharedPitchContext,
+                sharedVelocitySettings,
+                firePreferences,
+                viewControl,
+                new GlobalSettingsOverlayController.Host() {
+                    @Override
+                    public boolean browserButtonPressed() {
+                        final BiColorButton button = getButton(NoteAssign.BROWSER);
+                        return button != null && button.isPressed();
+                    }
+
+                    @Override
+                    public boolean popupBrowserActive() {
+                        return isPopupBrowserActive();
+                    }
+
+                    @Override
+                    public boolean shiftHeld() {
+                        return isGlobalShiftHeld();
+                    }
+
+                    @Override
+                    public boolean altHeld() {
+                        return isGlobalAltHeld();
+                    }
+
+                    @Override
+                    public Mode activeMode() {
+                        return modeState.activeMode();
+                    }
+
+                    @Override
+                    public void prepareActivation() {
+                        prepareGlobalSettingsOverlayActivation();
+                    }
+
+                    @Override
+                    public void restoreActiveMode() {
+                        switchActiveMode();
+                    }
+
+                    @Override
+                    public void refreshSurfaceLights() {
+                        AkaiFireOikontrolExtension.this.refreshSurfaceLights();
+                    }
+
+                    @Override
+                    public boolean consumeKnobModeGesture() {
+                        return AkaiFireOikontrolExtension.this.consumeKnobModeGesture();
+                    }
+
+                    @Override
+                    public ParameterEncoderBinding.ExplicitResetControl explicitResetControl() {
+                        return knobModeEncoderResetControl();
+                    }
+                });
     }
 
     private BiColorButton addButton(final NoteAssign which, final int ccLightValue) {
@@ -557,7 +572,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean shouldShowPlaybackNoteChordDisplay() {
-        return FireControlPreferences.shouldShowPlaybackNoteChordDisplay(noteChordDisplayLabel());
+        return firePreferences != null
+                && FireControlPreferences.shouldShowPlaybackNoteChordDisplay(firePreferences.noteChordDisplay());
     }
 
     private void handleTransportPlayingChanged(final boolean playing) {
@@ -1924,12 +1940,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Shuffle", groove.getShuffleAmount().displayedValue().get());
     }
 
-    private void activateGlobalSettingsOverlay() {
-        if (globalSettingsOverlayActive) {
-            showGlobalSettingsOverview();
-            return;
-        }
-        globalSettingsOverlayActive = true;
+    private void prepareGlobalSettingsOverlayActivation() {
         releaseAutoPinnedDrumContext(true);
         drumSequenceMode.deactivate();
         notePlayMode.deactivate();
@@ -1939,570 +1950,20 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         fugueStepMode.deactivate();
         nestedRhythmMode.deactivate();
         performMode.deactivate();
-        globalSettingsLayer.activate();
-        showGlobalSettingsOverview();
-        refreshSurfaceLights();
-    }
-
-    private void deactivateGlobalSettingsOverlay() {
-        if (!globalSettingsOverlayActive) {
-            return;
-        }
-        globalSettingsOverlayActive = false;
-        globalSettingsLayer.deactivate();
-        switchActiveMode();
-        oled.clearScreenDelayed();
-        refreshSurfaceLights();
     }
 
     private boolean dismissGlobalSettingsOverlayForModeButton(final Mode targetMode) {
-        if (!shouldDismissGlobalSettingsOverlayForPlainModeButton()) {
-            return false;
-        }
-        globalSettingsOverlayLatch.close();
-        final boolean alreadyInTargetMode = modeState.activeMode() == targetMode;
-        deactivateGlobalSettingsOverlay();
-        return alreadyInTargetMode;
+        return globalSettingsOverlay != null && globalSettingsOverlay.dismissForModeButton(targetMode);
     }
 
     private boolean dismissGlobalSettingsOverlayForStepButton() {
-        if (!shouldDismissGlobalSettingsOverlayForPlainModeButton()) {
-            return false;
-        }
-        globalSettingsOverlayLatch.close();
-        final boolean alreadyInStepFamily = switch (modeState.activeMode()) {
-            case CHORD_STEP, MELODIC_STEP, FUGUE_STEP -> true;
-            default -> false;
-        };
-        deactivateGlobalSettingsOverlay();
-        return alreadyInStepFamily;
-    }
-
-    private boolean shouldDismissGlobalSettingsOverlayForPlainModeButton() {
-        return globalSettingsOverlayActive && !isGlobalShiftHeld() && !isGlobalAltHeld();
+        return globalSettingsOverlay != null && globalSettingsOverlay.dismissForStepButton();
     }
 
     private void updateGlobalSettingsOverlayState() {
-        final BiColorButton browserButton = getButton(NoteAssign.BROWSER);
-        final boolean momentaryComboHeld = browserButton != null
-                && browserButton.isPressed()
-                && isGlobalShiftHeld()
-                && !isGlobalAltHeld()
-                && !isPopupBrowserActive();
-        final boolean shouldShow = globalSettingsOverlayLatch.shouldBeActive(
-                momentaryComboHeld,
-                isPopupBrowserActive());
-        if (shouldShow) {
-            activateGlobalSettingsOverlay();
-        } else {
-            deactivateGlobalSettingsOverlay();
+        if (globalSettingsOverlay != null) {
+            globalSettingsOverlay.refreshState();
         }
-    }
-
-    private void showGlobalSettingsOverview() {
-        if (globalSettingsEncoderMode == EncoderMode.USER_1) {
-            oled.detailInfo("Global Settings",
-                    "Page: %s\n1: Pin Track %s\n2: Pin Device %s\n3: Pin Clip %s\n4: --".formatted(
-                            globalSettingsPageLabel(),
-                            pinStateLabel(viewControl.getCursorTrack().isPinned().get()),
-                            pinOverviewLabel(viewControl.getSelectedDevice().isPinned().get(),
-                                    viewControl.getSelectedDevice().exists().get()),
-                            pinOverviewLabel(viewControl.getSelectedClip().isPinned().get(),
-                                    viewControl.getSelectedClip().exists().get())));
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.USER_2) {
-            oled.detailInfo("Global Settings",
-                    "Page: %s\n1: Create %s\n2: Record %s\n3: --\n4: --".formatted(
-                            globalSettingsPageLabel(),
-                            defaultClipLengthLabel(),
-                            launcherRecordLengthLabel()));
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.MIXER) {
-            oled.detailInfo("Global Settings",
-                    "Page: %s\n1: Vel Sens %d%%\n2: Vel Ctr %d\n3: Pad Bright %s\n4: Pad Sat %s".formatted(
-                            globalSettingsPageLabel(),
-                            sharedVelocitySettings.sensitivity(),
-                            sharedVelocitySettings.centerVelocity(),
-                            padBrightnessLabel(),
-                            padSaturationLabel()));
-            return;
-        }
-        oled.detailInfo("Global Settings",
-                "Page: %s\n1: Root %s\n2: Scale %s\n3: Oct %d\n4: Note OLED %s\nTracks: %s".formatted(
-                        globalSettingsPageLabel(),
-                        com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()),
-                        sharedPitchContext.getScaleDisplayName(),
-                        sharedPitchContext.getOctave(),
-                        noteChordDisplayLabel(),
-                        showDeactivatedTracks() ? "All" : "Active"));
-    }
-
-    private void adjustGlobalSettings(final int encoderIndex, final int inc) {
-        if (inc == 0) {
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.MIXER) {
-            adjustGlobalInputSettings(encoderIndex, inc);
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.USER_1) {
-            adjustGlobalPinSettings(encoderIndex, inc);
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.USER_2) {
-            adjustGlobalClipSettings(encoderIndex, inc);
-            return;
-        }
-        if (encoderIndex == 0) {
-            final int nextRoot = Math.max(0, Math.min(11, sharedPitchContext.getRootNote() + inc));
-            sharedPitchContext.setRootNote(nextRoot);
-            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
-            return;
-        }
-        if (encoderIndex == 1) {
-            sharedPitchContext.adjustScaleIndex(inc, -1);
-            oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName());
-            return;
-        }
-        if (encoderIndex == 2) {
-            sharedPitchContext.adjustOctave(inc);
-            oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
-            return;
-        }
-        if (encoderIndex == 3) {
-            adjustNoteChordDisplayPreference(inc);
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void handleGlobalSettingsTouch(final int encoderIndex, final boolean touched) {
-        if (!touched) {
-            globalSettingsAccumulators[encoderIndex].reset();
-            showGlobalSettingsOverview();
-            return;
-        }
-        if (handleGlobalSettingsResetTouch(encoderIndex)) {
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.MIXER) {
-            showGlobalInputSetting(encoderIndex);
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.USER_1) {
-            showGlobalPinSetting(encoderIndex);
-            return;
-        }
-        if (globalSettingsEncoderMode == EncoderMode.USER_2) {
-            showGlobalClipSetting(encoderIndex);
-            return;
-        }
-        if (encoderIndex == 0) {
-            oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote()));
-            return;
-        }
-        if (encoderIndex == 1) {
-            oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName());
-            return;
-        }
-        if (encoderIndex == 2) {
-            oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave()));
-            return;
-        }
-        if (encoderIndex == 3) {
-            oled.valueInfo("Note OLED", noteChordDisplayLabel());
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private boolean handleGlobalSettingsResetTouch(final int encoderIndex) {
-        return switch (globalSettingsEncoderMode) {
-            case MIXER -> handleGlobalInputResetTouch(encoderIndex);
-            case USER_1 -> handleGlobalPinResetTouch(encoderIndex);
-            case USER_2 -> handleGlobalClipResetTouch(encoderIndex);
-            default -> handleGlobalPitchResetTouch(encoderIndex);
-        };
-    }
-
-    private boolean handleGlobalPitchResetTouch(final int encoderIndex) {
-        return switch (encoderIndex) {
-            case 0 -> handleKnobModeEncoderReset(true, true, "Root", "No reset",
-                    () -> sharedPitchContext.setRootNote(getDefaultRootKeyPreference()),
-                    () -> oled.valueInfo("Root", com.oikoaudio.fire.note.NoteGridLayout.noteName(sharedPitchContext.getRootNote())));
-            case 1 -> handleKnobModeEncoderReset(true, true, "Scale", "No reset",
-                    () -> sharedPitchContext.setScaleIndex(defaultScaleIndex()),
-                    () -> oled.valueInfo("Scale", sharedPitchContext.getScaleDisplayName()));
-            case 2 -> handleKnobModeEncoderReset(true, true, "Octave", "No reset",
-                    () -> sharedPitchContext.setOctave(getDefaultNoteInputOctavePreference()),
-                    () -> oled.valueInfo("Octave", Integer.toString(sharedPitchContext.getOctave())));
-            case 3 -> handleKnobModeEncoderReset(true, firePreferences != null, "Note OLED", "No reset",
-                    () -> firePreferences.setNoteChordDisplay(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS),
-                    () -> oled.valueInfo("Note OLED", noteChordDisplayLabel()));
-            default -> false;
-        };
-    }
-
-    private int defaultScaleIndex() {
-        return sharedPitchContext.resolveDefaultScaleIndex(getDefaultScalePreference());
-    }
-
-    private boolean handleGlobalInputResetTouch(final int encoderIndex) {
-        return switch (encoderIndex) {
-            case 0 -> handleKnobModeEncoderReset(true, true, "Velocity Sens", "No reset",
-                    () -> sharedVelocitySettings.setSensitivity(getDefaultVelocitySensitivityPreference()),
-                    () -> oled.valueInfo("Velocity Sens", sharedVelocitySettings.sensitivity() + "%"));
-            case 1 -> handleKnobModeEncoderReset(true, true, "Velocity Ctr", "No reset",
-                    () -> sharedVelocitySettings.setCenterVelocity(GLOBAL_VELOCITY_CENTER_DEFAULT),
-                    () -> oled.valueInfo("Velocity Ctr", Integer.toString(sharedVelocitySettings.centerVelocity())));
-            case 2 -> handleKnobModeEncoderReset(true, firePreferences != null, "Pad Bright", "No reset",
-                    () -> firePreferences.setPadBrightness(FireControlPreferences.PAD_BRIGHTNESS_DEFAULT),
-                    () -> oled.valueInfo("Pad Bright", padBrightnessLabel()));
-            case 3 -> handleKnobModeEncoderReset(true, firePreferences != null, "Pad Sat", "No reset",
-                    () -> firePreferences.setPadSaturation(FireControlPreferences.PAD_SATURATION_DEFAULT),
-                    () -> oled.valueInfo("Pad Sat", padSaturationLabel()));
-            default -> false;
-        };
-    }
-
-    private boolean handleGlobalClipResetTouch(final int encoderIndex) {
-        return switch (encoderIndex) {
-            case 0 -> handleKnobModeEncoderReset(true, firePreferences != null, "Create Len", "No reset",
-                    () -> firePreferences.setDefaultClipLength(FireControlPreferences.CLIP_LENGTH_2_BARS),
-                    () -> oled.valueInfo("Create Len", defaultClipLengthLabel()));
-            case 1 -> handleKnobModeEncoderReset(true, firePreferences != null, "Record Len", "No reset",
-                    () -> firePreferences.setLauncherRecordLength(
-                            FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_2_BARS),
-                    () -> oled.valueInfo("Record Len", launcherRecordLengthLabel()));
-            default -> handleKnobModeEncoderReset(true, false, "Clip", "No reset", () -> { },
-                    this::showGlobalSettingsOverview);
-        };
-    }
-
-    private boolean handleGlobalPinResetTouch(final int encoderIndex) {
-        return switch (encoderIndex) {
-            case 0 -> handleKnobModeEncoderReset(true, true, "Pin Track", "No reset",
-                    () -> viewControl.getCursorTrack().isPinned().set(false),
-                    () -> oled.valueInfo("Pin Track", pinStateLabel(viewControl.getCursorTrack().isPinned().get())));
-            case 1 -> handleKnobModeEncoderReset(true, viewControl.getSelectedDevice().exists().get(),
-                    "Pin Device", "No reset",
-                    () -> viewControl.getSelectedDevice().isPinned().set(false),
-                    () -> showPinInfo("Pin Device", viewControl.getSelectedDevice().isPinned().get(),
-                            viewControl.getSelectedDevice().exists().get()));
-            case 2 -> handleKnobModeEncoderReset(true, viewControl.getSelectedClip().exists().get(),
-                    "Pin Clip", "No reset",
-                    () -> viewControl.getSelectedClip().isPinned().set(false),
-                    () -> showPinInfo("Pin Clip", viewControl.getSelectedClip().isPinned().get(),
-                            viewControl.getSelectedClip().exists().get()));
-            default -> handleKnobModeEncoderReset(true, false, "Pins", "No reset", () -> { }, this::showGlobalSettingsOverview);
-        };
-    }
-
-    private void handleGlobalSettingsPad(final int padIndex, final boolean pressed) {
-        if (!pressed) {
-            return;
-        }
-        if (padIndex != SETTINGS_SHOW_DEACTIVATED_TRACKS_PAD || firePreferences == null) {
-            return;
-        }
-        firePreferences.setShowDeactivatedTracks(!showDeactivatedTracks());
-        oled.valueInfo("Tracks", showDeactivatedTracks() ? "All" : "Active");
-        refreshSurfaceLights();
-    }
-
-    private void handleGlobalSettingsModeAdvance(final boolean pressed) {
-        if (pressed) {
-            return;
-        }
-        if (consumeKnobModeGesture()) {
-            oled.clearScreenDelayed();
-            return;
-        }
-        globalSettingsEncoderMode = globalSettingsEncoderMode == EncoderMode.CHANNEL
-                ? EncoderMode.MIXER
-                : globalSettingsEncoderMode == EncoderMode.MIXER
-                ? EncoderMode.USER_2
-                : globalSettingsEncoderMode == EncoderMode.USER_2
-                ? EncoderMode.USER_1
-                : EncoderMode.CHANNEL;
-        for (final EncoderStepAccumulator accumulator : globalSettingsAccumulators) {
-            accumulator.reset();
-        }
-        showGlobalSettingsOverview();
-        refreshSurfaceLights();
-    }
-
-    private BiColorLightState globalSettingsModeLightState() {
-        return globalSettingsEncoderMode.getState();
-    }
-
-    private String globalSettingsPageLabel() {
-        return switch (globalSettingsEncoderMode) {
-            case MIXER -> "Input";
-            case USER_2 -> "Clip";
-            case USER_1 -> "Pins";
-            default -> "Pitch";
-        };
-    }
-
-    private void adjustGlobalInputSettings(final int encoderIndex, final int inc) {
-        if (encoderIndex == 0) {
-            if (sharedVelocitySettings.adjustSensitivity(inc)) {
-                oled.paramInfo("Velocity Sens", sharedVelocitySettings.sensitivity(), "Global Input", 0, 100);
-            }
-            return;
-        }
-        if (encoderIndex == 1) {
-            if (sharedVelocitySettings.adjustCenterVelocity(inc)) {
-                oled.paramInfo("Velocity Center", sharedVelocitySettings.centerVelocity(), "Global Input",
-                        sharedVelocitySettings.minCenterVelocity(), sharedVelocitySettings.maxCenterVelocity());
-            }
-            return;
-        }
-        if (encoderIndex == 2) {
-            adjustPadBrightness(inc);
-            return;
-        }
-        if (encoderIndex == 3) {
-            adjustPadSaturation(inc);
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void adjustGlobalPinSettings(final int encoderIndex, final int inc) {
-        if (encoderIndex == 0) {
-            applyPinEncoder("Pin Track", viewControl.getCursorTrack().isPinned(), true, inc);
-            return;
-        }
-        if (encoderIndex == 1) {
-            applyPinEncoder("Pin Device", viewControl.getSelectedDevice().isPinned(),
-                    viewControl.getSelectedDevice().exists().get(), inc);
-            return;
-        }
-        if (encoderIndex == 2) {
-            applyPinEncoder("Pin Clip", viewControl.getSelectedClip().isPinned(),
-                    viewControl.getSelectedClip().exists().get(), inc);
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void showGlobalPinSetting(final int encoderIndex) {
-        if (encoderIndex == 0) {
-            oled.valueInfo("Pin Track", pinStateLabel(viewControl.getCursorTrack().isPinned().get()));
-            return;
-        }
-        if (encoderIndex == 1) {
-            showPinInfo("Pin Device", viewControl.getSelectedDevice().isPinned().get(),
-                    viewControl.getSelectedDevice().exists().get());
-            return;
-        }
-        if (encoderIndex == 2) {
-            showPinInfo("Pin Clip", viewControl.getSelectedClip().isPinned().get(),
-                    viewControl.getSelectedClip().exists().get());
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void applyPinEncoder(final String label,
-                                 final SettableBooleanValue pinValue,
-                                 final boolean targetExists,
-                                 final int inc) {
-        if (!targetExists) {
-            oled.valueInfo(label, "No Target");
-            return;
-        }
-        final boolean targetPinned = inc > 0;
-        pinValue.set(targetPinned);
-        oled.valueInfo(label, pinStateLabel(targetPinned));
-    }
-
-    private void showPinInfo(final String label, final boolean pinned, final boolean targetExists) {
-        oled.valueInfo(label, targetExists ? pinStateLabel(pinned) : "No Target");
-    }
-
-    private String pinOverviewLabel(final boolean pinned, final boolean targetExists) {
-        return targetExists ? pinStateLabel(pinned) : "--";
-    }
-
-    private String pinStateLabel(final boolean pinned) {
-        return pinned ? "On" : "Off";
-    }
-
-    private void showGlobalInputSetting(final int encoderIndex) {
-        if (encoderIndex == 0) {
-            oled.valueInfo("Velocity Sens", sharedVelocitySettings.sensitivity() + "%");
-            return;
-        }
-        if (encoderIndex == 1) {
-            oled.valueInfo("Velocity Center", Integer.toString(sharedVelocitySettings.centerVelocity()));
-            return;
-        }
-        if (encoderIndex == 2) {
-            oled.valueInfo("Pad Bright", padBrightnessLabel());
-            return;
-        }
-        if (encoderIndex == 3) {
-            oled.valueInfo("Pad Sat", padSaturationLabel());
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void adjustGlobalClipSettings(final int encoderIndex, final int inc) {
-        if (encoderIndex == 0) {
-            adjustDefaultClipLength(inc);
-            return;
-        }
-        if (encoderIndex == 1) {
-            adjustLauncherRecordLength(inc);
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void showGlobalClipSetting(final int encoderIndex) {
-        if (encoderIndex == 0) {
-            oled.valueInfo("Create Len", defaultClipLengthLabel());
-            return;
-        }
-        if (encoderIndex == 1) {
-            oled.valueInfo("Record Len", launcherRecordLengthLabel());
-            return;
-        }
-        showGlobalSettingsOverview();
-    }
-
-    private void adjustPadBrightness(final int inc) {
-        final double next = FireControlPreferences.normalizePadBrightness(
-                (firePreferences == null
-                        ? FireControlPreferences.PAD_BRIGHTNESS_DEFAULT
-                        : firePreferences.padBrightness())
-                        + inc * FireControlPreferences.PAD_BRIGHTNESS_STEP);
-        if (firePreferences != null) {
-            firePreferences.setPadBrightness(next);
-        }
-        oled.valueInfo("Pad Bright", padBrightnessLabel(next));
-    }
-
-    private void adjustPadSaturation(final int inc) {
-        final double next = FireControlPreferences.normalizePadSaturation(
-                (firePreferences == null
-                        ? FireControlPreferences.PAD_SATURATION_DEFAULT
-                        : firePreferences.padSaturation())
-                        + inc * FireControlPreferences.PAD_SATURATION_STEP);
-        if (firePreferences != null) {
-            firePreferences.setPadSaturation(next);
-        }
-        oled.valueInfo("Pad Sat", padSaturationLabel(next));
-    }
-
-    private void adjustDefaultClipLength(final int inc) {
-        if (firePreferences == null || inc == 0) {
-            return;
-        }
-        final String current = firePreferences.defaultClipLength();
-        int currentIndex = 0;
-        for (int i = 0; i < FireControlPreferences.DEFAULT_CLIP_LENGTHS.length; i++) {
-            if (FireControlPreferences.DEFAULT_CLIP_LENGTHS[i].equals(current)) {
-                currentIndex = i;
-                break;
-            }
-        }
-        final int nextIndex = Math.max(0,
-                Math.min(FireControlPreferences.DEFAULT_CLIP_LENGTHS.length - 1, currentIndex + inc));
-        firePreferences.setDefaultClipLength(FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
-        oled.valueInfo("Create Len", FireControlPreferences.DEFAULT_CLIP_LENGTHS[nextIndex]);
-    }
-
-    private void adjustLauncherRecordLength(final int inc) {
-        if (firePreferences == null || inc == 0) {
-            return;
-        }
-        final String current = firePreferences.launcherRecordLength();
-        int currentIndex = 0;
-        for (int i = 0; i < FireControlPreferences.LAUNCHER_RECORD_LENGTHS.length; i++) {
-            if (FireControlPreferences.LAUNCHER_RECORD_LENGTHS[i].equals(current)) {
-                currentIndex = i;
-                break;
-            }
-        }
-        final int nextIndex = Math.max(0,
-                Math.min(FireControlPreferences.LAUNCHER_RECORD_LENGTHS.length - 1, currentIndex + inc));
-        firePreferences.setLauncherRecordLength(FireControlPreferences.LAUNCHER_RECORD_LENGTHS[nextIndex]);
-        oled.valueInfo("Record Len", FireControlPreferences.LAUNCHER_RECORD_LENGTHS[nextIndex]);
-    }
-
-    private void adjustNoteChordDisplayPreference(final int inc) {
-        if (firePreferences == null || inc == 0) {
-            return;
-        }
-        final String current = firePreferences.noteChordDisplay();
-        int currentIndex = 0;
-        for (int i = 0; i < FireControlPreferences.NOTE_CHORD_DISPLAY_MODES.length; i++) {
-            if (FireControlPreferences.NOTE_CHORD_DISPLAY_MODES[i].equals(current)) {
-                currentIndex = i;
-                break;
-            }
-        }
-        final int nextIndex = Math.max(0,
-                Math.min(FireControlPreferences.NOTE_CHORD_DISPLAY_MODES.length - 1, currentIndex + inc));
-        firePreferences.setNoteChordDisplay(FireControlPreferences.NOTE_CHORD_DISPLAY_MODES[nextIndex]);
-        oled.valueInfo("Note OLED", noteChordDisplayLabel());
-    }
-
-    private String defaultClipLengthLabel() {
-        return firePreferences == null
-                ? FireControlPreferences.CLIP_LENGTH_2_BARS
-                : firePreferences.defaultClipLength();
-    }
-
-    private String launcherRecordLengthLabel() {
-        return firePreferences == null
-                ? FireControlPreferences.LAUNCHER_RECORD_LENGTH_FIXED_2_BARS
-                : firePreferences.launcherRecordLength();
-    }
-
-    private String noteChordDisplayLabel() {
-        return firePreferences == null
-                ? FireControlPreferences.NOTE_CHORD_DISPLAY_PADS
-                : firePreferences.noteChordDisplay();
-    }
-
-    private String padBrightnessLabel() {
-        return padBrightnessLabel(firePreferences == null
-                ? FireControlPreferences.PAD_BRIGHTNESS_DEFAULT
-                : firePreferences.padBrightness());
-    }
-
-    private String padBrightnessLabel(final double value) {
-        return "%.0f%%".formatted(FireControlPreferences.normalizePadBrightness(value));
-    }
-
-    private String padSaturationLabel() {
-        return padSaturationLabel(firePreferences == null
-                ? FireControlPreferences.PAD_SATURATION_DEFAULT
-                : firePreferences.padSaturation());
-    }
-
-    private String padSaturationLabel(final double value) {
-        return "%.0f%%".formatted(FireControlPreferences.normalizePadSaturation(value));
-    }
-
-    private RgbLigthState globalSettingsPadState(final int padIndex) {
-        if (padIndex == SETTINGS_SHOW_DEACTIVATED_TRACKS_PAD) {
-            return showDeactivatedTracks() ? SETTINGS_TOGGLE_ON : SETTINGS_TOGGLE_OFF;
-        }
-        final int row = padIndex / SETTINGS_PAD_COLUMNS;
-        final int column = padIndex % SETTINGS_PAD_COLUMNS;
-        if (row < 0 || row >= SETTINGS_PAD_ROWS || column < 0 || column >= SETTINGS_PAD_COLUMNS) {
-            return RgbLigthState.OFF;
-        }
-        return SETTINGS_LOGO[row][column] ? SETTINGS_LOGO_ON : SETTINGS_LOGO_OFF;
     }
 
     public boolean isPopupBrowserActive() {
@@ -2510,14 +1971,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public BiColorLightState getBrowserLightState() {
-        if (globalSettingsOverlayActive) {
+        if (isGlobalSettingsOverlayActive()) {
             return BiColorLightState.AMBER_FULL;
         }
         return isPopupBrowserActive() ? BiColorLightState.RED_FULL : BiColorLightState.OFF;
     }
 
     public boolean isGlobalSettingsOverlayActive() {
-        return globalSettingsOverlayActive;
+        return globalSettingsOverlay != null && globalSettingsOverlay.isActive();
     }
 
     public boolean showDeactivatedTracks() {
@@ -2796,13 +2257,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (!pressed) {
             browserPressToken++;
             updateGlobalSettingsOverlayState();
-            if (!globalSettingsOverlayActive) {
+            if (!isGlobalSettingsOverlayActive()) {
                 oled.clearScreenDelayed();
             }
             return;
         }
-        if (globalSettingsOverlayActive && !isGlobalShiftHeld()) {
-            globalSettingsOverlayLatch.close();
+        if (isGlobalSettingsOverlayActive() && !isGlobalShiftHeld()) {
+            globalSettingsOverlay.closeLatch();
             updateGlobalSettingsOverlayState();
             notifyAction("Settings", "Closed");
             return;
@@ -2813,10 +2274,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return;
         }
         if (isGlobalShiftHeld() && !isGlobalAltHeld()) {
-            final boolean wasLatched = globalSettingsOverlayLatch.isLatched();
-            globalSettingsOverlayLatch.toggleLatch(true);
+            final boolean wasLatched = globalSettingsOverlay.isLatched();
+            globalSettingsOverlay.toggleLatch();
             if (wasLatched) {
-                deactivateGlobalSettingsOverlay();
+                globalSettingsOverlay.deactivate();
                 notifyAction("Settings", "Closed");
                 return;
             }
@@ -2837,7 +2298,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (browserButton == null || !browserButton.isPressed()) {
             return;
         }
-        if (globalSettingsOverlayActive || isPopupBrowserActive()) {
+        if (isGlobalSettingsOverlayActive() || isPopupBrowserActive()) {
             return;
         }
         openPopupBrowser();
