@@ -16,7 +16,7 @@ final class NestedRhythmEncoderControls {
             final AkaiFireOikontrolExtension driver,
             final Supplier<EncoderBankLayout> bankFactory) {
         layout = bankFactory.get();
-        layer = new StepSequencerEncoderLayer(host, driver);
+        layer = new StepSequencerEncoderLayer(host, driver, layout);
     }
 
     EncoderBankLayout layout() {

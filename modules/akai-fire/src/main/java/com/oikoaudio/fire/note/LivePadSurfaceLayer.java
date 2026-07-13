@@ -158,6 +158,17 @@ public abstract class LivePadSurfaceLayer extends Layer {
         }
     }
 
+    enum MainEncoderPressTarget {
+        CYCLE_ROLE,
+        NOTE_REPEAT,
+        CURRENT_ROLE
+    }
+
+    enum MainEncoderTurnTarget {
+        NOTE_REPEAT,
+        CURRENT_ROLE
+    }
+
     private boolean inKey = false;
     private boolean mainEncoderPressConsumed = false;
     private final boolean drumPadsOnly;
@@ -2396,17 +2407,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
         if (driver.handleMainEncoderGlobalChord(inc)) {
             return;
         }
-        if (noteRepeatHandler.getNoteRepeatActive().get()) {
-            // While transient live note repeat is active, keep SELECT dedicated to repeat-rate
-            // edits.
-            // Turning through the minimum rate should not drop straight into the underlying encoder
-            // role.
-            noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld(), false);
-            return;
-        }
         final boolean fine = driver.isGlobalShiftHeld();
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
-        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+        if (mainEncoderTurnTarget(mainEncoderRole) == MainEncoderTurnTarget.NOTE_REPEAT) {
             noteRepeatHandler.handleMainEncoder(inc, driver.isGlobalAltHeld());
         } else if (driver.routeGlobalMainEncoderRole(inc, fine)) {
             return;
@@ -2432,16 +2435,21 @@ public abstract class LivePadSurfaceLayer extends Layer {
             mainEncoderPressConsumed = false;
             return;
         }
-        if (noteRepeatHandler.getNoteRepeatActive().get()) {
-            noteRepeatHandler.handlePressed(pressed);
-            return;
-        }
-        if (pressed && driver.isGlobalShiftHeld()) {
-            mainEncoderPressConsumed = true;
-            driver.cycleMainEncoderRolePreference();
-            return;
-        }
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
+        switch (mainEncoderPressTarget(pressed, driver.isGlobalShiftHeld(), mainEncoderRole)) {
+            case CYCLE_ROLE -> {
+                mainEncoderPressConsumed = true;
+                driver.cycleMainEncoderRolePreference();
+                return;
+            }
+            case NOTE_REPEAT -> {
+                noteRepeatHandler.handlePressed(pressed);
+                return;
+            }
+            case CURRENT_ROLE -> {
+                // Continue with the role-specific press behavior below.
+            }
+        }
         if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
             driver.toggleMainEncoderRolePreference();
             return;
@@ -2481,6 +2489,23 @@ public abstract class LivePadSurfaceLayer extends Layer {
         } else if (pressed) {
             driver.showMainCursorParameterInfo();
         }
+    }
+
+    static MainEncoderPressTarget mainEncoderPressTarget(
+            final boolean pressed, final boolean shiftHeld, final String mainEncoderRole) {
+        if (pressed && shiftHeld) {
+            return MainEncoderPressTarget.CYCLE_ROLE;
+        }
+        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+            return MainEncoderPressTarget.NOTE_REPEAT;
+        }
+        return MainEncoderPressTarget.CURRENT_ROLE;
+    }
+
+    static MainEncoderTurnTarget mainEncoderTurnTarget(final String mainEncoderRole) {
+        return AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)
+                ? MainEncoderTurnTarget.NOTE_REPEAT
+                : MainEncoderTurnTarget.CURRENT_ROLE;
     }
 
     private void applyLayout() {

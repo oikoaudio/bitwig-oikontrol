@@ -56,6 +56,13 @@ public class StepSequencerEncoderLayer extends Layer {
 
     public StepSequencerEncoderLayer(
             final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
+        this(host, driver, host.getEncoderBankLayout());
+    }
+
+    public StepSequencerEncoderLayer(
+            final StepSequencerHost host,
+            final AkaiFireOikontrolExtension driver,
+            final EncoderBankLayout layout) {
         super(driver.getLayers(), "Encoder_layer");
         this.parent = host;
         this.driver = driver;
@@ -65,7 +72,6 @@ public class StepSequencerEncoderLayer extends Layer {
         user1Layer = new Layer(driver.getLayers(), "ENC_USER1_LAYER");
         user2Layer = new Layer(driver.getLayers(), "ENC_USER2_LAYER");
         encoders = driver.getEncoders();
-        final EncoderBankLayout layout = parent.getEncoderBankLayout();
         bindBank(EncoderMode.CHANNEL, channelLayer, layout.bank(EncoderMode.CHANNEL));
         bindBank(EncoderMode.MIXER, mixerLayer, layout.bank(EncoderMode.MIXER));
         bindBank(EncoderMode.USER_1, user1Layer, layout.bank(EncoderMode.USER_1));
