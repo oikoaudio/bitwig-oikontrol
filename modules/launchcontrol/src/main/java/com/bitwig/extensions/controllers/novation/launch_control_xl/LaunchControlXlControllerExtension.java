@@ -34,6 +34,7 @@ import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumMap
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumUiState;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumSettings;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.factory.FactoryLedRenderer;
+import com.bitwig.extensions.controllers.novation.launch_control_xl.factory.FactoryLayerController;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.factory.FactoryUiSnapshot;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.support.DeviceLocator;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.support.DeviceLocator.FocusResult;
@@ -178,7 +179,11 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          EXCLUSIVE_TRACK_ARM_DEFAULT);
       mExclusiveTrackArm.markInterested();
       mExclusiveTrackArmEnabled = mExclusiveTrackArm.get();
-      mExclusiveTrackArm.addValueObserver(value -> mExclusiveTrackArmEnabled = value);
+      mExclusiveTrackArm.addValueObserver(value -> {
+         mExclusiveTrackArmEnabled = value;
+         if (mFactoryLayerController != null)
+            mFactoryLayerController.setExclusiveTrackArmEnabled(value);
+      });
       mDrumSettings = DrumSettings.from(mHost);
 
       mMidiIn.setSysexCallback(this::onSysex);
@@ -257,11 +262,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
       createHardwareSurface();
       createLayers();
+      mFactoryLayerController = new FactoryLayerController(new FactoryPort(), STRIP_COUNT);
+      mFactoryLayerController.setExclusiveTrackArmEnabled(mExclusiveTrackArmEnabled);
 
       mMainLayer.activate();
       selectMode(Mode.Send2FullDevice);
-      setTrackControl(TrackControl.None);
-      setDeviceOn(false);
+      mFactoryLayerController.setTrackControl(FactoryUiSnapshot.TrackControl.NONE);
+      mFactoryLayerController.setDeviceOn(false);
    }
 
    private void initializeDeviceWithMode(final Mode mode)
@@ -493,25 +500,25 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mMainLayer.bind(mHardwareSliders[i], value -> setTrackValue(stripIndex, TrackValueTarget.VOLUME, value));
-         mMainLayer.bindPressed(mBtTrackFocus[i], () -> selectTrackStrip(stripIndex));
+         mMainLayer.bind(mHardwareSliders[i], value -> mFactoryLayerController.setTrackValue(
+            stripIndex, FactoryLayerController.TrackValueTarget.VOLUME, value));
+         mMainLayer.bindPressed(mBtTrackFocus[i], () -> mFactoryLayerController.selectTrack(stripIndex));
       }
 
       mMainLayer.bindPressed(mBtSendUp, () -> {
-         for (int i = 0; i < STRIP_COUNT; ++i)
-            scrollSendBank(i, -1);
+         mFactoryLayerController.scrollAllSendBanks(-1);
       });
       mMainLayer.bindPressed(mBtSendDown, () -> {
-         for (int i = 0; i < STRIP_COUNT; ++i)
-            scrollSendBank(i, 1);
+         mFactoryLayerController.scrollAllSendBanks(1);
       });
-      mMainLayer.bindPressed(mBtTrackLeft, () -> scrollTrackBankPage(-1));
-      mMainLayer.bindPressed(mBtTrackRight, () -> scrollTrackBankPage(1));
-      mMainLayer.bindPressed(mBtDevice, () -> setDeviceOn(true));
-      mMainLayer.bindReleased(mBtDevice, () -> setDeviceOn(false));
-      mMainLayer.bindPressed(mBtMute, () -> toggleTrackControl(TrackControl.Mute));
-      mMainLayer.bindPressed(mBtSolo, () -> toggleTrackControl(TrackControl.Solo));
-      mMainLayer.bindPressed(mBtRecordArm, () -> toggleTrackControl(TrackControl.RecordArm));
+      mMainLayer.bindPressed(mBtTrackLeft, () -> mFactoryLayerController.scrollTrackPage(-1));
+      mMainLayer.bindPressed(mBtTrackRight, () -> mFactoryLayerController.scrollTrackPage(1));
+      mMainLayer.bindPressed(mBtDevice, () -> mFactoryLayerController.setDeviceOn(true));
+      mMainLayer.bindReleased(mBtDevice, () -> mFactoryLayerController.setDeviceOn(false));
+      mMainLayer.bindPressed(mBtMute, () -> mFactoryLayerController.toggleTrackControl(FactoryUiSnapshot.TrackControl.MUTE));
+      mMainLayer.bindPressed(mBtSolo, () -> mFactoryLayerController.toggleTrackControl(FactoryUiSnapshot.TrackControl.SOLO));
+      mMainLayer.bindPressed(mBtRecordArm,
+         () -> mFactoryLayerController.toggleTrackControl(FactoryUiSnapshot.TrackControl.RECORD_ARM));
 
       createModeLayers(layers);
       createTrackControlsLayers(layers);
@@ -523,13 +530,13 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private void createDeviceLayer(final Layers layers)
    {
       mDeviceLayer = new Layer(layers, "Device");
-      mDeviceLayer.bindPressed(mBtTrackLeft, mCursorDevice.selectPreviousAction());
-      mDeviceLayer.bindPressed(mBtTrackRight, mCursorDevice.selectNextAction());
+      mDeviceLayer.bindPressed(mBtTrackLeft, () -> mFactoryLayerController.selectPreviousDevice());
+      mDeviceLayer.bindPressed(mBtTrackRight, () -> mFactoryLayerController.selectNextDevice());
 
       for (int i = 0; i < 8; ++i)
       {
          final int I = i;
-         mDeviceLayer.bindPressed(mBtTrackControl[i], () -> mRemoteControls.selectedPageIndex().set(I));
+         mDeviceLayer.bindPressed(mBtTrackControl[i], () -> mFactoryLayerController.selectDeviceRemotePage(I));
       }
    }
 
@@ -620,72 +627,78 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSend2FullDeviceLayer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
-         mSend2FullDeviceLayer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
-         mSend2FullDeviceLayer.bind(mHardwareKnobs[16 + i], mRemoteControls.getParameter(i));
+         mSend2FullDeviceLayer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setSendValue(stripIndex, 0, value));
+         mSend2FullDeviceLayer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setSendValue(stripIndex, 1, value));
+         mSend2FullDeviceLayer.bind(mHardwareKnobs[16 + i],
+            value -> mFactoryLayerController.setSelectedDeviceRemoteValue(stripIndex, value));
       }
 
       mSend2ProjectLayer = new Layer(layers, "2 Sends and Project Remotes");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSend2ProjectLayer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
-         mSend2ProjectLayer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
-         mSend2ProjectLayer.bind(mHardwareKnobs[16 + i], mProjectRemoteControlsCursor.getParameter(i));
+         mSend2ProjectLayer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setSendValue(stripIndex, 0, value));
+         mSend2ProjectLayer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setSendValue(stripIndex, 1, value));
+         mSend2ProjectLayer.bind(mHardwareKnobs[16 + i],
+            value -> mFactoryLayerController.setProjectRemoteValue(stripIndex, value));
       }
 
       mSend2Device1Layer = new Layer(layers, "2 Sends 1 Device");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSend2Device1Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
-         mSend2Device1Layer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
-         mSend2Device1Layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 0), value));
+         mSend2Device1Layer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setSendValue(stripIndex, 0, value));
+         mSend2Device1Layer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setSendValue(stripIndex, 1, value));
+         mSend2Device1Layer.bind(mHardwareKnobs[16 + i],
+            value -> mFactoryLayerController.setDeviceRemoteValue(stripIndex, 0, value));
       }
 
       mSend1Device2Layer = new Layer(layers, "1 Sends 2 Device");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSend1Device2Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
-         mSend1Device2Layer.bind(mHardwareKnobs[8 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 0), value));
-         mSend1Device2Layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 1), value));
+         mSend1Device2Layer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setSendValue(stripIndex, 0, value));
+         mSend1Device2Layer.bind(mHardwareKnobs[8 + i],
+            value -> mFactoryLayerController.setDeviceRemoteValue(stripIndex, 0, value));
+         mSend1Device2Layer.bind(mHardwareKnobs[16 + i],
+            value -> mFactoryLayerController.setDeviceRemoteValue(stripIndex, 1, value));
       }
 
       mDevice3Layer = new Layer(layers, "3 Device");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mDevice3Layer.bind(mHardwareKnobs[i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 0), value));
-         mDevice3Layer.bind(mHardwareKnobs[8 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 1), value));
-         mDevice3Layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(deviceParamForStrip(stripIndex, 2), value));
+         mDevice3Layer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setDeviceRemoteValue(stripIndex, 0, value));
+         mDevice3Layer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setDeviceRemoteValue(stripIndex, 1, value));
+         mDevice3Layer.bind(mHardwareKnobs[16 + i], value -> mFactoryLayerController.setDeviceRemoteValue(stripIndex, 2, value));
       }
 
       mSend2Pan1Layer = new Layer(layers, "2 Sends 1 Pan");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSend2Pan1Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
-         mSend2Pan1Layer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
-         mSend2Pan1Layer.bind(mHardwareKnobs[16 + i], value -> setTrackValue(stripIndex, TrackValueTarget.PAN, value));
+         mSend2Pan1Layer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setSendValue(stripIndex, 0, value));
+         mSend2Pan1Layer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setSendValue(stripIndex, 1, value));
+         mSend2Pan1Layer.bind(mHardwareKnobs[16 + i], value -> mFactoryLayerController.setTrackValue(
+            stripIndex, FactoryLayerController.TrackValueTarget.PAN, value));
       }
 
       mSend3Layer = new Layer(layers, "3 Sends");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSend3Layer.bind(mHardwareKnobs[i], value -> setSendValue(stripIndex, 0, value));
-         mSend3Layer.bind(mHardwareKnobs[8 + i], value -> setSendValue(stripIndex, 1, value));
-         mSend3Layer.bind(mHardwareKnobs[16 + i], value -> setSendValue(stripIndex, 2, value));
+         mSend3Layer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setSendValue(stripIndex, 0, value));
+         mSend3Layer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setSendValue(stripIndex, 1, value));
+         mSend3Layer.bind(mHardwareKnobs[16 + i], value -> mFactoryLayerController.setSendValue(stripIndex, 2, value));
       }
 
       mTrack3layer = new Layer(layers, "3 Track Remotes");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mTrack3layer.bind(mHardwareKnobs[i], value -> setRemoteValue(trackParamForStrip(stripIndex, 0), value));
-         mTrack3layer.bind(mHardwareKnobs[8 + i], value -> setRemoteValue(trackParamForStrip(stripIndex, 1), value));
-         mTrack3layer.bind(mHardwareKnobs[16 + i], value -> setRemoteValue(trackParamForStrip(stripIndex, 2), value));
+         mTrack3layer.bind(mHardwareKnobs[i], value -> mFactoryLayerController.setTrackRemoteValue(stripIndex, 0, value));
+         mTrack3layer.bind(mHardwareKnobs[8 + i], value -> mFactoryLayerController.setTrackRemoteValue(stripIndex, 1, value));
+         mTrack3layer.bind(mHardwareKnobs[16 + i], value -> mFactoryLayerController.setTrackRemoteValue(stripIndex, 2, value));
       }
    }
 
@@ -695,71 +708,33 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mMuteLayer.bindPressed(mBtTrackControl[i], () -> toggleTrackBoolean(stripIndex, TrackBooleanTarget.MUTE));
+         mMuteLayer.bindPressed(mBtTrackControl[i], () -> mFactoryLayerController.toggleTrackBoolean(
+            stripIndex, FactoryLayerController.TrackBooleanTarget.MUTE));
       }
 
       mSoloLayer = new Layer(layers, "Solo");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mSoloLayer.bindPressed(mBtTrackControl[i], () -> toggleTrackBoolean(stripIndex, TrackBooleanTarget.SOLO));
+         mSoloLayer.bindPressed(mBtTrackControl[i], () -> mFactoryLayerController.toggleTrackBoolean(
+            stripIndex, FactoryLayerController.TrackBooleanTarget.SOLO));
       }
 
       mRecordArmLayer = new Layer(layers, "Record Arm");
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int stripIndex = i;
-         mRecordArmLayer.bindPressed(mBtTrackControl[i], () -> toggleTrackBoolean(stripIndex, TrackBooleanTarget.ARM));
+         mRecordArmLayer.bindPressed(mBtTrackControl[i], () -> mFactoryLayerController.toggleTrackBoolean(
+            stripIndex, FactoryLayerController.TrackBooleanTarget.ARM));
       }
 
       mTrackRemoteButtonLayer = new Layer(layers, "Track Remote Button");
       for (int i = 0; i < 8; ++i)
       {
          final int stripIndex = i;
-         mTrackRemoteButtonLayer.bindPressed(mBtTrackControl[i], () -> {
-            toggleRemoteParameter(trackParamForStrip(stripIndex, 3));
-         });
+         mTrackRemoteButtonLayer.bindPressed(mBtTrackControl[i],
+            () -> mFactoryLayerController.toggleTrackRemoteButton(stripIndex));
       }
-   }
-
-   private void setTrackControl(final TrackControl trackControl)
-   {
-      mTrackControl = trackControl;
-      mMuteLayer.setIsActive(trackControl == TrackControl.Mute);
-      mSoloLayer.setIsActive(trackControl == TrackControl.Solo);
-      mRecordArmLayer.setIsActive(trackControl == TrackControl.RecordArm);
-      mTrackRemoteButtonLayer.setIsActive(trackControl == TrackControl.None);
-      if (mDrumLayerController != null)
-         mDrumLayerController.setTrackControlMode(trackControl);
-      if (mDrumLayerActive)
-      {
-         switch (trackControl)
-         {
-            case Mute -> mHostActions.showPopup("Drum layer: Mute buttons");
-            case None -> mHostActions.showPopup("Drum layer: Default buttons");
-            default -> {
-               // No popup for other track control modes while in drum layer.
-            }
-         }
-      }
-   }
-
-   private void toggleTrackControl(final TrackControl desired)
-   {
-      if (mTrackControl == desired)
-      {
-         setTrackControl(TrackControl.None);
-      }
-      else
-      {
-         setTrackControl(desired);
-      }
-   }
-
-   private void setDeviceOn(final boolean isDeviceOn)
-   {
-      mIsDeviceOn = isDeviceOn;
-      mDeviceLayer.setIsActive(isDeviceOn);
    }
 
    private void setFactoryLayersEnabled(final boolean enabled)
@@ -770,7 +745,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          // Reactivate only the current mode-specific layers; do not turn on every layer at once.
          mMainLayer.setIsActive(true);
          selectMode(mMode);
-         setTrackControl(mTrackControl);
+         mFactoryLayerController.setTrackControl(mFactoryLayerController.trackControl());
          attachHardwareMatchers();
       }
       else
@@ -1018,103 +993,6 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       if (sendBank.getItemAt(sendIndex).exists().get())
       {
          send.set(value);
-      }
-   }
-
-   private void scrollSendBank(final int stripIndex, final int direction)
-   {
-      final SendBank sendBank = sendBankForStrip(stripIndex);
-      if (sendBank == null)
-      {
-         return;
-      }
-      if (direction < 0)
-      {
-         sendBank.scrollBackwards();
-      }
-      else if (direction > 0)
-      {
-         sendBank.scrollForwards();
-      }
-   }
-
-   private void scrollTrackBankPage(final int direction)
-   {
-      if (direction < 0)
-      {
-         if (!mTrackBank.canScrollBackwards().get())
-         {
-            return;
-         }
-         mTrackBank.scrollPageBackwards();
-      }
-      else if (direction > 0)
-      {
-         if (!mTrackBank.canScrollForwards().get())
-         {
-            return;
-         }
-         mTrackBank.scrollPageForwards();
-      }
-      else
-      {
-         return;
-      }
-      mHost.scheduleTask(() -> selectTrackStrip(0), TRACK_PAGE_SELECTION_DELAY_MS);
-   }
-
-   private void selectTrackStrip(final int stripIndex)
-   {
-      final Track track = trackForStrip(stripIndex);
-      if (track != null)
-      {
-         mCursorTrack.selectChannel(track);
-      }
-   }
-
-   private void toggleTrackBoolean(final int stripIndex, final TrackBooleanTarget target)
-   {
-      final Track track = trackForStrip(stripIndex);
-      if (track == null)
-      {
-         return;
-      }
-      switch (target)
-      {
-         case MUTE -> track.mute().toggle();
-         case SOLO -> track.solo().toggle(false);
-         case ARM -> toggleTrackArm(stripIndex, track);
-      }
-   }
-
-   private void toggleTrackArm(final int stripIndex, final Track track)
-   {
-      if (!mExclusiveTrackArmEnabled)
-      {
-         track.arm().toggle();
-         return;
-      }
-      final boolean shouldArm = !track.arm().get();
-      if (shouldArm)
-      {
-         disarmOtherTrackStrips(stripIndex);
-      }
-      track.arm().set(shouldArm);
-      mCursorTrack.selectChannel(track);
-   }
-
-   private void disarmOtherTrackStrips(final int selectedStripIndex)
-   {
-      for (int stripIndex = 0; stripIndex < STRIP_COUNT; stripIndex++)
-      {
-         if (stripIndex != selectedStripIndex)
-         {
-            final Track track = trackForStrip(stripIndex);
-            if (track != null)
-            {
-               track.arm().set(false);
-            }
-         }
       }
    }
 
@@ -1370,22 +1248,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private void selectMode(final Mode mode)
    {
       mMode = mode;
-      mSend2Device1Layer.setIsActive(mode == Mode.Send2Device1);
-      mSend2Pan1Layer.setIsActive(mode == Mode.Send2Pan1);
-      mSend3Layer.setIsActive(mode == Mode.Send3);
-      mSend1Device2Layer.setIsActive(mode == Mode.Send1Device2);
-      mDevice3Layer.setIsActive(mode == Mode.Device3);
-      mTrack3layer.setIsActive(mode == Mode.Track3);
-      mSend2FullDeviceLayer.setIsActive(mode == Mode.Send2FullDevice);
-      mSend2ProjectLayer.setIsActive(mode == Mode.Send2Project);
-
-      switch (mode)
-      {
-         case Send2FullDevice, Send2Project, Send2Device1, Send2Pan1 -> setSizeOfSendBank(2);
-         case Send3 -> setSizeOfSendBank(3);
-         case Send1Device2 -> setSizeOfSendBank(1);
-      }
-
+      mFactoryLayerController.selectMode(toFactoryMode(mode));
       mHostActions.showPopup(mode.getNotification());
    }
 
@@ -1396,6 +1259,184 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          final Track track = mTrackBank.getItemAt(i);
          final SendBank sendBank = track.sendBank();
          sendBank.setSizeOfBank(size);
+      }
+   }
+
+   private final class FactoryPort implements FactoryLayerController.Port
+   {
+      @Override
+      public boolean trackExists(final int strip)
+      {
+         return trackForStrip(strip) != null;
+      }
+
+      @Override
+      public boolean trackArm(final int strip)
+      {
+         final Track track = trackForStrip(strip);
+         return track != null && track.arm().get();
+      }
+
+      @Override
+      public void setTrackArm(final int strip, final boolean value)
+      {
+         final Track track = trackForStrip(strip);
+         if (track != null)
+            track.arm().set(value);
+      }
+
+      @Override
+      public void toggleTrackMute(final int strip)
+      {
+         final Track track = trackForStrip(strip);
+         if (track != null)
+            track.mute().toggle();
+      }
+
+      @Override
+      public void toggleTrackSolo(final int strip)
+      {
+         final Track track = trackForStrip(strip);
+         if (track != null)
+            track.solo().toggle(false);
+      }
+
+      @Override
+      public void selectTrack(final int strip)
+      {
+         final Track track = trackForStrip(strip);
+         if (track != null)
+            mCursorTrack.selectChannel(track);
+      }
+
+      @Override
+      public void scrollSendBank(final int strip, final int direction)
+      {
+         final SendBank sendBank = sendBankForStrip(strip);
+         if (sendBank == null)
+            return;
+         if (direction < 0)
+            sendBank.scrollBackwards();
+         else if (direction > 0)
+            sendBank.scrollForwards();
+      }
+
+      @Override
+      public boolean canScrollTrackPage(final int direction)
+      {
+         return direction < 0 ? mTrackBank.canScrollBackwards().get()
+            : direction > 0 && mTrackBank.canScrollForwards().get();
+      }
+
+      @Override
+      public void scrollTrackPage(final int direction)
+      {
+         if (direction < 0)
+            mTrackBank.scrollPageBackwards();
+         else if (direction > 0)
+            mTrackBank.scrollPageForwards();
+      }
+
+      @Override
+      public void scheduleFirstTrackSelection()
+      {
+         mHost.scheduleTask(() -> mFactoryLayerController.selectTrack(0), TRACK_PAGE_SELECTION_DELAY_MS);
+      }
+
+      @Override
+      public void setTrackValue(final int strip, final FactoryLayerController.TrackValueTarget target,
+                                final double value)
+      {
+         LaunchControlXlControllerExtension.this.setTrackValue(strip,
+            target == FactoryLayerController.TrackValueTarget.VOLUME ? TrackValueTarget.VOLUME : TrackValueTarget.PAN,
+            value);
+      }
+
+      @Override
+      public void setSendValue(final int strip, final int send, final double value)
+      {
+         LaunchControlXlControllerExtension.this.setSendValue(strip, send, value);
+      }
+
+      @Override
+      public void setDeviceRemoteValue(final int strip, final int parameter, final double value)
+      {
+         setRemoteValue(deviceParamForStrip(strip, parameter), value);
+      }
+
+      @Override
+      public void setTrackRemoteValue(final int strip, final int parameter, final double value)
+      {
+         setRemoteValue(trackParamForStrip(strip, parameter), value);
+      }
+
+      @Override
+      public void setSelectedDeviceRemoteValue(final int parameter, final double value)
+      {
+         setRemoteValue(mRemoteControls.getParameter(parameter), value);
+      }
+
+      @Override
+      public void setProjectRemoteValue(final int parameter, final double value)
+      {
+         setRemoteValue(mProjectRemoteControlsCursor.getParameter(parameter), value);
+      }
+
+      @Override
+      public void toggleTrackRemoteButton(final int strip)
+      {
+         toggleRemoteParameter(trackParamForStrip(strip, 3));
+      }
+
+      @Override
+      public void selectDeviceRemotePage(final int page)
+      {
+         mRemoteControls.selectedPageIndex().set(page);
+      }
+
+      @Override public void selectPreviousDevice() { mCursorDevice.selectPrevious(); }
+      @Override public void selectNextDevice() { mCursorDevice.selectNext(); }
+
+      @Override
+      public void applyMode(final FactoryUiSnapshot.Mode mode)
+      {
+         mSend2Device1Layer.setIsActive(mode == FactoryUiSnapshot.Mode.SEND_2_DEVICE_1);
+         mSend2Pan1Layer.setIsActive(mode == FactoryUiSnapshot.Mode.SEND_2_PAN_1);
+         mSend3Layer.setIsActive(mode == FactoryUiSnapshot.Mode.SEND_3);
+         mSend1Device2Layer.setIsActive(mode == FactoryUiSnapshot.Mode.SEND_1_DEVICE_2);
+         mDevice3Layer.setIsActive(mode == FactoryUiSnapshot.Mode.DEVICE_3);
+         mTrack3layer.setIsActive(mode == FactoryUiSnapshot.Mode.TRACK_3);
+         mSend2FullDeviceLayer.setIsActive(mode == FactoryUiSnapshot.Mode.SEND_2_FULL_DEVICE);
+         mSend2ProjectLayer.setIsActive(mode == FactoryUiSnapshot.Mode.SEND_2_PROJECT);
+      }
+
+      @Override public void setSendBankSize(final int size) { setSizeOfSendBank(size); }
+
+      @Override
+      public void applyTrackControl(final FactoryUiSnapshot.TrackControl control)
+      {
+         final TrackControl drumTrackControl = fromFactoryTrackControl(control);
+         mMuteLayer.setIsActive(control == FactoryUiSnapshot.TrackControl.MUTE);
+         mSoloLayer.setIsActive(control == FactoryUiSnapshot.TrackControl.SOLO);
+         mRecordArmLayer.setIsActive(control == FactoryUiSnapshot.TrackControl.RECORD_ARM);
+         mTrackRemoteButtonLayer.setIsActive(control == FactoryUiSnapshot.TrackControl.NONE);
+         if (mDrumLayerController != null)
+            mDrumLayerController.setTrackControlMode(drumTrackControl);
+         if (mDrumLayerActive)
+         {
+            switch (control)
+            {
+               case MUTE -> mHostActions.showPopup("Drum layer: Mute buttons");
+               case NONE -> mHostActions.showPopup("Drum layer: Default buttons");
+               default -> { }
+            }
+         }
+      }
+
+      @Override
+      public void applyDeviceOn(final boolean deviceOn)
+      {
+         mDeviceLayer.setIsActive(deviceOn);
       }
    }
 
@@ -1563,7 +1604,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          projectRemotes[i] = snapshotValue(mProjectRemoteControlsCursor.getParameter(i));
       }
       final SendBank firstSends = sendBankForStrip(0);
-      return new FactoryUiSnapshot(factorySurface(), factoryMode(), factoryTrackControl(), mIsDeviceOn,
+      return new FactoryUiSnapshot(factorySurface(), factoryMode(), mFactoryLayerController.trackControl(),
+         mFactoryLayerController.deviceOn(),
          mRemoteControls.selectedPageIndex().get(), mRemoteControls.pageCount().get(),
          mTrackBank.cursorIndex().get(), strips, deviceRemotes, projectRemotes,
          firstSends != null && firstSends.canScrollBackwards().get(),
@@ -1581,7 +1623,12 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
    private FactoryUiSnapshot.Mode factoryMode()
    {
-      return switch (mMode)
+      return toFactoryMode(mMode);
+   }
+
+   private static FactoryUiSnapshot.Mode toFactoryMode(final Mode mode)
+   {
+      return switch (mode)
       {
          case Send2FullDevice -> FactoryUiSnapshot.Mode.SEND_2_FULL_DEVICE;
          case Send2Device1 -> FactoryUiSnapshot.Mode.SEND_2_DEVICE_1;
@@ -1606,14 +1653,14 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       return mFactoryTemplateActive ? FactoryUiSnapshot.Surface.FACTORY : FactoryUiSnapshot.Surface.RAW_USER;
    }
 
-   private FactoryUiSnapshot.TrackControl factoryTrackControl()
+   private static TrackControl fromFactoryTrackControl(final FactoryUiSnapshot.TrackControl trackControl)
    {
-      return switch (mTrackControl)
+      return switch (trackControl)
       {
-         case None -> FactoryUiSnapshot.TrackControl.NONE;
-         case Mute -> FactoryUiSnapshot.TrackControl.MUTE;
-         case Solo -> FactoryUiSnapshot.TrackControl.SOLO;
-         case RecordArm -> FactoryUiSnapshot.TrackControl.RECORD_ARM;
+         case NONE -> TrackControl.None;
+         case MUTE -> TrackControl.Mute;
+         case SOLO -> TrackControl.Solo;
+         case RECORD_ARM -> TrackControl.RecordArm;
       };
    }
 
@@ -1813,20 +1860,19 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
    private RhArpLayerController mArpLayerController;
    private DrumLayerController mDrumLayerController;
    private DevicePagesController mDevicePagesController;
+   private FactoryLayerController mFactoryLayerController;
    private DeviceLocator mDeviceLocator;
    private DrumSettings mDrumSettings;
    private DrumPadBank mDrumPadBank;
    private final RemoteControlsPage[] mDrumPadRemoteControls =
       new RemoteControlsPage[DrumLayerController.PADS_PER_BANK];
 
-   private boolean mIsDeviceOn = false;
    private boolean mIgnoreNextSysex = false;
    private boolean mFactoryTemplateActive = true;
    private boolean mArpLayerActive = false;
    private boolean mDrumLayerActive = false;
    private boolean mDevicePagesLayerActive = false;
    private int mCurrentTemplateChannel = Mode.Send2FullDevice.getChannel();
-   private TrackControl mTrackControl = TrackControl.None;
    private Mode mMode = Mode.Send2Device1;
 
    private final SimpleLed[] mKnobsLed = new SimpleLed[] {
