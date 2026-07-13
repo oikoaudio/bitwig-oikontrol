@@ -1334,18 +1334,25 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private void adjustDensity(final int amount) {
         final double nextDensity = clampUnit(density + amount * 0.05);
         if (Double.compare(nextDensity, density) == 0) {
-            oled.valueInfo("Density", "%.2f".formatted(density));
+            oled.valueInfo("Density", MelodicDensityEditor.parameterLabel(density));
             return;
         }
         density = nextDensity;
-        if (lastGenerationSeed < 0 || activeStepCount(patternState.currentPattern()) == 0) {
-            oled.valueInfo("Density", "%.2f".formatted(density));
+        final java.util.OptionalLong regenerationSeed =
+                MelodicDensityEditor.regenerationSeed(
+                        lastGenerationSeed, seed, activeStepCount(patternState.currentPattern()));
+        if (regenerationSeed.isEmpty()) {
+            oled.valueInfo("Density", MelodicDensityEditor.parameterLabel(density));
             return;
         }
-        final MelodicPattern generated =
-                generatePatternForSeed(lastGenerationSeed, activeGenerator());
+        final long densitySeed = regenerationSeed.getAsLong();
+        if (lastGenerationSeed < 0) {
+            lastGenerationSeed = densitySeed;
+            seed = nextSeed(densitySeed);
+        }
+        final MelodicPattern generated = generatePatternForSeed(densitySeed, activeGenerator());
         patternState.setBasePattern(generated);
-        applyPattern(generated, "Density", Integer.toString(activeStepCount(generated)));
+        applyPattern(generated, "Density", MelodicDensityEditor.parameterLabel(density));
     }
 
     private void adjustPoolOctave(final int amount) {
@@ -2468,13 +2475,17 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                                         () -> density = 0.45,
                                         () ->
                                                 oled.valueInfo(
-                                                        "Density", "%.2f".formatted(density)))) {
+                                                        "Density",
+                                                        MelodicDensityEditor.parameterLabel(
+                                                                density)))) {
                                     return;
                                 }
                                 if (driver.isGlobalAltHeld()) {
                                     oled.valueInfo("Thin/Fill", "Current phrase");
                                 } else {
-                                    oled.valueInfo(view.label, "Density");
+                                    oled.valueInfo(
+                                            "Density",
+                                            MelodicDensityEditor.parameterLabel(density));
                                 }
                             } else {
                                 oled.clearScreenDelayed();

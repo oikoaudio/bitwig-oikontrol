@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 /** Chooses musical thin/fill targets while leaving note mutation to Melodic Step. */
 final class MelodicDensityEditor {
@@ -39,5 +40,17 @@ final class MelodicDensityEditor {
                                 .thenComparingInt(Integer::intValue))
                 .map(OptionalInt::of)
                 .orElseGet(OptionalInt::empty);
+    }
+
+    static OptionalLong regenerationSeed(
+            final long lastGenerationSeed, final long currentSeed, final int activeStepCount) {
+        if (activeStepCount <= 0) {
+            return OptionalLong.empty();
+        }
+        return OptionalLong.of(lastGenerationSeed >= 0 ? lastGenerationSeed : currentSeed);
+    }
+
+    static String parameterLabel(final double density) {
+        return "%.2f".formatted(Math.max(0.0, Math.min(1.0, density)));
     }
 }
