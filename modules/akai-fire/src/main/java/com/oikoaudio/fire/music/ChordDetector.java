@@ -1,4 +1,4 @@
-package com.personal.chords;
+package com.oikoaudio.fire.music;
 
 /*
  * Adapted from ChordDetector in BitX by Wim van den Borre:

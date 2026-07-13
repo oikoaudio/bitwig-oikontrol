@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.display;
 
-import com.personal.chords.ChordDetector;
+import com.oikoaudio.fire.music.ChordDetector;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;

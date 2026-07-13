@@ -1,4 +1,4 @@
-package com.personal.chords;
+package com.oikoaudio.fire.music;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
