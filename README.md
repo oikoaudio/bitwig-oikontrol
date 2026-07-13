@@ -137,6 +137,7 @@ Current artifact names:
 
 ### Developer Documentation
 
+- [Source formatting](docs/contributing/formatting.md): lightweight rules for new and touched files.
 - `CONTRIBUTING.md`: contribution workflow and Conventional Commit guidance.
 - `docs/adr/`: Architectural Decision Records, including `0000-use-adrs.md` and `0001-architecture-summary.md`.
 - `docs/dev/`: active implementation notes, experiments, and workflow documentation.
