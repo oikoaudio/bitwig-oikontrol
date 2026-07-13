@@ -14,6 +14,8 @@ final class ChordStepInsertionDefaults {
                     NoteStepAccess.PRESSURE,
                     NoteStepAccess.TIMBRE,
                     NoteStepAccess.PITCH,
+                    NoteStepAccess.PAN,
+                    NoteStepAccess.GAIN,
                     NoteStepAccess.DURATION,
                     NoteStepAccess.CHANCE,
                     NoteStepAccess.VELOCITY_SPREAD,
@@ -25,6 +27,8 @@ final class ChordStepInsertionDefaults {
     private double pressure;
     private double timbre;
     private double pitch;
+    private double pan;
+    private double gain;
     private double duration;
     private double chance;
     private double velocitySpread;
@@ -45,6 +49,8 @@ final class ChordStepInsertionDefaults {
             case PRESSURE -> setPressure(pressure + amount * 0.01);
             case TIMBRE -> setTimbre(timbre + amount * 0.01);
             case PITCH -> setPitch(pitch + amount);
+            case PAN -> setPan(pan + amount * 0.01);
+            case GAIN -> setGain(gain + amount * 0.01);
             case DURATION -> setDuration(duration + originalDuration * amount * 0.01);
             case CHANCE -> setChance(chance + amount * 0.05);
             case VELOCITY_SPREAD -> setVelocitySpread(velocitySpread + amount * 0.01);
@@ -59,6 +65,8 @@ final class ChordStepInsertionDefaults {
             case PRESSURE -> pressure = 0.0;
             case TIMBRE -> timbre = 0.0;
             case PITCH -> pitch = 0.0;
+            case PAN -> pan = 0.0;
+            case GAIN -> gain = 0.5;
             case DURATION -> duration = originalDuration;
             case CHANCE -> chance = 1.0;
             case VELOCITY_SPREAD -> velocitySpread = 0.0;
@@ -68,7 +76,7 @@ final class ChordStepInsertionDefaults {
     }
 
     Values snapshot() {
-        return new Values(pressure, timbre, pitch, chance, velocitySpread, repeats);
+        return new Values(pressure, timbre, pitch, pan, gain, chance, velocitySpread, repeats);
     }
 
     int velocity() {
@@ -85,6 +93,14 @@ final class ChordStepInsertionDefaults {
 
     double pitch() {
         return pitch;
+    }
+
+    double pan() {
+        return pan;
+    }
+
+    double gain() {
+        return gain;
     }
 
     double duration() {
@@ -105,8 +121,8 @@ final class ChordStepInsertionDefaults {
             case PRESSURE -> pressure;
             case TIMBRE -> timbre;
             case PITCH -> pitch;
-            case PAN -> 0.0;
-            case GAIN -> 0.5;
+            case PAN -> pan;
+            case GAIN -> gain;
             case CHANCE -> chance;
             case VELOCITY_SPREAD -> velocitySpread;
         };
@@ -139,6 +155,14 @@ final class ChordStepInsertionDefaults {
 
     private boolean setPitch(final double value) {
         return updateDouble(value, -96.0, 96.0, pitch, next -> pitch = next);
+    }
+
+    private boolean setPan(final double value) {
+        return updateDouble(value, -1.0, 1.0, pan, next -> pan = next);
+    }
+
+    private boolean setGain(final double value) {
+        return updateDouble(value, 0.0, 1.0, gain, next -> gain = next);
     }
 
     private boolean setDuration(final double value) {
@@ -188,6 +212,8 @@ final class ChordStepInsertionDefaults {
             double pressure,
             double timbre,
             double pitch,
+            double pan,
+            double gain,
             double chance,
             double velocitySpread,
             int repeats) {
@@ -195,6 +221,8 @@ final class ChordStepInsertionDefaults {
             note.setPressure(pressure);
             note.setTimbre(timbre);
             note.setTranspose(pitch);
+            note.setPan(pan);
+            note.setGain(gain);
             note.setChance(chance);
             note.setIsChanceEnabled(chance < 1.0);
             note.setVelocitySpread(velocitySpread);

@@ -74,6 +74,28 @@ public enum NoteStepAccess implements EncoderAccess {
             0.01,
             0.25,
             1),
+    PAN(
+            "Note Pan",
+            ns -> ns.pan(),
+            (final NoteStep ns, final double v) -> ns.setPan(v),
+            NoteValueUnit.PERCENT,
+            -1,
+            1,
+            0.01,
+            0.25,
+            0.0,
+            1),
+    GAIN(
+            "Note Gain",
+            ns -> ns.gain(),
+            (final NoteStep ns, final double v) -> ns.setGain(v),
+            NoteValueUnit.PERCENT,
+            0,
+            1,
+            0.01,
+            0.25,
+            0.5,
+            1),
     DURATION(
             "N.Length",
             ns -> ns.duration(), //

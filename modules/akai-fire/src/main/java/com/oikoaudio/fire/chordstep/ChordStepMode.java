@@ -1025,6 +1025,10 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                             details,
                             NoteStepAccess.PITCH.getMin(),
                             NoteStepAccess.PITCH.getMax());
+            case PAN ->
+                    oled.paramInfoPercent("Note Pan", insertionDefaults.pan(), details, -1.0, 1.0);
+            case GAIN ->
+                    oled.paramInfoPercent("Note Gain", insertionDefaults.gain(), details, 0.0, 1.0);
             case DURATION ->
                     oled.paramInfoDuration(
                             "N.Length", insertionDefaults.duration(), details, STEP_LENGTH);
@@ -1962,6 +1966,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
         return encoderBankLayout;
+    }
+
+    @Override
+    public boolean supportsSecondaryNoteExpressionPage() {
+        return true;
     }
 
     @Override

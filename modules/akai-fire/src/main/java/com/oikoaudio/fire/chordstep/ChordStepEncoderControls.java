@@ -174,8 +174,8 @@ final class ChordStepEncoderControls {
                         EncoderFooterLegend.of("Velo", "Pres", "Timb", "PExp"),
                         new EncoderSlotBinding[] {
                             noteAccessSlot(NoteStepAccess.VELOCITY),
-                            noteAccessSlot(NoteStepAccess.PRESSURE),
-                            noteAccessSlot(NoteStepAccess.TIMBRE),
+                            selectableNoteAccessSlot(NoteStepAccess.PRESSURE, NoteStepAccess.GAIN),
+                            selectableNoteAccessSlot(NoteStepAccess.TIMBRE, NoteStepAccess.PAN),
                             noteAccessSlot(NoteStepAccess.PITCH)
                         }));
         banks.put(
@@ -205,27 +205,53 @@ final class ChordStepEncoderControls {
                     final Layer layer,
                     final TouchEncoder encoder,
                     final int slotIndex) {
-                handler.bindNoteAccess(
+                handler.bindNoteAccess(layer, encoder, slotIndex, access, emptyHandler(access));
+            }
+        };
+    }
+
+    private EncoderSlotBinding selectableNoteAccessSlot(
+            final NoteStepAccess primary, final NoteStepAccess selected) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return primary.getResolution();
+            }
+
+            @Override
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                handler.bindSelectableNoteAccess(
                         layer,
                         encoder,
                         slotIndex,
-                        access,
-                        new StepSequencerEncoderLayer.EmptyNoteAccessHandler() {
-                            @Override
-                            public void adjust(final int amount) {
-                                host.adjustInsertionDefault(access, amount);
-                            }
+                        primary,
+                        selected,
+                        emptyHandler(primary),
+                        emptyHandler(selected));
+            }
+        };
+    }
 
-                            @Override
-                            public void show() {
-                                host.showInsertionDefault(access);
-                            }
+    private StepSequencerEncoderLayer.EmptyNoteAccessHandler emptyHandler(
+            final NoteStepAccess access) {
+        return new StepSequencerEncoderLayer.EmptyNoteAccessHandler() {
+            @Override
+            public void adjust(final int amount) {
+                host.adjustInsertionDefault(access, amount);
+            }
 
-                            @Override
-                            public void reset() {
-                                host.resetInsertionDefault(access);
-                            }
-                        });
+            @Override
+            public void show() {
+                host.showInsertionDefault(access);
+            }
+
+            @Override
+            public void reset() {
+                host.resetInsertionDefault(access);
             }
         };
     }

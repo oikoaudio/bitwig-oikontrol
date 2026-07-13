@@ -103,6 +103,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private int defaultVelocity = 100;
     private double defaultPressure = 0.0;
     private double defaultTimbre = 0.0;
+    private double defaultPan = 0.0;
+    private double defaultGain = 0.5;
     private final Map<Integer, Integer> pendingAddedVelocity = new HashMap<>();
     private final Map<Integer, Double> pendingAddedPressure = new HashMap<>();
     private final Map<Integer, Double> pendingAddedTimbre = new HashMap<>();
@@ -834,6 +836,38 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         oled.paramInfoPercent("Timbre", defaultTimbre, "Drum Default", -1, 1);
     }
 
+    private void adjustDefaultNoteValue(
+            final StepSequencerEncoderLayer handler, final NoteStepAccess access, final int inc) {
+        final List<NoteStep> targets = getExpressionTargetNotes();
+        if (!targets.isEmpty()) {
+            handler.handleExplicitNoteAccess(inc, access, targets);
+            return;
+        }
+        if (access == NoteStepAccess.PAN) {
+            defaultPan = Math.max(-1.0, Math.min(1.0, defaultPan + inc * 0.01));
+            showDefaultPan();
+        } else if (access == NoteStepAccess.GAIN) {
+            defaultGain = Math.max(0.0, Math.min(1.0, defaultGain + inc * 0.01));
+            showDefaultGain();
+        }
+    }
+
+    private void showDefaultPan() {
+        oled.paramInfoPercent("Note Pan", defaultPan, "Drum Default", -1, 1);
+    }
+
+    private void showDefaultGain() {
+        oled.paramInfoPercent("Note Gain", defaultGain, "Drum Default", 0, 1);
+    }
+
+    private void resetDefaultPan() {
+        defaultPan = 0.0;
+    }
+
+    private void resetDefaultGain() {
+        defaultGain = 0.5;
+    }
+
     private void adjustUser1Velocity(final StepSequencerEncoderLayer handler, final int inc) {
         final List<NoteStep> targets = getExpressionTargetNotes();
         if (targets.isEmpty()) {
@@ -998,6 +1032,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         noteStep.setPressure(pressure != null ? pressure : defaultPressure);
         final Double timbre = pendingAddedTimbre.remove(stepIndex);
         noteStep.setTimbre(timbre != null ? timbre : defaultTimbre);
+        noteStep.setPan(defaultPan);
+        noteStep.setGain(defaultGain);
         final Double pitch = pendingAddedPitch.remove(stepIndex);
         if (pitch != null) {
             noteStep.setTranspose(pitch);
@@ -1841,12 +1877,24 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                                     this::showDefaultPressure,
                                     this::resetDefaultPressure,
                                     (handler, inc) -> adjustUser1Pressure(handler, inc),
+                                    NoteStepAccess.GAIN,
+                                    this::showDefaultGain,
+                                    this::resetDefaultGain,
+                                    (handler, inc) ->
+                                            adjustDefaultNoteValue(
+                                                    handler, NoteStepAccess.GAIN, inc),
                                     0.25),
                             drumExpressionSlot(
                                     NoteStepAccess.TIMBRE,
                                     this::showDefaultTimbre,
                                     this::resetDefaultTimbre,
                                     (handler, inc) -> adjustUser1Timbre(handler, inc),
+                                    NoteStepAccess.PAN,
+                                    this::showDefaultPan,
+                                    this::resetDefaultPan,
+                                    (handler, inc) ->
+                                            adjustDefaultNoteValue(
+                                                    handler, NoteStepAccess.PAN, inc),
                                     0.25),
                             drumExpressionSlot(
                                     NoteStepAccess.PITCH,
@@ -1974,6 +2022,20 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             final Runnable resetDefault,
             final DrumExpressionAdjuster adjuster,
             final double stepSize) {
+        return drumExpressionSlot(
+                accessor, showDefault, resetDefault, adjuster, null, null, null, null, stepSize);
+    }
+
+    private EncoderSlotBinding drumExpressionSlot(
+            final NoteStepAccess accessor,
+            final Runnable showDefault,
+            final Runnable resetDefault,
+            final DrumExpressionAdjuster adjuster,
+            final NoteStepAccess selectedAccessor,
+            final Runnable showSelectedDefault,
+            final Runnable resetSelectedDefault,
+            final DrumExpressionAdjuster selectedAdjuster,
+            final double stepSize) {
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -1986,13 +2048,19 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     final Layer layer,
                     final TouchEncoder encoder,
                     final int slotIndex) {
+                final NoteStepAccess[] touchedAccessor = {null};
                 final var action =
                         (java.util.function.IntConsumer)
                                 inc -> {
-                                    if (handleNoteVariationTurn(accessor, inc)) {
+                                    final boolean selected =
+                                            selectedAccessor != null
+                                                    && encoderLayer.isSecondaryNoteExpressionPage();
+                                    final NoteStepAccess activeAccessor =
+                                            selected ? selectedAccessor : accessor;
+                                    if (handleNoteVariationTurn(activeAccessor, inc)) {
                                         return;
                                     }
-                                    adjuster.adjust(handler, inc);
+                                    (selected ? selectedAdjuster : adjuster).adjust(handler, inc);
                                 };
                 if (accessor.accelerationProfile()
                         == com.oikoaudio.fire.control.ContinuousEncoderScaler.Profile.SOFT) {
@@ -2007,16 +2075,27 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 encoder.bindTouched(
                         layer,
                         touched -> {
-                            if (handleNoteVariationTouch(accessor, touched)) {
+                            final boolean selected =
+                                    selectedAccessor != null
+                                            && encoderLayer.isSecondaryNoteExpressionPage();
+                            final NoteStepAccess activeAccessor =
+                                    touched
+                                            ? selected ? selectedAccessor : accessor
+                                            : touchedAccessor[0] != null
+                                                    ? touchedAccessor[0]
+                                                    : selected ? selectedAccessor : accessor;
+                            touchedAccessor[0] = touched ? activeAccessor : null;
+                            if (handleNoteVariationTouch(activeAccessor, touched)) {
                                 return;
                             }
+                            final boolean activeSelected = activeAccessor == selectedAccessor;
                             handleUser1Touch(
                                     handler,
                                     touched,
                                     slotIndex,
-                                    accessor,
-                                    showDefault,
-                                    resetDefault);
+                                    activeAccessor,
+                                    activeSelected ? showSelectedDefault : showDefault,
+                                    activeSelected ? resetSelectedDefault : resetDefault);
                         });
             }
         };
@@ -2025,6 +2104,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
         return encoderBankLayout;
+    }
+
+    @Override
+    public boolean supportsSecondaryNoteExpressionPage() {
+        return true;
     }
 
     @Override
@@ -2090,8 +2174,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             case VELOCITY -> defaultVelocity / 127.0;
             case PRESSURE -> defaultPressure;
             case TIMBRE -> defaultTimbre;
-            case PITCH, PAN -> 0.0;
-            case GAIN -> 0.5;
+            case PITCH -> 0.0;
+            case PAN -> defaultPan;
+            case GAIN -> defaultGain;
             case CHANCE -> 1.0;
             case VELOCITY_SPREAD -> 0.0;
         };

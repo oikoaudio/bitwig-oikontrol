@@ -8,6 +8,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderTurnBehavior;
 import com.oikoaudio.fire.control.TouchEncoder;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ public class StepSequencerEncoderLayer extends Layer {
     private final Layer user2Layer;
 
     private Layer currentLayer;
+    private boolean secondaryNoteExpressionPage;
     private final OledDisplay oled;
     private final Map<EncoderMode, Layer> modeMapping = new HashMap<>();
     private final TouchEncoder[] encoders;
@@ -125,19 +127,53 @@ public class StepSequencerEncoderLayer extends Layer {
             final int slotIndex,
             final NoteStepAccess access,
             final EmptyNoteAccessHandler emptyHandler) {
+        bindResolvedNoteAccess(
+                layer, encoder, slotIndex, access, () -> access, ignored -> emptyHandler);
+    }
+
+    public void bindSelectableNoteAccess(
+            final Layer layer,
+            final TouchEncoder encoder,
+            final int slotIndex,
+            final NoteStepAccess primary,
+            final NoteStepAccess selected,
+            final EmptyNoteAccessHandler primaryEmptyHandler,
+            final EmptyNoteAccessHandler selectedEmptyHandler) {
+        bindResolvedNoteAccess(
+                layer,
+                encoder,
+                slotIndex,
+                primary,
+                () -> secondaryNoteExpressionPage ? selected : primary,
+                access -> access == selected ? selectedEmptyHandler : primaryEmptyHandler);
+    }
+
+    private void bindResolvedNoteAccess(
+            final Layer layer,
+            final TouchEncoder encoder,
+            final int slotIndex,
+            final NoteStepAccess behaviorAccess,
+            final java.util.function.Supplier<NoteStepAccess> accessSupplier,
+            final java.util.function.Function<NoteStepAccess, EmptyNoteAccessHandler>
+                    emptyHandlerSupplier) {
         final EncoderTurnBehavior behavior =
-                !access.usesAcceleratedTurnBehavior()
-                        ? EncoderTurnBehavior.quantizedSteps(access.getStepThreshold())
-                        : EncoderTurnBehavior.acceleratedValue(access.accelerationProfile());
+                !behaviorAccess.usesAcceleratedTurnBehavior()
+                        ? EncoderTurnBehavior.quantizedSteps(behaviorAccess.getStepThreshold())
+                        : EncoderTurnBehavior.acceleratedValue(
+                                behaviorAccess.accelerationProfile());
+        final NoteStepAccess[] touchedAccess = {null};
         encoder.bindEncoderBehavior(
                 layer,
                 driver::isGlobalShiftHeld,
                 behavior,
                 effectiveInc -> {
                     if (effectiveInc != 0) {
+                        final NoteStepAccess access = accessSupplier.get();
                         if (parent.handleNoteVariationTurn(access, effectiveInc)) {
                             return;
                         }
+                        final EmptyNoteAccessHandler emptyHandler =
+                                emptyHandlerSupplier.apply(access);
                         final List<NoteStep> notes = activeNotesForAccess();
                         if (notes.isEmpty() && emptyHandler != null) {
                             emptyHandler.adjust(effectiveInc);
@@ -152,9 +188,17 @@ public class StepSequencerEncoderLayer extends Layer {
                     if (!touched) {
                         behavior.reset();
                     }
+                    final NoteStepAccess access =
+                            touched
+                                    ? accessSupplier.get()
+                                    : touchedAccess[0] != null
+                                            ? touchedAccess[0]
+                                            : accessSupplier.get();
+                    touchedAccess[0] = touched ? access : null;
                     if (parent.handleNoteVariationTouch(access, touched)) {
                         return;
                     }
+                    final EmptyNoteAccessHandler emptyHandler = emptyHandlerSupplier.apply(access);
                     handleTouch(slotIndex, touched, access, emptyHandler);
                 });
     }
@@ -206,9 +250,22 @@ public class StepSequencerEncoderLayer extends Layer {
             oled.clearScreenDelayed();
             return;
         }
+        if (encoderMode == EncoderMode.USER_1
+                && driver.isGlobalAltHeld()
+                && parent.supportsSecondaryNoteExpressionPage()) {
+            secondaryNoteExpressionPage = !secondaryNoteExpressionPage;
+            applyFooterLegend();
+            oled.detailInfo(
+                    "Note Expression",
+                    secondaryNoteExpressionPage
+                            ? "1: Velocity\n2: Note Gain\n3: Note Pan\n4: Pitch Expr"
+                            : parent.getModeInfo(EncoderMode.USER_1));
+            oled.clearScreenDelayed(MODE_INFO_HOLD_MS);
+            return;
+        }
         if (parent.isSelectHeld()) { // display encoder details on select + mode
             applyFooterLegend();
-            oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
+            oled.detailInfo("Encoder Mode", modeInfo(encoderMode));
         } else {
             switchMode(nextMode());
         }
@@ -222,7 +279,7 @@ public class StepSequencerEncoderLayer extends Layer {
         applyResolution(encoderMode);
         parent.handleEncoderModeChanged(encoderMode);
         applyFooterLegend();
-        oled.detailInfo("Encoder Mode", parent.getModeInfo(encoderMode));
+        oled.detailInfo("Encoder Mode", modeInfo(encoderMode));
         oled.clearScreenDelayed(MODE_INFO_HOLD_MS);
     }
 
@@ -239,6 +296,10 @@ public class StepSequencerEncoderLayer extends Layer {
 
     public EncoderMode getEncoderMode() {
         return encoderMode;
+    }
+
+    public boolean isSecondaryNoteExpressionPage() {
+        return secondaryNoteExpressionPage;
     }
 
     private void handleMod(final int inc, final NoteStepAccess accessor) {
@@ -494,6 +555,15 @@ public class StepSequencerEncoderLayer extends Layer {
     }
 
     private void applyFooterLegend() {
-        oled.setFooterLegend(parent.getEncoderFooterLegend(encoderMode));
+        oled.setFooterLegend(
+                encoderMode == EncoderMode.USER_1 && secondaryNoteExpressionPage
+                        ? EncoderFooterLegend.of("Velo", "Gain", "Pan", "PExp")
+                        : parent.getEncoderFooterLegend(encoderMode));
+    }
+
+    private String modeInfo(final EncoderMode mode) {
+        return mode == EncoderMode.USER_1 && secondaryNoteExpressionPage
+                ? "1: Velocity\n2: Note Gain\n3: Note Pan\n4: Pitch Expr"
+                : parent.getModeInfo(mode);
     }
 }

@@ -100,6 +100,12 @@ class ScatterNoteVariationTest {
                 NoteVariationParameter.PITCH,
                 NoteVariationParameter.from(NoteStepAccess.PITCH).orElseThrow());
         assertEquals(
+                NoteVariationParameter.PAN,
+                NoteVariationParameter.from(NoteStepAccess.PAN).orElseThrow());
+        assertEquals(
+                NoteVariationParameter.GAIN,
+                NoteVariationParameter.from(NoteStepAccess.GAIN).orElseThrow());
+        assertEquals(
                 NoteVariationParameter.CHANCE,
                 NoteVariationParameter.from(NoteStepAccess.CHANCE).orElseThrow());
         assertEquals(

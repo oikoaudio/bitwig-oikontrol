@@ -116,6 +116,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private double tension = 0.25;
     private double octaveActivity = 0.1;
     private double legato = 0.1;
+    private double defaultNotePan = 0.0;
+    private double defaultNoteGain = 0.5;
     private int euclideanPulses = 5;
     private int euclideanRotation = 0;
     private double mutateIntensity = 0.45;
@@ -2041,6 +2043,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 if (Math.abs(noteStep.chance() - pending.chance()) > 0.0001) {
                     noteStep.setChance(pending.chance());
                 }
+                noteStep.setPan(defaultNotePan);
+                noteStep.setGain(defaultNoteGain);
                 if (noteStep.recurrenceLength() != pending.bitwigRecurrenceLength()
                         || noteStep.recurrenceMask() != pending.bitwigRecurrenceMask()) {
                     noteStep.setRecurrence(
@@ -2273,8 +2277,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 },
                 new EncoderSlotBinding[] {
                     noteAccessSlot(NoteStepAccess.VELOCITY),
-                            noteAccessSlot(NoteStepAccess.PRESSURE),
-                    noteAccessSlot(NoteStepAccess.TIMBRE), noteAccessSlot(NoteStepAccess.PITCH)
+                            selectableNoteAccessSlot(NoteStepAccess.PRESSURE, NoteStepAccess.GAIN),
+                    selectableNoteAccessSlot(NoteStepAccess.TIMBRE, NoteStepAccess.PAN),
+                            noteAccessSlot(NoteStepAccess.PITCH)
                 },
                 new EncoderSlotBinding[] {
                     noteAccessSlot(NoteStepAccess.DURATION), noteAccessSlot(NoteStepAccess.CHANCE),
@@ -2787,6 +2792,65 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         };
     }
 
+    private EncoderSlotBinding selectableNoteAccessSlot(
+            final NoteStepAccess primary, final NoteStepAccess secondary) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return primary.getResolution();
+            }
+
+            @Override
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                handler.bindSelectableNoteAccess(
+                        layer,
+                        encoder,
+                        slotIndex,
+                        primary,
+                        secondary,
+                        null,
+                        secondaryDefaultHandler(secondary));
+            }
+        };
+    }
+
+    private StepSequencerEncoderLayer.EmptyNoteAccessHandler secondaryDefaultHandler(
+            final NoteStepAccess access) {
+        return new StepSequencerEncoderLayer.EmptyNoteAccessHandler() {
+            @Override
+            public void adjust(final int amount) {
+                if (access == NoteStepAccess.PAN) {
+                    defaultNotePan = Math.max(-1.0, Math.min(1.0, defaultNotePan + amount * 0.01));
+                } else {
+                    defaultNoteGain = Math.max(0.0, Math.min(1.0, defaultNoteGain + amount * 0.01));
+                }
+                show();
+            }
+
+            @Override
+            public void show() {
+                if (access == NoteStepAccess.PAN) {
+                    oled.paramInfoPercent("Note Pan", defaultNotePan, "Melodic Default", -1, 1);
+                } else {
+                    oled.paramInfoPercent("Note Gain", defaultNoteGain, "Melodic Default", 0, 1);
+                }
+            }
+
+            @Override
+            public void reset() {
+                if (access == NoteStepAccess.PAN) {
+                    defaultNotePan = 0.0;
+                } else {
+                    defaultNoteGain = 0.5;
+                }
+            }
+        };
+    }
+
     private void adjustLengthProcess(final int inc) {
         if (inc > 0) {
             applyRepeatDouble();
@@ -3012,6 +3076,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     @Override
+    public boolean supportsSecondaryNoteExpressionPage() {
+        return true;
+    }
+
+    @Override
     public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
         if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
             return false;
@@ -3074,8 +3143,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private double noteVariationDefault(final NoteVariationParameter parameter) {
         return switch (parameter) {
             case VELOCITY -> DEFAULT_VELOCITY / 127.0;
-            case PRESSURE, TIMBRE, PITCH, PAN -> 0.0;
-            case GAIN -> 0.5;
+            case PRESSURE, TIMBRE, PITCH -> 0.0;
+            case PAN -> defaultNotePan;
+            case GAIN -> defaultNoteGain;
             case CHANCE -> 1.0;
             case VELOCITY_SPREAD -> 0.0;
         };

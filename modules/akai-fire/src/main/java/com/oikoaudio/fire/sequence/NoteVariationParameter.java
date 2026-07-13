@@ -43,6 +43,8 @@ public enum NoteVariationParameter {
             case PRESSURE -> Optional.of(PRESSURE);
             case TIMBRE -> Optional.of(TIMBRE);
             case PITCH -> Optional.of(PITCH);
+            case PAN -> Optional.of(PAN);
+            case GAIN -> Optional.of(GAIN);
             case CHANCE -> Optional.of(CHANCE);
             case VELOCITY_SPREAD -> Optional.of(VELOCITY_SPREAD);
             default -> Optional.empty();

@@ -67,6 +67,10 @@ public interface StepSequencerHost {
 
     default void handleEncoderModeChanged(final EncoderMode mode) {}
 
+    default boolean supportsSecondaryNoteExpressionPage() {
+        return false;
+    }
+
     default boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
         return false;
     }
