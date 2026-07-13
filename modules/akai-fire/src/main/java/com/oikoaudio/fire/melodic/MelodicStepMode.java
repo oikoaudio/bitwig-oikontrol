@@ -34,11 +34,10 @@ import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
-import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
+import com.oikoaudio.fire.sequence.SelectedNoteClipCoordinator;
 import com.oikoaudio.fire.sequence.ClipSlotSelectionResolver;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
@@ -80,6 +79,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip cursorClip;
     private final ClipLauncherSlotBank clipSlotBank;
+    private final SelectedNoteClipCoordinator selectedClipCoordinator;
     private final CursorRemoteControlsPage remoteControlsPage;
     private final StepSequencerEncoderLayer encoderLayer;
     private final MelodicStepEncoderControls encoderControls;
@@ -187,6 +187,15 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             loopSteps = Math.max(1, Math.min(STEP_COUNT, (int) Math.round(length / STEP_LENGTH)));
             rebuildCachedPattern();
         });
+        this.selectedClipCoordinator = new SelectedNoteClipCoordinator(
+                clipSlotBank,
+                MelodicRenderer.ACTIVE_STEP,
+                () -> cursorTrack.canHoldNoteData().get(),
+                () -> driver.getViewControl().getSelectedClipSlotIndex(),
+                this::showClipAvailabilityFailure,
+                this::applySelectedClipState,
+                () -> cursorClip.scrollToKey(0),
+                () -> cursorClip.scrollToStep(0));
         final PinnableCursorDevice cursorDevice = cursorTrack.createCursorDevice("MELODIC_STEP_DEVICE",
                 "Melo Gen Device", 8, CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.remoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
@@ -1806,25 +1815,20 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void observeSelectedClip() {
-        SelectedClipSlotObserver.observe(clipSlotBank, true, true, this::refreshSelectedClipState);
+        selectedClipCoordinator.observe(true, true);
     }
 
     private void refreshSelectedClipState() {
-        final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, MelodicRenderer.ACTIVE_STEP);
+        selectedClipCoordinator.refreshState();
+    }
+
+    private void applySelectedClipState(final SelectedClipSlotState state) {
         selectedClipSlotIndex = state.slotIndex();
         selectedClipColor = state.color();
     }
 
     private boolean ensureClipAvailable() {
-        refreshSelectedClipState();
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
-                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
-        if (failure != null) {
-            showClipAvailabilityFailure(failure);
-            return false;
-        }
-        refreshClipCursor();
-        return true;
+        return selectedClipCoordinator.ensureAvailable();
     }
 
     private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
@@ -1833,13 +1837,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void refreshClipCursor() {
-        NoteClipCursorRefresher.refresh(
-                clipSlotBank,
-                driver.getViewControl().getSelectedClipSlotIndex(),
-                this::refreshSelectedClipState,
-                () -> selectedClipSlotIndex,
-                () -> cursorClip.scrollToKey(0),
-                () -> cursorClip.scrollToStep(0));
+        selectedClipCoordinator.refreshCursor();
     }
     private MelodicPhraseContext phraseContext() {
         return new MelodicPhraseContext(driver.getSharedMusicalScale(), driver.getSharedRootNote(),

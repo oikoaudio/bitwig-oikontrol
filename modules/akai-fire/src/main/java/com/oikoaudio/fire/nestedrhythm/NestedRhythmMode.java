@@ -32,8 +32,8 @@ import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
-import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
+import com.oikoaudio.fire.sequence.SelectedNoteClipCoordinator;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
@@ -70,6 +70,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip cursorClip;
     private final ClipLauncherSlotBank clipSlotBank;
+    private final SelectedNoteClipCoordinator selectedClipCoordinator;
     private final CursorRemoteControlsPage remoteControlsPage;
     private final ClipRowHandler clipHandler;
     private final NestedRhythmPadSurface padSurface;
@@ -125,6 +126,17 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         for (int i = 0; i < remoteControlsPage.getParameterCount(); i++) {
             ParameterEncoderBinding.markInterested(remoteControlsPage.getParameter(i));
         }
+        this.selectedClipCoordinator = new SelectedNoteClipCoordinator(
+                clipSlotBank,
+                BASE_COLOR,
+                () -> cursorTrack.canHoldNoteData().get(),
+                () -> driver.getViewControl().getSelectedClipSlotIndex(),
+                this::showClipAvailabilityFailure,
+                this::applySelectedClipState,
+                () -> cursorClip.scrollToKey(0),
+                () -> cursorClip.scrollToStep(0),
+                () -> cursorClip.setStepSize(CLIP_STEP_SIZE));
+        this.selectedClipCoordinator.observe(true, true);
         this.clipHandler = new ClipRowHandler(this);
         this.padSurface = new NestedRhythmPadSurface(
                 editablePulses,
@@ -1932,7 +1944,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void refreshSelectedClipState() {
-        final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, BASE_COLOR);
+        selectedClipCoordinator.refreshState();
+    }
+
+    private void applySelectedClipState(final SelectedClipSlotState state) {
         selectedClipSlotIndex = state.slotIndex();
         if (selectedClipSlotIndex != lastSelectedClipSlotIndex) {
             observedNoteSteps.clear();
@@ -1980,6 +1995,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         }
     }
 
+    private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
+        oled.valueInfo(failure.title(), failure.oledDetail());
+        driver.notifyPopup(failure.title(), failure.popupDetail());
+    }
+
     private boolean canWriteSelectedClipFromContinuousControl() {
         if (nestedRhythmOwnsSelectedClip || !selectedClipHasContent && !hasObservedNotes()) {
             return true;
@@ -1993,35 +2013,16 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     public void onClipCreated(final int index) {
         nestedRhythmOwnsSelectedClip = true;
         observedNoteSteps.clear();
-        driver.getHost().scheduleTask(() -> {
-            refreshClipCursor();
-            refreshSelectedClipState();
-            generatePatternForced("Generate", summaryLabel());
-        }, CLIP_CREATE_GENERATE_DELAY_MS);
+        selectedClipCoordinator.scheduleRefresh(driver.getHost()::scheduleTask, CLIP_CREATE_GENERATE_DELAY_MS,
+                () -> generatePatternForced("Generate", summaryLabel()));
     }
 
     private boolean ensureClipAvailable() {
-        refreshSelectedClipState();
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
-                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
-        if (failure != null) {
-            oled.valueInfo(failure.title(), failure.oledDetail());
-            driver.notifyPopup(failure.title(), failure.popupDetail());
-            return false;
-        }
-        refreshClipCursor();
-        return true;
+        return selectedClipCoordinator.ensureAvailable();
     }
 
     private void refreshClipCursor() {
-        NoteClipCursorRefresher.refresh(
-                clipSlotBank,
-                driver.getViewControl().getSelectedClipSlotIndex(),
-                this::refreshSelectedClipState,
-                () -> selectedClipSlotIndex,
-                () -> cursorClip.scrollToKey(0),
-                () -> cursorClip.scrollToStep(0),
-                () -> cursorClip.setStepSize(CLIP_STEP_SIZE));
+        selectedClipCoordinator.refreshCursor();
     }
 
     @Override
