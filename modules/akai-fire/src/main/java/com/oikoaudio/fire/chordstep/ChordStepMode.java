@@ -87,9 +87,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final VelocitySettings chordStepVelocity;
     private final ChordStepVisibleClipCache visibleClipCache =
             new ChordStepVisibleClipCache(STEP_COUNT);
-    private final ChordStepFineNudgeState<ChordStepEventIndex.Event> fineNudgeState =
-            new ChordStepFineNudgeState<>();
-    private final ChordStepFineNudgeController<ChordStepEventIndex.Event> fineNudgeController;
+    private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> fineNudgeSession;
     private final ChordStepFineNudgeWriter chordStepFineNudgeWriter;
     private final ChordStepClipController chordStepClipController;
     private final ChordStepClipEditor<ChordStepEventIndex.Event> chordStepClipEditor;
@@ -164,6 +162,10 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         FINE_STEPS_PER_STEP,
                         FINE_STEP_LENGTH,
                         STEP_LENGTH);
+        this.fineNudgeSession =
+                new ChordStepFineNudgeSession<>(
+                        stepIndex -> snapshotChordEventForStep(stepIndex, true),
+                        this::nudgeHeldNotes);
         this.chordStepClips.observe(
                 this::handleStepData,
                 this::handleNoteStepObject,
@@ -179,7 +181,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 new ChordStepClipEditor<>(
                         chordStepClips.observedClip(),
                         chordStepEventIndex.observedState(),
-                        fineNudgeState,
+                        fineNudgeSession,
                         this::localToGlobalStep,
                         this::localToGlobalFineStep,
                         this::queueChordObservationResync,
@@ -188,7 +190,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 new ChordStepFineNudgeWriter(
                         chordStepClips.observedClip(),
                         chordStepEventIndex,
-                        fineNudgeState,
+                        fineNudgeSession,
                         chordStepPadSurface::markModifiedSteps,
                         this::chordLoopFineSteps,
                         this::isVisibleGlobalStep,
@@ -196,11 +198,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         (task, delayTicks) -> driver.getHost().scheduleTask(task, delayTicks),
                         this::refreshChordStepObservation,
                         FINE_STEPS_PER_STEP);
-        this.fineNudgeController =
-                new ChordStepFineNudgeController<>(
-                        fineNudgeState,
-                        stepIndex -> snapshotChordEventForStep(stepIndex, true),
-                        this::nudgeHeldNotes);
         this.chordStepClipNavigation =
                 new ChordStepClipNavigation(
                         chordStepClips.noteClip(),
@@ -628,7 +625,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
             @Override
             public void removeHeldBankFineStart(final int stepIndex) {
-                fineNudgeState.invalidateStep(stepIndex);
+                fineNudgeSession.invalidateStep(stepIndex);
             }
         };
     }
@@ -751,12 +748,12 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
             @Override
             public void setPendingLengthAdjust(final boolean pending) {
-                fineNudgeState.setPendingLengthAdjust(pending);
+                fineNudgeSession.setPendingLengthAdjust(pending);
             }
 
             @Override
             public boolean isPendingLengthAdjust() {
-                return fineNudgeState.isPendingLengthAdjust();
+                return fineNudgeSession.isPendingLengthAdjust();
             }
 
             @Override
@@ -777,7 +774,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
             @Override
             public void beginHeldFineNudge(final int amount, final Set<Integer> heldSteps) {
-                fineNudgeController.beginHeldNudge(amount, heldSteps);
+                fineNudgeSession.beginHeldNudge(amount, heldSteps);
             }
 
             @Override
@@ -794,7 +791,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
             @Override
             public boolean completePendingFineNudge() {
-                return fineNudgeController.completePendingNudge();
+                return fineNudgeSession.completePendingNudge();
             }
 
             @Override
@@ -1088,7 +1085,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private Map<Integer, Integer> snapshotFineStartsForStep(
             final int localStep, final boolean heldOnly) {
         final Map<Integer, Integer> persisted =
-                fineNudgeState.fineStartsForStep(localStep, heldOnly);
+                fineNudgeSession.fineStartsForStep(localStep, heldOnly);
         if (persisted != null && !persisted.isEmpty()) {
             return new HashMap<>(persisted);
         }
@@ -1102,7 +1099,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                                         (a, b) -> a,
                                         HashMap::new));
         if (heldOnly && !starts.isEmpty()) {
-            fineNudgeState.rememberHeldFineStarts(localStep, starts);
+            fineNudgeSession.rememberHeldFineStarts(localStep, starts);
         }
         return starts;
     }
@@ -1110,7 +1107,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private ChordStepEventIndex.Event snapshotChordEventForStep(
             final int localStep, final boolean heldOnly) {
         final ChordStepEventIndex.Event persisted =
-                heldOnly ? fineNudgeState.heldEvent(localStep) : null;
+                heldOnly ? fineNudgeSession.heldEvent(localStep) : null;
         if (persisted != null) {
             return persisted;
         }
@@ -1118,7 +1115,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void clearPendingBankAction() {
-        fineNudgeController.cancelPending();
+        fineNudgeSession.cancelPending();
     }
 
     private boolean isVisibleGlobalStep(final int globalStep) {
@@ -1723,7 +1720,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void clearAllBankFineNudgeSessions() {
-        fineNudgeController.clearHeld();
+        fineNudgeSession.clearHeld();
     }
 
     private void showChordPageInfo() {

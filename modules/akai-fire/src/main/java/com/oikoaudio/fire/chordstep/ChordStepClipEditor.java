@@ -10,7 +10,7 @@ import java.util.function.IntUnaryOperator;
 public final class ChordStepClipEditor<E> {
     private final Clip observedClip;
     private final ChordStepObservedState observedState;
-    private final ChordStepFineNudgeState<E> fineNudgeState;
+    private final ChordStepFineNudgeSession<E> fineNudgeSession;
     private final IntUnaryOperator localToGlobalStep;
     private final IntUnaryOperator localToGlobalFineStep;
     private final Runnable queueObservationResync;
@@ -19,14 +19,14 @@ public final class ChordStepClipEditor<E> {
     public ChordStepClipEditor(
             final Clip observedClip,
             final ChordStepObservedState observedState,
-            final ChordStepFineNudgeState<E> fineNudgeState,
+            final ChordStepFineNudgeSession<E> fineNudgeSession,
             final IntUnaryOperator localToGlobalStep,
             final IntUnaryOperator localToGlobalFineStep,
             final Runnable queueObservationResync,
             final int fineStepsPerStep) {
         this.observedClip = observedClip;
         this.observedState = observedState;
-        this.fineNudgeState = fineNudgeState;
+        this.fineNudgeSession = fineNudgeSession;
         this.localToGlobalStep = localToGlobalStep;
         this.localToGlobalFineStep = localToGlobalFineStep;
         this.queueObservationResync = queueObservationResync;
@@ -69,6 +69,6 @@ public final class ChordStepClipEditor<E> {
     public void invalidateObservedChordStep(final int stepIndex) {
         final int globalStep = localToGlobalStep.applyAsInt(stepIndex);
         observedState.invalidateStep(globalStep);
-        fineNudgeState.invalidateStep(stepIndex);
+        fineNudgeSession.invalidateStep(stepIndex);
     }
 }

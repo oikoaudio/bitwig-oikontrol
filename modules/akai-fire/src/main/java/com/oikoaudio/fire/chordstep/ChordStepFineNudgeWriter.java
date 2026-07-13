@@ -19,7 +19,7 @@ import java.util.function.IntUnaryOperator;
 public final class ChordStepFineNudgeWriter {
     private final Clip observedClip;
     private final ChordStepEventIndex eventIndex;
-    private final ChordStepFineNudgeState<ChordStepEventIndex.Event> state;
+    private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> session;
     private final Consumer<Set<Integer>> markModifiedSteps;
     private final IntSupplier loopFineSteps;
     private final IntPredicate visibleGlobalStep;
@@ -34,7 +34,7 @@ public final class ChordStepFineNudgeWriter {
     public ChordStepFineNudgeWriter(
             final Clip observedClip,
             final ChordStepEventIndex eventIndex,
-            final ChordStepFineNudgeState<ChordStepEventIndex.Event> state,
+            final ChordStepFineNudgeSession<ChordStepEventIndex.Event> session,
             final Consumer<Set<Integer>> markModifiedSteps,
             final IntSupplier loopFineSteps,
             final IntPredicate visibleGlobalStep,
@@ -44,7 +44,7 @@ public final class ChordStepFineNudgeWriter {
             final int fineStepsPerStep) {
         this.observedClip = observedClip;
         this.eventIndex = eventIndex;
-        this.state = state;
+        this.session = session;
         this.markModifiedSteps = markModifiedSteps;
         this.loopFineSteps = loopFineSteps;
         this.visibleGlobalStep = visibleGlobalStep;
@@ -77,7 +77,7 @@ public final class ChordStepFineNudgeWriter {
         if (eventsToNudge.isEmpty()) {
             return false;
         }
-        state.beginHeldNudge(targetSteps);
+        session.prepareHeldMove(targetSteps);
         final int loopFineStepCount = loopFineSteps.getAsInt();
         final List<ChordStepEventIndex.EventNoteMove> noteMoves = new ArrayList<>();
         final Map<Integer, ChordStepEventIndex.Event> movedEvents = new HashMap<>();
@@ -96,9 +96,9 @@ public final class ChordStepFineNudgeWriter {
         }
         rewriteEventMoves(noteMoves);
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
-            state.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
+            session.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
         }
-        movedEvents.forEach(state::putHeldEvent);
+        movedEvents.forEach(session::putHeldEvent);
         return true;
     }
 
