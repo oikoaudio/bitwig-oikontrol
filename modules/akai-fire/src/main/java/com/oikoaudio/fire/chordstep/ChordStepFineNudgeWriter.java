@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.Clip;
+import com.oikoaudio.fire.sequence.FineStepOwnership;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -112,8 +113,13 @@ final class ChordStepFineNudgeWriter {
     }
 
     private void rewriteEventMoves(final List<ChordStepEventIndex.EventNoteMove> noteMoves) {
+        final int loopFineStepCount = loopFineSteps.getAsInt();
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
-            final int targetGlobalStep = Math.floorDiv(move.targetFineStart(), fineStepsPerStep);
+            final int targetGlobalStep =
+                    FineStepOwnership.ownerOf(
+                            move.targetFineStart(),
+                            fineStepsPerStep,
+                            Math.max(1, loopFineStepCount / fineStepsPerStep));
             if (move.visibleStep() != null && visibleGlobalStep.test(targetGlobalStep)) {
                 eventIndex.addPendingNoteSnapshot(
                         globalToLocalStep.applyAsInt(targetGlobalStep),

@@ -445,7 +445,7 @@ final class ChordStepPadSurface {
         if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, availableSteps)) {
             return RgbLightState.OFF;
         }
-        if (hasHeldStep(stepIndex)) {
+        if (hasHeldStep(stepIndex) && occupied) {
             return heldStepColor.getBrightest();
         }
         if (occupied) {

@@ -164,7 +164,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         this::currentChordVelocity,
                         FINE_STEPS_PER_STEP,
                         FINE_STEP_LENGTH,
-                        STEP_LENGTH);
+                        STEP_LENGTH,
+                        this::chordLoopSteps);
         this.fineNudgeSession =
                 new ChordStepFineNudgeSession<>(
                         stepIndex -> snapshotChordEventForStep(stepIndex, true),
@@ -241,10 +242,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         chordStepClips.position()::getAvailableSteps,
                         () -> playingStep,
                         this::shiftedClipStartColumn,
-                        this::hasVisibleStepContent,
-                        stepIndex ->
-                                hasVisibleStepContent(stepIndex) && isChordStepAccented(stepIndex),
-                        this::isChordStepSustained);
+                        this::hasOwnedStepStart,
+                        stepIndex -> hasOwnedStepStart(stepIndex) && isChordStepAccented(stepIndex),
+                        stepIndex -> false);
 
         // Buttons and encoders
         this.chordStepModeButtons =
@@ -1579,10 +1579,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         return chordStepBaseColor != null ? chordStepBaseColor : OCCUPIED_STEP;
     }
 
-    private boolean isChordStepSustained(final int stepIndex) {
-        return hasVisibleStepContent(stepIndex) && !hasStepStartNote(stepIndex);
-    }
-
     private RgbLightState getClipStepRecordPadLight(final int padIndex) {
         if (padIndex < STEP_PAD_OFFSET) {
             return DEFERRED_TOP;
@@ -2038,6 +2034,10 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private boolean hasStepStartNote(final int stepIndex) {
         return chordStepEventIndex.hasStepStart(stepIndex);
+    }
+
+    private boolean hasOwnedStepStart(final int stepIndex) {
+        return chordStepPadSurface.hasAddedStep(stepIndex) || hasStepStartNote(stepIndex);
     }
 
     private Set<Integer> bestAvailableStepNotes(final int stepIndex) {

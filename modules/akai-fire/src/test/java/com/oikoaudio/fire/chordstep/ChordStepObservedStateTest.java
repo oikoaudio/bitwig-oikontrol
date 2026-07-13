@@ -64,6 +64,46 @@ class ChordStepObservedStateTest {
     }
 
     @Test
+    void fineStartOwnershipTransfersOnlyAtTheNearestStepMidpoint() {
+        final ChordStepObservedState state = new ChordStepObservedState(() -> 8);
+
+        state.handleObservedStepData(39, 60, NoteStep.State.NoteOn.ordinal(), FINE_STEPS_PER_STEP);
+
+        assertTrue(state.hasStepStart(2));
+        assertFalse(state.hasStepStart(3));
+
+        state.moveFineStart(39, 40, 60, FINE_STEP_LENGTH, FINE_STEPS_PER_STEP, FINE_STEP_LENGTH);
+
+        assertFalse(state.hasStepStart(2));
+        assertTrue(state.hasStepStart(3));
+        assertEquals(40, state.fineStartFor(3, 60, -1));
+    }
+
+    @Test
+    void durationDoesNotGiveNeighboringStepsOwnership() {
+        final ChordStepObservedState state = new ChordStepObservedState(() -> 8);
+
+        state.handleObservedStepData(32, 60, NoteStep.State.NoteOn.ordinal(), FINE_STEPS_PER_STEP);
+        state.handleObservedStepData(
+                48, 60, NoteStep.State.NoteSustain.ordinal(), FINE_STEPS_PER_STEP);
+
+        assertTrue(state.hasStepStart(2));
+        assertFalse(state.hasStepStart(3));
+        assertEquals(Set.of(60), state.notesAtStep(2));
+        assertEquals(Set.of(), state.notesAtStep(3));
+    }
+
+    @Test
+    void fineStartOwnershipWrapsAtTheLoopBoundary() {
+        final ChordStepObservedState state = new ChordStepObservedState(() -> 8);
+
+        state.handleObservedStepData(127, 60, NoteStep.State.NoteOn.ordinal(), FINE_STEPS_PER_STEP);
+
+        assertTrue(state.hasStepStart(0));
+        assertEquals(127, state.fineStartFor(0, 60, -1));
+    }
+
+    @Test
     void visibleStepQueriesMapGlobalStepsToLocalSteps() {
         final ChordStepObservedState state = new ChordStepObservedState();
 

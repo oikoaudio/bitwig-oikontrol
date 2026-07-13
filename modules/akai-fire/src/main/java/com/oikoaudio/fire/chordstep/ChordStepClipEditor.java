@@ -58,6 +58,16 @@ final class ChordStepClipEditor<E> {
     }
 
     public void clearChordStep(final int stepIndex) {
+        final int globalStep = localToGlobalStep.applyAsInt(stepIndex);
+        final Map<Integer, Integer> ownedStarts = observedState.noteStartsForStep(globalStep);
+        if (!ownedStarts.isEmpty()) {
+            ownedStarts.forEach(
+                    (midiNote, fineStart) -> observedClip.clearStep(fineStart, midiNote));
+            return;
+        }
+        if (observedState.hasAnyObservedNotes()) {
+            return;
+        }
         final int fineStart = localToGlobalFineStep.applyAsInt(stepIndex);
         for (int offset = 0; offset < fineStepsPerStep; offset++) {
             observedClip.clearStepsAtX(0, fineStart + offset);

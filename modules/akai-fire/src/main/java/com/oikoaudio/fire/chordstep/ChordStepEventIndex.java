@@ -8,11 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.IntPredicate;
+import java.util.function.IntSupplier;
 import java.util.function.IntUnaryOperator;
 
 /** Owns chord-step visible note objects, fine-grid observed-note state, and event snapshots. */
 final class ChordStepEventIndex {
-    private final ChordStepObservedState observedState = new ChordStepObservedState();
+    private final ChordStepObservedState observedState;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepSnapshot> pendingMovedNotes = new HashMap<>();
     private final Map<String, ChordStepInsertionDefaults.Values> pendingInsertionDefaults =
@@ -33,6 +34,27 @@ final class ChordStepEventIndex {
             final int fineStepsPerStep,
             final double fineStepLength,
             final double defaultDuration) {
+        this(
+                localToGlobalStep,
+                globalToLocalStep,
+                visibleGlobalStep,
+                defaultVelocity,
+                fineStepsPerStep,
+                fineStepLength,
+                defaultDuration,
+                () -> 2048);
+    }
+
+    public ChordStepEventIndex(
+            final IntUnaryOperator localToGlobalStep,
+            final IntUnaryOperator globalToLocalStep,
+            final IntPredicate visibleGlobalStep,
+            final IntUnaryOperator defaultVelocity,
+            final int fineStepsPerStep,
+            final double fineStepLength,
+            final double defaultDuration,
+            final IntSupplier loopSteps) {
+        this.observedState = new ChordStepObservedState(loopSteps);
         this.localToGlobalStep = localToGlobalStep;
         this.globalToLocalStep = globalToLocalStep;
         this.visibleGlobalStep = visibleGlobalStep;
@@ -117,8 +139,8 @@ final class ChordStepEventIndex {
 
     public boolean hasStepStart(final int localStep) {
         final int globalStep = localToGlobalStep.applyAsInt(localStep);
-        if (observedState.hasStepStart(globalStep)) {
-            return true;
+        if (observedState.hasAnyObservedNotes()) {
+            return observedState.hasStepStart(globalStep);
         }
         return noteStepsAt(localStep).values().stream()
                 .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
@@ -127,8 +149,8 @@ final class ChordStepEventIndex {
     public Set<Integer> notesAtStep(final int localStep) {
         final Set<Integer> observedNotes =
                 observedState.notesAtStep(localToGlobalStep.applyAsInt(localStep));
-        if (observedNotes != null && !observedNotes.isEmpty()) {
-            return new HashSet<>(observedNotes);
+        if (observedState.hasAnyObservedNotes()) {
+            return observedNotes;
         }
         return new HashSet<>(noteStepsAt(localStep).keySet());
     }
@@ -143,6 +165,9 @@ final class ChordStepEventIndex {
     public Set<Integer> visibleStartedSteps() {
         final Set<Integer> startedSteps =
                 observedState.visibleStartedSteps(visibleGlobalStep, globalToLocalStep);
+        if (observedState.hasAnyObservedNotes()) {
+            return startedSteps;
+        }
         noteStepsByPosition.entrySet().stream()
                 .filter(
                         entry ->

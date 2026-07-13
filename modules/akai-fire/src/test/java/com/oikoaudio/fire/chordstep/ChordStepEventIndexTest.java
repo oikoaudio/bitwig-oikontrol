@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -44,6 +45,24 @@ class ChordStepEventIndexTest {
         assertTrue(index.hasStepStart(4));
         assertEquals(Set.of(4), index.visibleStartedSteps());
         assertEquals(64, index.eventForStep(4, Map.of()).notes().get(0).midiNote());
+    }
+
+    @Test
+    void fineGridOwnershipOverridesTheCoarseVisibleNoteBucket() {
+        final ChordStepEventIndex index = index();
+        final NoteStep coarseNote = mock(NoteStep.class);
+        when(coarseNote.x()).thenReturn(2);
+        when(coarseNote.y()).thenReturn(60);
+        when(coarseNote.state()).thenReturn(NoteStep.State.NoteOn);
+
+        index.handleNoteStepObject(coarseNote);
+        index.handleObservedStepData(40, 60, NoteStep.State.NoteOn.ordinal());
+
+        assertFalse(index.hasStepStart(2));
+        assertTrue(index.hasStepStart(3));
+        assertEquals(Set.of(3), index.visibleStartedSteps());
+        assertEquals(Set.of(), index.notesAtStep(2));
+        assertEquals(Set.of(60), index.notesAtStep(3));
     }
 
     @Test

@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Poly Step now assigns each finely nudged note or chord to exactly one nearest step pad, transfers that ownership
+  at the midpoint, and preserves long-note duration without lighting or clearing neighboring sustain steps.
 - Poly Step chord-set pads now support simultaneous multi-pad grips, combining and deduplicating the selected
   chords' pitches for audition, step insertion, held-step assignment, and source-first pitch replacement.
 - Poly Step User 1 and User 2 encoders now edit session-local insertion defaults when no note is selected; touching

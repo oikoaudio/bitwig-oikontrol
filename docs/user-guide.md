@@ -423,6 +423,11 @@ Press `STEP` from normal performance modes to enter `Poly Step`. Press `STEP` ag
 | `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
 | Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
 
+Each note or chord is owned by the step pad nearest to its note-on position. Fine nudge keeps that
+ownership until the note-on crosses the midpoint to the neighboring step, then transfers it as one
+event. A long note still lights, selects, and clears only from its owning pad; its duration may extend
+across later steps without making those pads occupied.
+
 | Left-side button | Action |
 | --- | --- |
 | `MUTE_1` | Select / load step |
@@ -449,7 +454,8 @@ shared `Root Key` or `Scale` does not switch bank, page, or slot; it only change
 grip is rendered. `As Is` transposes the stored chord shapes from the current root. `In Scale` rebuilds them from the
 current shared scale and root.
 
-Coarse nudge is intentionally disabled in `Poly Step`; micro-timing is currently temperamental and should be treated as experimental.
+Coarse nudge is intentionally disabled in `Poly Step`; micro-timing should still be smoke-tested after
+changes to clip observation or note editing.
 
 ### Fugue mode
 

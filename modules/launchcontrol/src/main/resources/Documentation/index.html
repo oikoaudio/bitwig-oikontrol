@@ -549,6 +549,7 @@
           <tr><td>Hold step(s) + <code>BANK LEFT/RIGHT</code></td><td>Experimental micro-timing nudge for held chord material</td></tr>
       </tbody>
       </table>
+      <p>Each note or chord is owned by the step pad nearest to its note-on position. Fine nudge keeps that ownership until the note-on crosses the midpoint to the neighboring step, then transfers it as one event. A long note still lights, selects, and clears only from its owning pad; its duration may extend across later steps without making those pads occupied.</p>
       <table class="control-map">
         <thead><tr><th>Left-side button</th><th>Action</th></tr></thead>
         <tbody>
@@ -569,7 +570,7 @@
       </table>
       <p>On the <code>User 1</code> and <code>User 2</code> pages, an encoder edits held or selected notes when they are available. With no note target, it instead changes the session-local default for the next note or chord inserted in <code>Poly Step</code>; touching the encoder shows that default. Hold <code>KNOB MODE</code> and touch the encoder to restore its original default. These defaults cover velocity, pressure, timbre, pitch expression, note length, chance, velocity spread, and repeats.</p>
       <p>Chord banks are static libraries of chord formulas and voicing variants. Press several chord-set pads together to combine their rendered pitches into one grip; the combined grip remains selected after release and can be auditioned, written to empty steps, or used for source-first pitch replacement just like a multi-pad Builder grip. Changing shared <code>Root Key</code> or <code>Scale</code> does not switch bank, page, or slot; it only changes how the selected slot or combined grip is rendered. <code>As Is</code> transposes the stored chord shapes from the current root. <code>In Scale</code> rebuilds them from the current shared scale and root.</p>
-      <p>Coarse nudge is intentionally disabled in <code>Poly Step</code>; micro-timing is currently temperamental and should be treated as experimental.</p>
+      <p>Coarse nudge is intentionally disabled in <code>Poly Step</code>; micro-timing should still be smoke-tested after changes to clip observation or note editing.</p>
       <h3>Fugue mode</h3>
       <p>Press <code>STEP</code> from <code>Melo Gen</code> to enter <code>Fugue</code>. <code>Fugue</code> treats MIDI channel 1 as the source line and generates related lines on channels 2-4.</p>
       <table class="control-map">

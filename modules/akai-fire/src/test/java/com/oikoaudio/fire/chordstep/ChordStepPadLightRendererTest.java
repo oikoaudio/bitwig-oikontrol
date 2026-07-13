@@ -8,6 +8,7 @@ import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,7 @@ class ChordStepPadLightRendererTest {
     void rendersHeldStepAsChordStepHeldColor() {
         final Fixture fixture = new Fixture();
         fixture.surface.addHeldStep(0);
+        fixture.ownedSteps.add(0);
 
         final RgbLightState expected = new RgbLightState(120, 88, 0, true).getBrightest();
 
@@ -65,9 +67,25 @@ class ChordStepPadLightRendererTest {
                 fixture.renderer.padLight(STEP_OFFSET, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
     }
 
+    @Test
+    void heldPhysicalPadDoesNotRemainHighlightedAfterOwnershipTransfers() {
+        final Fixture fixture = new Fixture();
+        fixture.surface.addHeldStep(0);
+        fixture.ownedSteps.add(1);
+
+        final RgbLightState oldOwner =
+                fixture.renderer.padLight(STEP_OFFSET, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET);
+        final RgbLightState newOwner =
+                fixture.renderer.padLight(STEP_OFFSET + 1, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET);
+
+        assertEquals(RgbLightState.GRAY_1, oldOwner);
+        assertEquals(RgbLightState.PURPLE, newOwner);
+    }
+
     private static final class Fixture {
         private final ChordStepPadSurface surface = new ChordStepPadSurface();
         private final ChordStepChordSelection selection = new ChordStepChordSelection();
+        private final Set<Integer> ownedSteps = new HashSet<>();
         private final ChordStepBuilderController builder;
         private final ChordStepPadLightRenderer renderer;
 
@@ -89,7 +107,7 @@ class ChordStepPadLightRendererTest {
                             () -> 32,
                             () -> -1,
                             () -> -1,
-                            step -> false,
+                            ownedSteps::contains,
                             step -> false,
                             step -> false);
         }

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.bitwig.extension.controller.api.Clip;
+import com.bitwig.extension.controller.api.NoteStep;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +94,39 @@ class ChordStepFineNudgeWriterTest {
 
         scheduledTasks.get(1).run();
         assertFalse(writer.isMoveInFlight());
+    }
+
+    @Test
+    void transfersOwnershipAtTheMidpointWithoutChangingDuration() {
+        final Clip clip = mock(Clip.class);
+        final ChordStepEventIndex index = index();
+        index.handleObservedStepData(39, 60, NoteStep.State.NoteOn.ordinal());
+        final ChordStepFineNudgeSession<ChordStepEventIndex.Event> session =
+                new ChordStepFineNudgeSession<>(step -> null, (amount, steps, events) -> {});
+        final ChordStepFineNudgeWriter writer =
+                new ChordStepFineNudgeWriter(
+                        clip,
+                        index,
+                        session,
+                        steps -> {},
+                        () -> 512,
+                        global -> global >= 0 && global < 32,
+                        global -> global,
+                        (task, delayTicks) -> {},
+                        () -> {},
+                        16);
+        final ChordStepEventIndex.Event event =
+                new ChordStepEventIndex.Event(
+                        2,
+                        2,
+                        39,
+                        List.of(new ChordStepEventIndex.EventNote(60, 39, 0, 96, 0.75, null)));
+
+        writer.nudgeHeldNotes(1, Set.of(2), Map.of(2, event));
+
+        assertFalse(index.hasStepStart(2));
+        assertTrue(index.hasStepStart(3));
+        verify(clip).setStep(40, 60, 96, 0.75);
     }
 
     private static ChordStepEventIndex index() {
