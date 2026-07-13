@@ -111,7 +111,7 @@ class NoteLivePadPerformerTest {
     }
 
     @Test
-    void sameMidiNoteIsExclusiveAcrossPads() {
+    void sharedMidiNoteSoundsUntilTheLastOwningPadIsReleased() {
         final List<String> events = new ArrayList<>();
         final NoteLivePadPerformer performer =
                 new NoteLivePadPerformer(
@@ -122,7 +122,34 @@ class NoteLivePadPerformerTest {
         performer.handlePadPress(0, false, 0, 100);
         performer.handlePadPress(1, false, 0, 100);
 
-        assertEquals(List.of("on:60:70", "off:60", "on:60:90", "off:60"), events);
+        assertEquals(List.of("on:60:70", "off:60"), events);
+    }
+
+    @Test
+    void overlappingChordPadsPlayTheirUnion() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> pad == 0 ? new int[] {60, 64, 67} : new int[] {64, 67, 71},
+                        (configured, raw) -> raw);
+
+        performer.handlePadPress(0, true, 70, 100);
+        performer.handlePadPress(1, true, 90, 100);
+        performer.handlePadPress(0, false, 0, 100);
+        performer.handlePadPress(1, false, 0, 100);
+
+        assertEquals(
+                List.of(
+                        "on:60:70",
+                        "on:64:70",
+                        "on:67:70",
+                        "on:71:90",
+                        "off:60",
+                        "off:64",
+                        "off:67",
+                        "off:71"),
+                events);
     }
 
     @Test
@@ -216,6 +243,35 @@ class NoteLivePadPerformerTest {
 
         assertEquals(List.of("on:61:80", "on:62:90", "off:61", "off:62"), events);
         assertFalse(performer.isPadHeld(2));
+    }
+
+    @Test
+    void heldChordKeepsSharedNotesWhenLaterMomentaryChordIsReleased() {
+        final List<String> events = new ArrayList<>();
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> pad == 0 ? new int[] {60, 64, 67} : new int[] {64, 67, 71},
+                        (configured, raw) -> raw);
+
+        performer.handlePadPress(0, true, 70, 100);
+        performer.toggleHoldMode();
+        performer.handlePadPress(0, false, 0, 100);
+        performer.handlePadPress(1, true, 90, 100);
+        performer.handlePadPress(1, false, 0, 100);
+        performer.toggleHoldMode();
+
+        assertEquals(
+                List.of(
+                        "on:60:70",
+                        "on:64:70",
+                        "on:67:70",
+                        "on:71:90",
+                        "off:71",
+                        "off:60",
+                        "off:64",
+                        "off:67"),
+                events);
     }
 
     private record TestMidiOut(List<String> events) implements NoteLivePadPerformer.MidiOut {

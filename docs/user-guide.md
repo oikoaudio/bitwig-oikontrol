@@ -369,7 +369,7 @@ While harmonic input is active, the `Mixer` encoder page changes from track mixi
 | --- | --- | --- | --- | --- |
 | `Mixer` | Notes per pad: 1, 2, or 3 | Octave span: 1-3 | Bass Grid on / off | Pitch Gliss |
 
-Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, and the bass grid enabled. `Notes per pad` controls how many notes each harmonic pad produces before octave expansion. `Octave span` adds octave copies above those notes. Bass-grid pads always stay single-note, even when notes-per-pad is set higher. `Pitch Gliss` shifts the harmonic field through the same pitch-gliss offset used on the `Channel` page.
+Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, and the bass grid enabled. `Notes per pad` controls how many notes each harmonic pad produces before octave expansion. `Octave span` adds octave copies above those notes. Bass-grid pads always stay single-note, even when notes-per-pad is set higher. Hold several pads to play the union of their notes; overlapping notes sound once and remain active until the last pad containing them is released. `Pitch Gliss` shifts the harmonic field through the same pitch-gliss offset used on the `Channel` page.
 
 ### Melo Gen mode
 

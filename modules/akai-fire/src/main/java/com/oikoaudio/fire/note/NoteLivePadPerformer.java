@@ -149,18 +149,19 @@ final class NoteLivePadPerformer {
         if (midiNotes == null || midiNotes.length == 0) {
             return;
         }
-        stopOtherPadsSoundingAny(padIndex, midiNotes);
         final int appliedVelocity =
                 velocityResolver.resolve(padIndex, configuredVelocity, rawVelocity);
         final int timbre = timbreResolver.resolve(padIndex);
         final List<Integer> sounding = new ArrayList<>();
         for (final int midiNote : midiNotes) {
-            if (midiNote < 0) {
+            if (midiNote < 0 || sounding.contains(midiNote)) {
                 continue;
             }
-            midiOut.noteOn(midiNote, appliedVelocity);
-            if (timbre >= 0) {
-                midiOut.timbre(midiNote, timbre);
+            if (!isMidiNoteSounding(midiNote)) {
+                midiOut.noteOn(midiNote, appliedVelocity);
+                if (timbre >= 0) {
+                    midiOut.timbre(midiNote, timbre);
+                }
             }
             sounding.add(midiNote);
         }
@@ -193,33 +194,6 @@ final class NoteLivePadPerformer {
         notifySoundingNotesChanged();
     }
 
-    private void stopOtherPadsSoundingAny(final int padIndex, final int[] midiNotes) {
-        final Set<Integer> targetNotes = new HashSet<>();
-        for (final int midiNote : midiNotes) {
-            if (midiNote >= 0) {
-                targetNotes.add(midiNote);
-            }
-        }
-        if (targetNotes.isEmpty()) {
-            return;
-        }
-        final List<Integer> duplicatePads =
-                soundingNotesByPad.entrySet().stream()
-                        .filter(entry -> entry.getKey() != padIndex)
-                        .filter(
-                                entry ->
-                                        entry.getValue().midiNotes().stream()
-                                                .anyMatch(targetNotes::contains))
-                        .map(Map.Entry::getKey)
-                        .toList();
-        duplicatePads.forEach(
-                duplicatePad -> {
-                    physicalHeldPads.remove(duplicatePad);
-                    holdCapturedPads.remove(duplicatePad);
-                    noteOff(duplicatePad);
-                });
-    }
-
     private void releaseHoldCapturedNotes() {
         for (final int padIndex : new ArrayList<>(holdCapturedPads)) {
             if (!physicalHeldPads.contains(padIndex)) {
@@ -240,7 +214,9 @@ final class NoteLivePadPerformer {
             return;
         }
         for (final int midiNote : activeNote.midiNotes()) {
-            midiOut.noteOff(midiNote);
+            if (!isMidiNoteSounding(midiNote)) {
+                midiOut.noteOff(midiNote);
+            }
         }
     }
 
