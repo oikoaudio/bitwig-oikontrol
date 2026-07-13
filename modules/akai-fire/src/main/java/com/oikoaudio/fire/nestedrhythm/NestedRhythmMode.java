@@ -32,6 +32,9 @@ import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
+import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationParameter;
+import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SelectedNoteClipCoordinator;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
@@ -42,9 +45,12 @@ import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class NestedRhythmMode extends Layer implements StepSequencerHost, SeqClipRowHost {
     private static final int CLIP_ROW_PAD_COUNT = NestedRhythmPadSurface.CLIP_ROW_PAD_COUNT;
@@ -76,6 +82,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final NestedRhythmPadSurface padSurface;
     private final EncoderBankLayout encoderBankLayout;
     private final StepSequencerEncoderLayer encoderLayer;
+    private final NoteVariationAmounts noteVariationAmounts;
+    private final ObservedNoteVariationAdapter noteVariationAdapter =
+            new ObservedNoteVariationAdapter(CLIP_FINE_STEP_COUNT);
+    private final Set<NoteVariationParameter> activeVariationTouches =
+            EnumSet.noneOf(NoteVariationParameter.class);
     private final NestedRhythmGenerator generator = new NestedRhythmGenerator();
     private final NestedRhythmClipWriter clipWriter;
     private final BooleanValueObject selectHeld = new BooleanValueObject();
@@ -104,6 +115,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         this.driver = driver;
         this.oled = driver.getOled();
         this.patternButtons = driver.getPatternButtons();
+        this.noteVariationAmounts = driver.getNoteVariationAmounts();
 
         final ControllerHost host = driver.getHost();
         this.cursorTrack =
@@ -122,7 +134,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         this.cursorClip.getLoopLength().markInterested();
         this.cursorClip.getPlayStart().markInterested();
         this.cursorClip.getLoopLength().addValueObserver(this::syncClipLengthFromBeats);
-        this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
+        this.cursorClip.addNoteStepObserver(
+                noteStep -> {
+                    noteVariationAdapter.handleObservedNote(noteStep);
+                    handleNoteStepObject(noteStep);
+                });
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
         final PinnableCursorDevice cursorDevice =
                 cursorTrack.createCursorDevice(
@@ -740,6 +756,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                         EncoderFooterLegend.of("Velo", "Pres", "Timb", "Chnc"),
                         new EncoderSlotBinding[] {
                             modifierChoiceSlot(
+                                    NoteVariationParameter.VELOCITY,
                                     view(
                                             "Velocity",
                                             this::velocityPrimaryLabel,
@@ -756,6 +773,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                             this::adjustVelocityRotation,
                                             this::resetVelocityRotation)),
                             modifierChoiceSlot(
+                                    NoteVariationParameter.PRESSURE,
                                     view(
                                             "Pressure",
                                             this::pressurePrimaryLabel,
@@ -772,6 +790,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                             this::adjustPressureRotation,
                                             this::resetPressureRotation)),
                             modifierChoiceSlot(
+                                    NoteVariationParameter.TIMBRE,
                                     view(
                                             "Timbre",
                                             this::timbrePrimaryLabel,
@@ -788,6 +807,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                             this::adjustTimbreRotation,
                                             this::resetTimbreRotation)),
                             modifierChoiceSlot(
+                                    NoteVariationParameter.CHANCE,
                                     view(
                                             "Chance",
                                             this::chancePrimaryLabel,
@@ -812,6 +832,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                         new EncoderSlotBinding[] {
                             choiceSlot("Pitch", this::pitchLabel, this::adjustPitch),
                             modifierChoiceSlot(
+                                    NoteVariationParameter.PITCH,
                                     view(
                                             "Pitch Expr",
                                             this::pitchExpressionPrimaryLabel,
@@ -878,6 +899,14 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             final ModifierEncoderView primary,
             final ModifierEncoderView alt,
             final ModifierEncoderView shift) {
+        return modifierChoiceSlot(null, primary, alt, shift);
+    }
+
+    private EncoderSlotBinding modifierChoiceSlot(
+            final NoteVariationParameter variationParameter,
+            final ModifierEncoderView primary,
+            final ModifierEncoderView alt,
+            final ModifierEncoderView shift) {
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -908,6 +937,10 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                                                     : normal;
                             final int steps = accumulator.consume(inc);
                             if (steps != 0) {
+                                if (variationParameter != null
+                                        && handleNoteVariationTurn(variationParameter, steps)) {
+                                    return;
+                                }
                                 if (hasHeldPulse()) {
                                     padSurface.markHeldPulseConsumed();
                                 }
@@ -917,6 +950,15 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                 encoder.bindTouched(
                         layer,
                         touched -> {
+                            if (variationParameter != null
+                                    && handleNoteVariationTouch(variationParameter, touched)) {
+                                if (!touched) {
+                                    normal.reset();
+                                    altAccumulator.reset();
+                                    shiftAccumulator.reset();
+                                }
+                                return;
+                            }
                             if (touched) {
                                 final ModifierEncoderView currentView =
                                         activeView(primary, alt, shift);
@@ -2263,6 +2305,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         selectedClipSlotIndex = state.slotIndex();
         if (selectedClipSlotIndex != lastSelectedClipSlotIndex) {
             observedNoteSteps.clear();
+            noteVariationAdapter.clear();
             nestedRhythmOwnsSelectedClip = false;
             lastSelectedClipSlotIndex = selectedClipSlotIndex;
         }
@@ -2404,6 +2447,73 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
         return encoderBankLayout;
+    }
+
+    private boolean handleNoteVariationTurn(
+            final NoteVariationParameter parameter, final int amount) {
+        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final double variationAmount = noteVariationAmounts.adjust(parameter, amount * 0.05);
+        oled.valueInfo(
+                parameter.displayName() + " Rand",
+                "%d%%".formatted(Math.round(variationAmount * 100.0)));
+        return true;
+    }
+
+    private boolean handleNoteVariationTouch(
+            final NoteVariationParameter parameter, final boolean touched) {
+        if (!touched && activeVariationTouches.remove(parameter)) {
+            oled.clearScreenDelayed();
+            return true;
+        }
+        if (!touched
+                || !driver.isGlobalShiftHeld()
+                || !driver.isGlobalAltHeld()
+                || driver.isKnobModeHeld()) {
+            return false;
+        }
+        activeVariationTouches.add(parameter);
+        applyNoteVariation(parameter);
+        return true;
+    }
+
+    private void applyNoteVariation(final NoteVariationParameter parameter) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        final ObservedNoteVariationAdapter.Result result =
+                noteVariationAdapter.apply(
+                        parameter,
+                        noteVariationDefault(parameter),
+                        noteVariationAmounts.amount(parameter),
+                        ThreadLocalRandom.current().nextLong(),
+                        observedLoopFineSteps());
+        switch (result.status()) {
+            case APPLIED -> oled.valueInfo("Randomized", result.noteCount() + " notes");
+            case RESET ->
+                    oled.valueInfo(
+                            "Reset " + parameter.displayName(), result.noteCount() + " notes");
+            case EMPTY -> oled.valueInfo("No notes", "Active loop");
+            case TOO_LARGE -> oled.valueInfo("Clip too large", "No changes");
+        }
+    }
+
+    private double noteVariationDefault(final NoteVariationParameter parameter) {
+        return switch (parameter) {
+            case VELOCITY -> parameters.velocityCenter() / 127.0;
+            case PRESSURE -> parameters.pressureCenter();
+            case TIMBRE -> parameters.timbreCenter();
+            case PITCH -> parameters.pitchExpressionCenter();
+            case CHANCE -> parameters.chanceBaseline();
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unsupported Nested Rhythm variation parameter");
+        };
+    }
+
+    private int observedLoopFineSteps() {
+        return Math.max(0, (int) Math.ceil(observedLoopLengthBeats() / CLIP_STEP_SIZE - 1.0e-9));
     }
 
     @Override
