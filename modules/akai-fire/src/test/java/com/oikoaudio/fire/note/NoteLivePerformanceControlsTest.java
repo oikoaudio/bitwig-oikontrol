@@ -50,7 +50,7 @@ class NoteLivePerformanceControlsTest {
     }
 
     @Test
-    void mute3TogglesNoteRepeatOnlyOnPress() {
+    void mute3TapTogglesNoteRepeatOnRelease() {
         final List<String> calls = new ArrayList<>();
         final AtomicBoolean active = new AtomicBoolean();
         final NoteLivePerformanceControls controls =
@@ -64,11 +64,31 @@ class NoteLivePerformanceControlsTest {
                         active::get,
                         (title, detail) -> {});
 
-        controls.handleMute3(false);
         controls.handleMute3(true);
+        assertEquals(List.of(), calls);
+        controls.handleMute3(false);
 
         assertEquals(List.of("toggle"), calls);
         assertEquals(BiColorLightState.GREEN_FULL, controls.mute3LightState());
+    }
+
+    @Test
+    void mute3SelectTurnConsumesTheTapWithoutTogglingNoteRepeat() {
+        final List<String> calls = new ArrayList<>();
+        final NoteLivePerformanceControls controls =
+                new NoteLivePerformanceControls(
+                        ignored -> {},
+                        ignored -> {},
+                        () -> calls.add("toggle"),
+                        () -> false,
+                        (title, detail) -> {});
+
+        controls.handleMute3(true);
+        assertEquals(true, controls.consumeMute3EncoderTurn());
+        controls.handleMute3(false);
+
+        assertEquals(List.of(), calls);
+        assertEquals(false, controls.consumeMute3EncoderTurn());
     }
 
     @Test

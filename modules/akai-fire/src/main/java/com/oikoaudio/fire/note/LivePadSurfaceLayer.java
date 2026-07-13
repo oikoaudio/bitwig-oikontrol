@@ -2420,6 +2420,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return;
         }
         driver.markMainEncoderTurned();
+        if (notePlayController.consumeMute3EncoderTurn()) {
+            noteRepeatHandler.adjustRatePreservingActivation(inc);
+            return;
+        }
         if (driver.handleMainEncoderGlobalChord(inc)) {
             return;
         }

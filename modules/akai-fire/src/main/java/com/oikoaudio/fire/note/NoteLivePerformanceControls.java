@@ -15,6 +15,8 @@ final class NoteLivePerformanceControls {
     private final StatusDisplay statusDisplay;
     private boolean sustainActive;
     private boolean sostenutoActive;
+    private boolean mute3Held;
+    private boolean mute3EncoderTurned;
 
     NoteLivePerformanceControls(
             final Consumer<Integer> sustainSender,
@@ -69,8 +71,28 @@ final class NoteLivePerformanceControls {
 
     void handleMute3(final boolean pressed) {
         if (pressed) {
+            if (!mute3Held) {
+                mute3Held = true;
+                mute3EncoderTurned = false;
+            }
+            return;
+        }
+        if (!mute3Held) {
+            return;
+        }
+        mute3Held = false;
+        if (!mute3EncoderTurned) {
             noteRepeatToggle.run();
         }
+        mute3EncoderTurned = false;
+    }
+
+    boolean consumeMute3EncoderTurn() {
+        if (!mute3Held) {
+            return false;
+        }
+        mute3EncoderTurned = true;
+        return true;
     }
 
     void handleMute4(final boolean pressed) {
@@ -102,6 +124,8 @@ final class NoteLivePerformanceControls {
     }
 
     void resetToggles() {
+        mute3Held = false;
+        mute3EncoderTurned = false;
         if (sustainActive) {
             sustainActive = false;
             sustainSender.accept(0);

@@ -52,6 +52,7 @@ class NotePlayControllerTest {
         mode.handleMute1(true);
         mode.handleMute2(true);
         mode.handleMute3(true);
+        mode.handleMute3(false);
         mode.handlePadPress(0, true, 99, 100);
         mode.deactivate(() -> events.add("release"));
 

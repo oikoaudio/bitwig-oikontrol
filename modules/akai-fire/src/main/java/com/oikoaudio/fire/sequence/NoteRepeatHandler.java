@@ -57,7 +57,9 @@ public class NoteRepeatHandler {
     public void handlePressed(final boolean pressed) {
         repeatButtonHeld = pressed;
         if (pressed) {
-            oled.valueInfo("Note Repeat", GRID_RATES_STR[selectedArpIndex]);
+            oled.valueInfo(
+                    "Note Repeat",
+                    noteRepeatActive.get() ? GRID_RATES_STR[selectedArpIndex] : "Off");
         } else {
             oled.clearScreenDelayed();
         }
@@ -73,10 +75,25 @@ public class NoteRepeatHandler {
 
     public void toggleActive() {
         if (noteRepeatActive.get()) {
-            setNoteRateValue(0);
+            disableNoteRepeat(false);
             return;
         }
         setNoteRateValue(selectedArpIndex == 0 ? DEFAULT_TOGGLE_RATE_INDEX : selectedArpIndex);
+    }
+
+    public void adjustRatePreservingActivation(final int inc) {
+        final int currentIndex =
+                selectedArpIndex == 0 ? DEFAULT_TOGGLE_RATE_INDEX : selectedArpIndex;
+        final int newValue = currentIndex + inc;
+        if (newValue < 1 || newValue >= GRID_RATES_STR.length) {
+            return;
+        }
+        selectedArpIndex = newValue;
+        if (noteRepeatActive.get()) {
+            setNoteRateValue(newValue);
+        } else {
+            oled.valueInfo("Note Repeat", GRID_RATES_STR[newValue]);
+        }
     }
 
     // BUG Pagename is not updated correctly
@@ -111,9 +128,7 @@ public class NoteRepeatHandler {
     private void setNoteRateValue(final int index) {
         this.selectedArpIndex = index;
         if (index == 0) {
-            noteRepeatActive.set(false);
-            arp.isEnabled().set(false);
-            oled.valueInfo("Note Repeat", "Off");
+            disableNoteRepeat(true);
             return;
         }
         noteRepeatActive.set(true);
@@ -121,6 +136,15 @@ public class NoteRepeatHandler {
         arp.isEnabled().set(true);
         arp.rate().set(ARP_RATES[index - 1]);
         oled.valueInfo("Note Repeat", GRID_RATES_STR[index]);
+    }
+
+    private void disableNoteRepeat(final boolean clearSelectedRate) {
+        if (clearSelectedRate) {
+            selectedArpIndex = 0;
+        }
+        noteRepeatActive.set(false);
+        arp.isEnabled().set(false);
+        oled.valueInfo("Note Repeat", "Off");
     }
 
     public void activate() {

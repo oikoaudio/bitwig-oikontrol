@@ -114,6 +114,7 @@ class NoteLiveControlSurfaceTest {
         surface.handleMute1(true);
         surface.handleMute2(true);
         surface.handleMute3(true);
+        surface.handleMute3(false);
 
         assertEquals(BiColorLightState.GREEN_FULL, surface.mute1LightState());
         assertEquals(BiColorLightState.GREEN_FULL, surface.mute2LightState());
@@ -151,6 +152,7 @@ class NoteLiveControlSurfaceTest {
         surface.handleMute1(true);
         surface.handleMute2(true);
         surface.handleMute3(true);
+        surface.handleMute3(false);
         surface.handleMute4(true);
 
         assertEquals(BiColorLightState.GREEN_FULL, surface.mute1LightState());

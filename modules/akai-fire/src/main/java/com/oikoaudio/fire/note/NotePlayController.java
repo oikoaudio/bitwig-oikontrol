@@ -47,6 +47,10 @@ final class NotePlayController {
         controls.handleMute3(pressed);
     }
 
+    boolean consumeMute3EncoderTurn() {
+        return controls.consumeMute3EncoderTurn();
+    }
+
     void handleMute4(final boolean pressed) {
         controls.handleMute4(pressed);
     }

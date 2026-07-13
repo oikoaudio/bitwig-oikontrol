@@ -78,6 +78,10 @@ final class NoteLiveControlSurface {
         performanceControls.handleMute3(pressed);
     }
 
+    boolean consumeMute3EncoderTurn() {
+        return performanceControls.consumeMute3EncoderTurn();
+    }
+
     void handleMute4(final boolean pressed) {
         performanceControls.handleMute4(pressed);
     }

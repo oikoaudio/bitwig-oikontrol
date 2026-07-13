@@ -340,7 +340,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `ALT + PATTERN DOWN/UP` | Lower / higher shared root key |
 | `MUTE_1` | Sustain |
 | `MUTE_2` | Sostenuto |
-| `MUTE_3` | Note Repeat toggle |
+| Tap `MUTE_3` | Toggle Note Repeat |
+| Hold `MUTE_3` + turn `SELECT` | Choose the repeat division without changing whether Note Repeat is on or off |
 | `MUTE_4` | Hold only the pad notes already down when Hold turns on; held-note pads blink and release when pressed again or Hold turns off |
 | `KNOB MODE` | Cycle live-note encoder pages |
 
