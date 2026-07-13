@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Poly Step Channel encoder 3 now shows the selected pitch/chord set and page prominently on touch and turn,
+  instead of rendering the current chord in the OLED center and relegating the set name to the encoder header.
 - Renamed the user-facing Chord Step workflow to Poly Step and added a source-first replacement gesture: hold one
   or more source pitches/chords, then tap an occupied step to replace only its pitches while preserving timing,
   duration, velocity, probability, expression, repeat, recurrence, occurrence, and other note conditions.

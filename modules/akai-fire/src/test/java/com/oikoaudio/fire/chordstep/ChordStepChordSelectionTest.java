@@ -36,6 +36,7 @@ class ChordStepChordSelectionTest {
         assertEquals(2, selection.selectedSlot());
         assertEquals("Audible", selection.familyLabel());
         assertEquals("Minor", selection.chordName());
+        assertEquals("Audible 1/2", selection.familyDisplayLabel());
     }
 
     @Test

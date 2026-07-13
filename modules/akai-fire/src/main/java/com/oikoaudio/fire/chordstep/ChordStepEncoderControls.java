@@ -149,23 +149,12 @@ final class ChordStepEncoderControls {
         banks.put(
                 EncoderMode.CHANNEL,
                 new EncoderBank(
-                        "1: Oct/Root/Scale\n2: Velocity\n3: Chord Family\n4: Int/Inv/Layout",
-                        EncoderFooterLegend.of("RScO", "Velo", "Chrd", "Intr"),
+                        "1: Oct/Root/Scale\n2: Velocity\n3: Pitch/Chord Set\n4: Int/Inv/Layout",
+                        EncoderFooterLegend.of("RScO", "Velo", "Set", "Intr"),
                         new EncoderSlotBinding[] {
                             chordPitchContextSlot(),
                             chordBuildVelocitySlot(),
-                            chordSlot(
-                                    2,
-                                    chordFamilyEncoder,
-                                    amount -> {
-                                        if (mainEncoderRouting.isAltHeld()) {
-                                            host.adjustChordPage(amount);
-                                        } else {
-                                            host.adjustChordFamily(amount);
-                                        }
-                                    },
-                                    host::showCurrentChord,
-                                    host::resetChordFamilySelection),
+                            chordSlot(chordFamilyEncoder, host::resetChordFamilySelection),
                             interpretSlot()
                         }));
         banks.put(
@@ -403,11 +392,7 @@ final class ChordStepEncoderControls {
     }
 
     private EncoderSlotBinding chordSlot(
-            final int slotIndex,
-            final EncoderStepAccumulator accumulator,
-            final ChordAdjuster adjuster,
-            final Runnable showInfo,
-            final Runnable resetAction) {
+            final EncoderStepAccumulator accumulator, final Runnable resetAction) {
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -420,36 +405,51 @@ final class ChordStepEncoderControls {
                     final Layer layer,
                     final TouchEncoder encoder,
                     final int boundSlotIndex) {
-                encoder.bindEncoder(
-                        layer,
-                        inc -> {
-                            final int amount = accumulator.consume(inc);
-                            if (amount != 0) {
-                                adjuster.adjust(amount);
-                            }
-                        });
+                encoder.bindEncoder(layer, ChordStepEncoderControls.this::handleChordFamilyTurn);
                 encoder.bindTouched(
                         layer,
-                        touched -> {
-                            if (touched) {
-                                if (mainEncoderRouting.handleReset(
-                                        true,
-                                        "Chord",
-                                        "No reset",
-                                        () -> {
-                                            accumulator.reset();
-                                            resetAction.run();
-                                        },
-                                        showInfo)) {
-                                    return;
-                                }
-                                showInfo.run();
-                                return;
-                            }
-                            oled.clearScreenDelayed();
-                        });
+                        touched -> handleChordFamilyTouched(touched, accumulator, resetAction));
             }
         };
+    }
+
+    void handleChordFamilyTouched(final boolean touched) {
+        handleChordFamilyTouched(touched, chordFamilyEncoder, host::resetChordFamilySelection);
+    }
+
+    void handleChordFamilyTurn(final int inc) {
+        final int amount = chordFamilyEncoder.consume(inc);
+        if (amount == 0) {
+            return;
+        }
+        if (mainEncoderRouting.isAltHeld()) {
+            host.adjustChordPage(amount);
+        } else {
+            host.adjustChordFamily(amount);
+        }
+        host.showChordFamilyInfo();
+    }
+
+    private void handleChordFamilyTouched(
+            final boolean touched,
+            final EncoderStepAccumulator accumulator,
+            final Runnable resetAction) {
+        if (touched) {
+            if (mainEncoderRouting.handleReset(
+                    true,
+                    "Pitch/Chord Set",
+                    "No reset",
+                    () -> {
+                        accumulator.reset();
+                        resetAction.run();
+                    },
+                    host::showChordFamilyInfo)) {
+                return;
+            }
+            host.showChordFamilyInfo();
+            return;
+        }
+        oled.clearScreenDelayed();
     }
 
     private EncoderSlotBinding interpretSlot() {
@@ -525,11 +525,6 @@ final class ChordStepEncoderControls {
         };
     }
 
-    @FunctionalInterface
-    private interface ChordAdjuster {
-        void adjust(int amount);
-    }
-
     interface Host {
         void adjustChordRoot(int amount);
 
@@ -555,7 +550,7 @@ final class ChordStepEncoderControls {
 
         void adjustChordFamily(int amount);
 
-        void showCurrentChord();
+        void showChordFamilyInfo();
 
         void resetChordFamilySelection();
 

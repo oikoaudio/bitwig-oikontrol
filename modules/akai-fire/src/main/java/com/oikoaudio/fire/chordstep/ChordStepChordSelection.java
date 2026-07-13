@@ -232,6 +232,11 @@ final class ChordStepChordSelection {
                 : oledFamilyLabel(chordBank.family(currentPresetFamilyIndex()).family());
     }
 
+    public String familyDisplayLabel() {
+        final String family = familyLabel();
+        return pageCount() > 1 ? "%s %d/%d".formatted(family, page + 1, pageCount()) : family;
+    }
+
     public String chordName() {
         if (isBuilderFamily()) {
             return builderSelectedNotes.isEmpty() ? "Empty" : builderSelectionSummary();

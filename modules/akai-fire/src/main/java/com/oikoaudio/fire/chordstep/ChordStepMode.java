@@ -921,8 +921,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void showCurrentChord() {
-                ChordStepMode.this.showCurrentChord();
+            public void showChordFamilyInfo() {
+                ChordStepMode.this.showChordFamilyInfo();
             }
 
             @Override
@@ -1338,15 +1338,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void adjustChordPage(final int amount) {
-        if (chordSelection.adjustPage(amount)) {
-            showCurrentChord();
-        }
+        chordSelection.adjustPage(amount);
     }
 
     private void adjustChordFamily(final int amount) {
-        if (chordSelection.adjustFamily(amount)) {
-            showCurrentChord();
-        }
+        chordSelection.adjustFamily(amount);
     }
 
     private void adjustChordRoot(final int amount) {
@@ -1640,6 +1636,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private String currentChordFamilyLabel() {
         return chordSelection.familyLabel();
+    }
+
+    private void showChordFamilyInfo() {
+        chordDisplayRefreshPending = false;
+        oled.valueInfo("Pitch/Chord Set", chordSelection.familyDisplayLabel());
     }
 
     private String currentChordName() {

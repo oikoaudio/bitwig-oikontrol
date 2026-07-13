@@ -432,7 +432,7 @@ Press `STEP` from normal performance modes to enter `Poly Step`. Press `STEP` ag
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Chord octave / `ALT`: shared root / `SHIFT`: shared scale | Global velocity sensitivity / `SHIFT`: velocity center | Chord family / `ALT`: family page | Interpretation / `ALT`: invert chord / `SHIFT`: builder layout |
+| `Channel` | Chord octave / `ALT`: shared root / `SHIFT`: shared scale | Global velocity sensitivity / `SHIFT`: velocity center | Pitch/chord set / `ALT`: set page | Interpretation / `ALT`: invert chord / `SHIFT`: builder layout |
 | `Mixer` | Track volume | Track pan | Send 1 | Send 2 |
 | `User 1` | Note velocity | Pressure | Timbre | Pitch |
 | `User 2` | Note length | Chance | Velocity spread | Repeats |
