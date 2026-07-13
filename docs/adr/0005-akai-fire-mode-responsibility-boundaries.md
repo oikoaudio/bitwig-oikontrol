@@ -59,7 +59,12 @@ Accepted - incremental adoption in progress.
 - Chord Step is now the reference for removing cross-mode inheritance coupling: sequencing behavior should live in the mode package that owns it.
 - `ChordStepMode` is now the top-level mode implementation rather than a shell around `ChordStepSurfaceLayer`; do not copy the removed wrapper-layer pattern.
 - Nested Rhythm is the reference for generated editable patterns and clip-write pending patching.
-- Melodic Step is the reference for current/base pattern state and generated-pattern clip writing, with pitch-pool and encoder controls still candidates for extraction.
-- Drum XOX should be used to check that the vocabulary also works for simple direct-step editing, especially before adding shared abstractions.
+- Melodic Step is the reference for current/base pattern state and generated-pattern clip writing; its pitch-pool,
+  encoder, pad-surface, and selected-clip responsibilities now have named collaborators.
+- Drum XOX demonstrates the vocabulary for simple direct-step editing through `DrumStepPadSurface` without forcing
+  it into a generated-pattern model.
+- Perform demonstrates that page state, observation state, rendering, navigation, mixing, and encoder policy can be
+  separated without turning the mode vocabulary into a generic framework. Fugue and live Step Input use narrower
+  collaborators where their workflows do not need the full generated-pattern shape.
 - Shared helpers should emerge from repeated behavior in at least two real modes. Small behavior-specific helpers such as recurrence-row interaction are preferred over generic mode routers.
 - ADR 0002 remains the Launch Control XL controller-layer separation decision. This ADR records the later Akai Fire mode-level boundary vocabulary.
