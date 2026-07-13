@@ -139,20 +139,21 @@ final class ChordStepEventIndex {
 
     public boolean hasStepStart(final int localStep) {
         final int globalStep = localToGlobalStep.applyAsInt(localStep);
-        if (observedState.hasAnyObservedNotes()) {
-            return observedState.hasStepStart(globalStep);
+        if (observedState.hasStepStart(globalStep)) {
+            return true;
         }
         return noteStepsAt(localStep).values().stream()
-                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
+                .anyMatch(note -> isUnsupersededNoteStart(localStep, note));
     }
 
     public Set<Integer> notesAtStep(final int localStep) {
-        final Set<Integer> observedNotes =
-                observedState.notesAtStep(localToGlobalStep.applyAsInt(localStep));
-        if (observedState.hasAnyObservedNotes()) {
-            return observedNotes;
-        }
-        return new HashSet<>(noteStepsAt(localStep).keySet());
+        final Set<Integer> notes =
+                new HashSet<>(observedState.notesAtStep(localToGlobalStep.applyAsInt(localStep)));
+        noteStepsAt(localStep).values().stream()
+                .filter(note -> isUnsupersededNoteStart(localStep, note))
+                .map(NoteStep::y)
+                .forEach(notes::add);
+        return notes;
     }
 
     public Set<Integer> visibleOccupiedSteps() {
@@ -165,14 +166,14 @@ final class ChordStepEventIndex {
     public Set<Integer> visibleStartedSteps() {
         final Set<Integer> startedSteps =
                 observedState.visibleStartedSteps(visibleGlobalStep, globalToLocalStep);
-        if (observedState.hasAnyObservedNotes()) {
-            return startedSteps;
-        }
         noteStepsByPosition.entrySet().stream()
                 .filter(
                         entry ->
                                 entry.getValue().values().stream()
-                                        .anyMatch(note -> note.state() == NoteStep.State.NoteOn))
+                                        .anyMatch(
+                                                note ->
+                                                        isUnsupersededNoteStart(
+                                                                entry.getKey(), note)))
                 .map(Map.Entry::getKey)
                 .forEach(startedSteps::add);
         return startedSteps;
@@ -216,7 +217,7 @@ final class ChordStepEventIndex {
         }
         if (visibleNotes != null) {
             visibleNotes.values().stream()
-                    .filter(note -> note.state() == NoteStep.State.NoteOn)
+                    .filter(note -> isUnsupersededNoteStart(localStep, note))
                     .forEach(
                             note ->
                                     noteStarts.putIfAbsent(
@@ -332,6 +333,12 @@ final class ChordStepEventIndex {
             return defaultDuration;
         }
         return occupiedFineSteps * fineStepLength;
+    }
+
+    private boolean isUnsupersededNoteStart(final int localStep, final NoteStep note) {
+        return note.state() == NoteStep.State.NoteOn
+                && !observedState.hasObservedStartInCoarseStep(
+                        localToGlobalStep.applyAsInt(localStep), note.y(), fineStepsPerStep);
     }
 
     private static String moveKey(final int x, final int y) {

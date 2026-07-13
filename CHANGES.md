@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Fixed Poly Step pad LEDs temporarily blanking during parameter edits while its fine-grid observation cache was
+  being repopulated.
 - Poly Step now assigns each finely nudged note or chord to exactly one nearest step pad, transfers that ownership
   at the midpoint, and preserves long-note duration without lighting or clearing neighboring sustain steps.
 - Poly Step chord-set pads now support simultaneous multi-pad grips, combining and deduplicating the selected

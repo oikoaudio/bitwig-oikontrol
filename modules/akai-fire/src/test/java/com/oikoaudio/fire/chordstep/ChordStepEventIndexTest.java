@@ -48,21 +48,28 @@ class ChordStepEventIndexTest {
     }
 
     @Test
-    void fineGridOwnershipOverridesTheCoarseVisibleNoteBucket() {
+    void fineGridOwnershipOverridesOnlyTheMatchingCoarseEntryDuringRefresh() {
         final ChordStepEventIndex index = index();
         final NoteStep coarseNote = mock(NoteStep.class);
         when(coarseNote.x()).thenReturn(2);
         when(coarseNote.y()).thenReturn(60);
         when(coarseNote.state()).thenReturn(NoteStep.State.NoteOn);
+        final NoteStep unrelatedCoarseNote = mock(NoteStep.class);
+        when(unrelatedCoarseNote.x()).thenReturn(5);
+        when(unrelatedCoarseNote.y()).thenReturn(67);
+        when(unrelatedCoarseNote.state()).thenReturn(NoteStep.State.NoteOn);
 
         index.handleNoteStepObject(coarseNote);
+        index.handleNoteStepObject(unrelatedCoarseNote);
         index.handleObservedStepData(40, 60, NoteStep.State.NoteOn.ordinal());
 
         assertFalse(index.hasStepStart(2));
         assertTrue(index.hasStepStart(3));
-        assertEquals(Set.of(3), index.visibleStartedSteps());
+        assertTrue(index.hasStepStart(5));
+        assertEquals(Set.of(3, 5), index.visibleStartedSteps());
         assertEquals(Set.of(), index.notesAtStep(2));
         assertEquals(Set.of(60), index.notesAtStep(3));
+        assertEquals(Set.of(67), index.notesAtStep(5));
     }
 
     @Test

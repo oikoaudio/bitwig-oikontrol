@@ -184,6 +184,25 @@ final class ChordStepObservedState {
         return fineNoteStartsByStep.containsKey(globalStep);
     }
 
+    public boolean hasObservedStartInCoarseStep(
+            final int globalCoarseStep, final int midiNote, final int fineStepsPerStep) {
+        final int loopStepCount = Math.max(1, loopSteps.getAsInt());
+        final int normalizedCoarseStep = Math.floorMod(globalCoarseStep, loopStepCount);
+        final int followingOwnerStep = Math.floorMod(normalizedCoarseStep + 1, loopStepCount);
+        return hasStartInPhysicalStep(
+                        normalizedCoarseStep,
+                        normalizedCoarseStep,
+                        midiNote,
+                        fineStepsPerStep,
+                        loopStepCount)
+                || hasStartInPhysicalStep(
+                        followingOwnerStep,
+                        normalizedCoarseStep,
+                        midiNote,
+                        fineStepsPerStep,
+                        loopStepCount);
+    }
+
     public Set<Integer> notesAtStep(final int globalStep) {
         final Map<Integer, Integer> starts = fineNoteStartsByStep.get(globalStep);
         if (starts == null || starts.isEmpty()) {
@@ -195,5 +214,18 @@ final class ChordStepObservedState {
     private int ownerStep(final int fineStep, final int fineStepsPerStep) {
         return FineStepOwnership.ownerOf(
                 fineStep, fineStepsPerStep, Math.max(1, loopSteps.getAsInt()));
+    }
+
+    private boolean hasStartInPhysicalStep(
+            final int ownerStep,
+            final int physicalStep,
+            final int midiNote,
+            final int fineStepsPerStep,
+            final int loopStepCount) {
+        final Integer fineStart =
+                fineNoteStartsByStep.getOrDefault(ownerStep, Map.of()).get(midiNote);
+        return fineStart != null
+                && Math.floorMod(Math.floorDiv(fineStart, fineStepsPerStep), loopStepCount)
+                        == physicalStep;
     }
 }
