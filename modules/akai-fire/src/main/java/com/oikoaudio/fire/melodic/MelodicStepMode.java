@@ -35,6 +35,7 @@ import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationGesture;
 import com.oikoaudio.fire.sequence.NoteVariationParameter;
 import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
@@ -3082,7 +3083,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     @Override
     public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
-        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+        if (driver.isKnobModeHeld()
+                || NoteVariationGesture.turn(driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())
+                        != NoteVariationGesture.Action.ADJUST_AMOUNT) {
             return false;
         }
         final java.util.Optional<NoteVariationParameter> parameter =
@@ -3104,9 +3107,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             return true;
         }
         if (!touched
-                || !driver.isGlobalShiftHeld()
-                || !driver.isGlobalAltHeld()
-                || driver.isKnobModeHeld()) {
+                || NoteVariationGesture.touch(
+                                driver.isGlobalShiftHeld(),
+                                driver.isGlobalAltHeld(),
+                                driver.isKnobModeHeld())
+                        != NoteVariationGesture.Action.APPLY) {
             return false;
         }
         final java.util.Optional<NoteVariationParameter> parameter =

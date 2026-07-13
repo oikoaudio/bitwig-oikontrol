@@ -1,4 +1,4 @@
-package com.oikoaudio.fire.chordstep;
+package com.oikoaudio.fire.sequence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -9,12 +9,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.sequence.NoteVariationParameter;
-import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-class ChordStepNoteVariationAdapterTest {
+class ObservedNoteVariationAdapterTest {
 
     @Test
     void appliesOneCoherentValueToEveryChordVoiceInTheFullLoop() {

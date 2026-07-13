@@ -306,6 +306,28 @@
       <p>On the <code>Pins</code> page, turn an encoder right for <code>On</code> and left for <code>Off</code>; the pin controls stop at those two states and do not wrap. The <code>Input</code> velocity settings are shared by live <code>NOTE</code>, <code>Drum Pads</code>, and <code>Poly Step</code> input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle <code>Show deactivated tracks</code>; the same persistent option is available in the controller preferences and defaults to off.</p>
       <p>The <code>Screen Message Hold</code> hardware preference controls how long transient OLED messages stay visible before persistent screens return: <code>Short</code> is 750 ms, <code>Normal</code> is 1.5 s, and <code>Long</code> is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The <code>Idle Perf &amp; Drum OLED</code> hardware preference defaults to <code>Context</code>; set it to <code>Meters</code> to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data. The <code>Note OLED Notes/Chords</code> hardware preference defaults to <code>Pads</code>: live Note pads show notes/chords on the OLED, while selected-track DAW playback notes do not take over the idle display. Set it to <code>Pads + DAW</code> if you also want playing clip notes/chords to appear during playback.</p>
       <p>Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Poly Step, Nested Rhythm, and Fugue. The <code>Encoder Legend Position</code> hardware preference defaults to <code>Bottom</code>; set it to <code>Top</code> if the top row is easier to read in your controller setup.</p>
+      <h3>Baked Note Variation</h3>
+      <p>Sequencer and generator modes can write stable, clip-wide variation into continuous per-note values. This is <strong>Baked Note Variation</strong>: values are written once into the notes and do not change again merely because the clip loops.</p>
+      <p>On an eligible note-parameter encoder:</p>
+      <ul>
+        <li><code>SHIFT + ALT + turn</code> sets that parameter's session-local variation amount from 0% to 100%.</li>
+        <li><code>SHIFT + ALT + touch</code> writes a fresh variation to every note-on event in the active clip loop, across all pitches and MIDI channels.</li>
+        <li>Turn the amount down to 0%, then use <code>SHIFT + ALT + touch</code>, to reset every targeted note to the mode's insertion baseline or expression centre.</li>
+        <li><code>KNOB MODE + touch</code> still resets the ordinary encoder target and takes priority over variation.</li>
+      </ul>
+      <p>The first variation policy, <code>Scatter</code>, favors values near the current default and gives notes at the same onset the same value, so chords and layered unisons move together. Pitch expression stays within 12 semitones of its default. Held steps, selected notes, the visible page, and the selected drum pad do not narrow the operation. If the controller cannot observe the complete loop it reports <code>Clip too large</code> and changes nothing.</p>
+      <table>
+        <thead><tr><th>Mode</th><th>Eligible mapped values</th></tr></thead>
+        <tbody>
+          <tr><td>Drum XOX</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance, Velocity spread, Note Gain, Note Pan</td></tr>
+          <tr><td>Poly Step</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance, Velocity spread, Note Gain, Note Pan</td></tr>
+          <tr><td>Melo Gen</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance, Velocity spread, Note Gain, Note Pan</td></tr>
+          <tr><td>Nested Rhythm</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance</td></tr>
+          <tr><td>Fugue</td><td>Velocity and Chance</td></tr>
+      </tbody>
+      </table>
+      <p>In Drum XOX, Poly Step, and Melo Gen, go to <code>User 1</code> and press <code>ALT + KNOB MODE</code> to latch the secondary expression page. Its legend is <code>Velo / Gain / Pan / PExp</code>; press <code>ALT + KNOB MODE</code> again to return to <code>Velo / Pres / Timb / PExp</code>. Note Gain and Note Pan use ordinary edit/default/reset behavior on that latched page, so their <code>SHIFT + ALT</code> variation gesture needs no extra held button.</p>
+      <p>Applying variation again produces a new stable result. A later deliberate generator action in Melo Gen, Fugue, or Nested Rhythm may rewrite those values. Variation amounts are shared by parameter across compatible modes for the current extension session, but are not stored in controller preferences or project metadata.</p>
       <h3>Main SELECT encoder</h3>
       <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
       <p>Global <code>SELECT</code> turn chords:</p>

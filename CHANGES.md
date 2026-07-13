@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Added Baked Note Variation across Drum XOX, Poly Step, Melodic Step, Fugue, and Nested Rhythm: `SHIFT + ALT` adjusts and applies stable clip-wide per-note variation, zero amount resets to mode defaults, and a latched `ALT + KNOB MODE` User 1 page exposes Note Gain and Note Pan in compatible step modes.
+- Restored Melodic Step density generation and made ALT density thinning/filling follow the shared metric-indispensability ranking instead of clip scan order.
 - Shortened Poly Step's paged chord-family OLED labels so the complete page fraction remains visible in the large
   value font.
 - Fixed Poly Step pad LEDs temporarily blanking during parameter edits while its fine-grid observation cache was

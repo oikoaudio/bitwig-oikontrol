@@ -16,6 +16,7 @@ import com.oikoaudio.fire.melodic.MelodicPattern;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationGesture;
 import com.oikoaudio.fire.sequence.NoteVariationParameter;
 import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
@@ -744,7 +745,9 @@ public final class FugueStepMode extends Layer {
     }
 
     private boolean handleNoteVariationTurn(final int encoderIndex, final int increment) {
-        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+        if (driver.isKnobModeHeld()
+                || NoteVariationGesture.turn(driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())
+                        != NoteVariationGesture.Action.ADJUST_AMOUNT) {
             return false;
         }
         final Optional<NoteVariationParameter> parameter = noteVariationParameter(encoderIndex);
@@ -764,9 +767,11 @@ public final class FugueStepMode extends Layer {
             return true;
         }
         if (!touched
-                || !driver.isGlobalShiftHeld()
-                || !driver.isGlobalAltHeld()
-                || driver.isKnobModeHeld()) {
+                || NoteVariationGesture.touch(
+                                driver.isGlobalShiftHeld(),
+                                driver.isGlobalAltHeld(),
+                                driver.isKnobModeHeld())
+                        != NoteVariationGesture.Action.APPLY) {
             return false;
         }
         final Optional<NoteVariationParameter> parameter = noteVariationParameter(encoderIndex);

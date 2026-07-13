@@ -2113,7 +2113,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @Override
     public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
-        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+        if (driver.isKnobModeHeld()
+                || NoteVariationGesture.turn(driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())
+                        != NoteVariationGesture.Action.ADJUST_AMOUNT) {
             return false;
         }
         final Optional<NoteVariationParameter> parameter = NoteVariationParameter.from(access);
@@ -2134,9 +2136,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             return true;
         }
         if (!touched
-                || !driver.isGlobalShiftHeld()
-                || !driver.isGlobalAltHeld()
-                || driver.isKnobModeHeld()) {
+                || NoteVariationGesture.touch(
+                                driver.isGlobalShiftHeld(),
+                                driver.isGlobalAltHeld(),
+                                driver.isKnobModeHeld())
+                        != NoteVariationGesture.Action.APPLY) {
             return false;
         }
         final Optional<NoteVariationParameter> parameter = NoteVariationParameter.from(access);

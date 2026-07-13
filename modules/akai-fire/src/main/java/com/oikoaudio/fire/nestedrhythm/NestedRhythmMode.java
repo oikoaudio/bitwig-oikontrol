@@ -33,6 +33,7 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationGesture;
 import com.oikoaudio.fire.sequence.NoteVariationParameter;
 import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
@@ -2451,7 +2452,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     private boolean handleNoteVariationTurn(
             final NoteVariationParameter parameter, final int amount) {
-        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+        if (driver.isKnobModeHeld()
+                || NoteVariationGesture.turn(driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())
+                        != NoteVariationGesture.Action.ADJUST_AMOUNT) {
             return false;
         }
         final double variationAmount = noteVariationAmounts.adjust(parameter, amount * 0.05);
@@ -2468,9 +2471,11 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             return true;
         }
         if (!touched
-                || !driver.isGlobalShiftHeld()
-                || !driver.isGlobalAltHeld()
-                || driver.isKnobModeHeld()) {
+                || NoteVariationGesture.touch(
+                                driver.isGlobalShiftHeld(),
+                                driver.isGlobalAltHeld(),
+                                driver.isKnobModeHeld())
+                        != NoteVariationGesture.Action.APPLY) {
             return false;
         }
         activeVariationTouches.add(parameter);

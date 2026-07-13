@@ -28,6 +28,7 @@ import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationGesture;
 import com.oikoaudio.fire.sequence.NoteVariationParameter;
 import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
@@ -1975,7 +1976,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     @Override
     public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
-        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+        if (driver.isKnobModeHeld()
+                || NoteVariationGesture.turn(driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())
+                        != NoteVariationGesture.Action.ADJUST_AMOUNT) {
             return false;
         }
         final java.util.Optional<NoteVariationParameter> parameter =
@@ -1997,9 +2000,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return true;
         }
         if (!touched
-                || !driver.isGlobalShiftHeld()
-                || !driver.isGlobalAltHeld()
-                || driver.isKnobModeHeld()) {
+                || NoteVariationGesture.touch(
+                                driver.isGlobalShiftHeld(),
+                                driver.isGlobalAltHeld(),
+                                driver.isKnobModeHeld())
+                        != NoteVariationGesture.Action.APPLY) {
             return false;
         }
         final java.util.Optional<NoteVariationParameter> parameter =
