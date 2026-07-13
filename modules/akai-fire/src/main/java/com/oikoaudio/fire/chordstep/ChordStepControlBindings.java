@@ -2,106 +2,138 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.MultiStateHardwareLight;
 import com.bitwig.extensions.framework.Layer;
-import com.oikoaudio.fire.AkaiFireOikontrolExtension;
-import com.oikoaudio.fire.NoteAssign;
-import com.oikoaudio.fire.control.PadBankRowControlBindings;
+import com.oikoaudio.fire.control.BankButtonBindings;
+import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.ButtonRowBindings;
+import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.utils.PatternButtons;
 
 final class ChordStepControlBindings {
-    private final AkaiFireOikontrolExtension driver;
     private final Layer layer;
+    private final RgbButton[] pads;
+    private final BiColorButton stepButton;
+    private final BiColorButton bankLeftButton;
+    private final BiColorButton bankRightButton;
+    private final BiColorButton[] rowButtons;
+    private final PatternButtons patternButtons;
+    private final MultiStateHardwareLight[] stateLights;
     private final Host host;
 
     ChordStepControlBindings(
-            final AkaiFireOikontrolExtension driver, final Layer layer, final Host host) {
-        this.driver = driver;
+            final Layer layer,
+            final RgbButton[] pads,
+            final BiColorButton stepButton,
+            final BiColorButton bankLeftButton,
+            final BiColorButton bankRightButton,
+            final BiColorButton[] rowButtons,
+            final PatternButtons patternButtons,
+            final MultiStateHardwareLight[] stateLights,
+            final Host host) {
         this.layer = layer;
+        this.pads = pads;
+        this.stepButton = stepButton;
+        this.bankLeftButton = bankLeftButton;
+        this.bankRightButton = bankRightButton;
+        this.rowButtons = rowButtons;
+        this.patternButtons = patternButtons;
+        this.stateLights = stateLights;
         this.host = host;
     }
 
     void bind() {
-        PadBankRowControlBindings.velocitySensitivePads(
-                        driver,
-                        layer,
-                        padBankRowHost(),
-                        new PadBankRowControlBindings.ExtraButtonBinding(
-                                NoteAssign.STEP_SEQ,
-                                host::handleStepSeqPressed,
-                                host::stepSeqLightState))
-                .bind();
+        bindPads();
+        bindButtons();
         bindEditStatusLights();
     }
 
     void activatePatternButtons() {
-        driver.getPatternButtons().setUpCallback(host::handlePatternUp, host::patternUpLight);
-        driver.getPatternButtons().setDownCallback(host::handlePatternDown, host::patternDownLight);
+        patternButtons.setUpCallback(host::handlePatternUp, host::patternUpLight);
+        patternButtons.setDownCallback(host::handlePatternDown, host::patternDownLight);
     }
 
     void deactivatePatternButtons() {
-        driver.getPatternButtons().setUpCallback(pressed -> {}, () -> BiColorLightState.OFF);
-        driver.getPatternButtons().setDownCallback(pressed -> {}, () -> BiColorLightState.OFF);
+        patternButtons.setUpCallback(pressed -> {}, () -> BiColorLightState.OFF);
+        patternButtons.setDownCallback(pressed -> {}, () -> BiColorLightState.OFF);
     }
 
-    private PadBankRowControlBindings.Host padBankRowHost() {
-        return new PadBankRowControlBindings.Host() {
-            @Override
-            public void handlePadPress(final int padIndex, final boolean pressed) {
-                host.handlePadPress(padIndex, pressed, 0);
-            }
+    private void bindPads() {
+        PadMatrixBindings.bindPressedVelocity(
+                layer,
+                pads,
+                new PadMatrixBindings.Host() {
+                    @Override
+                    public void handlePadPress(
+                            final int padIndex, final boolean pressed, final int velocity) {
+                        host.handlePadPress(padIndex, pressed, velocity);
+                    }
 
-            @Override
-            public void handlePadPress(
-                    final int padIndex, final boolean pressed, final int velocity) {
-                host.handlePadPress(padIndex, pressed, velocity);
-            }
+                    @Override
+                    public RgbLightState padLight(final int padIndex) {
+                        return host.padLight(padIndex);
+                    }
+                });
+    }
 
-            @Override
-            public RgbLightState padLight(final int padIndex) {
-                return host.padLight(padIndex);
-            }
+    private void bindButtons() {
+        stepButton.bindPressed(layer, host::handleStepSeqPressed, host::stepSeqLightState);
+        BankButtonBindings.bind(
+                layer,
+                bankLeftButton,
+                bankRightButton,
+                new BankButtonBindings.Host() {
+                    @Override
+                    public void handleBankButton(final boolean pressed, final int amount) {
+                        host.handleBankButton(pressed, amount);
+                    }
 
-            @Override
-            public void handleBankButton(final boolean pressed, final int amount) {
-                host.handleBankButton(pressed, amount);
-            }
+                    @Override
+                    public BiColorLightState bankLightState() {
+                        return host.bankLightState();
+                    }
+                });
+        ButtonRowBindings.bindPressed(
+                layer,
+                rowButtons,
+                new ButtonRowBindings.Host() {
+                    @Override
+                    public void handleButton(final int index, final boolean pressed) {
+                        handleRowButton(index, pressed);
+                    }
 
-            @Override
-            public BiColorLightState bankLightState() {
-                return host.bankLightState();
-            }
+                    @Override
+                    public BiColorLightState lightState(final int index) {
+                        return rowLightState(index);
+                    }
+                });
+    }
 
-            @Override
-            public void handleRowButton(final int index, final boolean pressed) {
-                switch (index) {
-                    case 0 -> host.handleMute1Button(pressed);
-                    case 1 -> host.handleMute2Button(pressed);
-                    case 2 -> host.handleMute3Button(pressed);
-                    case 3 -> host.handleMute4Button(pressed);
-                    default ->
-                            throw new IllegalArgumentException(
-                                    "Unsupported mute button index: " + index);
-                }
-            }
+    private void handleRowButton(final int index, final boolean pressed) {
+        switch (index) {
+            case 0 -> host.handleMute1Button(pressed);
+            case 1 -> host.handleMute2Button(pressed);
+            case 2 -> host.handleMute3Button(pressed);
+            case 3 -> host.handleMute4Button(pressed);
+            default ->
+                    throw new IllegalArgumentException("Unsupported mute button index: " + index);
+        }
+    }
 
-            @Override
-            public BiColorLightState rowLightState(final int index) {
-                return switch (index) {
-                    case 0 -> host.mute1LightState();
-                    case 1 -> host.mute2LightState();
-                    case 2 -> host.mute3LightState();
-                    case 3 -> host.mute4LightState();
-                    default ->
-                            throw new IllegalArgumentException(
-                                    "Unsupported mute button index: " + index);
-                };
-            }
+    private BiColorLightState rowLightState(final int index) {
+        return switch (index) {
+            case 0 -> host.mute1LightState();
+            case 1 -> host.mute2LightState();
+            case 2 -> host.mute3LightState();
+            case 3 -> host.mute4LightState();
+            default ->
+                    throw new IllegalArgumentException("Unsupported mute button index: " + index);
         };
     }
 
     private void bindEditStatusLights() {
-        final MultiStateHardwareLight[] stateLights = driver.getStateLights();
         for (int index = 0; index < stateLights.length; index++) {
             final int lightIndex = index;
             layer.bindLightState(() -> editStatusLightState(lightIndex), stateLights[lightIndex]);
@@ -128,6 +160,9 @@ final class ChordStepControlBindings {
         };
     }
 
+    /*
+     * The host remains semantic: physical controls are supplied separately by the composition root.
+     */
     interface Host {
         void handlePadPress(int padIndex, boolean pressed, int velocity);
 

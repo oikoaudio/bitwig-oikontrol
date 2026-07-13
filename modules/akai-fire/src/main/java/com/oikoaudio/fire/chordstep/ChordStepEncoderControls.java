@@ -3,7 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extensions.framework.Layer;
-import com.oikoaudio.fire.AkaiFireOikontrolExtension;
+import com.oikoaudio.fire.MainEncoderRouting;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
@@ -25,7 +25,7 @@ final class ChordStepEncoderControls {
     private static final int CHORD_OCTAVE_ENCODER_THRESHOLD = 8;
     private static final int CHORD_FAMILY_ENCODER_THRESHOLD = 8;
 
-    private final AkaiFireOikontrolExtension driver;
+    private final MainEncoderRouting mainEncoderRouting;
     private final OledDisplay oled;
     private final CursorTrack cursorTrack;
     private final Host host;
@@ -39,11 +39,11 @@ final class ChordStepEncoderControls {
     private boolean mainEncoderPressConsumed = false;
 
     ChordStepEncoderControls(
-            final AkaiFireOikontrolExtension driver,
+            final MainEncoderRouting mainEncoderRouting,
             final OledDisplay oled,
             final CursorTrack cursorTrack,
             final Host host) {
-        this.driver = driver;
+        this.mainEncoderRouting = mainEncoderRouting;
         this.oled = oled;
         this.cursorTrack = cursorTrack;
         this.host = host;
@@ -55,95 +55,92 @@ final class ChordStepEncoderControls {
     }
 
     void bindMainEncoder(final Layer layer) {
-        final TouchEncoder mainEncoder = driver.getMainEncoder();
+        final TouchEncoder mainEncoder = mainEncoderRouting.encoder();
         mainEncoder.bindEncoder(layer, this::handleMainEncoder);
         mainEncoder.bindTouched(layer, this::handleMainEncoderPress);
     }
 
     private void handleMainEncoder(final int inc) {
-        if (driver.isPopupBrowserActive()) {
-            driver.routeBrowserMainEncoder(inc);
+        if (mainEncoderRouting.isPopupBrowserActive()) {
+            mainEncoderRouting.routeBrowserTurn(inc);
             return;
         }
-        driver.markMainEncoderTurned();
-        if (driver.handleMainEncoderGlobalChord(inc)) {
+        mainEncoderRouting.markTurned();
+        if (mainEncoderRouting.routeGlobalChord(inc)) {
             return;
         }
-        final boolean fine = driver.isGlobalShiftHeld();
-        final String mainEncoderRole = driver.getMainEncoderRolePreference();
-        if (driver.routeGlobalMainEncoderRole(inc, fine)) {
+        final boolean fine = mainEncoderRouting.isShiftHeld();
+        final MainEncoderRouting.Role role = mainEncoderRouting.currentRole();
+        if (mainEncoderRouting.routeRoleTurn(inc, fine)) {
             return;
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(
-                mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.NOTE_REPEAT) {
             oled.valueInfo("Note Repeat", "Live only");
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.DRUM_GRID) {
             oled.valueInfo("Drum Grid", "Drum only");
         } else {
-            driver.adjustMainCursorParameter(inc, fine);
+            mainEncoderRouting.adjustCursorParameter(inc, fine);
         }
     }
 
     private void handleMainEncoderPress(final boolean pressed) {
-        if (driver.isPopupBrowserActive()) {
-            driver.routeBrowserMainEncoderPress(pressed);
+        if (mainEncoderRouting.isPopupBrowserActive()) {
+            mainEncoderRouting.routeBrowserPress(pressed);
             return;
         }
-        driver.setMainEncoderPressed(pressed);
-        if (pressed && driver.isGlobalAltHeld()) {
+        mainEncoderRouting.setPressed(pressed);
+        if (pressed && mainEncoderRouting.isAltHeld()) {
             mainEncoderPressConsumed = true;
-            driver.toggleCurrentDeviceWindow();
+            mainEncoderRouting.toggleCurrentDeviceWindow();
             return;
         }
         if (!pressed && mainEncoderPressConsumed) {
             mainEncoderPressConsumed = false;
             return;
         }
-        if (pressed && driver.isGlobalShiftHeld()) {
+        if (pressed && mainEncoderRouting.isShiftHeld()) {
             mainEncoderPressConsumed = true;
-            driver.cycleMainEncoderRolePreference();
+            mainEncoderRouting.cycleRole();
             return;
         }
-        final String mainEncoderRole = driver.getMainEncoderRolePreference();
-        if (!pressed && !driver.wasMainEncoderTurnedWhilePressed()) {
-            driver.toggleMainEncoderRolePreference();
+        final MainEncoderRouting.Role role = mainEncoderRouting.currentRole();
+        if (!pressed && !mainEncoderRouting.wasTurnedWhilePressed()) {
+            mainEncoderRouting.toggleRole();
             return;
         }
-        if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+        if (role == MainEncoderRouting.Role.NOTE_REPEAT) {
             if (pressed) {
                 oled.valueInfo("Note Repeat", "Live only");
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TEMPO_ROLE.equals(mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.TEMPO) {
             if (pressed) {
-                driver.showTempoInfo();
+                mainEncoderRouting.showTempoInfo();
             } else {
                 oled.clearScreenDelayed();
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_SHUFFLE_ROLE.equals(mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.SHUFFLE) {
             if (pressed) {
-                driver.showGrooveShuffleInfo();
+                mainEncoderRouting.showShuffleInfo();
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(
-                mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.TRACK_SELECT) {
             if (pressed) {
-                driver.showSelectedTrackInfo(false);
+                mainEncoderRouting.showSelectedTrackInfo();
             } else {
                 oled.clearScreenDelayed();
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(
-                mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.PLAYBACK_START) {
             if (pressed) {
                 oled.valueInfo("Play Start", "Grid step");
             } else {
                 oled.clearScreenDelayed();
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
+        } else if (role == MainEncoderRouting.Role.DRUM_GRID) {
             if (pressed) {
                 oled.valueInfo("Drum Grid", "Drum only");
             } else {
                 oled.clearScreenDelayed();
             }
         } else if (pressed) {
-            driver.showMainCursorParameterInfo();
+            mainEncoderRouting.showCursorParameterInfo();
         }
     }
 
@@ -161,7 +158,7 @@ final class ChordStepEncoderControls {
                                     2,
                                     chordFamilyEncoder,
                                     amount -> {
-                                        if (driver.isGlobalAltHeld()) {
+                                        if (mainEncoderRouting.isAltHeld()) {
                                             host.adjustChordPage(amount);
                                         } else {
                                             host.adjustChordFamily(amount);
@@ -241,14 +238,15 @@ final class ChordStepEncoderControls {
                         layer,
                         inc -> {
                             final boolean scaleContext =
-                                    driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                                    mainEncoderRouting.isShiftHeld()
+                                            && !mainEncoderRouting.isAltHeld();
                             if (scaleContext) {
                                 if (inc != 0) {
                                     host.adjustChordSharedScale(inc);
                                 }
                                 return;
                             }
-                            final boolean rootContext = driver.isGlobalAltHeld();
+                            final boolean rootContext = mainEncoderRouting.isAltHeld();
                             final EncoderStepAccumulator accumulator =
                                     rootContext ? chordRootEncoder : chordOctaveEncoder;
                             final int amount = accumulator.consume(inc);
@@ -266,10 +264,10 @@ final class ChordStepEncoderControls {
                         touched -> {
                             if (touched) {
                                 final boolean scaleContext =
-                                        driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                                        mainEncoderRouting.isShiftHeld()
+                                                && !mainEncoderRouting.isAltHeld();
                                 if (scaleContext) {
-                                    if (driver.handleKnobModeEncoderReset(
-                                            true,
+                                    if (mainEncoderRouting.handleReset(
                                             false,
                                             "Scale",
                                             "No reset",
@@ -282,9 +280,8 @@ final class ChordStepEncoderControls {
                                     oled.valueInfo("Scale", host.getScaleDisplayName());
                                     return;
                                 }
-                                final boolean rootContext = driver.isGlobalAltHeld();
-                                if (driver.handleKnobModeEncoderReset(
-                                        true,
+                                final boolean rootContext = mainEncoderRouting.isAltHeld();
+                                if (mainEncoderRouting.handleReset(
                                         true,
                                         rootContext ? "Root" : "Octave",
                                         "No reset",
@@ -335,7 +332,7 @@ final class ChordStepEncoderControls {
                 encoder.bindEncoder(
                         layer,
                         inc -> {
-                            if (driver.isGlobalShiftHeld()) {
+                            if (mainEncoderRouting.isShiftHeld()) {
                                 host.adjustChordVelocityCenter(inc);
                             } else {
                                 host.adjustChordVelocitySensitivity(inc);
@@ -345,8 +342,7 @@ final class ChordStepEncoderControls {
                         layer,
                         touched -> {
                             if (touched) {
-                                if (driver.handleKnobModeEncoderReset(
-                                        true,
+                                if (mainEncoderRouting.handleReset(
                                         true,
                                         "Velocity",
                                         "No reset",
@@ -391,9 +387,9 @@ final class ChordStepEncoderControls {
                         slotIndex,
                         parameter,
                         label,
-                        driver::isGlobalShiftHeld,
+                        mainEncoderRouting::isShiftHeld,
                         mixerResetPolicy(index),
-                        driver.knobModeEncoderResetControl(),
+                        mainEncoderRouting.resetControl(),
                         profile,
                         index == 1,
                         oled::valueInfoWithBar,
@@ -436,8 +432,7 @@ final class ChordStepEncoderControls {
                         layer,
                         touched -> {
                             if (touched) {
-                                if (driver.handleKnobModeEncoderReset(
-                                        true,
+                                if (mainEncoderRouting.handleReset(
                                         true,
                                         "Chord",
                                         "No reset",
@@ -474,9 +469,10 @@ final class ChordStepEncoderControls {
                         layer,
                         inc -> {
                             if (inc != 0) {
-                                if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                                if (mainEncoderRouting.isShiftHeld()
+                                        && !mainEncoderRouting.isAltHeld()) {
                                     host.setBuilderLayoutInKey(inc > 0);
-                                } else if (driver.isGlobalAltHeld()) {
+                                } else if (mainEncoderRouting.isAltHeld()) {
                                     host.invertCurrentChord(inc > 0 ? 1 : -1);
                                 } else {
                                     host.adjustChordInterpretation(inc);
@@ -487,9 +483,9 @@ final class ChordStepEncoderControls {
                         layer,
                         touched -> {
                             if (touched) {
-                                if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
-                                    if (driver.handleKnobModeEncoderReset(
-                                            true,
+                                if (mainEncoderRouting.isShiftHeld()
+                                        && !mainEncoderRouting.isAltHeld()) {
+                                    if (mainEncoderRouting.handleReset(
                                             false,
                                             "Builder Layout",
                                             "No reset",
@@ -500,9 +496,8 @@ final class ChordStepEncoderControls {
                                     host.showBuilderLayoutInfo();
                                     return;
                                 }
-                                if (driver.isGlobalAltHeld()) {
-                                    if (driver.handleKnobModeEncoderReset(
-                                            true,
+                                if (mainEncoderRouting.isAltHeld()) {
+                                    if (mainEncoderRouting.handleReset(
                                             false,
                                             "Invert",
                                             "No reset",
@@ -513,8 +508,7 @@ final class ChordStepEncoderControls {
                                     oled.valueInfo("Invert", "Turn encoder");
                                     return;
                                 }
-                                if (driver.handleKnobModeEncoderReset(
-                                        true,
+                                if (mainEncoderRouting.handleReset(
                                         true,
                                         "Interpret",
                                         "No reset",

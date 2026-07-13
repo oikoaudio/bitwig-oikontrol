@@ -11,6 +11,9 @@ import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.MainEncoderRouting;
+import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.NoteChordOledView;
@@ -245,12 +248,29 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 new ChordStepBankButtonControls(chordStepBankButtonHost());
         this.chordStepEncoderControls =
                 new ChordStepEncoderControls(
-                        driver, oled, chordStepCursorTrack, chordStepEncoderHost());
+                        new MainEncoderRouting(driver),
+                        oled,
+                        chordStepCursorTrack,
+                        chordStepEncoderHost());
         this.stepEncoderLayer = new StepSequencerEncoderLayer(this, driver);
 
         // Physical bindings and activation
         this.chordStepControlBindings =
-                new ChordStepControlBindings(driver, this, chordStepControlBindingsHost());
+                new ChordStepControlBindings(
+                        this,
+                        driver.getRgbButtons(),
+                        driver.getButton(NoteAssign.STEP_SEQ),
+                        driver.getButton(NoteAssign.BANK_L),
+                        driver.getButton(NoteAssign.BANK_R),
+                        new BiColorButton[] {
+                            driver.getButton(NoteAssign.MUTE_1),
+                            driver.getButton(NoteAssign.MUTE_2),
+                            driver.getButton(NoteAssign.MUTE_3),
+                            driver.getButton(NoteAssign.MUTE_4)
+                        },
+                        driver.getPatternButtons(),
+                        driver.getStateLights(),
+                        chordStepControlBindingsHost());
         activateControls();
     }
 
