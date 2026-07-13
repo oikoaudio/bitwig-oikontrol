@@ -33,6 +33,8 @@ import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumLed
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumMapping;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumUiState;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.drum.DrumSettings;
+import com.bitwig.extensions.controllers.novation.launch_control_xl.factory.FactoryLedRenderer;
+import com.bitwig.extensions.controllers.novation.launch_control_xl.factory.FactoryUiSnapshot;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.support.DeviceLocator;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.support.DeviceLocator.FocusResult;
 import com.bitwig.extensions.controllers.novation.launch_control_xl.support.DeviceLocator.Role;
@@ -1514,67 +1516,105 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      final int selectedTrack = mTrackBank.cursorIndex().get();
-
+      final FactoryLedRenderer.LedFrame frame = FactoryLedRenderer.render(factoryUiSnapshot());
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
-         final Track track = trackForStrip(i);
-         final boolean trackExists = track != null;
-         final int defaultFocusColor = trackExists
-            ? (selectedTrack == i ? SimpleLedColor.Amber.value() : SimpleLedColor.AmberLow.value())
-            : SimpleLedColor.Off.value();
          final int focusColor = mArpLayerController != null
-            ? mArpLayerController.applyFocusColor(i, defaultFocusColor)
-            : defaultFocusColor;
+            ? mArpLayerController.applyFocusColor(i, frame.topButtons()[i])
+            : frame.topButtons()[i];
          mBottomButtonsLed[i].setColor(focusColor);
+         final int appliedControlColor = mArpLayerController != null
+            ? mArpLayerController.applyControlColor(i, frame.bottomButtons()[i])
+            : frame.bottomButtons()[i];
+         mBottomButtonsLed[8 + i].setColor(appliedControlColor);
+      }
+   }
 
-         int controlColor;
-         if (mIsDeviceOn)
+   private FactoryUiSnapshot factoryUiSnapshot()
+   {
+      final FactoryUiSnapshot.Strip[] strips = new FactoryUiSnapshot.Strip[STRIP_COUNT];
+      final FactoryUiSnapshot.Value[] deviceRemotes = new FactoryUiSnapshot.Value[STRIP_COUNT];
+      final FactoryUiSnapshot.Value[] projectRemotes = new FactoryUiSnapshot.Value[STRIP_COUNT];
+      for (int i = 0; i < STRIP_COUNT; i++)
+      {
+         final Track track = trackForStrip(i);
+         if (track == null)
          {
-            SimpleLedColor color = SimpleLedColor.Off;
-
-            if (mRemoteControls.selectedPageIndex().get() == i)
-               color = SimpleLedColor.Amber;
-            else if (i < mRemoteControls.pageCount().get())
-               color = SimpleLedColor.AmberLow;
-
-            controlColor = color.value();
-         }
-         else if (trackExists)
-         {
-            final int amber = SimpleLedColor.Amber.value();
-            final int amberLow = SimpleLedColor.AmberLow.value();
-            final int off = SimpleLedColor.Off.value();
-            switch (mTrackControl)
-            {
-               case Mute -> controlColor = track.mute().get()
-                  ? SimpleLedColor.GreenLow.value()
-                  : SimpleLedColor.Green.value();
-               case Solo -> controlColor = track.solo().get()
-                  ? amber
-                  : amberLow;
-               case RecordArm -> controlColor = track.arm().get()
-                  ? SimpleLedColor.Red.value()
-                  : SimpleLedColor.RedLow.value();
-               case None ->
-               {
-                  final RemoteControl param = trackParamForStrip(i, 3);
-                  final boolean exists = param != null && param.exists().get();
-                  final double value = exists ? param.value().get() : 0;
-                  controlColor = exists ? levelColor(value, off, amberLow, amber) : off;
-               }
-               default -> controlColor = SimpleLedColor.Off.value();
-            }
+            strips[i] = FactoryUiSnapshot.Strip.missing();
          }
          else
          {
-            controlColor = SimpleLedColor.Off.value();
+            final SendBank sends = track.sendBank();
+            final FactoryUiSnapshot.Value[] sendValues = new FactoryUiSnapshot.Value[3];
+            final FactoryUiSnapshot.Value[] deviceValues = new FactoryUiSnapshot.Value[3];
+            final FactoryUiSnapshot.Value[] trackValues = new FactoryUiSnapshot.Value[3];
+            for (int parameter = 0; parameter < 3; parameter++)
+            {
+               sendValues[parameter] = sends != null && sends.getItemAt(parameter).exists().get()
+                  ? FactoryUiSnapshot.Value.of(sends.getItemAt(parameter).value().get())
+                  : FactoryUiSnapshot.Value.missing();
+               deviceValues[parameter] = snapshotValue(deviceParamForStrip(i, parameter));
+               trackValues[parameter] = snapshotValue(trackParamForStrip(i, parameter));
+            }
+            strips[i] = FactoryUiSnapshot.Strip.existing(track.mute().get(), track.solo().get(), track.arm().get(),
+               snapshotValue(trackParamForStrip(i, 3)), sendValues, deviceValues, trackValues);
          }
-         final int appliedControlColor = mArpLayerController != null
-            ? mArpLayerController.applyControlColor(i, controlColor)
-            : controlColor;
-         mBottomButtonsLed[8 + i].setColor(appliedControlColor);
+         deviceRemotes[i] = snapshotValue(mRemoteControls.getParameter(i));
+         projectRemotes[i] = snapshotValue(mProjectRemoteControlsCursor.getParameter(i));
       }
+      final SendBank firstSends = sendBankForStrip(0);
+      return new FactoryUiSnapshot(factorySurface(), factoryMode(), factoryTrackControl(), mIsDeviceOn,
+         mRemoteControls.selectedPageIndex().get(), mRemoteControls.pageCount().get(),
+         mTrackBank.cursorIndex().get(), strips, deviceRemotes, projectRemotes,
+         firstSends != null && firstSends.canScrollBackwards().get(),
+         firstSends != null && firstSends.canScrollForwards().get(),
+         mTrackBank.canScrollBackwards().get(), mTrackBank.canScrollForwards().get(),
+         mCursorDevice.hasPrevious().get(), mCursorDevice.hasNext().get());
+   }
+
+   private FactoryUiSnapshot.Value snapshotValue(final RemoteControl parameter)
+   {
+      return parameter != null && parameter.exists().get()
+         ? FactoryUiSnapshot.Value.of(parameter.value().get())
+         : FactoryUiSnapshot.Value.missing();
+   }
+
+   private FactoryUiSnapshot.Mode factoryMode()
+   {
+      return switch (mMode)
+      {
+         case Send2FullDevice -> FactoryUiSnapshot.Mode.SEND_2_FULL_DEVICE;
+         case Send2Device1 -> FactoryUiSnapshot.Mode.SEND_2_DEVICE_1;
+         case Send2Project -> FactoryUiSnapshot.Mode.SEND_2_PROJECT;
+         case Send3 -> FactoryUiSnapshot.Mode.SEND_3;
+         case Send1Device2 -> FactoryUiSnapshot.Mode.SEND_1_DEVICE_2;
+         case Device3 -> FactoryUiSnapshot.Mode.DEVICE_3;
+         case Track3 -> FactoryUiSnapshot.Mode.TRACK_3;
+         case None -> FactoryUiSnapshot.Mode.NONE;
+         case Send2Pan1 -> FactoryUiSnapshot.Mode.SEND_2_PAN_1;
+      };
+   }
+
+   private FactoryUiSnapshot.Surface factorySurface()
+   {
+      if (mDrumLayerActive)
+         return FactoryUiSnapshot.Surface.DRUM;
+      if (mArpLayerActive)
+         return FactoryUiSnapshot.Surface.ARP;
+      if (mDevicePagesLayerActive)
+         return FactoryUiSnapshot.Surface.DEVICE_PAGES;
+      return mFactoryTemplateActive ? FactoryUiSnapshot.Surface.FACTORY : FactoryUiSnapshot.Surface.RAW_USER;
+   }
+
+   private FactoryUiSnapshot.TrackControl factoryTrackControl()
+   {
+      return switch (mTrackControl)
+      {
+         case None -> FactoryUiSnapshot.TrackControl.NONE;
+         case Mute -> FactoryUiSnapshot.TrackControl.MUTE;
+         case Solo -> FactoryUiSnapshot.TrackControl.SOLO;
+         case RecordArm -> FactoryUiSnapshot.TrackControl.RECORD_ARM;
+      };
    }
 
    private void paintDrumButtons()
@@ -1663,93 +1703,9 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      for (int i = 0; i < STRIP_COUNT; ++i)
-      {
-         final Track track = trackForStrip(i);
-         final SendBank sendBank = track != null ? track.sendBank() : null;
-
-         final int green = SimpleLedColor.Green.value();
-         final int greenLow = SimpleLedColor.GreenLow.value();
-         final int off = SimpleLedColor.Off.value();
-         final int amber = SimpleLedColor.Amber.value();
-         final int amberLow = SimpleLedColor.AmberLow.value();
-         final int red = SimpleLedColor.Red.value();
-
-         if (sendBank == null)
-         {
-            mKnobsLed[i].setColor(off);
-            mKnobsLed[8 + i].setColor(off);
-            mKnobsLed[16 + i].setColor(off);
-            continue;
-         }
-
-         switch (mMode)
-         {
-            case Send2Device1 ->
-            {
-               mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               final RemoteControl deviceParam0 = deviceParamForStrip(i, 0);
-               mKnobsLed[16 + i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
-            }
-            case Send2Pan1 ->
-            {
-               mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               mKnobsLed[16 + i].setColor(track != null ? red : off);
-            }
-            case Send3 ->
-            {
-               mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               mKnobsLed[16 + i].setColor(levelColor(sendBank.getItemAt(2).exists().get() ? sendBank.getItemAt(2).value().get() : 0, off, greenLow, green));
-            }
-            case Send1Device2 ->
-            {
-               mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               final RemoteControl deviceParam0 = deviceParamForStrip(i, 0);
-               final RemoteControl deviceParam1 = deviceParamForStrip(i, 1);
-               mKnobsLed[8 + i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
-               mKnobsLed[16 + i].setColor(levelColor(deviceParam1 != null && deviceParam1.exists().get() ? deviceParam1.value().get() : 0, off, amberLow, amber));
-            }
-            case Device3 ->
-            {
-               final RemoteControl deviceParam0 = deviceParamForStrip(i, 0);
-               final RemoteControl deviceParam1 = deviceParamForStrip(i, 1);
-               final RemoteControl deviceParam2 = deviceParamForStrip(i, 2);
-               mKnobsLed[i].setColor(levelColor(deviceParam0 != null && deviceParam0.exists().get() ? deviceParam0.value().get() : 0, off, amberLow, amber));
-               mKnobsLed[8 + i].setColor(levelColor(deviceParam1 != null && deviceParam1.exists().get() ? deviceParam1.value().get() : 0, off, amberLow, amber));
-               mKnobsLed[16 + i].setColor(levelColor(deviceParam2 != null && deviceParam2.exists().get() ? deviceParam2.value().get() : 0, off, amberLow, amber));
-            }
-            case Track3 ->
-            {
-               final RemoteControl trackParam0 = trackParamForStrip(i, 0);
-               final RemoteControl trackParam1 = trackParamForStrip(i, 1);
-               final RemoteControl trackParam2 = trackParamForStrip(i, 2);
-               mKnobsLed[i].setColor(levelColor(trackParam0 != null && trackParam0.exists().get() ? trackParam0.value().get() : 0, off, amberLow, amber));
-               mKnobsLed[8 + i].setColor(levelColor(trackParam1 != null && trackParam1.exists().get() ? trackParam1.value().get() : 0, off, amberLow, amber));
-               mKnobsLed[16 + i].setColor(levelColor(trackParam2 != null && trackParam2.exists().get() ? trackParam2.value().get() : 0, off, amberLow, amber));
-            }
-            case Send2FullDevice ->
-            {
-               mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               mKnobsLed[16 + i].setColor(levelColor(mRemoteControls.getParameter(i).exists().get() ? mRemoteControls.getParameter(i).value().get() : 0, off, amberLow, amber));
-            }
-            case Send2Project ->
-            {
-               mKnobsLed[i].setColor(levelColor(sendBank.getItemAt(0).exists().get() ? sendBank.getItemAt(0).value().get() : 0, off, greenLow, green));
-               mKnobsLed[8 + i].setColor(levelColor(sendBank.getItemAt(1).exists().get() ? sendBank.getItemAt(1).value().get() : 0, off, greenLow, green));
-               mKnobsLed[16 + i].setColor(levelColor(mProjectRemoteControlsCursor.getParameter(i).exists().get() ? mProjectRemoteControlsCursor.getParameter(i).value().get() : 0, off, amberLow, amber));
-            }
-            case None ->
-            {
-               mKnobsLed[i].setColor(off);
-               mKnobsLed[8 + i].setColor(off);
-               mKnobsLed[16 + i].setColor(off);
-            }
-         }
-      }
+      final int[] colors = FactoryLedRenderer.render(factoryUiSnapshot()).knobs();
+      for (int i = 0; i < colors.length; i++)
+         mKnobsLed[i].setColor(colors[i]);
    }
 
    private void paintDrumKnobs()
@@ -1827,25 +1783,15 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      mDeviceLed.setColor(mIsDeviceOn ? yellow : off);
-      mMuteLed.setColor(mTrackControl == TrackControl.Mute ? yellow : off);
-      mSoloLed.setColor(mTrackControl == TrackControl.Solo ? yellow : off);
-      mRecordArmLed.setColor(mTrackControl == TrackControl.RecordArm ? yellow : off);
-
-      final SendBank sendBank = sendBankForStrip(0);
-      mUpButtonLed.setColor(sendBank != null && sendBank.canScrollBackwards().get() ? yellow : off);
-      mDownButtonLed.setColor(sendBank != null && sendBank.canScrollForwards().get() ? yellow : off);
-
-      if (mIsDeviceOn)
-      {
-         mLeftButtonLed.setColor(mCursorDevice.hasPrevious().get() ? yellow : off);
-         mRightButtonLed.setColor(mCursorDevice.hasNext().get() ? yellow : off);
-      }
-      else
-      {
-         mLeftButtonLed.setColor(mTrackBank.canScrollBackwards().get() ? yellow : off);
-         mRightButtonLed.setColor(mTrackBank.canScrollForwards().get() ? yellow : off);
-      }
+      final int[] colors = FactoryLedRenderer.render(factoryUiSnapshot()).rightButtons();
+      mDeviceLed.setColor(colors[0]);
+      mMuteLed.setColor(colors[1]);
+      mSoloLed.setColor(colors[2]);
+      mRecordArmLed.setColor(colors[3]);
+      mUpButtonLed.setColor(colors[4]);
+      mDownButtonLed.setColor(colors[5]);
+      mLeftButtonLed.setColor(colors[6]);
+      mRightButtonLed.setColor(colors[7]);
    }
 
    private ControllerHost mHost;
