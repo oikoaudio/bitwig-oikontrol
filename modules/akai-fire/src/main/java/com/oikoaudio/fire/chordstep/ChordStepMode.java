@@ -1751,7 +1751,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void clearAllBankFineNudgeSessions() {
-        fineNudgeSession.clearHeld();
+        fineNudgeSession.clear();
+        chordStepFineNudgeWriter.cancelPendingMove();
     }
 
     private void showChordPageInfo() {
@@ -1942,6 +1943,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         stopAuditionNotes();
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
+        clearAllBankFineNudgeSessions();
         selectedPresetStepIndex = null;
         stepEncoderLayer.deactivate();
         clearTranslation();

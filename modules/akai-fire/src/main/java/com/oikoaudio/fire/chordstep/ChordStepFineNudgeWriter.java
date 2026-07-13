@@ -106,6 +106,11 @@ final class ChordStepFineNudgeWriter {
         return moveInFlight;
     }
 
+    public void cancelPendingMove() {
+        moveGeneration++;
+        moveInFlight = false;
+    }
+
     private void rewriteEventMoves(final List<ChordStepEventIndex.EventNoteMove> noteMoves) {
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
             final int targetGlobalStep = Math.floorDiv(move.targetFineStart(), fineStepsPerStep);

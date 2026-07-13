@@ -104,6 +104,11 @@ final class ChordStepFineNudgeSession<E> {
         heldEvents.clear();
     }
 
+    public void clear() {
+        clearPending();
+        clearHeld();
+    }
+
     private void clearPending() {
         pendingDirection = 0;
         pendingFineMove = false;
