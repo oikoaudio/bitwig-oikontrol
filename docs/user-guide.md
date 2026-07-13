@@ -367,9 +367,9 @@ While harmonic input is active, the `Mixer` encoder page changes from track mixi
 
 | Harmonic `Mixer` page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Mixer` | Notes per pad: 1, 2, or 3 | Octave span: 1-3 | Bass Grid on / off | Pitch Gliss |
+| `Mixer` | Notes per pad: 1, 2, or 3 | Octave span: 1-3 | Bass Grid on / off | Voicing: Drop 2, Close, or Open |
 
-Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, and the bass grid enabled. `Notes per pad` controls how many notes each harmonic pad produces before octave expansion. `Octave span` adds octave copies above those notes. Bass-grid pads always stay single-note, even when notes-per-pad is set higher. Hold several pads to play the union of their notes; overlapping notes sound once and remain active until the last pad containing them is released. `Pitch Gliss` shifts the harmonic field through the same pitch-gliss offset used on the `Channel` page.
+Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, the `Drop 2` voicing, and the bass grid enabled. `Notes per pad` controls how many notes each harmonic pad produces before octave expansion. `Voicing` changes the register of that initial group, then `Octave span` adds octave copies above it. `Close` packs the notes above the pad's harmonic root; `Open` widens that close shape; and `Drop 2` preserves the original lattice voicing. Bass-grid pads always stay single-note, even when notes-per-pad or voicing changes. Hold several pads to play the union of their notes; overlapping notes sound once and remain active until the last pad containing them is released. `Pitch Gliss` remains available on Channel encoder 3.
 
 ### Melo Gen mode
 

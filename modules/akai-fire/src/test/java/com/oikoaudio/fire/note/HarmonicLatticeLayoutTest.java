@@ -88,4 +88,46 @@ class HarmonicLatticeLayoutTest {
 
         assertArrayEquals(new int[] {36, 28, 43, 48, 40, 55}, layout.notesForPad(50));
     }
+
+    @Test
+    void voicingIsAppliedBeforeOctaveExpansion() {
+        final HarmonicLatticeLayout close = layout(HarmonicVoicing.CLOSE, 2);
+        final HarmonicLatticeLayout open = layout(HarmonicVoicing.OPEN, 1);
+        final HarmonicLatticeLayout dropTwo = layout(HarmonicVoicing.DROP_2, 1);
+
+        assertArrayEquals(new int[] {36, 40, 43, 48, 52, 55}, close.notesForPad(50));
+        assertArrayEquals(new int[] {36, 43, 52}, open.notesForPad(50));
+        assertArrayEquals(new int[] {36, 28, 43}, dropTwo.notesForPad(50));
+    }
+
+    @Test
+    void voicingDoesNotChangeBassGridPads() {
+        assertArrayEquals(
+                layout(HarmonicVoicing.CLOSE, 1).notesForPad(0),
+                layout(HarmonicVoicing.OPEN, 1).notesForPad(0));
+    }
+
+    @Test
+    void openVoicingWidensTwoNotePadsAndLeavesSingleNotesAlone() {
+        assertArrayEquals(new int[] {36, 52}, layout(HarmonicVoicing.OPEN, 1, 2).notesForPad(50));
+        assertArrayEquals(new int[] {36}, layout(HarmonicVoicing.OPEN, 1, 1).notesForPad(50));
+    }
+
+    private static HarmonicLatticeLayout layout(
+            final HarmonicVoicing voicing, final int octaveSpan) {
+        return layout(voicing, octaveSpan, 3);
+    }
+
+    private static HarmonicLatticeLayout layout(
+            final HarmonicVoicing voicing, final int octaveSpan, final int noteCount) {
+        return new HarmonicLatticeLayout(
+                MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"),
+                0,
+                2,
+                noteCount,
+                octaveSpan,
+                true,
+                0,
+                voicing);
+    }
 }

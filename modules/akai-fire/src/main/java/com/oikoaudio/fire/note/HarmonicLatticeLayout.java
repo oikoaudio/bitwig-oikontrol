@@ -17,6 +17,7 @@ final class HarmonicLatticeLayout implements LiveNoteLayout {
     private final int octaveSpan;
     private final boolean bassColumnsEnabled;
     private final int glissSteps;
+    private final HarmonicVoicing voicing;
     private final int scaleDegreeCount;
 
     HarmonicLatticeLayout(
@@ -27,6 +28,26 @@ final class HarmonicLatticeLayout implements LiveNoteLayout {
             final int octaveSpan,
             final boolean bassColumnsEnabled,
             final int glissSteps) {
+        this(
+                scale,
+                rootNote,
+                octave,
+                noteCount,
+                octaveSpan,
+                bassColumnsEnabled,
+                glissSteps,
+                HarmonicVoicing.DROP_2);
+    }
+
+    HarmonicLatticeLayout(
+            final MusicalScale scale,
+            final int rootNote,
+            final int octave,
+            final int noteCount,
+            final int octaveSpan,
+            final boolean bassColumnsEnabled,
+            final int glissSteps,
+            final HarmonicVoicing voicing) {
         this.scale = scale;
         this.rootNote = rootNote;
         this.octave = octave;
@@ -34,6 +55,7 @@ final class HarmonicLatticeLayout implements LiveNoteLayout {
         this.octaveSpan = octaveSpan;
         this.bassColumnsEnabled = bassColumnsEnabled;
         this.glissSteps = glissSteps;
+        this.voicing = voicing;
         this.scaleDegreeCount = detectScaleDegreeCount(scale, rootNote);
     }
 
@@ -75,12 +97,15 @@ final class HarmonicLatticeLayout implements LiveNoteLayout {
     private int[] harmonicNotesForPad(final int harmonicColumn, final int rowFromBottom) {
         final int startIndex = harmonicColumn - rowFromBottom * 2 + glissSteps;
         final int rowBaseOctave = octave + rowFromBottom;
-        final int[] notes = new int[noteCount * octaveSpan];
+        final int[] latticeNotes = new int[noteCount];
+        for (int i = 0; i < noteCount; i++) {
+            latticeNotes[i] = clampMidi(resolveRegisteredRunMidi(startIndex + i, rowBaseOctave));
+        }
+        final int[] baseVoicing = voicing.apply(latticeNotes);
+        final int[] notes = new int[baseVoicing.length * octaveSpan];
         int out = 0;
         for (int octaveOffset = 0; octaveOffset < octaveSpan; octaveOffset++) {
-            for (int i = 0; i < noteCount; i++) {
-                final int baseNote =
-                        clampMidi(resolveRegisteredRunMidi(startIndex + i, rowBaseOctave));
+            for (final int baseNote : baseVoicing) {
                 notes[out++] = baseNote < 0 ? -1 : wrapMidi(baseNote + octaveOffset * 12);
             }
         }

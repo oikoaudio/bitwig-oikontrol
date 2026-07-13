@@ -180,6 +180,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private int harmonicNoteCountIndex = 2;
     private int harmonicOctaveSpan = 1;
     private boolean harmonicBassColumns = true;
+    private HarmonicVoicing harmonicVoicing = HarmonicVoicing.DROP_2;
     private int drumMachineScrollPosition = 0;
     private DrumMachinePadLayout.Layout drumMachineLayout = DrumMachinePadLayout.Layout.GRID64;
     private int selectedDrumPadOffset = 0;
@@ -223,6 +224,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
             new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
     private final EncoderStepAccumulator liveLayoutEncoder =
             new EncoderStepAccumulator(LIVE_LAYOUT_ENCODER_THRESHOLD);
+    private final EncoderStepAccumulator harmonicVoicingEncoder =
+            new EncoderStepAccumulator(LIVE_NOTE_ENCODER_THRESHOLD);
 
     protected LivePadSurfaceLayer(
             final AkaiFireOikontrolExtension driver,
@@ -1224,7 +1227,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             case 0 -> adjustHarmonicNoteCount(inc);
             case 1 -> adjustHarmonicOctaveSpan(inc);
             case 2 -> adjustHarmonicBassColumns(inc);
-            case 3 -> adjustLivePitchOffset(inc);
+            case 3 -> adjustHarmonicVoicing(inc);
             default -> {}
         }
     }
@@ -1234,7 +1237,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             case 0 -> showLiveValueInfo("Notes", harmonicNoteCountDisplay());
             case 1 -> showLiveValueInfo("Octaves", Integer.toString(harmonicOctaveSpan));
             case 2 -> showLiveValueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off");
-            case 3 -> showLivePitchGlissInfo();
+            case 3 -> showLiveValueInfo("Voicing", harmonicVoicing.displayName());
             default -> oled.clearScreenDelayed();
         }
     }
@@ -1273,10 +1276,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     driver.handleKnobModeEncoderReset(
                             true,
                             true,
-                            "Pitch Gliss",
+                            "Voicing",
                             "No reset",
-                            this::resetLivePitchGlissOffset,
-                            this::showLivePitchGlissInfo);
+                            () -> retuneLivePads(() -> harmonicVoicing = HarmonicVoicing.DROP_2),
+                            () -> showLiveValueInfo("Voicing", harmonicVoicing.displayName()));
             default -> false;
         };
     }
@@ -1571,6 +1574,19 @@ public abstract class LivePadSurfaceLayer extends Layer {
         oled.valueInfo("Bass Grid", harmonicBassColumns ? "On" : "Off");
     }
 
+    private void adjustHarmonicVoicing(final int inc) {
+        final int steps = harmonicVoicingEncoder.consume(inc);
+        if (steps == 0) {
+            return;
+        }
+        final HarmonicVoicing next = harmonicVoicing.step(steps);
+        if (next == harmonicVoicing) {
+            return;
+        }
+        retuneLivePads(() -> harmonicVoicing = next);
+        oled.valueInfo("Voicing", harmonicVoicing.displayName());
+    }
+
     private String harmonicNoteCountDisplay() {
         return Integer.toString(HarmonicLatticeLayout.NOTE_COUNTS[harmonicNoteCountIndex]);
     }
@@ -1627,7 +1643,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return "1: Layout\n2: Velocity\n3: --\n4: --";
         }
         if (isHarmonicLiveMode() && mode == EncoderMode.MIXER) {
-            return "1: Notes\n2: Octaves\n3: Bass Grid\n4: Pitch Gliss";
+            return "1: Notes\n2: Octaves\n3: Bass Grid\n4: Voicing";
         }
         if (mode == EncoderMode.USER_2) {
             final int firstParameterIndex = liveRemoteParameterIndex(0);
@@ -1645,7 +1661,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             return EncoderFooterLegend.of("Lay", "Velo", "--", "--");
         }
         if (isHarmonicLiveMode() && mode == EncoderMode.MIXER) {
-            return EncoderFooterLegend.of("Note", "Oct", "Bass", "Glis");
+            return EncoderFooterLegend.of("Note", "Oct", "Bass", "Voic");
         }
         if (mode == EncoderMode.USER_2) {
             final int firstParameterIndex = liveRemoteParameterIndex(0);
@@ -2868,7 +2884,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
                     HarmonicLatticeLayout.NOTE_COUNTS[harmonicNoteCountIndex],
                     harmonicOctaveSpan,
                     harmonicBassColumns,
-                    getHarmonicGlissStepOffset());
+                    getHarmonicGlissStepOffset(),
+                    harmonicVoicing);
         }
         if (isDrumMachineLiveMode()) {
             return new DrumMachinePadLayout(

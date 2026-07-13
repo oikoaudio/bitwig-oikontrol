@@ -5,6 +5,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 ## Unreleased
 
 - Live Note and Harmonic pads now use per-note ownership, so overlapping pads play their combined note union and shared notes remain sounding until the last owning pad is released, including with Hold mode.
+- Harmonic input Mixer encoder 4 now selects Drop 2, Close, or Open voicings and safely retunes held pads; Pitch Gliss remains on Channel encoder 3.
 - Melo Gen now uses `SHIFT + Channel encoder 3` as a shared-scale shortcut, matching Poly Step's `SHIFT` scale and `ALT` root modifier grammar on its pitch-context encoder.
 - Rolling generator density now grows monotonically from four characteristic family hits per 16 steps at `0.00` to every step at `1.00`, while keeping the seeded family stable across density changes.
 - Acid generator density now spans the full displayed range, growing deterministically from a sparse metric backbone at `0.00` to the complete seeded rhythm skeleton at `1.00`.
