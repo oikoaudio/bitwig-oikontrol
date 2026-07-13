@@ -55,6 +55,15 @@ public class StepSequencerEncoderLayer extends Layer {
         void set(NoteStep step, int value);
     }
 
+    /** Handles a mode-local insertion default when no existing note is targeted. */
+    public interface EmptyNoteAccessHandler {
+        void adjust(int amount);
+
+        void show();
+
+        void reset();
+    }
+
     public StepSequencerEncoderLayer(
             final StepSequencerHost host,
             final AkaiFireOikontrolExtension driver,
@@ -107,6 +116,15 @@ public class StepSequencerEncoderLayer extends Layer {
             final TouchEncoder encoder,
             final int slotIndex,
             final NoteStepAccess access) {
+        bindNoteAccess(layer, encoder, slotIndex, access, null);
+    }
+
+    public void bindNoteAccess(
+            final Layer layer,
+            final TouchEncoder encoder,
+            final int slotIndex,
+            final NoteStepAccess access,
+            final EmptyNoteAccessHandler emptyHandler) {
         final EncoderTurnBehavior behavior =
                 !access.usesAcceleratedTurnBehavior()
                         ? EncoderTurnBehavior.quantizedSteps(access.getStepThreshold())
@@ -117,7 +135,12 @@ public class StepSequencerEncoderLayer extends Layer {
                 behavior,
                 effectiveInc -> {
                     if (effectiveInc != 0) {
-                        handleMod(effectiveInc, access);
+                        final List<NoteStep> notes = activeNotesForAccess();
+                        if (notes.isEmpty() && emptyHandler != null) {
+                            emptyHandler.adjust(effectiveInc);
+                        } else {
+                            handleMod(effectiveInc, access, notes);
+                        }
                     }
                 });
         encoder.bindTouched(
@@ -126,7 +149,7 @@ public class StepSequencerEncoderLayer extends Layer {
                     if (!touched) {
                         behavior.reset();
                     }
-                    handleTouch(slotIndex, touched, access);
+                    handleTouch(slotIndex, touched, access, emptyHandler);
                 });
     }
 
@@ -356,8 +379,24 @@ public class StepSequencerEncoderLayer extends Layer {
     }
 
     private void handleTouch(
-            final int slotIndex, final boolean touched, final NoteStepAccess accessor) {
+            final int slotIndex,
+            final boolean touched,
+            final NoteStepAccess accessor,
+            final EmptyNoteAccessHandler emptyHandler) {
         if (touched) {
+            if (activeNotesForAccess().isEmpty() && emptyHandler != null) {
+                if (driver.handleKnobModeEncoderReset(
+                        true,
+                        true,
+                        accessor.getName(),
+                        "No reset",
+                        emptyHandler::reset,
+                        emptyHandler::show)) {
+                    return;
+                }
+                emptyHandler.show();
+                return;
+            }
             if (driver.handleKnobModeEncoderReset(
                     true,
                     accessor.canReset(),

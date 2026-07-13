@@ -437,6 +437,11 @@ Press `STEP` from normal performance modes to enter `Poly Step`. Press `STEP` ag
 | `User 1` | Note velocity | Pressure | Timbre | Pitch |
 | `User 2` | Note length | Chance | Velocity spread | Repeats |
 
+On the `User 1` and `User 2` pages, an encoder edits held or selected notes when they are available. With no note
+target, it instead changes the session-local default for the next note or chord inserted in `Poly Step`; touching
+the encoder shows that default. Hold `KNOB MODE` and touch the encoder to restore its original default. These
+defaults cover velocity, pressure, timbre, pitch expression, note length, chance, velocity spread, and repeats.
+
 Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch bank, page, or slot; it only changes how the selected slot is rendered. `As Is` transposes the stored chord shape from the current root. `In Scale` rebuilds that slot from the current shared scale and root.
 
 Coarse nudge is intentionally disabled in `Poly Step`; micro-timing is currently temperamental and should be treated as experimental.

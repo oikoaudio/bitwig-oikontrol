@@ -79,6 +79,25 @@ class ChordStepEventIndexTest {
         verify(replacement).setIsOccurrenceEnabled(true);
     }
 
+    @Test
+    void appliesCapturedInsertionDefaultsWhenANewPitchBecomesObservable() {
+        final ChordStepEventIndex index = index();
+        final ChordStepInsertionDefaults defaults = new ChordStepInsertionDefaults(100, 0.25);
+        defaults.adjust(com.oikoaudio.fire.sequence.NoteStepAccess.PRESSURE, 12);
+        defaults.adjust(com.oikoaudio.fire.sequence.NoteStepAccess.CHANCE, -3);
+        final NoteStep inserted = mock(NoteStep.class);
+        when(inserted.x()).thenReturn(7);
+        when(inserted.y()).thenReturn(72);
+        when(inserted.state()).thenReturn(NoteStep.State.NoteOn);
+
+        index.addPendingInsertionDefaults(7, 72, defaults.snapshot());
+        index.handleNoteStepObject(inserted);
+
+        verify(inserted).setPressure(0.12);
+        verify(inserted).setChance(0.85);
+        verify(inserted).setIsChanceEnabled(true);
+    }
+
     private static ChordStepEventIndex index() {
         return new ChordStepEventIndex(
                 local -> local,

@@ -26,6 +26,7 @@ import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
+import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
@@ -87,6 +88,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final ChordStepBuilderController chordBuilder;
     private final ChordStepAuditionController chordStepAudition;
     private final ChordStepEditControls chordStepEditControls;
+    private final ChordStepInsertionDefaults insertionDefaults;
 
     // Clip resources, observation, and mutation
     private final ChordStepVisibleClipCache visibleClipCache =
@@ -129,6 +131,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.oled = driver.getOled();
         this.noteChordOledView = new NoteChordOledView(oled);
         this.chordStepVelocity = driver.getSharedVelocitySettings();
+        this.insertionDefaults =
+                new ChordStepInsertionDefaults(chordStepVelocity.centerVelocity(), STEP_LENGTH);
 
         // Musical and edit state
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
@@ -969,7 +973,58 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             public void showChordInterpretationInfo() {
                 oled.valueInfo("Interpret", chordSelection.interpretationDisplayName());
             }
+
+            @Override
+            public void adjustInsertionDefault(final NoteStepAccess access, final int amount) {
+                ChordStepMode.this.adjustInsertionDefault(access, amount);
+            }
+
+            @Override
+            public void showInsertionDefault(final NoteStepAccess access) {
+                ChordStepMode.this.showInsertionDefault(access);
+            }
+
+            @Override
+            public void resetInsertionDefault(final NoteStepAccess access) {
+                insertionDefaults.reset(access);
+            }
         };
+    }
+
+    private void adjustInsertionDefault(final NoteStepAccess access, final int amount) {
+        if (insertionDefaults.adjust(access, amount)) {
+            showInsertionDefault(access);
+        }
+    }
+
+    private void showInsertionDefault(final NoteStepAccess access) {
+        final String details = "Poly Default";
+        switch (access) {
+            case VELOCITY ->
+                    oled.paramInfo("Velocity", insertionDefaults.velocity(), details, 1, 127);
+            case PRESSURE ->
+                    oled.paramInfoPercent(
+                            "Pressure", insertionDefaults.pressure(), details, 0.0, 1.0);
+            case TIMBRE ->
+                    oled.paramInfoPercent("Timbre", insertionDefaults.timbre(), details, -1.0, 1.0);
+            case PITCH ->
+                    oled.paramInfoDouble(
+                            "Pitch",
+                            insertionDefaults.pitch(),
+                            details,
+                            NoteStepAccess.PITCH.getMin(),
+                            NoteStepAccess.PITCH.getMax());
+            case DURATION ->
+                    oled.paramInfoDuration(
+                            "N.Length", insertionDefaults.duration(), details, STEP_LENGTH);
+            case CHANCE ->
+                    oled.paramInfoPercent("Chance", insertionDefaults.chance(), details, 0.0, 1.0);
+            case VELOCITY_SPREAD ->
+                    oled.paramInfoPercent(
+                            "Vel.Spread", insertionDefaults.velocitySpread(), details, 0.0, 1.0);
+            case REPEATS -> oled.paramInfo("Repeats", insertionDefaults.repeats(), details, 0, 16);
+            default -> oled.valueInfo(access.getName(), "No insertion default");
+        }
     }
 
     private void applyChordStepRecurrence(
@@ -1269,9 +1324,15 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             oled.valueInfo("Select", "Notes 1st");
             return false;
         }
-        final int appliedVelocity = currentChordVelocity(velocity);
+        final int appliedVelocity =
+                chordStepVelocity.resolveVelocityFromCenter(insertionDefaults.velocity(), velocity);
+        final ChordStepInsertionDefaults.Values defaults = insertionDefaults.snapshot();
         for (final int stepIndex : stepIndexes) {
-            chordStepClipEditor.writeChordAtStep(stepIndex, notes, appliedVelocity, STEP_LENGTH);
+            for (final int note : notes) {
+                chordStepEventIndex.addPendingInsertionDefaults(stepIndex, note, defaults);
+            }
+            chordStepClipEditor.writeChordAtStep(
+                    stepIndex, notes, appliedVelocity, insertionDefaults.duration());
         }
         showCurrentChord();
         return true;

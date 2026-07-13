@@ -4,6 +4,9 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Poly Step User 1 and User 2 encoders now edit session-local insertion defaults when no note is selected; touching
+  shows the current default, and `KNOB MODE + touch` restores its original value. New notes receive those velocity,
+  duration, probability, expression, velocity-spread, pitch-expression, and repeat defaults.
 - Poly Step Channel encoder 3 now shows the selected pitch/chord set and page prominently on touch and turn,
   instead of rendering the current chord in the OLED center and relegating the set name to the encoder header.
 - Renamed the user-facing Chord Step workflow to Poly Step and added a source-first replacement gesture: hold one

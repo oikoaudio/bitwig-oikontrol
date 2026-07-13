@@ -15,6 +15,8 @@ final class ChordStepEventIndex {
     private final ChordStepObservedState observedState = new ChordStepObservedState();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepSnapshot> pendingMovedNotes = new HashMap<>();
+    private final Map<String, ChordStepInsertionDefaults.Values> pendingInsertionDefaults =
+            new HashMap<>();
     private final IntUnaryOperator localToGlobalStep;
     private final IntUnaryOperator globalToLocalStep;
     private final IntPredicate visibleGlobalStep;
@@ -65,6 +67,11 @@ final class ChordStepEventIndex {
         if (pending != null) {
             pending.applyTo(noteStep);
         }
+        final ChordStepInsertionDefaults.Values defaults =
+                pendingInsertionDefaults.remove(moveKey(x, y));
+        if (defaults != null) {
+            defaults.applyTo(noteStep);
+        }
     }
 
     public void addPendingNoteSnapshot(
@@ -72,9 +79,17 @@ final class ChordStepEventIndex {
         pendingMovedNotes.put(moveKey(localStep, midiNote), NoteStepSnapshot.capture(noteStep));
     }
 
+    public void addPendingInsertionDefaults(
+            final int localStep,
+            final int midiNote,
+            final ChordStepInsertionDefaults.Values defaults) {
+        pendingInsertionDefaults.put(moveKey(localStep, midiNote), defaults);
+    }
+
     public void clear() {
         observedState.clear();
         pendingMovedNotes.clear();
+        pendingInsertionDefaults.clear();
     }
 
     public Map<Integer, NoteStep> noteStepsAt(final int localStep) {

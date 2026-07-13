@@ -205,7 +205,27 @@ final class ChordStepEncoderControls {
                     final Layer layer,
                     final TouchEncoder encoder,
                     final int slotIndex) {
-                handler.bindNoteAccess(layer, encoder, slotIndex, access);
+                handler.bindNoteAccess(
+                        layer,
+                        encoder,
+                        slotIndex,
+                        access,
+                        new StepSequencerEncoderLayer.EmptyNoteAccessHandler() {
+                            @Override
+                            public void adjust(final int amount) {
+                                host.adjustInsertionDefault(access, amount);
+                            }
+
+                            @Override
+                            public void show() {
+                                host.showInsertionDefault(access);
+                            }
+
+                            @Override
+                            public void reset() {
+                                host.resetInsertionDefault(access);
+                            }
+                        });
             }
         };
     }
@@ -569,5 +589,11 @@ final class ChordStepEncoderControls {
         void resetChordInterpretation();
 
         void showChordInterpretationInfo();
+
+        void adjustInsertionDefault(NoteStepAccess access, int amount);
+
+        void showInsertionDefault(NoteStepAccess access);
+
+        void resetInsertionDefault(NoteStepAccess access);
     }
 }
