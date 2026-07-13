@@ -16,7 +16,7 @@ final class ChordStepPadController {
 
         boolean hasChordSlot(int sourcePadIndex);
 
-        void selectChordSlot(int sourcePadIndex);
+        void selectChordSlots(Set<Integer> sourcePadIndexes, int primarySourcePadIndex);
 
         boolean isStepAuditionEnabled();
 
@@ -143,7 +143,7 @@ final class ChordStepPadController {
         }
         trackSourcePad(sourcePadIndex, pressed);
         if (pressed) {
-            host.selectChordSlot(sourcePadIndex);
+            host.selectChordSlots(Set.copyOf(heldSourcePads), sourcePadIndex);
             final boolean hasHeldSteps = padSurface.hasHeldSteps();
             final boolean auditionEnabled = host.isStepAuditionEnabled();
             final boolean transportStopped = !host.isTransportPlaying();
@@ -155,7 +155,7 @@ final class ChordStepPadController {
             } else if (!auditionEnabled) {
                 host.showCurrentChord();
             }
-        } else {
+        } else if (heldSourcePads.isEmpty()) {
             host.stopAuditionNotes();
         }
     }

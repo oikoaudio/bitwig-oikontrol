@@ -44,6 +44,26 @@ class ChordStepPadControllerTest {
     }
 
     @Test
+    void simultaneousPresetPadsFormAndRetainACombinedChordGrip() {
+        final FakeHost host = new FakeHost();
+        host.chordSlots.addAll(Set.of(2, 3));
+        final ChordStepPadController controller = controller(host);
+
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 2, true, 99);
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 3, true, 98);
+
+        assertEquals(Set.of(2, 3), host.selectedChordSlots);
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 2, false, 0);
+        assertTrue(host.events.stream().noneMatch("stop-audition"::equals));
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 3, false, 0);
+        assertEquals(1, host.events.stream().filter("stop-audition"::equals).count());
+        assertEquals(Set.of(2, 3), host.selectedChordSlots);
+
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 2, true, 97);
+        assertEquals(Set.of(2), host.selectedChordSlots);
+    }
+
+    @Test
     void builderSourcePadsToggleBuilderAndApplyHeldSteps() {
         final FakeHost host = new FakeHost();
         host.builderFamily = true;
@@ -146,6 +166,7 @@ class ChordStepPadControllerTest {
         private boolean builderFamily;
         private boolean builderSourceChanged = true;
         private int selectedChordSlot = -1;
+        private Set<Integer> selectedChordSlots = Set.of();
         private Set<Integer> assignedSteps = Set.of();
         private int assignedVelocity;
         private int recurrenceEdits;
@@ -166,8 +187,10 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public void selectChordSlot(final int sourcePadIndex) {
-            selectedChordSlot = sourcePadIndex;
+        public void selectChordSlots(
+                final Set<Integer> sourcePadIndexes, final int primarySourcePadIndex) {
+            selectedChordSlot = primarySourcePadIndex;
+            selectedChordSlots = Set.copyOf(sourcePadIndexes);
         }
 
         @Override

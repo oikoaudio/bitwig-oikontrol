@@ -107,7 +107,7 @@ final class ChordStepPadLightRenderer {
         final RgbLightState grouped =
                 familyGroupColor(
                         slot.family(), groupIndex, selection.page(), selection.pageCount());
-        return sourcePadIndex == selection.selectedSlot() ? SELECTED_CHORD : grouped.getDimmed();
+        return selection.isSlotSelected(sourcePadIndex) ? SELECTED_CHORD : grouped.getDimmed();
     }
 
     private RgbLightState builderSourcePadLight(final int sourcePadIndex) {

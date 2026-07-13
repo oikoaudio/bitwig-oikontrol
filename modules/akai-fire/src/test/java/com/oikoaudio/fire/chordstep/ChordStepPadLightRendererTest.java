@@ -9,6 +9,7 @@ import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class ChordStepPadLightRendererTest {
@@ -35,6 +36,21 @@ class ChordStepPadLightRendererTest {
         assertEquals(
                 expected,
                 fixture.renderer.padLight(SOURCE_OFFSET, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
+    }
+
+    @Test
+    void rendersEverySelectedPresetPadAsSelected() {
+        final Fixture fixture = new Fixture();
+        fixture.selection.adjustFamily(1);
+        fixture.selection.selectSlots(Set.of(0, 2), 2);
+        final RgbLightState selected = new RgbLightState(110, 24, 118, true);
+
+        assertEquals(
+                selected,
+                fixture.renderer.padLight(SOURCE_OFFSET, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
+        assertEquals(
+                selected,
+                fixture.renderer.padLight(SOURCE_OFFSET + 2, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
     }
 
     @Test

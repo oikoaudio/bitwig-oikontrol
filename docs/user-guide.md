@@ -442,7 +442,12 @@ target, it instead changes the session-local default for the next note or chord 
 the encoder shows that default. Hold `KNOB MODE` and touch the encoder to restore its original default. These
 defaults cover velocity, pressure, timbre, pitch expression, note length, chance, velocity spread, and repeats.
 
-Chord banks are static libraries of chord formulas and voicing variants. Changing shared `Root Key` or `Scale` does not switch bank, page, or slot; it only changes how the selected slot is rendered. `As Is` transposes the stored chord shape from the current root. `In Scale` rebuilds that slot from the current shared scale and root.
+Chord banks are static libraries of chord formulas and voicing variants. Press several chord-set pads together to
+combine their rendered pitches into one grip; the combined grip remains selected after release and can be auditioned,
+written to empty steps, or used for source-first pitch replacement just like a multi-pad Builder grip. Changing
+shared `Root Key` or `Scale` does not switch bank, page, or slot; it only changes how the selected slot or combined
+grip is rendered. `As Is` transposes the stored chord shapes from the current root. `In Scale` rebuilds them from the
+current shared scale and root.
 
 Coarse nudge is intentionally disabled in `Poly Step`; micro-timing is currently temperamental and should be treated as experimental.
 

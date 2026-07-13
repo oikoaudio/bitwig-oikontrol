@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Poly Step chord-set pads now support simultaneous multi-pad grips, combining and deduplicating the selected
+  chords' pitches for audition, step insertion, held-step assignment, and source-first pitch replacement.
 - Poly Step User 1 and User 2 encoders now edit session-local insertion defaults when no note is selected; touching
   shows the current default, and `KNOB MODE + touch` restores its original value. New notes receive those velocity,
   duration, probability, expression, velocity-spread, pitch-expression, and repeat defaults.

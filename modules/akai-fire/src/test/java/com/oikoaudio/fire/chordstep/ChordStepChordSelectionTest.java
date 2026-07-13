@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.bitwig.extensions.framework.MusicalScale;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class ChordStepChordSelectionTest {
@@ -58,5 +59,28 @@ class ChordStepChordSelectionTest {
         assertEquals(1, selection.octaveOffset());
         assertEquals("InKey", selection.interpretationDisplayName());
         assertEquals("F1 InKey KC O+1", selection.interpretationSuffix(0));
+    }
+
+    @Test
+    void rendersTheUnionOfSimultaneouslySelectedPresetSlots() {
+        final ChordStepChordSelection selection = new ChordStepChordSelection();
+        selection.adjustFamily(1);
+        selection.selectSlot(0);
+        final int[] first = selection.renderSelectedChord(MAJOR, 0);
+        selection.selectSlot(2);
+        final int[] second = selection.renderSelectedChord(MAJOR, 0);
+
+        selection.selectSlots(Set.of(0, 2), 2);
+
+        final int[] expected =
+                java.util.stream.IntStream.concat(
+                                java.util.Arrays.stream(first), java.util.Arrays.stream(second))
+                        .distinct()
+                        .sorted()
+                        .toArray();
+        assertArrayEquals(expected, selection.renderSelectedChord(MAJOR, 0));
+        assertTrue(selection.isSlotSelected(0));
+        assertTrue(selection.isSlotSelected(2));
+        assertEquals("2 Chords", selection.chordName());
     }
 }

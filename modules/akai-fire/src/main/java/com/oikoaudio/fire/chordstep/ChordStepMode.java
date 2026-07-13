@@ -511,8 +511,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public void selectChordSlot(final int sourcePadIndex) {
-                chordSelection.selectSlot(sourcePadIndex);
+            public void selectChordSlots(
+                    final Set<Integer> sourcePadIndexes, final int primarySourcePadIndex) {
+                chordSelection.selectSlots(sourcePadIndexes, primarySourcePadIndex);
             }
 
             @Override
