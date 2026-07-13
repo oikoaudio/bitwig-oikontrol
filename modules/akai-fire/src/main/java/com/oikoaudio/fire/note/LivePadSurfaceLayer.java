@@ -1,6 +1,5 @@
 package com.oikoaudio.fire.note;
 
-import com.bitwig.extension.controller.api.Application;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.ControllerHost;
@@ -113,6 +112,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private final NoteLiveExpressionControls liveExpressionControls;
     private final CursorTrack cursorTrack;
     private final PinnableCursorClip stepInputCursorClip;
+    private final StepInputWorkflowController stepInputWorkflow;
     private final PinnableCursorDevice liveCursorDevice;
     private final PinnableCursorDevice liveDrumMachineDevice;
     private final DrumPadBank liveDrumPadBank;
@@ -195,12 +195,6 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean liveMeterDisplayActive = false;
     private boolean liveContextDisplayActive = false;
     private long liveContextDisplayRevision = Long.MIN_VALUE;
-    private boolean stepInputHelperActive = false;
-    private int stepInputActivationGeneration = 0;
-    private int stepInputStepIndex = 0;
-    private int stepInputHeldPadCount = 0;
-    private boolean stepInputPadGesturePending = false;
-    private double stepInputClipLengthBeats = 0.0;
     private final PeakRmsOledView selectedTrackMeterView;
     private final NoteChordOledView liveNoteChordOledView;
     private List<Integer> selectedTrackPlayingNotes = List.of();
@@ -263,14 +257,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
         trackBaseColor = ColorLookup.getColor(this.cursorTrack.color().get());
         this.stepInputCursorClip = cursorTrack.createLauncherCursorClip("NOTE_STEP_INPUT_CLIP", "Note Step Input Clip",
                 CLIP_ROW_PAD_COUNT, 128);
+        this.stepInputWorkflow = new StepInputWorkflowController(new StepInputPort(),
+                STEP_INPUT_DISPLAY_STEP_SIZE_BEATS);
         this.stepInputCursorClip.setStepSize(STEP_INPUT_DISPLAY_STEP_SIZE_BEATS);
         this.stepInputCursorClip.getLoopLength().markInterested();
-        this.stepInputCursorClip.getLoopLength().addValueObserver(length -> {
-            stepInputClipLengthBeats = length;
-            if (stepInputHelperActive) {
-                showStepInputDisplay();
-            }
-        });
+        this.stepInputCursorClip.getLoopLength().addValueObserver(stepInputWorkflow::updateClipLength);
         this.liveCursorDevice = cursorTrack.createCursorDevice("NOTE_LIVE_DEVICE", "Note Live Device", 8,
                 CursorDeviceFollowMode.FOLLOW_SELECTION);
         this.liveDrumMachineDevice = drumPadsOnly
@@ -506,7 +497,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private boolean shouldShowLiveNoteChordDisplay() {
-        return active && !drumPadsOnly && !isDrumMachineLiveMode() && !stepInputHelperActive;
+        return active && !drumPadsOnly && !isDrumMachineLiveMode() && !stepInputWorkflow.enabled();
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -523,7 +514,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     public boolean showIdleInfoIfNeeded() {
-        if (stepInputHelperActive) {
+        if (stepInputWorkflow.enabled()) {
             resetLiveMeterDisplay();
             showStepInputDisplay();
             return true;
@@ -970,7 +961,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void refreshLiveContextIdleIfVisible() {
-        if (stepInputHelperActive) {
+        if (stepInputWorkflow.enabled()) {
             showStepInputDisplay();
             return;
         }
@@ -1029,22 +1020,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
         liveContextDisplayActive = false;
         applyLiveFooterLegend();
         oled.clearScreen();
-        oled.valueInfoPersistentNoClear("Step Input", stepInputStepLabel());
-    }
-
-    private String stepInputStepLabel() {
-        final int displayStep = stepInputStepIndex + 1;
-        final int totalSteps = estimatedStepInputTotalSteps(stepInputClipLengthBeats, STEP_INPUT_DISPLAY_STEP_SIZE_BEATS);
-        return totalSteps > 0
-                ? "Step %d/%d".formatted(displayStep, totalSteps)
-                : "Step %d".formatted(displayStep);
+        oled.valueInfoPersistentNoClear("Step Input", stepInputWorkflow.stepLabel());
     }
 
     static int estimatedStepInputTotalSteps(final double clipLengthBeats, final double stepSizeBeats) {
         if (clipLengthBeats <= 0.0 || stepSizeBeats <= 0.0) {
             return -1;
         }
-        return Math.max(1, (int) Math.round(clipLengthBeats / stepSizeBeats));
+        return StepInputWorkflowController.estimatedTotalSteps(clipLengthBeats, stepSizeBeats);
     }
 
     private void handleHarmonicMixerEncoder(final int encoderIndex, final int inc) {
@@ -1538,142 +1521,115 @@ public abstract class LivePadSurfaceLayer extends Layer {
     }
 
     private void toggleStepInputHelper() {
-        if (stepInputHelperActive) {
-            deactivateStepInputHelper(false);
-            return;
-        }
-        activateStepInputHelper();
-    }
-
-    private void activateStepInputHelper() {
-        if (isDrumMachineLiveMode()) {
-            oled.valueInfo("Step Input", "Note/Harmonic");
-            return;
-        }
-        final Application application = driver.getApplication();
-        stepInputCursorClip.showInEditor();
-        final int generation = ++stepInputActivationGeneration;
-        oled.valueInfo("Step Input", "Opening");
-        driver.getHost().scheduleTask(() -> focusStepInputTrack(application, generation), 100);
-    }
-
-    private void focusStepInputTrack(final Application application, final int generation) {
-        if (generation != stepInputActivationGeneration || isDrumMachineLiveMode()) {
-            return;
-        }
-        cursorTrack.selectInEditor();
-        BitwigEditorToolActions.focusTrackHeader(application);
-        driver.getHost().scheduleTask(() -> focusStepInputEditor(application, generation), 100);
-    }
-
-    private void focusStepInputEditor(final Application application, final int generation) {
-        if (generation != stepInputActivationGeneration || isDrumMachineLiveMode()) {
-            return;
-        }
-        if (!BitwigEditorToolActions.focusClipEditorPanel(application)) {
-            driver.notifyPopup("Step Input", "Editor focus unavailable");
-            BitwigEditorToolActions.logCandidateActions(application,
-                    message -> driver.getHost().println("[Oikontrol] " + message));
-        }
-        driver.getHost().scheduleTask(() -> completeStepInputActivation(application, generation), 100);
-    }
-
-    private void completeStepInputActivation(final Application application, final int generation) {
-        if (generation != stepInputActivationGeneration || isDrumMachineLiveMode()) {
-            return;
-        }
-        if (!BitwigEditorToolActions.activateStepInputTool(application)) {
-            oled.valueInfo("Step Input", "Unavailable");
-            driver.notifyPopup("Step Input", "Tool unavailable");
-            BitwigEditorToolActions.logCandidateActions(application,
-                    message -> driver.getHost().println("[Oikontrol] " + message));
-            return;
-        }
-        if (!BitwigEditorToolActions.moveTimeSelectionToFirstItem(application)) {
-            driver.notifyPopup("Step Input", "Start action unavailable");
-            BitwigEditorToolActions.logCandidateActions(application,
-                    message -> driver.getHost().println("[Oikontrol] " + message));
-        }
-        stepInputHelperActive = true;
-        stepInputStepIndex = 0;
-        stepInputHeldPadCount = 0;
-        stepInputPadGesturePending = false;
-        resetLiveIdleDisplay();
-        showStepInputDisplay();
-        driver.notifyPopup("Step Input", "On");
-    }
-
-    private void deactivateStepInputHelper(final boolean force) {
-        stepInputActivationGeneration++;
-        final Application application = driver.getApplication();
-        if (!force && !BitwigEditorToolActions.activatePointerTool(application)) {
-            oled.valueInfo("Pointer", "Unavailable");
-            driver.notifyPopup("Pointer", "Tool unavailable");
-            BitwigEditorToolActions.logCandidateActions(application,
-                    message -> driver.getHost().println("[Oikontrol] " + message));
-            return;
-        }
-        stepInputHelperActive = false;
-        stepInputHeldPadCount = 0;
-        stepInputPadGesturePending = false;
-        resetLiveIdleDisplay();
-        showLiveTrackLegendIdle();
-        driver.notifyPopup("Step Input", "Off");
+        stepInputWorkflow.toggle();
     }
 
     private boolean handleStepInputBankButton(final boolean pressed, final int amount) {
-        if (!stepInputHelperActive || !pressed || driver.isGlobalAltHeld()) {
-            return false;
-        }
-        final Application application = driver.getApplication();
-        if (application == null) {
-            oled.valueInfo("Step Input", "Unavailable");
-            return true;
-        }
-        if (amount > 0) {
-            application.arrowKeyRight();
-            advanceStepInputEstimate(1);
-            return true;
-        }
-        application.arrowKeyLeft();
-        advanceStepInputEstimate(-1);
-        return true;
+        return stepInputWorkflow.handleBankButton(pressed, amount, driver.isGlobalAltHeld());
     }
 
     private void handleStepInputPadGesture(final boolean pressed) {
-        if (!stepInputHelperActive || isDrumMachineLiveMode()) {
-            return;
-        }
-        if (pressed) {
-            if (stepInputHeldPadCount == 0) {
-                stepInputPadGesturePending = true;
-            }
-            stepInputHeldPadCount++;
-            return;
-        }
-        if (stepInputHeldPadCount > 0) {
-            stepInputHeldPadCount--;
-        }
-        if (stepInputHeldPadCount == 0 && stepInputPadGesturePending) {
-            stepInputPadGesturePending = false;
-            advanceStepInputEstimate(1);
-        }
-    }
-
-    private void advanceStepInputEstimate(final int amount) {
-        stepInputStepIndex = Math.max(0, stepInputStepIndex + amount);
-        showStepInputDisplay();
+        stepInputWorkflow.handlePadGesture(pressed);
     }
 
     private void clearStepInputHelper() {
-        if (!stepInputHelperActive) {
-            return;
+        stepInputWorkflow.clear();
+    }
+
+    private final class StepInputPort implements StepInputWorkflowController.Port {
+        @Override
+        public boolean drumMode() {
+            return isDrumMachineLiveMode();
         }
-        BitwigEditorToolActions.activatePointerTool(driver.getApplication());
-        stepInputActivationGeneration++;
-        stepInputHelperActive = false;
-        stepInputHeldPadCount = 0;
-        stepInputPadGesturePending = false;
+
+        @Override
+        public void showClipInEditor() {
+            stepInputCursorClip.showInEditor();
+        }
+
+        @Override
+        public void selectTrackInEditor() {
+            cursorTrack.selectInEditor();
+        }
+
+        @Override
+        public void schedule(final Runnable task, final long delayMs) {
+            driver.getHost().scheduleTask(task, delayMs);
+        }
+
+        @Override
+        public boolean focusTrackHeader() {
+            return BitwigEditorToolActions.focusTrackHeader(driver.getApplication());
+        }
+
+        @Override
+        public boolean focusClipEditor() {
+            return BitwigEditorToolActions.focusClipEditorPanel(driver.getApplication());
+        }
+
+        @Override
+        public boolean activateStepTool() {
+            return BitwigEditorToolActions.activateStepInputTool(driver.getApplication());
+        }
+
+        @Override
+        public boolean activatePointerTool() {
+            return BitwigEditorToolActions.activatePointerTool(driver.getApplication());
+        }
+
+        @Override
+        public boolean moveToFirstItem() {
+            return BitwigEditorToolActions.moveTimeSelectionToFirstItem(driver.getApplication());
+        }
+
+        @Override
+        public boolean moveBank(final int amount) {
+            if (driver.getApplication() == null) {
+                return false;
+            }
+            if (amount > 0) {
+                driver.getApplication().arrowKeyRight();
+            } else {
+                driver.getApplication().arrowKeyLeft();
+            }
+            return true;
+        }
+
+        @Override
+        public void display(final String value) {
+            if (value.startsWith("Step ")) {
+                showStepInputDisplay();
+            } else if (value.startsWith("Pointer")) {
+                oled.valueInfo("Pointer", "Unavailable");
+            } else {
+                oled.valueInfo("Step Input", value);
+            }
+        }
+
+        @Override
+        public void popup(final String value) {
+            if (value.startsWith("Pointer")) {
+                driver.notifyPopup("Pointer", "Tool unavailable");
+            } else {
+                driver.notifyPopup("Step Input", value);
+            }
+        }
+
+        @Override
+        public void logCandidateActions() {
+            BitwigEditorToolActions.logCandidateActions(driver.getApplication(),
+                    message -> driver.getHost().println("[Oikontrol] " + message));
+        }
+
+        @Override
+        public void resetIdleDisplay() {
+            resetLiveIdleDisplay();
+        }
+
+        @Override
+        public void showLiveIdle() {
+            showLiveTrackLegendIdle();
+        }
     }
 
     private void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
