@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Shortened Poly Step's paged chord-family OLED labels so the complete page fraction remains visible in the large
+  value font.
 - Fixed Poly Step pad LEDs temporarily blanking during parameter edits while its fine-grid observation cache was
   being repopulated.
 - Poly Step now assigns each finely nudged note or chord to exactly one nearest step pad, transfers that ownership

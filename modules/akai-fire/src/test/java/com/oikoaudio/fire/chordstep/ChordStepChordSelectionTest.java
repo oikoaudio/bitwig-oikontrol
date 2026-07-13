@@ -37,7 +37,28 @@ class ChordStepChordSelectionTest {
         assertEquals(2, selection.selectedSlot());
         assertEquals("Audible", selection.familyLabel());
         assertEquals("Minor", selection.chordName());
-        assertEquals("Audible 1/2", selection.familyDisplayLabel());
+        assertEquals("Audibl 1/2", selection.familyDisplayLabel());
+    }
+
+    @Test
+    void keepsEveryPagedFamilyLabelWithinTheLargeOledValueWidth() {
+        final ChordStepChordSelection selection = new ChordStepChordSelection();
+        final List<String> expectedLabels =
+                List.of(
+                        "Audibl 1/2",
+                        "Barker 1/4",
+                        "SusMot 1/4",
+                        "Quartl 1/4",
+                        "Clustr 1/4",
+                        "MinDrf 1/4",
+                        "DorLft 1/4",
+                        "RtDrn 1/4");
+
+        for (final String expected : expectedLabels) {
+            assertTrue(selection.adjustFamily(1));
+            assertEquals(expected, selection.familyDisplayLabel());
+            assertTrue(selection.familyDisplayLabel().length() <= 10);
+        }
     }
 
     @Test

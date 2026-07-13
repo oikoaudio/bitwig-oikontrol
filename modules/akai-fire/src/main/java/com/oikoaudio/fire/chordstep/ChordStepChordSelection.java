@@ -250,8 +250,10 @@ final class ChordStepChordSelection {
     }
 
     public String familyDisplayLabel() {
-        final String family = familyLabel();
-        return pageCount() > 1 ? "%s %d/%d".formatted(family, page + 1, pageCount()) : family;
+        if (pageCount() <= 1) {
+            return familyLabel();
+        }
+        return "%s %d/%d".formatted(pagedOledFamilyLabel(rawFamilyName()), page + 1, pageCount());
     }
 
     public String chordName() {
@@ -396,6 +398,20 @@ final class ChordStepChordSelection {
             case "Dorian Lift" -> "DorLift";
             case "Root Drone" -> "RootDrn";
             default -> family;
+        };
+    }
+
+    private static String pagedOledFamilyLabel(final String family) {
+        return switch (family) {
+            case "Audible" -> "Audibl";
+            case "Barker" -> "Barker";
+            case "Sus Motion" -> "SusMot";
+            case "Quartal" -> "Quartl";
+            case "Cluster" -> "Clustr";
+            case "Minor Drift" -> "MinDrf";
+            case "Dorian Lift" -> "DorLft";
+            case "Root Drone" -> "RtDrn";
+            default -> oledFamilyLabel(family);
         };
     }
 
