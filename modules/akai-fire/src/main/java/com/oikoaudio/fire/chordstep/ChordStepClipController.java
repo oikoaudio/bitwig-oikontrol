@@ -7,11 +7,13 @@ import java.util.function.BooleanSupplier;
 
 /** Owns chord-step selected-clip state refresh and clip-availability checks. */
 public final class ChordStepClipController {
-    private final ChordStepSelectedClipState selectedClipState = new ChordStepSelectedClipState();
     private final BooleanSupplier canHoldNoteData;
     private final BooleanSupplier hasLoadedNoteClipContent;
     private final ResyncRequester resyncRequester;
     private final AvailabilityFeedback availabilityFeedback;
+    private int slotIndex = -1;
+    private boolean hasContent;
+    private RgbLightState color;
 
     public ChordStepClipController(
             final BooleanSupplier canHoldNoteData,
@@ -25,15 +27,22 @@ public final class ChordStepClipController {
     }
 
     public void refresh(final SelectedClipSlotState state) {
-        if (selectedClipState.refresh(state)) {
+        final boolean changed = slotIndex != state.slotIndex() || hasContent != state.hasContent();
+        slotIndex = state.slotIndex();
+        hasContent = state.hasContent();
+        color = state.color();
+        if (changed) {
             resyncRequester.queueResync();
         }
     }
 
     public boolean ensureSelectedClip() {
+        final NoteClipAvailability.Failure slotFailure = selectedClipSlotFailure();
         final NoteClipAvailability.Failure failure =
-                selectedClipState.requireClip(
-                        canHoldNoteData.getAsBoolean(), hasLoadedNoteClipContent.getAsBoolean());
+                slotFailure != null
+                        ? slotFailure
+                        : NoteClipAvailability.requireClipContent(
+                                hasContent || hasLoadedNoteClipContent.getAsBoolean());
         if (failure != null) {
             availabilityFeedback.show(failure);
             return false;
@@ -42,8 +51,7 @@ public final class ChordStepClipController {
     }
 
     public boolean ensureSelectedClipSlot() {
-        final NoteClipAvailability.Failure failure =
-                selectedClipState.requireSelectedClipSlot(canHoldNoteData.getAsBoolean());
+        final NoteClipAvailability.Failure failure = selectedClipSlotFailure();
         if (failure != null) {
             availabilityFeedback.show(failure);
             return false;
@@ -52,15 +60,20 @@ public final class ChordStepClipController {
     }
 
     public int slotIndex() {
-        return selectedClipState.slotIndex();
+        return slotIndex;
     }
 
     public boolean hasContent() {
-        return selectedClipState.hasContent();
+        return hasContent;
     }
 
     public RgbLightState color() {
-        return selectedClipState.color();
+        return color;
+    }
+
+    private NoteClipAvailability.Failure selectedClipSlotFailure() {
+        return NoteClipAvailability.requireSelectedClipSlot(
+                canHoldNoteData.getAsBoolean(), slotIndex >= 0);
     }
 
     @FunctionalInterface

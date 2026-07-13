@@ -2,6 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.oikoaudio.fire.lights.RgbLightState;
@@ -31,6 +32,20 @@ class ChordStepClipControllerTest {
         assertEquals(List.of("resync", "resync"), events);
         assertEquals(2, controller.slotIndex());
         assertTrue(controller.hasContent());
+    }
+
+    @Test
+    void refreshStoresLatestClipColorWithoutTreatingColorAsSelectionChange() {
+        final List<String> events = new ArrayList<>();
+        final ChordStepClipController controller =
+                new ChordStepClipController(
+                        () -> true, () -> false, () -> events.add("resync"), failure -> {});
+
+        controller.refresh(SelectedClipSlotState.fromValues(1, true, RgbLightState.GRAY_1));
+        controller.refresh(SelectedClipSlotState.fromValues(1, true, RgbLightState.GRAY_2));
+
+        assertEquals(List.of("resync"), events);
+        assertSame(RgbLightState.GRAY_2, controller.color());
     }
 
     @Test

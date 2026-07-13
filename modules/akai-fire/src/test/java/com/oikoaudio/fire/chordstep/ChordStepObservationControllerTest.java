@@ -117,5 +117,45 @@ class ChordStepObservationControllerTest {
                 List.of(0, 1, 6, 18), scheduled.stream().map(ScheduledTask::delayTicks).toList());
     }
 
+    @Test
+    void refreshRunsImmediatePassAndSchedulesEstablishedFollowUps() {
+        final List<ScheduledTask> scheduled = new ArrayList<>();
+        final List<String> events = new ArrayList<>();
+        final ChordStepClipController clipController =
+                new ChordStepClipController(() -> true, () -> false, () -> {}, failure -> {});
+        final ChordStepObservationController controller =
+                new ChordStepObservationController(
+                        (task, delayTicks) -> scheduled.add(new ScheduledTask(task, delayTicks)),
+                        null,
+                        () -> 0,
+                        () -> RgbLightState.GRAY_1,
+                        clipController,
+                        () -> events.add("clear"),
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        (slotBank,
+                                selectedClipSlotIndex,
+                                refreshSelectedClipState,
+                                slotIndexSupplier,
+                                scrollNoteClipToKeyStart,
+                                scrollObservedClipToKeyStart,
+                                scrollNoteClipToCurrentStep,
+                                scrollObservedClipToStepStart) -> events.add("pass"),
+                        (slotBank, defaultColor) ->
+                                SelectedClipSlotState.fromValues(0, false, defaultColor));
+
+        controller.refresh();
+
+        assertEquals(List.of("clear", "pass"), events);
+        assertEquals(List.of(1, 6, 18), scheduled.stream().map(ScheduledTask::delayTicks).toList());
+
+        scheduled.forEach(task -> task.task().run());
+        assertEquals(
+                List.of("clear", "pass", "clear", "pass", "clear", "pass", "clear", "pass"),
+                events);
+    }
+
     private record ScheduledTask(Runnable task, int delayTicks) {}
 }
