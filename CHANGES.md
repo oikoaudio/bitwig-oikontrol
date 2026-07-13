@@ -4,6 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Fixed Drum XOX pad-pattern copy so destination steps preserve source velocity, duration, probability, and the
+  existing copied note-expression parameters instead of receiving fixed velocity and zero probability.
 - Refactored Akai Fire Chord Step around direct responsibility owners, workflow-level regression scenarios,
   concrete hardware/main-encoder boundaries, and explicit acyclic encoder-layer initialization across Drum XOX,
   Melodic Step, Chord Step, and Nested Rhythm; controller mappings and musical behavior are unchanged.

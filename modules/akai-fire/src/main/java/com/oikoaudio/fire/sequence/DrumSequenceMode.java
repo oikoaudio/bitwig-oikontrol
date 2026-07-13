@@ -27,7 +27,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private Application app;
 
     private final DrumStepPadSurface stepPadSurface = new DrumStepPadSurface();
-    private final HashMap<Integer, NoteStep> expectedNoteChanges = new HashMap<>();
+    private final HashMap<Integer, DrumNoteStepValues> expectedNoteChanges = new HashMap<>();
     // Maintain fractional offsets for held notes.
     private final Map<NoteStep, Double> fractionalOffsets = new HashMap<>();
     private final Map<Integer, Map<Integer, Integer>> currentNotesInClip = new HashMap<>();
@@ -399,7 +399,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             }
             final int vel = (int) Math.round(copyNote.velocity() * 127);
             final double duration = copyNote.duration();
-            expectedNoteChanges.put(index, copyNote);
+            expectedNoteChanges.put(index, DrumNoteStepValues.capture(copyNote));
             cursorClip.setStep(index, 0, vel, duration);
             heldStepFineStarts.put(index, coarseLower(index));
             oled.valueInfo("Copy Step", "Select target");
@@ -510,7 +510,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 pos = 0;
             }
             if (!shiftActive.get()) {
-                expectedNoteChanges.put(pos, noteStep);
+                expectedNoteChanges.put(pos, DrumNoteStepValues.capture(noteStep));
             }
             cursorClip.setStep(
                     pos, 0, (int) Math.round(noteStep.velocity() * 127), noteStep.duration());
@@ -1611,7 +1611,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
         assignments[newStep] = noteStep;
         if (expectedNoteChanges.containsKey(newStep)) {
-            final NoteStep previousStep = expectedNoteChanges.get(newStep);
+            final DrumNoteStepValues previousStep = expectedNoteChanges.get(newStep);
             expectedNoteChanges.remove(newStep);
             applyValues(noteStep, previousStep);
         } else if (noteStep.state() == State.NoteOn && hasPendingAddedValues(newStep)) {
@@ -1627,17 +1627,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         }
     }
 
-    private void applyValues(final NoteStep dest, final NoteStep src) {
-        // TODO: this is a bug, somewhere the chance is lost
-        dest.setChance(src.chance()); // src.chance()
-        dest.setTimbre(src.timbre());
-        dest.setPressure(src.pressure());
-        dest.setRepeatCount(src.repeatCount());
-        dest.setRepeatVelocityCurve(src.repeatVelocityCurve());
-        dest.setPan(src.pan());
-        dest.setRepeatVelocityEnd(src.repeatVelocityEnd());
-        dest.setRecurrence(src.recurrenceLength(), src.recurrenceMask());
-        dest.setOccurrence(src.occurrence());
+    private void applyValues(final NoteStep dest, final DrumNoteStepValues src) {
+        src.applyParametersTo(dest);
     }
 
     private void handlePlayingStep(final int playingStep) {
@@ -1739,8 +1730,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return padHandler.isPadBeingHeld();
     }
 
-    public void registerExpectedNoteChange(final int x, final NoteStep noteStep) {
-        expectedNoteChanges.put(noteStep.x(), noteStep);
+    void registerExpectedNoteChange(final int x, final DrumNoteStepValues noteStep) {
+        expectedNoteChanges.put(x, noteStep);
     }
 
     public BooleanValueObject getLengthDisplay() {

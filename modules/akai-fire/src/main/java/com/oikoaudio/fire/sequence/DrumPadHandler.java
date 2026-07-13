@@ -251,16 +251,13 @@ public class DrumPadHandler {
         return colors[colorIndex];
     }
 
-    void executeCopy(final List<NoteStep> notes, final boolean copyParams) {
+    void executeCopy(final List<DrumNoteStepValues> notes, final boolean copyParams) {
         cursorClip.clearStepsAtY(0, 0);
-        for (final NoteStep noteStep : notes) {
-            // TODO: this is an API bug
-            cursorClip.setStep(noteStep.x(), 0, 100, 0.25);
-            //            cursorClip.setStep(noteStep.x(), 0, (int) (noteStep.velocity() * 127),
-            // noteStep.duration());
+        for (final DrumNoteStepValues noteStep : notes) {
             if (copyParams) {
                 parent.registerExpectedNoteChange(noteStep.x(), noteStep);
             }
+            noteStep.insertInto(cursorClip);
         }
     }
 

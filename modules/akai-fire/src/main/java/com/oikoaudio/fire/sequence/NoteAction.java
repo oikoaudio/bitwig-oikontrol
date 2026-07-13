@@ -12,7 +12,7 @@ public class NoteAction {
     private final int destPadIndex;
     private final int srcPadIndex;
     private final Type type;
-    private final List<NoteStep> copyNotes;
+    private final List<DrumNoteStepValues> copyNotes;
 
     NoteAction(final int srcPadIndex, final int destPadIndex, final Type type) {
         this(srcPadIndex, destPadIndex, type, null);
@@ -26,7 +26,10 @@ public class NoteAction {
         this.destPadIndex = destPadIndex;
         this.srcPadIndex = srcPadIndex;
         this.type = type;
-        this.copyNotes = copyNotes;
+        this.copyNotes =
+                copyNotes == null
+                        ? List.of()
+                        : copyNotes.stream().map(DrumNoteStepValues::capture).toList();
     }
 
     public Type getType() {
@@ -41,7 +44,7 @@ public class NoteAction {
         return destPadIndex;
     }
 
-    public List<NoteStep> getCopyNotes() {
+    public List<DrumNoteStepValues> getCopyNotes() {
         return copyNotes;
     }
 }
