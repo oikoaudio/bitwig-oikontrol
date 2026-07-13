@@ -6,32 +6,34 @@ import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.lights.RgbLightState;
 
 /**
- * Snapshot of the currently selected clip slot state used by Akai modes.
- * Captures the selected slot index plus the pieces of bookkeeping the modes care about:
- * whether the slot has content and the color to use for pad feedback when color tracking is enabled.
+ * Snapshot of the currently selected clip slot state used by Akai modes. Captures the selected slot
+ * index plus the pieces of bookkeeping the modes care about: whether the slot has content and the
+ * color to use for pad feedback when color tracking is enabled.
  */
 public final class SelectedClipSlotState {
     private final int slotIndex;
     private final boolean hasContent;
     private final RgbLightState color;
 
-    private SelectedClipSlotState(final int slotIndex, final boolean hasContent, final RgbLightState color) {
+    private SelectedClipSlotState(
+            final int slotIndex, final boolean hasContent, final RgbLightState color) {
         this.slotIndex = slotIndex;
         this.hasContent = hasContent;
         this.color = color;
     }
 
-    public static SelectedClipSlotState fromValues(final int slotIndex,
-                                                   final boolean hasContent,
-                                                   final RgbLightState color) {
+    public static SelectedClipSlotState fromValues(
+            final int slotIndex, final boolean hasContent, final RgbLightState color) {
         return new SelectedClipSlotState(slotIndex, hasContent, color);
     }
 
-    public static SelectedClipSlotState scan(final ClipLauncherSlotBank slotBank, final RgbLightState defaultColor) {
+    public static SelectedClipSlotState scan(
+            final ClipLauncherSlotBank slotBank, final RgbLightState defaultColor) {
         for (int i = 0; i < slotBank.getSizeOfBank(); i++) {
             final ClipLauncherSlot slot = slotBank.getItemAt(i);
             if (slot.exists().get() && slot.isSelected().get()) {
-                final RgbLightState color = defaultColor == null ? null : ColorLookup.getColor(slot.color().get());
+                final RgbLightState color =
+                        defaultColor == null ? null : ColorLookup.getColor(slot.color().get());
                 return new SelectedClipSlotState(i, slot.hasContent().get(), color);
             }
         }

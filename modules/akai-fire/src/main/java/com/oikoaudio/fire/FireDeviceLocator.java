@@ -8,9 +8,7 @@ import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.oikoaudio.fire.values.SpecialDevices;
 
-/**
- * Finds the first drum machine in the project and focuses it on the shared Fire cursors.
- */
+/** Finds the first drum machine in the project and focuses it on the shared Fire cursors. */
 public final class FireDeviceLocator {
     private final TrackBank trackBank;
     private final Device[] drumDevices;
@@ -19,7 +17,8 @@ public final class FireDeviceLocator {
         trackBank = host.createMainTrackBank(width, 0, 0);
         drumDevices = new Device[width];
 
-        final DeviceMatcher drumMatcher = host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
+        final DeviceMatcher drumMatcher =
+                host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
         for (int index = 0; index < width; index++) {
             final Track track = trackBank.getItemAt(index);
             track.exists().markInterested();
@@ -36,7 +35,10 @@ public final class FireDeviceLocator {
         for (int index = 0; index < drumDevices.length; index++) {
             final Track track = trackBank.getItemAt(index);
             final Device drumDevice = drumDevices[index];
-            if (track == null || !track.exists().get() || drumDevice == null || !drumDevice.exists().get()) {
+            if (track == null
+                    || !track.exists().get()
+                    || drumDevice == null
+                    || !drumDevice.exists().get()) {
                 continue;
             }
 
@@ -48,5 +50,4 @@ public final class FireDeviceLocator {
         }
         return false;
     }
-
 }

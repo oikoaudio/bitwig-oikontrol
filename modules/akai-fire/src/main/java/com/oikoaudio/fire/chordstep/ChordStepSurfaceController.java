@@ -2,12 +2,12 @@ package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
-
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Aggregates the chord-step surface collaborators while the legacy pitched-surface adapter is being removed.
+ * Aggregates the chord-step surface collaborators while the legacy pitched-surface adapter is being
+ * removed.
  */
 public final class ChordStepSurfaceController {
     private final ChordStepPadSurface padSurface;
@@ -87,7 +87,8 @@ public final class ChordStepSurfaceController {
         return stepButtonControls.lightState(active);
     }
 
-    public void handleBankButton(final boolean pressed, final int amount, final boolean lengthAdjustEnabled) {
+    public void handleBankButton(
+            final boolean pressed, final int amount, final boolean lengthAdjustEnabled) {
         bankButtonControls.handlePressed(pressed, amount, lengthAdjustEnabled);
     }
 
@@ -107,7 +108,8 @@ public final class ChordStepSurfaceController {
         return patternButtonControls.downLight();
     }
 
-    public void handlePitchContextButton(final boolean pressed, final int amount, final boolean root) {
+    public void handlePitchContextButton(
+            final boolean pressed, final int amount, final boolean root) {
         pitchContextControls.handlePressed(pressed, amount, root);
     }
 
@@ -115,9 +117,10 @@ public final class ChordStepSurfaceController {
         return pitchContextControls.lightState(amount, root);
     }
 
-    public boolean nudgeHeldNotes(final int amount,
-                                  final Set<Integer> targetSteps,
-                                  final Map<Integer, ChordStepEventIndex.Event> chordEventSnapshot) {
+    public boolean nudgeHeldNotes(
+            final int amount,
+            final Set<Integer> targetSteps,
+            final Map<Integer, ChordStepEventIndex.Event> chordEventSnapshot) {
         return fineNudgeWriter.nudgeHeldNotes(amount, targetSteps, chordEventSnapshot);
     }
 

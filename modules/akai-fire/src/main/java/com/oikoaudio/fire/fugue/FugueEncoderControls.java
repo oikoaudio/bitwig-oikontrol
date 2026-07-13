@@ -27,12 +27,13 @@ public final class FugueEncoderControls {
     }
 
     public void selectLine(final int line) {
-        mode = switch (Math.max(0, Math.min(3, line))) {
-            case 1 -> EncoderMode.MIXER;
-            case 2 -> EncoderMode.USER_1;
-            case 3 -> EncoderMode.USER_2;
-            default -> EncoderMode.CHANNEL;
-        };
+        mode =
+                switch (Math.max(0, Math.min(3, line))) {
+                    case 1 -> EncoderMode.MIXER;
+                    case 2 -> EncoderMode.USER_1;
+                    case 3 -> EncoderMode.USER_2;
+                    default -> EncoderMode.CHANNEL;
+                };
     }
 
     public void select(final EncoderMode mode) {
@@ -40,12 +41,13 @@ public final class FugueEncoderControls {
     }
 
     public void cycle() {
-        mode = switch (mode) {
-            case CHANNEL -> EncoderMode.MIXER;
-            case MIXER -> EncoderMode.USER_1;
-            case USER_1 -> EncoderMode.USER_2;
-            case USER_2 -> EncoderMode.CHANNEL;
-        };
+        mode =
+                switch (mode) {
+                    case CHANNEL -> EncoderMode.MIXER;
+                    case MIXER -> EncoderMode.USER_1;
+                    case USER_1 -> EncoderMode.USER_2;
+                    case USER_2 -> EncoderMode.CHANNEL;
+                };
     }
 
     public BiColorLightState light() {
@@ -53,7 +55,9 @@ public final class FugueEncoderControls {
     }
 
     public String title() {
-        return selectedLine() == FugueClipAdapter.SOURCE_CHANNEL ? "Fugue Settings" : "Var " + (selectedLine() + 1);
+        return selectedLine() == FugueClipAdapter.SOURCE_CHANNEL
+                ? "Fugue Settings"
+                : "Var " + (selectedLine() + 1);
     }
 
     public String details() {
@@ -68,12 +72,17 @@ public final class FugueEncoderControls {
                 : EncoderFooterLegend.of("Dir", "Temp", "Strt", "Ptch");
     }
 
-    public void bind(final AkaiFireOikontrolExtension driver, final Layer owner, final Handler handler) {
+    public void bind(
+            final AkaiFireOikontrolExtension driver, final Layer owner, final Handler handler) {
         final TouchEncoder[] encoders = driver.getEncoders();
         for (int index = 0; index < encoders.length; index++) {
             final int encoderIndex = index;
-            encoders[index].bindThresholdedEncoder(owner, THRESHOLD, FINE_THRESHOLD,
-                    driver::isGlobalShiftHeld, increment -> handler.turn(encoderIndex, increment));
+            encoders[index].bindThresholdedEncoder(
+                    owner,
+                    THRESHOLD,
+                    FINE_THRESHOLD,
+                    driver::isGlobalShiftHeld,
+                    increment -> handler.turn(encoderIndex, increment));
             encoders[index].bindTouched(owner, touched -> handler.touch(encoderIndex, touched));
         }
     }

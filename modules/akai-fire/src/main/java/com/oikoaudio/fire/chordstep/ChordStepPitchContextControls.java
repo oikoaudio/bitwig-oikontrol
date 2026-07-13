@@ -2,9 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 
-/**
- * Owns chord-step behavior for the physical pitch-context buttons.
- */
+/** Owns chord-step behavior for the physical pitch-context buttons. */
 public final class ChordStepPitchContextControls {
     private final Host host;
 

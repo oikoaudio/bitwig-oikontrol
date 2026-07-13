@@ -1,7 +1,7 @@
 # Source formatting
 
-The repository uses `.editorconfig` to keep new and actively edited source consistent without reformatting
-inherited controller code wholesale.
+The repository uses Spotless for mechanical source formatting and `.editorconfig` for matching editor defaults.
+`.gitattributes` makes LF the repository-wide text-file convention while preserving CRLF for Windows batch files.
 
 ## Defaults
 
@@ -10,24 +10,22 @@ inherited controller code wholesale.
 - Use two spaces for Markdown, JSON, and YAML files.
 - Preserve tabs where the file format requires them, such as Makefiles.
 
-Apply these defaults to new files and to lines you change. Some inherited Java and Gradle files still contain
-mixed CRLF/LF endings or older indentation. Do not normalize or reindent an entire file as part of an unrelated
-change; make broad normalization a separate, explicitly reviewed change.
+Java is formatted with Google Java Format's four-space AOSP style. Gradle and Groovy build scripts receive
+deterministic whitespace, indentation, line-ending, and final-newline cleanup.
 
 ## Checks
 
-Before handing off a change, run:
+Apply formatting with:
 
 ```sh
-git diff --check
+just format
 ```
 
-For a mechanical edit to a legacy mixed-ending file, Git may report the existing carriage return on each changed
-line as trailing whitespace. Verify that case without hiding actual spaces using:
+Check formatting without changing files with:
 
 ```sh
-git -c core.whitespace=cr-at-eol diff --check
+just format-check
 ```
 
-That exception is for review of existing CRLF lines, not permission to introduce new CRLF source. New files should
-follow `.editorconfig`.
+The normal `just build` workflow also runs Spotless checks through Gradle's `check` lifecycle. Before handing off
+any change, also run `git diff --check` to catch whitespace errors in file types outside the formatter targets.

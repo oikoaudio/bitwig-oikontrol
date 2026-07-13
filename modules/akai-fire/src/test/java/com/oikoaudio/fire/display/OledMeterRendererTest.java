@@ -1,22 +1,22 @@
 package com.oikoaudio.fire.display;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
 
 class OledMeterRendererTest {
 
     @Test
     void verticalMetersStayBlankForSilence() {
-        final int[] image = OledMeterRenderer.verticalMeters(new int[]{0, 0}, 2);
+        final int[] image = OledMeterRenderer.verticalMeters(new int[] {0, 0}, 2);
 
         assertTrue(OledMeterRenderer.isBlank(image));
     }
 
     @Test
     void verticalMetersFillHigherValuesFromBottom() {
-        final int[] image = OledMeterRenderer.verticalMeters(new int[]{127}, 1);
+        final int[] image = OledMeterRenderer.verticalMeters(new int[] {127}, 1);
 
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 4));
@@ -24,7 +24,7 @@ class OledMeterRendererTest {
 
     @Test
     void verticalMetersDrawPeakMarkerAboveCurrentValue() {
-        final int[] image = OledMeterRenderer.verticalMeters(new int[]{32}, new int[]{127}, 1);
+        final int[] image = OledMeterRenderer.verticalMeters(new int[] {32}, new int[] {127}, 1);
 
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 2));
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 20));
@@ -32,7 +32,9 @@ class OledMeterRendererTest {
 
     @Test
     void mutedMetersDrawOnlyBottomDash() {
-        final int[] image = OledMeterRenderer.verticalMeters(new int[]{127}, new int[]{127}, new boolean[]{true}, 1);
+        final int[] image =
+                OledMeterRenderer.verticalMeters(
+                        new int[] {127}, new int[] {127}, new boolean[] {true}, 1);
 
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 60));
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 20));
@@ -41,8 +43,9 @@ class OledMeterRendererTest {
 
     @Test
     void verticalMetersWithFooterReserveBottomPage() {
-        final int[] image = OledMeterRenderer.verticalMetersWithFooter(
-                new int[]{127}, new int[]{127}, new boolean[]{false}, 1);
+        final int[] image =
+                OledMeterRenderer.verticalMetersWithFooter(
+                        new int[] {127}, new int[] {127}, new boolean[] {false}, 1);
 
         assertEquals(1, OledMeterRenderer.pixel(image, 64, 52));
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 56));
@@ -51,8 +54,13 @@ class OledMeterRendererTest {
 
     @Test
     void verticalMetersWithFooterCanReserveTopPage() {
-        final int[] image = OledMeterRenderer.verticalMetersWithFooter(
-                new int[]{127}, new int[]{127}, new boolean[]{false}, 1, EncoderLegendPosition.TOP);
+        final int[] image =
+                OledMeterRenderer.verticalMetersWithFooter(
+                        new int[] {127},
+                        new int[] {127},
+                        new boolean[] {false},
+                        1,
+                        EncoderLegendPosition.TOP);
 
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 0));
         assertEquals(0, OledMeterRenderer.pixel(image, 64, 7));

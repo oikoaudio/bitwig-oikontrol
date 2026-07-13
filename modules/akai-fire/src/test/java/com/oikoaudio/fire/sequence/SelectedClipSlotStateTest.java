@@ -1,13 +1,5 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extension.controller.api.ClipLauncherSlot;
-import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.lights.RgbLightState;
-import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
-import com.oikoaudio.fire.testutil.BitwigApiValueStubs.ColorValueStub;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -15,6 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
+import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
+import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
+import com.oikoaudio.fire.testutil.BitwigApiValueStubs.ColorValueStub;
+import org.junit.jupiter.api.Test;
 
 class SelectedClipSlotStateTest {
 
@@ -70,11 +70,12 @@ class SelectedClipSlotStateTest {
         assertNull(state.color());
     }
 
-    private static void stubSlot(final ClipLauncherSlot slot,
-                                 final boolean existsValue,
-                                 final boolean hasContentValue,
-                                 final boolean selectedValue,
-                                 final ColorValueStub colorValue) {
+    private static void stubSlot(
+            final ClipLauncherSlot slot,
+            final boolean existsValue,
+            final boolean hasContentValue,
+            final boolean selectedValue,
+            final ColorValueStub colorValue) {
         when(slot.exists()).thenReturn(new BooleanValueStub(existsValue).value());
         when(slot.hasContent()).thenReturn(new BooleanValueStub(hasContentValue).value());
         when(slot.isSelected()).thenReturn(new BooleanValueStub(selectedValue).value());

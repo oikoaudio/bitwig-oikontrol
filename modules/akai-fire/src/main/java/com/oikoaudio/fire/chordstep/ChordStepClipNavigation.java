@@ -5,7 +5,8 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.values.StepViewPosition;
 
 /**
- * Owns chord-step clip navigation controls: step-page movement, clip length, and play-start offsets.
+ * Owns chord-step clip navigation controls: step-page movement, clip length, and play-start
+ * offsets.
  */
 public final class ChordStepClipNavigation {
     private static final double STEP_LENGTH = 0.25;
@@ -20,15 +21,16 @@ public final class ChordStepClipNavigation {
     private final int fineStepsPerStep;
     private final double fineStepLength;
 
-    public ChordStepClipNavigation(final PinnableCursorClip clip,
-                                   final StepViewPosition position,
-                                   final OledDisplay oled,
-                                   final PopupFeedback popupFeedback,
-                                   final Runnable clearFineNudgeSessions,
-                                   final Runnable refreshObservation,
-                                   final int maxSteps,
-                                   final int fineStepsPerStep,
-                                   final double fineStepLength) {
+    public ChordStepClipNavigation(
+            final PinnableCursorClip clip,
+            final StepViewPosition position,
+            final OledDisplay oled,
+            final PopupFeedback popupFeedback,
+            final Runnable clearFineNudgeSessions,
+            final Runnable refreshObservation,
+            final int maxSteps,
+            final int fineStepsPerStep,
+            final double fineStepLength) {
         this.clip = clip;
         this.position = position;
         this.oled = oled;
@@ -82,7 +84,8 @@ public final class ChordStepClipNavigation {
         oled.valueInfo("Clip Length", formatBars(newLength));
     }
 
-    public void adjustPlayStart(final int direction, final boolean fine, final ClipSlotAvailability availability) {
+    public void adjustPlayStart(
+            final int direction, final boolean fine, final ClipSlotAvailability availability) {
         if (!availability.ensureSelectedNoteClipSlot()) {
             return;
         }
@@ -102,7 +105,8 @@ public final class ChordStepClipNavigation {
         }
         final double loopLength = Math.max(STEP_LENGTH, clip.getLoopLength().get());
         final double current = wrapBeatTime(clip.getPlayStart().get(), loopLength);
-        final double next = wrapBeatTime(Math.round(current / STEP_LENGTH) * STEP_LENGTH, loopLength);
+        final double next =
+                wrapBeatTime(Math.round(current / STEP_LENGTH) * STEP_LENGTH, loopLength);
         clip.getPlayStart().set(next);
         final String value = formatPlayStart(next);
         oled.valueInfo("Clip Start Snap", value);

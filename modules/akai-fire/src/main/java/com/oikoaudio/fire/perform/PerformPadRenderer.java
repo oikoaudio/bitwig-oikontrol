@@ -8,10 +8,22 @@ public final class PerformPadRenderer {
     private static final RgbLightState BIRDS_EYE_AVAILABLE = new RgbLightState(0, 36, 84, true);
     private static final RgbLightState BIRDS_EYE_CURRENT = new RgbLightState(0, 108, 127, true);
     private static final boolean[][] SETTINGS_LOGO = {
-            {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
-            {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
-            {true, true, false, false, false, true, false, false, true, true, false, false, true, true, true, false},
-            {true, false, false, false, true, true, true, false, true, false, true, false, true, true, true, true}
+        {
+            true, true, true, false, true, true, true, false, true, true, true, false, true, true,
+            true, true
+        },
+        {
+            true, false, false, false, false, true, false, false, true, false, true, false, true,
+            false, false, false
+        },
+        {
+            true, true, false, false, false, true, false, false, true, true, false, false, true,
+            true, true, false
+        },
+        {
+            true, false, false, false, true, true, true, false, true, false, true, false, true,
+            true, true, true
+        }
     };
 
     public enum TrackAction {
@@ -52,55 +64,57 @@ public final class PerformPadRenderer {
         }
     }
 
-    public record SlotSnapshot(boolean exists,
-                               boolean hasContent,
-                               boolean selected,
-                               boolean recording,
-                               boolean recordingQueued,
-                               boolean playbackQueued,
-                               boolean stopQueued,
-                               boolean playing,
-                               RgbLightState color) {
+    public record SlotSnapshot(
+            boolean exists,
+            boolean hasContent,
+            boolean selected,
+            boolean recording,
+            boolean recordingQueued,
+            boolean playbackQueued,
+            boolean stopQueued,
+            boolean playing,
+            RgbLightState color) {
         public static SlotSnapshot missing() {
-            return new SlotSnapshot(false, false, false, false, false, false, false, false, RgbLightState.WHITE);
+            return new SlotSnapshot(
+                    false, false, false, false, false, false, false, false, RgbLightState.WHITE);
         }
     }
 
-    public record SceneSnapshot(boolean exists,
-                                RgbLightState color,
-                                boolean pending,
-                                boolean selected,
-                                boolean recording,
-                                boolean playing) {
-    }
+    public record SceneSnapshot(
+            boolean exists,
+            RgbLightState color,
+            boolean pending,
+            boolean selected,
+            boolean recording,
+            boolean playing) {}
 
-    public record TrackSnapshot(TrackAction action,
-                                boolean exists,
-                                RgbLightState color,
-                                boolean selected,
-                                boolean stopped,
-                                boolean queuedForStop,
-                                boolean solo,
-                                boolean muted,
-                                boolean armed) {
+    public record TrackSnapshot(
+            TrackAction action,
+            boolean exists,
+            RgbLightState color,
+            boolean selected,
+            boolean stopped,
+            boolean queuedForStop,
+            boolean solo,
+            boolean muted,
+            boolean armed) {
         public static TrackSnapshot missing(final TrackAction action) {
             return new TrackSnapshot(action, false, null, false, false, false, false, false, false);
         }
     }
 
-    public record MixDeviceSnapshot(boolean exists, RgbLightState trackColor, boolean enabled, boolean selected) {
-    }
+    public record MixDeviceSnapshot(
+            boolean exists, RgbLightState trackColor, boolean enabled, boolean selected) {}
 
-    public record DeviceLayerSnapshot(TrackAction action,
-                                      boolean exists,
-                                      RgbLightState color,
-                                      boolean solo,
-                                      boolean muted,
-                                      boolean active) {
-    }
+    public record DeviceLayerSnapshot(
+            TrackAction action,
+            boolean exists,
+            RgbLightState color,
+            boolean solo,
+            boolean muted,
+            boolean active) {}
 
-    private PerformPadRenderer() {
-    }
+    private PerformPadRenderer() {}
 
     public static RgbLightState settingsLogo(final int padIndex) {
         if (padIndex < 0 || padIndex >= PerformLayout.PAD_COLUMNS * PerformLayout.PAD_ROWS) {
@@ -118,7 +132,8 @@ public final class PerformPadRenderer {
         if (!snapshot.hasContent()) {
             return snapshot.selected() ? RgbLightState.GRAY_2 : RgbLightState.GRAY_1;
         }
-        final RgbLightState color = snapshot.color() == null ? RgbLightState.WHITE : snapshot.color();
+        final RgbLightState color =
+                snapshot.color() == null ? RgbLightState.WHITE : snapshot.color();
         if (snapshot.recording()) {
             return blinkFast(color.getBrightest(), color, blinkTick);
         }
@@ -162,12 +177,23 @@ public final class PerformPadRenderer {
         }
         final RgbLightState trackColor = colorOr(snapshot.color(), TrackAction.SELECT.color());
         return switch (snapshot.action()) {
-            case SELECT -> snapshot.queuedForStop()
-                    ? blinkFast(trackColor.getBrightest(), trackColor.getDimmed(), blinkTick)
-                    : mixSelect(trackColor, snapshot.selected(), snapshot.stopped());
-            case SOLO -> snapshot.solo() ? TrackAction.SOLO.color().getBrightest() : TrackAction.SOLO.color().getDimmed();
-            case MUTE -> snapshot.muted() ? TrackAction.MUTE.color().getBrightest() : TrackAction.MUTE.color().getDimmed();
-            case ARM -> snapshot.armed() ? TrackAction.ARM.color() : TrackAction.ARM.color().getDimmed();
+            case SELECT ->
+                    snapshot.queuedForStop()
+                            ? blinkFast(
+                                    trackColor.getBrightest(), trackColor.getDimmed(), blinkTick)
+                            : mixSelect(trackColor, snapshot.selected(), snapshot.stopped());
+            case SOLO ->
+                    snapshot.solo()
+                            ? TrackAction.SOLO.color().getBrightest()
+                            : TrackAction.SOLO.color().getDimmed();
+            case MUTE ->
+                    snapshot.muted()
+                            ? TrackAction.MUTE.color().getBrightest()
+                            : TrackAction.MUTE.color().getDimmed();
+            case ARM ->
+                    snapshot.armed()
+                            ? TrackAction.ARM.color()
+                            : TrackAction.ARM.color().getDimmed();
         };
     }
 
@@ -197,7 +223,10 @@ public final class PerformPadRenderer {
             case SELECT -> color;
             case SOLO -> snapshot.solo() ? TrackAction.SOLO.color() : RgbLightState.OFF;
             case MUTE -> snapshot.muted() ? TrackAction.MUTE.color() : RgbLightState.OFF;
-            case ARM -> snapshot.active() ? TrackAction.ARM.color() : TrackAction.ARM.color().getSoftDimmed();
+            case ARM ->
+                    snapshot.active()
+                            ? TrackAction.ARM.color()
+                            : TrackAction.ARM.color().getSoftDimmed();
         };
     }
 
@@ -208,9 +237,8 @@ public final class PerformPadRenderer {
         return current ? BIRDS_EYE_CURRENT : BIRDS_EYE_AVAILABLE;
     }
 
-    public static RgbLightState mixSelect(final RgbLightState trackColor,
-                                          final boolean selected,
-                                          final boolean stopped) {
+    public static RgbLightState mixSelect(
+            final RgbLightState trackColor, final boolean selected, final boolean stopped) {
         final RgbLightState color = colorOr(trackColor, TrackAction.SELECT.color());
         if (selected) {
             return color.getBrightest();
@@ -222,15 +250,13 @@ public final class PerformPadRenderer {
         return color == null || RgbLightState.OFF.equals(color) ? fallback : color;
     }
 
-    private static RgbLightState blinkSlow(final RgbLightState on,
-                                           final RgbLightState off,
-                                           final int blinkTick) {
+    private static RgbLightState blinkSlow(
+            final RgbLightState on, final RgbLightState off, final int blinkTick) {
         return blinkTick % 8 < 4 ? on : off;
     }
 
-    private static RgbLightState blinkFast(final RgbLightState on,
-                                           final RgbLightState off,
-                                           final int blinkTick) {
+    private static RgbLightState blinkFast(
+            final RgbLightState on, final RgbLightState off, final int blinkTick) {
         return blinkTick % 2 == 0 ? on : off;
     }
 }

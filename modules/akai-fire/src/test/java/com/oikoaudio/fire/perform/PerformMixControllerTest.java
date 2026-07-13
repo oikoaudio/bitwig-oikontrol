@@ -1,23 +1,29 @@
 package com.oikoaudio.fire.perform;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class PerformMixControllerTest {
     @Test
     void resolvesEveryMixRowAndSelectAltStop() {
-        assertEquals(PerformMixController.TrackAction.SELECT,
+        assertEquals(
+                PerformMixController.TrackAction.SELECT,
                 PerformMixController.trackAction(0, false, false));
-        assertEquals(PerformMixController.TrackAction.STOP,
+        assertEquals(
+                PerformMixController.TrackAction.STOP,
                 PerformMixController.trackAction(0, true, false));
-        assertEquals(PerformMixController.TrackAction.SOLO,
+        assertEquals(
+                PerformMixController.TrackAction.SOLO,
                 PerformMixController.trackAction(16, false, false));
-        assertEquals(PerformMixController.TrackAction.MUTE,
+        assertEquals(
+                PerformMixController.TrackAction.MUTE,
                 PerformMixController.trackAction(32, false, false));
-        assertEquals(PerformMixController.TrackAction.ARM_EXCLUSIVE,
+        assertEquals(
+                PerformMixController.TrackAction.ARM_EXCLUSIVE,
                 PerformMixController.trackAction(48, true, false));
-        assertEquals(PerformMixController.TrackAction.ARM,
+        assertEquals(
+                PerformMixController.TrackAction.ARM,
                 PerformMixController.trackAction(48, true, true));
     }
 
@@ -37,11 +43,14 @@ class PerformMixControllerTest {
     @Test
     void devicePagesAndGesturesPreserveExistingMapping() {
         assertEquals(6, PerformMixController.deviceIndexForPad(32, 1));
-        assertEquals(PerformMixController.DeviceAction.TOGGLE_ENABLED,
+        assertEquals(
+                PerformMixController.DeviceAction.TOGGLE_ENABLED,
                 PerformMixController.deviceAction(true, false));
-        assertEquals(PerformMixController.DeviceAction.TOGGLE_WINDOW,
+        assertEquals(
+                PerformMixController.DeviceAction.TOGGLE_WINDOW,
                 PerformMixController.deviceAction(false, true));
-        assertEquals(PerformMixController.DeviceAction.SELECT,
+        assertEquals(
+                PerformMixController.DeviceAction.SELECT,
                 PerformMixController.deviceAction(false, false));
         assertEquals(false, PerformMixController.rowWideToggleTarget(true));
     }

@@ -1,16 +1,17 @@
 package com.oikoaudio.fire.fugue;
 
 import com.bitwig.extensions.framework.MusicalScale;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public final class ScaleAwareTransposer {
-    private ScaleAwareTransposer() {
-    }
+    private ScaleAwareTransposer() {}
 
-    public static int transpose(final int midiNote, final int semitoneOffset,
-                                final MusicalScale scale, final int rootNote) {
+    public static int transpose(
+            final int midiNote,
+            final int semitoneOffset,
+            final MusicalScale scale,
+            final int rootNote) {
         final int target = clampMidi(midiNote + semitoneOffset);
         if (Math.floorMod(semitoneOffset, 12) == 0) {
             return target;
@@ -31,8 +32,11 @@ public final class ScaleAwareTransposer {
         return target;
     }
 
-    public static int transposeByScaleDegrees(final int midiNote, final int degreeOffset,
-                                              final MusicalScale scale, final int rootNote) {
+    public static int transposeByScaleDegrees(
+            final int midiNote,
+            final int degreeOffset,
+            final MusicalScale scale,
+            final int rootNote) {
         if (degreeOffset == 0 || scale == null) {
             return clampMidi(midiNote);
         }
@@ -41,13 +45,17 @@ public final class ScaleAwareTransposer {
             return clampMidi(midiNote);
         }
         final int sourceIndex = nearestScaleIndex(scaleNotes, midiNote);
-        final int targetIndex = Math.max(0, Math.min(scaleNotes.size() - 1, sourceIndex + degreeOffset));
+        final int targetIndex =
+                Math.max(0, Math.min(scaleNotes.size() - 1, sourceIndex + degreeOffset));
         return scaleNotes.get(targetIndex);
     }
 
-    public static int transposeDiatonicThenChromatic(final int midiNote, final int degreeOffset,
-                                                     final int semitoneOffset,
-                                                     final MusicalScale scale, final int rootNote) {
+    public static int transposeDiatonicThenChromatic(
+            final int midiNote,
+            final int degreeOffset,
+            final int semitoneOffset,
+            final MusicalScale scale,
+            final int rootNote) {
         final int degreeTarget = transposeByScaleDegrees(midiNote, degreeOffset, scale, rootNote);
         return transpose(degreeTarget, semitoneOffset, scale, rootNote);
     }

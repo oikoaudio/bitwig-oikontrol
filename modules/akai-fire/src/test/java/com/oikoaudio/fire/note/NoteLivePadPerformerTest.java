@@ -1,23 +1,23 @@
 package com.oikoaudio.fire.note;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class NoteLivePadPerformerTest {
 
     @Test
     void handlePadPressSendsNoteOnAndOff() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(2, true, 99, 100);
         performer.handlePadPress(2, false, 0, 100);
@@ -29,10 +29,11 @@ class NoteLivePadPerformerTest {
     @Test
     void retriggeringPadSendsNoteOffBeforeNewNoteOn() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(1, true, 80, 100);
         performer.handlePadPress(1, true, 96, 100);
@@ -44,17 +45,17 @@ class NoteLivePadPerformerTest {
     @Test
     void retuneHeldPadsRestartsOnlyCurrentlyHeldPads() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> configured);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> configured);
 
         performer.handlePadPress(0, true, 90, 100);
         performer.handlePadPress(1, true, 91, 100);
         performer.handlePadPress(1, false, 0, 100);
 
-        performer.retuneHeldPads(() -> {
-        }, 77);
+        performer.retuneHeldPads(() -> {}, 77);
 
         assertEquals(List.of("on:60:100", "on:61:100", "off:61", "off:60", "on:60:77"), events);
     }
@@ -62,10 +63,11 @@ class NoteLivePadPerformerTest {
     @Test
     void releaseHeldNotesClearsHeldPadState() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(3, true, 70, 100);
 
@@ -78,25 +80,29 @@ class NoteLivePadPerformerTest {
     @Test
     void handlePadPressSupportsMultipleNotesPerPad() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad, 64 + pad, 67 + pad},
-                (configured, raw) -> configured);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad, 64 + pad, 67 + pad},
+                        (configured, raw) -> configured);
 
         performer.handlePadPress(0, true, 99, 100);
         performer.handlePadPress(0, false, 0, 100);
 
-        assertEquals(List.of("on:60:100", "on:64:100", "on:67:100", "off:60", "off:64", "off:67"), events);
+        assertEquals(
+                List.of("on:60:100", "on:64:100", "on:67:100", "off:60", "off:64", "off:67"),
+                events);
     }
 
     @Test
     void handlePadPressCanSendPerNoteTimbreAfterNoteOn() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (pad, configured, raw) -> raw,
-                pad -> 40 + pad);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (pad, configured, raw) -> raw,
+                        pad -> 40 + pad);
 
         performer.handlePadPress(2, true, 99, 100);
         performer.handlePadPress(2, false, 0, 100);
@@ -107,10 +113,9 @@ class NoteLivePadPerformerTest {
     @Test
     void sameMidiNoteIsExclusiveAcrossPads() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events), pad -> new int[] {60}, (configured, raw) -> raw);
 
         performer.handlePadPress(0, true, 70, 100);
         performer.handlePadPress(1, true, 90, 100);
@@ -123,10 +128,11 @@ class NoteLivePadPerformerTest {
     @Test
     void holdModeDoesNotLatchPadsPressedAfterActivation() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.toggleHoldMode();
         performer.handlePadPress(2, true, 99, 100);
@@ -139,10 +145,11 @@ class NoteLivePadPerformerTest {
     @Test
     void disablingHoldModeReleasesLatchedPads() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(1, true, 80, 100);
         assertTrue(performer.toggleHoldMode());
@@ -157,10 +164,11 @@ class NoteLivePadPerformerTest {
     @Test
     void enablingHoldModeWhilePadIsDownKeepsItSoundingAfterRelease() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(3, true, 70, 100);
         performer.toggleHoldMode();
@@ -174,10 +182,11 @@ class NoteLivePadPerformerTest {
     @Test
     void holdModeReleasesCapturedPadWhenPressedAgain() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(3, true, 70, 100);
         performer.toggleHoldMode();
@@ -191,10 +200,11 @@ class NoteLivePadPerformerTest {
     @Test
     void disablingHoldModeDoesNotReleaseLaterMomentaryPadStillDown() {
         final List<String> events = new ArrayList<>();
-        final NoteLivePadPerformer performer = new NoteLivePadPerformer(
-                new TestMidiOut(events),
-                pad -> new int[]{60 + pad},
-                (configured, raw) -> raw);
+        final NoteLivePadPerformer performer =
+                new NoteLivePadPerformer(
+                        new TestMidiOut(events),
+                        pad -> new int[] {60 + pad},
+                        (configured, raw) -> raw);
 
         performer.handlePadPress(1, true, 80, 100);
         performer.toggleHoldMode();

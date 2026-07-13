@@ -1,17 +1,17 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extensions.framework.MusicalScale;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.bitwig.extensions.framework.MusicalScale;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
 class ChordStepChordSelectionTest {
-    private static final MusicalScale MAJOR = new MusicalScale("Major", new int[] {0, 2, 4, 5, 7, 9, 11});
+    private static final MusicalScale MAJOR =
+            new MusicalScale("Major", new int[] {0, 2, 4, 5, 7, 9, 11});
 
     @Test
     void startsInBuilderFamilyWithEmptyChord() {

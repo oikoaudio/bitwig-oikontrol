@@ -12,12 +12,15 @@ public final class MelodicRenderer {
     public static final RgbLightState PITCH_POOL_ROOT = new RgbLightState(88, 80, 0, true);
     public static final RgbLightState PITCH_POOL_USED = RgbLightState.PURPLE;
 
-    private MelodicRenderer() {
-    }
+    private MelodicRenderer() {}
 
-    public static RgbLightState stepLight(final MelodicPattern.Step step, final boolean held,
-                                          final boolean inLoop, final boolean playing, final int stepIndex,
-                                          final RgbLightState clipColor) {
+    public static RgbLightState stepLight(
+            final MelodicPattern.Step step,
+            final boolean held,
+            final boolean inLoop,
+            final boolean playing,
+            final int stepIndex,
+            final RgbLightState clipColor) {
         if (!inLoop) {
             return OUT_OF_LOOP;
         }
@@ -39,9 +42,11 @@ public final class MelodicRenderer {
         return StepPadLightHelper.renderOccupiedStep(baseColor, step.accent(), false);
     }
 
-    public static RgbLightState pitchPoolLight(final boolean enabled, final boolean root, final boolean usedInPattern) {
+    public static RgbLightState pitchPoolLight(
+            final boolean enabled, final boolean root, final boolean usedInPattern) {
         if (enabled) {
-            final RgbLightState base = usedInPattern ? PITCH_POOL_USED : (root ? PITCH_POOL_ROOT : PITCH_POOL_ON);
+            final RgbLightState base =
+                    usedInPattern ? PITCH_POOL_USED : (root ? PITCH_POOL_ROOT : PITCH_POOL_ON);
             return base;
         }
         return root ? PITCH_POOL_ROOT.getDimmed() : PITCH_POOL_OFF;

@@ -1,11 +1,11 @@
 package com.oikoaudio.fire.melodic;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
 
 class MelodicStepPatternStateTest {
     @Test
@@ -31,7 +31,8 @@ class MelodicStepPatternStateTest {
 
         state.applyObservedPattern(MelodicPattern.empty(16));
 
-        final MelodicPattern.Step restored = state.restoreGeneratedStepOrDefault(5, () -> activeStep(5, 60));
+        final MelodicPattern.Step restored =
+                state.restoreGeneratedStepOrDefault(5, () -> activeStep(5, 60));
         assertTrue(restored.active());
         assertEquals(67, restored.pitch());
     }
@@ -74,7 +75,8 @@ class MelodicStepPatternStateTest {
         final MelodicStepPatternState state = new MelodicStepPatternState(16);
         state.setBasePattern(MelodicPattern.empty(16).withStep(activeStep(7, 74)));
 
-        final MelodicPattern.Step restored = state.restoreGeneratedStepOrDefault(7, () -> activeStep(7, 60));
+        final MelodicPattern.Step restored =
+                state.restoreGeneratedStepOrDefault(7, () -> activeStep(7, 60));
 
         assertTrue(restored.active());
         assertEquals(74, restored.pitch());

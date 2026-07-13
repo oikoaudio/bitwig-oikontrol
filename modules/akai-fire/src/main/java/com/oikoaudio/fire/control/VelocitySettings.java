@@ -9,10 +9,14 @@ public final class VelocitySettings {
     private int centerVelocity;
     private int sensitivity;
 
-    public VelocitySettings(final int centerVelocity, final int minCenterVelocity, final int maxCenterVelocity,
-                            final int sensitivity) {
+    public VelocitySettings(
+            final int centerVelocity,
+            final int minCenterVelocity,
+            final int maxCenterVelocity,
+            final int sensitivity) {
         if (minCenterVelocity > maxCenterVelocity) {
-            throw new IllegalArgumentException("Minimum center velocity must not exceed maximum center velocity");
+            throw new IllegalArgumentException(
+                    "Minimum center velocity must not exceed maximum center velocity");
         }
         this.minCenterVelocity = minCenterVelocity;
         this.maxCenterVelocity = maxCenterVelocity;

@@ -22,7 +22,8 @@ public final class NoteGridLayout implements LiveNoteLayout {
     private final int octave;
     private final boolean inKey;
 
-    public NoteGridLayout(final MusicalScale scale, final int rootNote, final int octave, final boolean inKey) {
+    public NoteGridLayout(
+            final MusicalScale scale, final int rootNote, final int octave, final boolean inKey) {
         this.scale = scale;
         this.rootNote = rootNote;
         this.octave = octave;
@@ -36,16 +37,18 @@ public final class NoteGridLayout implements LiveNoteLayout {
         final int column = padIndex % PAD_COLUMNS;
         final int rowFromBottom = PAD_ROWS - 1 - (padIndex / PAD_COLUMNS);
         if (inKey) {
-            return scale.computeNote(rootNote, octave + 1, column + rowFromBottom * IN_KEY_ROW_INTERVAL);
+            return scale.computeNote(
+                    rootNote, octave + 1, column + rowFromBottom * IN_KEY_ROW_INTERVAL);
         }
-        final int note = rootNote + (octave + 1) * 12 + column + rowFromBottom * CHROMATIC_ROW_INTERVAL;
+        final int note =
+                rootNote + (octave + 1) * 12 + column + rowFromBottom * CHROMATIC_ROW_INTERVAL;
         return note >= 0 && note <= 127 ? note : -1;
     }
 
     @Override
     public int[] notesForPad(final int padIndex) {
         final int midiNote = noteForPad(padIndex);
-        return midiNote < 0 ? new int[0] : new int[]{midiNote};
+        return midiNote < 0 ? new int[0] : new int[] {midiNote};
     }
 
     public PadRole roleForPad(final int padIndex) {

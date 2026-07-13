@@ -2,7 +2,6 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,9 +10,7 @@ import java.util.Set;
 import java.util.function.IntPredicate;
 import java.util.function.IntUnaryOperator;
 
-/**
- * Owns chord-step visible note objects, fine-grid observed-note state, and event snapshots.
- */
+/** Owns chord-step visible note objects, fine-grid observed-note state, and event snapshots. */
 public final class ChordStepEventIndex {
     private final ChordStepObservedState observedState = new ChordStepObservedState();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
@@ -26,13 +23,14 @@ public final class ChordStepEventIndex {
     private final double fineStepLength;
     private final double defaultDuration;
 
-    public ChordStepEventIndex(final IntUnaryOperator localToGlobalStep,
-                               final IntUnaryOperator globalToLocalStep,
-                               final IntPredicate visibleGlobalStep,
-                               final IntUnaryOperator defaultVelocity,
-                               final int fineStepsPerStep,
-                               final double fineStepLength,
-                               final double defaultDuration) {
+    public ChordStepEventIndex(
+            final IntUnaryOperator localToGlobalStep,
+            final IntUnaryOperator globalToLocalStep,
+            final IntPredicate visibleGlobalStep,
+            final IntUnaryOperator defaultVelocity,
+            final int fineStepsPerStep,
+            final double fineStepLength,
+            final double defaultDuration) {
         this.localToGlobalStep = localToGlobalStep;
         this.globalToLocalStep = globalToLocalStep;
         this.visibleGlobalStep = visibleGlobalStep;
@@ -53,7 +51,8 @@ public final class ChordStepEventIndex {
     public void handleNoteStepObject(final NoteStep noteStep) {
         final int x = noteStep.x();
         final int y = noteStep.y();
-        final Map<Integer, NoteStep> notesAtStep = noteStepsByPosition.computeIfAbsent(x, ignored -> new HashMap<>());
+        final Map<Integer, NoteStep> notesAtStep =
+                noteStepsByPosition.computeIfAbsent(x, ignored -> new HashMap<>());
         if (noteStep.state() == NoteStep.State.Empty) {
             notesAtStep.remove(y);
             if (notesAtStep.isEmpty()) {
@@ -68,7 +67,8 @@ public final class ChordStepEventIndex {
         }
     }
 
-    public void addPendingMoveSnapshot(final int localStep, final int midiNote, final NoteStep noteStep) {
+    public void addPendingMoveSnapshot(
+            final int localStep, final int midiNote, final NoteStep noteStep) {
         pendingMovedNotes.put(moveKey(localStep, midiNote), NoteStepSnapshot.capture(noteStep));
     }
 
@@ -84,8 +84,8 @@ public final class ChordStepEventIndex {
     public boolean hasAnyLoadedNoteContent() {
         return observedState.hasAnyObservedNotes()
                 || noteStepsByPosition.values().stream()
-                .flatMap(notes -> notes.values().stream())
-                .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
+                        .flatMap(notes -> notes.values().stream())
+                        .anyMatch(note -> note.state() == NoteStep.State.NoteOn);
     }
 
     public boolean hasVisibleStepContent(final int localStep) {
@@ -94,7 +94,10 @@ public final class ChordStepEventIndex {
             return true;
         }
         return noteStepsAt(localStep).values().stream()
-                .anyMatch(note -> note.state() == NoteStep.State.NoteOn || note.state() == NoteStep.State.NoteSustain);
+                .anyMatch(
+                        note ->
+                                note.state() == NoteStep.State.NoteOn
+                                        || note.state() == NoteStep.State.NoteSustain);
     }
 
     public boolean hasStepStart(final int localStep) {
@@ -107,7 +110,8 @@ public final class ChordStepEventIndex {
     }
 
     public Set<Integer> notesAtStep(final int localStep) {
-        final Set<Integer> observedNotes = observedState.notesAtStep(localToGlobalStep.applyAsInt(localStep));
+        final Set<Integer> observedNotes =
+                observedState.notesAtStep(localToGlobalStep.applyAsInt(localStep));
         if (observedNotes != null && !observedNotes.isEmpty()) {
             return new HashSet<>(observedNotes);
         }
@@ -116,16 +120,19 @@ public final class ChordStepEventIndex {
 
     public Set<Integer> visibleOccupiedSteps() {
         final Set<Integer> occupiedSteps = new HashSet<>(noteStepsByPosition.keySet());
-        occupiedSteps.addAll(observedState.visibleOccupiedSteps(
-                visibleGlobalStep,
-                globalToLocalStep));
+        occupiedSteps.addAll(
+                observedState.visibleOccupiedSteps(visibleGlobalStep, globalToLocalStep));
         return occupiedSteps;
     }
 
     public Set<Integer> visibleStartedSteps() {
-        final Set<Integer> startedSteps = observedState.visibleStartedSteps(visibleGlobalStep, globalToLocalStep);
+        final Set<Integer> startedSteps =
+                observedState.visibleStartedSteps(visibleGlobalStep, globalToLocalStep);
         noteStepsByPosition.entrySet().stream()
-                .filter(entry -> entry.getValue().values().stream().anyMatch(note -> note.state() == NoteStep.State.NoteOn))
+                .filter(
+                        entry ->
+                                entry.getValue().values().stream()
+                                        .anyMatch(note -> note.state() == NoteStep.State.NoteOn))
                 .map(Map.Entry::getKey)
                 .forEach(startedSteps::add);
         return startedSteps;
@@ -158,7 +165,8 @@ public final class ChordStepEventIndex {
         return eventsForStep(localStep, startOverrides).stream().findFirst().orElse(null);
     }
 
-    public List<Event> eventsForStep(final int localStep, final Map<Integer, Integer> startOverrides) {
+    public List<Event> eventsForStep(
+            final int localStep, final Map<Integer, Integer> startOverrides) {
         final Map<Integer, NoteStep> visibleNotes = noteStepsByPosition.get(localStep);
         final int globalStep = localToGlobalStep.applyAsInt(localStep);
         final Map<Integer, Integer> noteStarts = new HashMap<>();
@@ -169,38 +177,53 @@ public final class ChordStepEventIndex {
         if (visibleNotes != null) {
             visibleNotes.values().stream()
                     .filter(note -> note.state() == NoteStep.State.NoteOn)
-                    .forEach(note -> noteStarts.putIfAbsent(note.y(), fineStartFor(globalStep, note.y(), note.x())));
+                    .forEach(
+                            note ->
+                                    noteStarts.putIfAbsent(
+                                            note.y(),
+                                            fineStartFor(globalStep, note.y(), note.x())));
         }
         if (noteStarts.isEmpty()) {
             return List.of();
         }
-        final int anchorFineStart = noteStarts.values().stream()
-                .min(Integer::compareTo)
-                .orElse(globalStep * fineStepsPerStep);
-        final boolean normalizeToSharedAnchor = noteStarts.size() > 1
-                && noteStarts.values().stream().distinct().count() == 1;
-        final List<EventNote> notes = noteStarts.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue())
-                .map(entry -> {
-                    final int midiNote = entry.getKey();
-                    final int fineStart = entry.getValue();
-                    final int effectiveFineStart = normalizeToSharedAnchor ? anchorFineStart : fineStart;
-                    final NoteStep visibleNote = visibleNotes == null ? null : visibleNotes.get(midiNote);
-                    final int velocity = visibleNote == null
-                            ? defaultVelocity.applyAsInt(127)
-                            : (int) Math.round(visibleNote.velocity() * 127);
-                    final double duration = visibleNote != null
-                            ? visibleNote.duration()
-                            : durationForObservedNote(fineStart, midiNote);
-                    return new EventNote(
-                            midiNote,
-                            effectiveFineStart,
-                            effectiveFineStart - anchorFineStart,
-                            velocity,
-                            duration,
-                            visibleNote);
-                })
-                .toList();
+        final int anchorFineStart =
+                noteStarts.values().stream()
+                        .min(Integer::compareTo)
+                        .orElse(globalStep * fineStepsPerStep);
+        final boolean normalizeToSharedAnchor =
+                noteStarts.size() > 1 && noteStarts.values().stream().distinct().count() == 1;
+        final List<EventNote> notes =
+                noteStarts.entrySet().stream()
+                        .sorted(Map.Entry.comparingByValue())
+                        .map(
+                                entry -> {
+                                    final int midiNote = entry.getKey();
+                                    final int fineStart = entry.getValue();
+                                    final int effectiveFineStart =
+                                            normalizeToSharedAnchor ? anchorFineStart : fineStart;
+                                    final NoteStep visibleNote =
+                                            visibleNotes == null
+                                                    ? null
+                                                    : visibleNotes.get(midiNote);
+                                    final int velocity =
+                                            visibleNote == null
+                                                    ? defaultVelocity.applyAsInt(127)
+                                                    : (int)
+                                                            Math.round(
+                                                                    visibleNote.velocity() * 127);
+                                    final double duration =
+                                            visibleNote != null
+                                                    ? visibleNote.duration()
+                                                    : durationForObservedNote(fineStart, midiNote);
+                                    return new EventNote(
+                                            midiNote,
+                                            effectiveFineStart,
+                                            effectiveFineStart - anchorFineStart,
+                                            velocity,
+                                            duration,
+                                            visibleNote);
+                                })
+                        .toList();
         return List.of(new Event(localStep, globalStep, anchorFineStart, notes));
     }
 
@@ -211,33 +234,46 @@ public final class ChordStepEventIndex {
                 localToGlobalStep.applyAsInt(fallbackLocalStep) * fineStepsPerStep);
     }
 
-    public void moveFineStart(final int oldFineStart, final int newFineStart, final int midiNote,
-                              final double duration) {
-        observedState.moveFineStart(oldFineStart, newFineStart, midiNote, duration, fineStepsPerStep, fineStepLength);
+    public void moveFineStart(
+            final int oldFineStart,
+            final int newFineStart,
+            final int midiNote,
+            final double duration) {
+        observedState.moveFineStart(
+                oldFineStart, newFineStart, midiNote, duration, fineStepsPerStep, fineStepLength);
     }
 
-    public List<EventNoteMove> createNoteMovesForEvent(final Event event,
-                                                       final int targetAnchorFineStart,
-                                                       final int loopFineSteps) {
+    public List<EventNoteMove> createNoteMovesForEvent(
+            final Event event, final int targetAnchorFineStart, final int loopFineSteps) {
         return event.notes().stream()
-                .map(note -> new EventNoteMove(
-                        event.localStep(),
-                        note,
-                        Math.floorMod(targetAnchorFineStart + note.startOffset(), loopFineSteps)))
+                .map(
+                        note ->
+                                new EventNoteMove(
+                                        event.localStep(),
+                                        note,
+                                        Math.floorMod(
+                                                targetAnchorFineStart + note.startOffset(),
+                                                loopFineSteps)))
                 .filter(move -> move.sourceFineStart() != move.targetFineStart())
                 .toList();
     }
 
-    public Event moveEvent(final Event event, final int targetAnchorFineStart, final int loopFineSteps) {
-        final List<EventNote> movedNotes = event.notes().stream()
-                .map(note -> new EventNote(
-                        note.midiNote(),
-                        Math.floorMod(targetAnchorFineStart + note.startOffset(), loopFineSteps),
-                        note.startOffset(),
-                        note.velocity(),
-                        note.duration(),
-                        note.visibleStep()))
-                .toList();
+    public Event moveEvent(
+            final Event event, final int targetAnchorFineStart, final int loopFineSteps) {
+        final List<EventNote> movedNotes =
+                event.notes().stream()
+                        .map(
+                                note ->
+                                        new EventNote(
+                                                note.midiNote(),
+                                                Math.floorMod(
+                                                        targetAnchorFineStart + note.startOffset(),
+                                                        loopFineSteps),
+                                                note.startOffset(),
+                                                note.velocity(),
+                                                note.duration(),
+                                                note.visibleStep()))
+                        .toList();
         return new Event(
                 event.localStep(),
                 Math.floorDiv(targetAnchorFineStart, fineStepsPerStep),
@@ -262,12 +298,16 @@ public final class ChordStepEventIndex {
         return x + ":" + y;
     }
 
-    public record Event(int localStep, int globalStep, int anchorFineStart, List<EventNote> notes) {
-    }
+    public record Event(
+            int localStep, int globalStep, int anchorFineStart, List<EventNote> notes) {}
 
-    public record EventNote(int midiNote, int fineStart, int startOffset, int velocity, double duration,
-                            NoteStep visibleStep) {
-    }
+    public record EventNote(
+            int midiNote,
+            int fineStart,
+            int startOffset,
+            int velocity,
+            double duration,
+            NoteStep visibleStep) {}
 
     public record EventNoteMove(int localStep, EventNote note, int targetFineStart) {
         public int sourceFineStart() {
@@ -291,10 +331,19 @@ public final class ChordStepEventIndex {
         }
     }
 
-    private record NoteStepSnapshot(double chance, double pressure, double timbre, double velocitySpread,
-                                    int repeatCount, double repeatCurve, double repeatVelocityCurve,
-                                    double repeatVelocityEnd, double pan, int recurrenceLength, int recurrenceMask,
-                                    NoteOccurrence occurrence) {
+    private record NoteStepSnapshot(
+            double chance,
+            double pressure,
+            double timbre,
+            double velocitySpread,
+            int repeatCount,
+            double repeatCurve,
+            double repeatVelocityCurve,
+            double repeatVelocityEnd,
+            double pan,
+            int recurrenceLength,
+            int recurrenceMask,
+            NoteOccurrence occurrence) {
         static NoteStepSnapshot capture(final NoteStep step) {
             return new NoteStepSnapshot(
                     step.chance(),

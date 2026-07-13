@@ -17,7 +17,6 @@ import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
-
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -30,16 +29,20 @@ final class ChordStepEncoderControls {
     private final OledDisplay oled;
     private final CursorTrack cursorTrack;
     private final Host host;
-    private final EncoderStepAccumulator chordRootEncoder = new EncoderStepAccumulator(CHORD_ROOT_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator chordOctaveEncoder = new EncoderStepAccumulator(CHORD_OCTAVE_ENCODER_THRESHOLD);
-    private final EncoderStepAccumulator chordFamilyEncoder = new EncoderStepAccumulator(CHORD_FAMILY_ENCODER_THRESHOLD);
+    private final EncoderStepAccumulator chordRootEncoder =
+            new EncoderStepAccumulator(CHORD_ROOT_ENCODER_THRESHOLD);
+    private final EncoderStepAccumulator chordOctaveEncoder =
+            new EncoderStepAccumulator(CHORD_OCTAVE_ENCODER_THRESHOLD);
+    private final EncoderStepAccumulator chordFamilyEncoder =
+            new EncoderStepAccumulator(CHORD_FAMILY_ENCODER_THRESHOLD);
     private final EncoderBankLayout layout;
     private boolean mainEncoderPressConsumed = false;
 
-    ChordStepEncoderControls(final AkaiFireOikontrolExtension driver,
-                             final OledDisplay oled,
-                             final CursorTrack cursorTrack,
-                             final Host host) {
+    ChordStepEncoderControls(
+            final AkaiFireOikontrolExtension driver,
+            final OledDisplay oled,
+            final CursorTrack cursorTrack,
+            final Host host) {
         this.driver = driver;
         this.oled = oled;
         this.cursorTrack = cursorTrack;
@@ -70,7 +73,8 @@ final class ChordStepEncoderControls {
         final String mainEncoderRole = driver.getMainEncoderRolePreference();
         if (driver.routeGlobalMainEncoderRole(inc, fine)) {
             return;
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(mainEncoderRole)) {
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_NOTE_REPEAT_ROLE.equals(
+                mainEncoderRole)) {
             oled.valueInfo("Note Repeat", "Live only");
         } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_DRUM_GRID_ROLE.equals(mainEncoderRole)) {
             oled.valueInfo("Drum Grid", "Drum only");
@@ -118,13 +122,15 @@ final class ChordStepEncoderControls {
             if (pressed) {
                 driver.showGrooveShuffleInfo();
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(mainEncoderRole)) {
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_TRACK_SELECT_ROLE.equals(
+                mainEncoderRole)) {
             if (pressed) {
                 driver.showSelectedTrackInfo(false);
             } else {
                 oled.clearScreenDelayed();
             }
-        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(mainEncoderRole)) {
+        } else if (AkaiFireOikontrolExtension.MAIN_ENCODER_PLAYBACK_START_ROLE.equals(
+                mainEncoderRole)) {
             if (pressed) {
                 oled.valueInfo("Play Start", "Grid step");
             } else {
@@ -143,49 +149,60 @@ final class ChordStepEncoderControls {
 
     private EncoderBankLayout createLayout() {
         final Map<EncoderMode, EncoderBank> banks = new EnumMap<>(EncoderMode.class);
-        banks.put(EncoderMode.CHANNEL, new EncoderBank(
-                "1: Oct/Root/Scale\n2: Velocity\n3: Chord Family\n4: Int/Inv/Layout",
-                EncoderFooterLegend.of("RScO", "Velo", "Chrd", "Intr"),
-                new EncoderSlotBinding[]{
-                        chordPitchContextSlot(),
-                        chordBuildVelocitySlot(),
-                        chordSlot(2, chordFamilyEncoder,
-                                amount -> {
-                                    if (driver.isGlobalAltHeld()) {
-                                        host.adjustChordPage(amount);
-                                    } else {
-                                        host.adjustChordFamily(amount);
-                                    }
-                                },
-                                host::showCurrentChord, host::resetChordFamilySelection),
-                        interpretSlot()
-                }));
-        banks.put(EncoderMode.MIXER, new EncoderBank(
-                "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
-                new EncoderSlotBinding[]{
-                        chordMixerSlot(0, "Volume"),
-                        chordMixerSlot(1, "Pan"),
-                        chordMixerSlot(2, "Send 1"),
-                        chordMixerSlot(3, "Send 2")
-                }));
-        banks.put(EncoderMode.USER_1, new EncoderBank(
-                "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
-                EncoderFooterLegend.of("Velo", "Pres", "Timb", "PExp"),
-                new EncoderSlotBinding[]{
-                        noteAccessSlot(NoteStepAccess.VELOCITY),
-                        noteAccessSlot(NoteStepAccess.PRESSURE),
-                        noteAccessSlot(NoteStepAccess.TIMBRE),
-                        noteAccessSlot(NoteStepAccess.PITCH)
-                }));
-        banks.put(EncoderMode.USER_2, new EncoderBank(
-                "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
-                EncoderFooterLegend.of("Len", "Chnc", "VSpr", "Rpt"),
-                new EncoderSlotBinding[]{
-                        noteAccessSlot(NoteStepAccess.DURATION),
-                        noteAccessSlot(NoteStepAccess.CHANCE),
-                        noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD),
-                        noteAccessSlot(NoteStepAccess.REPEATS)
-                }));
+        banks.put(
+                EncoderMode.CHANNEL,
+                new EncoderBank(
+                        "1: Oct/Root/Scale\n2: Velocity\n3: Chord Family\n4: Int/Inv/Layout",
+                        EncoderFooterLegend.of("RScO", "Velo", "Chrd", "Intr"),
+                        new EncoderSlotBinding[] {
+                            chordPitchContextSlot(),
+                            chordBuildVelocitySlot(),
+                            chordSlot(
+                                    2,
+                                    chordFamilyEncoder,
+                                    amount -> {
+                                        if (driver.isGlobalAltHeld()) {
+                                            host.adjustChordPage(amount);
+                                        } else {
+                                            host.adjustChordFamily(amount);
+                                        }
+                                    },
+                                    host::showCurrentChord,
+                                    host::resetChordFamilySelection),
+                            interpretSlot()
+                        }));
+        banks.put(
+                EncoderMode.MIXER,
+                new EncoderBank(
+                        "1: Volume\n2: Pan\n3: Send 1\n4: Send 2",
+                        new EncoderSlotBinding[] {
+                            chordMixerSlot(0, "Volume"),
+                            chordMixerSlot(1, "Pan"),
+                            chordMixerSlot(2, "Send 1"),
+                            chordMixerSlot(3, "Send 2")
+                        }));
+        banks.put(
+                EncoderMode.USER_1,
+                new EncoderBank(
+                        "1: Velocity\n2: Pressure\n3: Timbre\n4: Pitch Expr",
+                        EncoderFooterLegend.of("Velo", "Pres", "Timb", "PExp"),
+                        new EncoderSlotBinding[] {
+                            noteAccessSlot(NoteStepAccess.VELOCITY),
+                            noteAccessSlot(NoteStepAccess.PRESSURE),
+                            noteAccessSlot(NoteStepAccess.TIMBRE),
+                            noteAccessSlot(NoteStepAccess.PITCH)
+                        }));
+        banks.put(
+                EncoderMode.USER_2,
+                new EncoderBank(
+                        "1: Note Length\n2: Chance\n3: Vel Spread\n4: Repeat",
+                        EncoderFooterLegend.of("Len", "Chnc", "VSpr", "Rpt"),
+                        new EncoderSlotBinding[] {
+                            noteAccessSlot(NoteStepAccess.DURATION),
+                            noteAccessSlot(NoteStepAccess.CHANCE),
+                            noteAccessSlot(NoteStepAccess.VELOCITY_SPREAD),
+                            noteAccessSlot(NoteStepAccess.REPEATS)
+                        }));
         return new EncoderBankLayout(banks);
     }
 
@@ -197,8 +214,11 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
                 handler.bindNoteAccess(layer, encoder, slotIndex, access);
             }
         };
@@ -212,66 +232,89 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
-                    if (scaleContext) {
-                        if (inc != 0) {
-                            host.adjustChordSharedScale(inc);
-                        }
-                        return;
-                    }
-                    final boolean rootContext = driver.isGlobalAltHeld();
-                    final EncoderStepAccumulator accumulator = rootContext ? chordRootEncoder : chordOctaveEncoder;
-                    final int amount = accumulator.consume(inc);
-                    if (amount == 0) {
-                        return;
-                    }
-                    if (rootContext) {
-                        host.adjustChordRoot(amount);
-                    } else {
-                        host.adjustChordOctave(amount);
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        final boolean scaleContext = driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
-                        if (scaleContext) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Scale", "No reset",
-                                    () -> { }, () -> oled.valueInfo("Scale", host.getScaleDisplayName()))) {
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                encoder.bindEncoder(
+                        layer,
+                        inc -> {
+                            final boolean scaleContext =
+                                    driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                            if (scaleContext) {
+                                if (inc != 0) {
+                                    host.adjustChordSharedScale(inc);
+                                }
                                 return;
                             }
-                            oled.valueInfo("Scale", host.getScaleDisplayName());
-                            return;
-                        }
-                        final boolean rootContext = driver.isGlobalAltHeld();
-                        if (driver.handleKnobModeEncoderReset(true, true, rootContext ? "Root" : "Octave",
-                                "No reset", () -> {
-                                    (rootContext ? chordRootEncoder : chordOctaveEncoder).reset();
-                                    if (rootContext) {
-                                        host.resetChordRoot();
-                                    } else {
-                                        host.resetChordOctave();
+                            final boolean rootContext = driver.isGlobalAltHeld();
+                            final EncoderStepAccumulator accumulator =
+                                    rootContext ? chordRootEncoder : chordOctaveEncoder;
+                            final int amount = accumulator.consume(inc);
+                            if (amount == 0) {
+                                return;
+                            }
+                            if (rootContext) {
+                                host.adjustChordRoot(amount);
+                            } else {
+                                host.adjustChordOctave(amount);
+                            }
+                        });
+                encoder.bindTouched(
+                        layer,
+                        touched -> {
+                            if (touched) {
+                                final boolean scaleContext =
+                                        driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld();
+                                if (scaleContext) {
+                                    if (driver.handleKnobModeEncoderReset(
+                                            true,
+                                            false,
+                                            "Scale",
+                                            "No reset",
+                                            () -> {},
+                                            () ->
+                                                    oled.valueInfo(
+                                                            "Scale", host.getScaleDisplayName()))) {
+                                        return;
                                     }
-                                }, () -> {
-                                    if (rootContext) {
-                                        host.showChordRootInfo();
-                                    } else {
-                                        host.showChordOctaveInfo();
-                                    }
-                                })) {
-                            return;
-                        }
-                        if (rootContext) {
-                            host.showChordRootInfo();
-                        } else {
-                            host.showChordOctaveInfo();
-                        }
-                        return;
-                    }
-                    oled.clearScreenDelayed();
-                });
+                                    oled.valueInfo("Scale", host.getScaleDisplayName());
+                                    return;
+                                }
+                                final boolean rootContext = driver.isGlobalAltHeld();
+                                if (driver.handleKnobModeEncoderReset(
+                                        true,
+                                        true,
+                                        rootContext ? "Root" : "Octave",
+                                        "No reset",
+                                        () -> {
+                                            (rootContext ? chordRootEncoder : chordOctaveEncoder)
+                                                    .reset();
+                                            if (rootContext) {
+                                                host.resetChordRoot();
+                                            } else {
+                                                host.resetChordOctave();
+                                            }
+                                        },
+                                        () -> {
+                                            if (rootContext) {
+                                                host.showChordRootInfo();
+                                            } else {
+                                                host.showChordOctaveInfo();
+                                            }
+                                        })) {
+                                    return;
+                                }
+                                if (rootContext) {
+                                    host.showChordRootInfo();
+                                } else {
+                                    host.showChordOctaveInfo();
+                                }
+                                return;
+                            }
+                            oled.clearScreenDelayed();
+                        });
             }
         };
     }
@@ -284,26 +327,38 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    if (driver.isGlobalShiftHeld()) {
-                        host.adjustChordVelocityCenter(inc);
-                    } else {
-                        host.adjustChordVelocitySensitivity(inc);
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        if (driver.handleKnobModeEncoderReset(true, true, "Velocity", "No reset",
-                                host::resetChordVelocityTargets, host::showChordVelocityInfo)) {
-                            return;
-                        }
-                        host.showChordVelocityInfo();
-                        return;
-                    }
-                    oled.clearScreenDelayed();
-                });
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                encoder.bindEncoder(
+                        layer,
+                        inc -> {
+                            if (driver.isGlobalShiftHeld()) {
+                                host.adjustChordVelocityCenter(inc);
+                            } else {
+                                host.adjustChordVelocitySensitivity(inc);
+                            }
+                        });
+                encoder.bindTouched(
+                        layer,
+                        touched -> {
+                            if (touched) {
+                                if (driver.handleKnobModeEncoderReset(
+                                        true,
+                                        true,
+                                        "Velocity",
+                                        "No reset",
+                                        host::resetChordVelocityTargets,
+                                        host::showChordVelocityInfo)) {
+                                    return;
+                                }
+                                host.showChordVelocityInfo();
+                                return;
+                            }
+                            oled.clearScreenDelayed();
+                        });
             }
         };
     }
@@ -316,20 +371,33 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                final Parameter parameter = switch (index) {
-                    case 0 -> cursorTrack.volume();
-                    case 1 -> cursorTrack.pan();
-                    case 2 -> cursorTrack.sendBank().getItemAt(0);
-                    default -> cursorTrack.sendBank().getItemAt(1);
-                };
-                final EncoderValueProfile profile = index == 1
-                        ? EncoderValueProfile.PAN
-                        : EncoderValueProfile.LARGE_RANGE;
-                ParameterEncoderBinding.bind(encoder, layer, slotIndex, parameter, label, driver::isGlobalShiftHeld,
-                        mixerResetPolicy(index), driver.knobModeEncoderResetControl(), profile, index == 1,
-                        oled::valueInfoWithBar, oled::clearScreenDelayed);
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                final Parameter parameter =
+                        switch (index) {
+                            case 0 -> cursorTrack.volume();
+                            case 1 -> cursorTrack.pan();
+                            case 2 -> cursorTrack.sendBank().getItemAt(0);
+                            default -> cursorTrack.sendBank().getItemAt(1);
+                        };
+                final EncoderValueProfile profile =
+                        index == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
+                ParameterEncoderBinding.bind(
+                        encoder,
+                        layer,
+                        slotIndex,
+                        parameter,
+                        label,
+                        driver::isGlobalShiftHeld,
+                        mixerResetPolicy(index),
+                        driver.knobModeEncoderResetControl(),
+                        profile,
+                        index == 1,
+                        oled::valueInfoWithBar,
+                        oled::clearScreenDelayed);
             }
         };
     }
@@ -338,9 +406,12 @@ final class ChordStepEncoderControls {
         return ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT;
     }
 
-    private EncoderSlotBinding chordSlot(final int slotIndex, final EncoderStepAccumulator accumulator,
-                                         final ChordAdjuster adjuster, final Runnable showInfo,
-                                         final Runnable resetAction) {
+    private EncoderSlotBinding chordSlot(
+            final int slotIndex,
+            final EncoderStepAccumulator accumulator,
+            final ChordAdjuster adjuster,
+            final Runnable showInfo,
+            final Runnable resetAction) {
         return new EncoderSlotBinding() {
             @Override
             public double stepSize() {
@@ -348,27 +419,40 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
-                             final int boundSlotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    final int amount = accumulator.consume(inc);
-                    if (amount != 0) {
-                        adjuster.adjust(amount);
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        if (driver.handleKnobModeEncoderReset(true, true, "Chord", "No reset", () -> {
-                            accumulator.reset();
-                            resetAction.run();
-                        }, showInfo)) {
-                            return;
-                        }
-                        showInfo.run();
-                        return;
-                    }
-                    oled.clearScreenDelayed();
-                });
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int boundSlotIndex) {
+                encoder.bindEncoder(
+                        layer,
+                        inc -> {
+                            final int amount = accumulator.consume(inc);
+                            if (amount != 0) {
+                                adjuster.adjust(amount);
+                            }
+                        });
+                encoder.bindTouched(
+                        layer,
+                        touched -> {
+                            if (touched) {
+                                if (driver.handleKnobModeEncoderReset(
+                                        true,
+                                        true,
+                                        "Chord",
+                                        "No reset",
+                                        () -> {
+                                            accumulator.reset();
+                                            resetAction.run();
+                                        },
+                                        showInfo)) {
+                                    return;
+                                }
+                                showInfo.run();
+                                return;
+                            }
+                            oled.clearScreenDelayed();
+                        });
             }
         };
     }
@@ -381,46 +465,68 @@ final class ChordStepEncoderControls {
             }
 
             @Override
-            public void bind(final StepSequencerEncoderLayer handler, final Layer layer, final TouchEncoder encoder,
-                             final int slotIndex) {
-                encoder.bindEncoder(layer, inc -> {
-                    if (inc != 0) {
-                        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
-                            host.setBuilderLayoutInKey(inc > 0);
-                        } else if (driver.isGlobalAltHeld()) {
-                            host.invertCurrentChord(inc > 0 ? 1 : -1);
-                        } else {
-                            host.adjustChordInterpretation(inc);
-                        }
-                    }
-                });
-                encoder.bindTouched(layer, touched -> {
-                    if (touched) {
-                        if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Builder Layout", "No reset",
-                                    () -> { }, host::showBuilderLayoutInfo)) {
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                encoder.bindEncoder(
+                        layer,
+                        inc -> {
+                            if (inc != 0) {
+                                if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                                    host.setBuilderLayoutInKey(inc > 0);
+                                } else if (driver.isGlobalAltHeld()) {
+                                    host.invertCurrentChord(inc > 0 ? 1 : -1);
+                                } else {
+                                    host.adjustChordInterpretation(inc);
+                                }
+                            }
+                        });
+                encoder.bindTouched(
+                        layer,
+                        touched -> {
+                            if (touched) {
+                                if (driver.isGlobalShiftHeld() && !driver.isGlobalAltHeld()) {
+                                    if (driver.handleKnobModeEncoderReset(
+                                            true,
+                                            false,
+                                            "Builder Layout",
+                                            "No reset",
+                                            () -> {},
+                                            host::showBuilderLayoutInfo)) {
+                                        return;
+                                    }
+                                    host.showBuilderLayoutInfo();
+                                    return;
+                                }
+                                if (driver.isGlobalAltHeld()) {
+                                    if (driver.handleKnobModeEncoderReset(
+                                            true,
+                                            false,
+                                            "Invert",
+                                            "No reset",
+                                            () -> {},
+                                            () -> oled.valueInfo("Invert", "Turn encoder"))) {
+                                        return;
+                                    }
+                                    oled.valueInfo("Invert", "Turn encoder");
+                                    return;
+                                }
+                                if (driver.handleKnobModeEncoderReset(
+                                        true,
+                                        true,
+                                        "Interpret",
+                                        "No reset",
+                                        host::resetChordInterpretation,
+                                        host::showChordInterpretationInfo)) {
+                                    return;
+                                }
+                                host.showChordInterpretationInfo();
                                 return;
                             }
-                            host.showBuilderLayoutInfo();
-                            return;
-                        }
-                        if (driver.isGlobalAltHeld()) {
-                            if (driver.handleKnobModeEncoderReset(true, false, "Invert", "No reset",
-                                    () -> { }, () -> oled.valueInfo("Invert", "Turn encoder"))) {
-                                return;
-                            }
-                            oled.valueInfo("Invert", "Turn encoder");
-                            return;
-                        }
-                        if (driver.handleKnobModeEncoderReset(true, true, "Interpret", "No reset",
-                                host::resetChordInterpretation, host::showChordInterpretationInfo)) {
-                            return;
-                        }
-                        host.showChordInterpretationInfo();
-                        return;
-                    }
-                    oled.clearScreenDelayed();
-                });
+                            oled.clearScreenDelayed();
+                        });
             }
         };
     }

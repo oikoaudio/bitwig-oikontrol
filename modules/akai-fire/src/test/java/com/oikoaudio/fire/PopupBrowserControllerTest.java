@@ -1,14 +1,5 @@
 package com.oikoaudio.fire;
 
-import com.bitwig.extension.controller.api.BrowserResultsItem;
-import com.bitwig.extension.controller.api.BooleanValue;
-import com.bitwig.extension.controller.api.ControllerHost;
-import com.bitwig.extension.controller.api.PopupBrowser;
-import com.bitwig.extension.controller.api.StringValue;
-import com.oikoaudio.fire.display.OledDisplay;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -16,6 +7,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.BooleanValue;
+import com.bitwig.extension.controller.api.BrowserResultsItem;
+import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.PopupBrowser;
+import com.bitwig.extension.controller.api.StringValue;
+import com.oikoaudio.fire.display.OledDisplay;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class PopupBrowserControllerTest {
     @Test
@@ -30,8 +30,9 @@ class PopupBrowserControllerTest {
         when(browser.exists()).thenReturn(browserExists);
         when(host.browserButtonPressed()).thenReturn(true);
 
-        final PopupBrowserController controller = new PopupBrowserController(
-                scheduler, browser, results, viewControl, mock(OledDisplay.class), host);
+        final PopupBrowserController controller =
+                new PopupBrowserController(
+                        scheduler, browser, results, viewControl, mock(OledDisplay.class), host);
         controller.handleBrowserPressed(true);
         final ArgumentCaptor<Runnable> delayedOpen = ArgumentCaptor.forClass(Runnable.class);
         verify(scheduler).scheduleTask(delayedOpen.capture(), anyLong());
@@ -59,8 +60,14 @@ class PopupBrowserControllerTest {
         when(results.exists()).thenReturn(resultExists);
         when(results.name()).thenReturn(resultName);
 
-        final PopupBrowserController controller = new PopupBrowserController(
-                scheduler, browser, results, mock(ViewCursorControl.class), mock(OledDisplay.class), host);
+        final PopupBrowserController controller =
+                new PopupBrowserController(
+                        scheduler,
+                        browser,
+                        results,
+                        mock(ViewCursorControl.class),
+                        mock(OledDisplay.class),
+                        host);
 
         controller.adjustSelection(2);
         controller.handleMainEncoderPress(true);
@@ -77,9 +84,14 @@ class PopupBrowserControllerTest {
         when(browserExists.get()).thenReturn(true);
         when(browser.exists()).thenReturn(browserExists);
         final PopupBrowserController.Host host = mock(PopupBrowserController.Host.class);
-        final PopupBrowserController controller = new PopupBrowserController(
-                mock(ControllerHost.class), browser, mock(BrowserResultsItem.class),
-                mock(ViewCursorControl.class), mock(OledDisplay.class), host);
+        final PopupBrowserController controller =
+                new PopupBrowserController(
+                        mock(ControllerHost.class),
+                        browser,
+                        mock(BrowserResultsItem.class),
+                        mock(ViewCursorControl.class),
+                        mock(OledDisplay.class),
+                        host);
 
         controller.cancel();
 

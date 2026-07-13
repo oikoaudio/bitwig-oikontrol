@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.note.LivePadSurfaceLayer;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import com.oikoaudio.fire.note.LivePadSurfaceLayer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import org.junit.jupiter.api.Test;
 
 class ChordStepModeDecouplingTest {
     @Test
@@ -20,10 +19,13 @@ class ChordStepModeDecouplingTest {
 
     @Test
     void livePadSurfaceLayerDoesNotRetainChordStepImplementation() throws IOException {
-        final Path sourcePath = Path.of("src/main/java/com/oikoaudio/fire/note/LivePadSurfaceLayer.java");
-        final String source = Files.readString(Files.exists(sourcePath)
-                ? sourcePath
-                : Path.of("modules/akai-fire").resolve(sourcePath));
+        final Path sourcePath =
+                Path.of("src/main/java/com/oikoaudio/fire/note/LivePadSurfaceLayer.java");
+        final String source =
+                Files.readString(
+                        Files.exists(sourcePath)
+                                ? sourcePath
+                                : Path.of("modules/akai-fire").resolve(sourcePath));
 
         assertFalse(source.contains("com.oikoaudio.fire.chordstep"));
         assertFalse(source.contains("ChordStep"));

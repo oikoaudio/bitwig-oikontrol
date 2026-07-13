@@ -1,8 +1,8 @@
 package com.oikoaudio.fire.nestedrhythm;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class NestedRhythmLoopLengthTest {
 
@@ -25,8 +25,8 @@ class NestedRhythmLoopLengthTest {
 
     @Test
     void settingsFromBeatsUsesSmallestContainingBarCount() {
-        final NestedRhythmLoopLength.Settings settings = NestedRhythmLoopLength.settingsFromBeats(
-                6.0, 4.0, new int[]{1, 2, 4});
+        final NestedRhythmLoopLength.Settings settings =
+                NestedRhythmLoopLength.settingsFromBeats(6.0, 4.0, new int[] {1, 2, 4});
 
         assertEquals(2, settings.barCount());
         assertEquals(23, settings.lastStepIndex());
@@ -34,8 +34,8 @@ class NestedRhythmLoopLengthTest {
 
     @Test
     void settingsFromBeatsCanRepresentOddPartialLengthsInLargerContainers() {
-        final NestedRhythmLoopLength.Settings settings = NestedRhythmLoopLength.settingsFromBeats(
-                12.0, 4.0, new int[]{1, 2, 4});
+        final NestedRhythmLoopLength.Settings settings =
+                NestedRhythmLoopLength.settingsFromBeats(12.0, 4.0, new int[] {1, 2, 4});
 
         assertEquals(4, settings.barCount());
         assertEquals(23, settings.lastStepIndex());
@@ -43,8 +43,8 @@ class NestedRhythmLoopLengthTest {
 
     @Test
     void settingsFromBeatsUsesMeterLengthAsOneBar() {
-        final NestedRhythmLoopLength.Settings settings = NestedRhythmLoopLength.settingsFromBeats(
-                5.0, 5.0, new int[]{1, 2, 4});
+        final NestedRhythmLoopLength.Settings settings =
+                NestedRhythmLoopLength.settingsFromBeats(5.0, 5.0, new int[] {1, 2, 4});
 
         assertEquals(1, settings.barCount());
         assertEquals(31, settings.lastStepIndex());
@@ -52,14 +52,18 @@ class NestedRhythmLoopLengthTest {
 
     @Test
     void steppedBarLengthMovesPartialLengthsToTheNextSupportedWholeBarLength() {
-        assertEquals(16.0, NestedRhythmLoopLength.steppedBarLengthBeats(
-                12.0, 4.0, new int[]{1, 2, 4}, 1));
-        assertEquals(8.0, NestedRhythmLoopLength.steppedBarLengthBeats(
-                12.0, 4.0, new int[]{1, 2, 4}, -1));
-        assertEquals(2.0, NestedRhythmLoopLength.steppedBarLengthBeats(
-                2.0, 4.0, new int[]{1, 2, 4}, -1));
-        assertEquals(20.0, NestedRhythmLoopLength.steppedBarLengthBeats(
-                20.0, 4.0, new int[]{1, 2, 4}, 1));
+        assertEquals(
+                16.0,
+                NestedRhythmLoopLength.steppedBarLengthBeats(12.0, 4.0, new int[] {1, 2, 4}, 1));
+        assertEquals(
+                8.0,
+                NestedRhythmLoopLength.steppedBarLengthBeats(12.0, 4.0, new int[] {1, 2, 4}, -1));
+        assertEquals(
+                2.0,
+                NestedRhythmLoopLength.steppedBarLengthBeats(2.0, 4.0, new int[] {1, 2, 4}, -1));
+        assertEquals(
+                20.0,
+                NestedRhythmLoopLength.steppedBarLengthBeats(20.0, 4.0, new int[] {1, 2, 4}, 1));
     }
 
     @Test

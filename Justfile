@@ -22,6 +22,12 @@ test:
 clean:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} clean
 
+format:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} spotlessApply
+
+format-check:
+    GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} spotlessCheck
+
 fire-compile:
     GRADLE_USER_HOME={{gradle_user_home}} {{gradlew}} :modules:akai-fire:compileJava :modules:akai-fire:testClasses
 

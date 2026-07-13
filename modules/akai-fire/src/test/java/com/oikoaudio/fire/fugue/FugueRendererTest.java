@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.fugue;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.melodic.MelodicPattern;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class FugueRendererTest {
     @Test

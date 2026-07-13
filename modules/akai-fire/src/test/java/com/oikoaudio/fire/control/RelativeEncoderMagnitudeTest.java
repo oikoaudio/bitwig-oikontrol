@@ -1,9 +1,9 @@
 package com.oikoaudio.fire.control;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.Test;
 
 class RelativeEncoderMagnitudeTest {
     @Test
@@ -47,7 +47,9 @@ class RelativeEncoderMagnitudeTest {
 
     @Test
     void boundedMagnitudeStepRequiresPositiveLimit() {
-        assertThrows(IllegalArgumentException.class, () -> RelativeEncoderMagnitude.toBoundedMagnitudeStep(1, 0));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> RelativeEncoderMagnitude.toBoundedMagnitudeStep(1, 0));
     }
 
     @Test

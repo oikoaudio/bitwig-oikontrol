@@ -1,10 +1,5 @@
 package com.oikoaudio.fire;
 
-import com.bitwig.extension.controller.api.Action;
-import com.bitwig.extension.controller.api.Application;
-import com.bitwig.extension.controller.api.PinnableCursorClip;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +8,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.bitwig.extension.controller.api.Action;
+import com.bitwig.extension.controller.api.Application;
+import com.bitwig.extension.controller.api.PinnableCursorClip;
+import org.junit.jupiter.api.Test;
+
 class LauncherRetriggerActionsTest {
     @Test
     void resolvesLikelyGlobalRetriggerActionId() {
@@ -20,7 +20,9 @@ class LauncherRetriggerActionsTest {
         final Action action = mock(Action.class);
         when(application.getAction("retrigger_playing_launcher_clips")).thenReturn(action);
 
-        assertSame(action, LauncherRetriggerActions.resolveRetriggerPlayingLauncherClipsAction(application));
+        assertSame(
+                action,
+                LauncherRetriggerActions.resolveRetriggerPlayingLauncherClipsAction(application));
     }
 
     @Test
@@ -30,7 +32,9 @@ class LauncherRetriggerActionsTest {
         final Action target = action("internal_unknown", "Retrigger playing Launcher clips", "");
         when(application.getActions()).thenReturn(new Action[] {other, target});
 
-        assertSame(target, LauncherRetriggerActions.resolveRetriggerPlayingLauncherClipsAction(application));
+        assertSame(
+                target,
+                LauncherRetriggerActions.resolveRetriggerPlayingLauncherClipsAction(application));
     }
 
     @Test

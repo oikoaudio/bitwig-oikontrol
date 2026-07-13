@@ -4,14 +4,12 @@ import com.bitwig.extension.api.PlatformType;
 import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
-
 import java.util.UUID;
 
 public class LpcArpControlExtensionDefinition extends ControllerExtensionDefinition {
     private static final UUID DRIVER_ID = UUID.fromString("41aa8c3d-b499-4cc6-b480-6ef30948f37a");
 
-    public LpcArpControlExtensionDefinition() {
-    }
+    public LpcArpControlExtensionDefinition() {}
 
     @Override
     public String getName() {
@@ -64,14 +62,14 @@ public class LpcArpControlExtensionDefinition extends ControllerExtensionDefinit
     }
 
     @Override
-    public void listAutoDetectionMidiPortNames(final AutoDetectionMidiPortNamesList list,
-                                               final PlatformType platformType) {
+    public void listAutoDetectionMidiPortNames(
+            final AutoDetectionMidiPortNamesList list, final PlatformType platformType) {
         if (platformType == PlatformType.WINDOWS) {
-            list.add(new String[]{"Launch Control XL"}, new String[]{"Launch Control XL"});
+            list.add(new String[] {"Launch Control XL"}, new String[] {"Launch Control XL"});
         } else if (platformType == PlatformType.MAC) {
-            list.add(new String[]{"Launch Control XL"}, new String[]{"Launch Control XL"});
+            list.add(new String[] {"Launch Control XL"}, new String[] {"Launch Control XL"});
         } else if (platformType == PlatformType.LINUX) {
-            list.add(new String[]{"Launch Control XL"}, new String[]{"Launch Control XL"});
+            list.add(new String[] {"Launch Control XL"}, new String[] {"Launch Control XL"});
         }
     }
 

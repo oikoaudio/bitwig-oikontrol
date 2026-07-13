@@ -11,11 +11,18 @@ import com.oikoaudio.fire.lights.RgbLightState;
 public final class FugueControlBindings implements PadBankRowControlBindings.Host {
     private final Port port;
 
-    public FugueControlBindings(final AkaiFireOikontrolExtension driver, final Layer owner, final Port port) {
+    public FugueControlBindings(
+            final AkaiFireOikontrolExtension driver, final Layer owner, final Port port) {
         this.port = port;
-        new PadBankRowControlBindings(driver, owner, this,
-                new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.KNOB_MODE,
-                        port::encoderModeButton, port::encoderModeLight)).bind();
+        new PadBankRowControlBindings(
+                        driver,
+                        owner,
+                        this,
+                        new PadBankRowControlBindings.ExtraButtonBinding(
+                                NoteAssign.KNOB_MODE,
+                                port::encoderModeButton,
+                                port::encoderModeLight))
+                .bind();
     }
 
     @Override

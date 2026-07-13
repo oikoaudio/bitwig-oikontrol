@@ -8,4 +8,5 @@ package com.bitwig.extensions.controllers.novation.launch_control_xl.drum;
  * @param soloMode True if solo mode is active
  * @param muteMode True if mute mode is active
  */
-public record DrumUiState(DrumLedRenderer.PadState[] pads, int selectedPad, boolean soloMode, boolean muteMode) {}
+public record DrumUiState(
+        DrumLedRenderer.PadState[] pads, int selectedPad, boolean soloMode, boolean muteMode) {}

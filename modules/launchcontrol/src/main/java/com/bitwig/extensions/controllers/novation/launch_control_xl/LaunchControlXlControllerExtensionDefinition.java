@@ -1,107 +1,92 @@
 package com.bitwig.extensions.controllers.novation.launch_control_xl;
 
-import java.util.UUID;
-
 import com.bitwig.extension.api.PlatformType;
 import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.oikoaudio.common.OikontrolVersion;
+import java.util.UUID;
 
-public class LaunchControlXlControllerExtensionDefinition extends ControllerExtensionDefinition
-{
-   @Override
-   public String getHardwareVendor()
-   {
-      return "Novation";
-   }
+public class LaunchControlXlControllerExtensionDefinition extends ControllerExtensionDefinition {
+    @Override
+    public String getHardwareVendor() {
+        return "Novation";
+    }
 
-   @Override
-   public String getHardwareModel()
-   {
-      return "Launch Control XL";
-   }
+    @Override
+    public String getHardwareModel() {
+        return "Launch Control XL";
+    }
 
-   @Override
-   public int getNumMidiInPorts()
-   {
-      return 1;
-   }
+    @Override
+    public int getNumMidiInPorts() {
+        return 1;
+    }
 
-   @Override
-   public int getNumMidiOutPorts()
-   {
-      return 1;
-   }
+    @Override
+    public int getNumMidiOutPorts() {
+        return 1;
+    }
 
-   @Override
-   public void listAutoDetectionMidiPortNames(
-      final AutoDetectionMidiPortNamesList list, final PlatformType platformType)
-   {
-      list.add(
-         new String[]{"Launch Control XL"},
-         new String[]{"Launch Control XL"});
+    @Override
+    public void listAutoDetectionMidiPortNames(
+            final AutoDetectionMidiPortNamesList list, final PlatformType platformType) {
+        list.add(new String[] {"Launch Control XL"}, new String[] {"Launch Control XL"});
 
-      list.add(
-         new String[]{"Launch Control XL MIDI 1"},
-         new String[]{"Launch Control XL MIDI 1"});
+        list.add(
+                new String[] {"Launch Control XL MIDI 1"},
+                new String[] {"Launch Control XL MIDI 1"});
 
-      // Weird, but it happened on Linux...
-      list.add(
-         new String[]{"Launch Control XL Launch Contro"},
-         new String[]{"Launch Control XL Launch Contro"});
-   }
+        // Weird, but it happened on Linux...
+        list.add(
+                new String[] {"Launch Control XL Launch Contro"},
+                new String[] {"Launch Control XL Launch Contro"});
+    }
 
-   @Override
-   public ControllerExtension createInstance(final ControllerHost host)
-   {
-      return new LaunchControlXlControllerExtension(this, host);
-   }
+    @Override
+    public ControllerExtension createInstance(final ControllerHost host) {
+        return new LaunchControlXlControllerExtension(this, host);
+    }
 
-   @Override
-   public String getName()
-   {
-      return "LCXL Oikontrol";
-   }
+    @Override
+    public String getName() {
+        return "LCXL Oikontrol";
+    }
 
-   @Override
-   public String getAuthor()
-   {
-      return "";
-   }
+    @Override
+    public String getAuthor() {
+        return "";
+    }
 
-   @Override
-   public String getVersion()
-   {
-      return OikontrolVersion.VERSION;
-   }
+    @Override
+    public String getVersion() {
+        return OikontrolVersion.VERSION;
+    }
 
-   @Override
-   public UUID getId()
-   {
-      return EXTENSION_UUID;
-   }
+    @Override
+    public UUID getId() {
+        return EXTENSION_UUID;
+    }
 
-   @Override
-   public int getRequiredAPIVersion()
-   {
-      return 25;
-   }
+    @Override
+    public int getRequiredAPIVersion() {
+        return 25;
+    }
 
-   @Override
-   public String getHelpFilePath()
-   {
-      return "index.html";
-   }
+    @Override
+    public String getHelpFilePath() {
+        return "index.html";
+    }
 
-   public static LaunchControlXlControllerExtensionDefinition getInstance()
-   {
-      return INSTANCE;
-   }
+    public static LaunchControlXlControllerExtensionDefinition getInstance() {
+        return INSTANCE;
+    }
 
-   private static final LaunchControlXlControllerExtensionDefinition INSTANCE = new LaunchControlXlControllerExtensionDefinition();
+    private static final LaunchControlXlControllerExtensionDefinition INSTANCE =
+            new LaunchControlXlControllerExtensionDefinition();
 
-   // Use a unique UUID to avoid clashing with Bitwig's factory Launch Control XL entry.
-   private static final UUID EXTENSION_UUID = UUID.fromString("9f1e9af6-5a1c-4f06-8f4a-b8b686c71111");
+    // Use a unique UUID to avoid clashing with Bitwig's factory Launch Control XL entry.
+    private static final UUID EXTENSION_UUID =
+            UUID.fromString("9f1e9af6-5a1c-4f06-8f4a-b8b686c71111");
 }

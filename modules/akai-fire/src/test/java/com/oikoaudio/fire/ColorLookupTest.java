@@ -1,10 +1,10 @@
 package com.oikoaudio.fire;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.bitwig.extension.api.Color;
 import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ColorLookupTest {
 

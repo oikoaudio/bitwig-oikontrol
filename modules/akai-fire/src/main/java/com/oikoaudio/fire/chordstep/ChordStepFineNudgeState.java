@@ -5,9 +5,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Owns chord-step fine-nudge session state for held-step bank-button gestures.
- */
+/** Owns chord-step fine-nudge session state for held-step bank-button gestures. */
 public final class ChordStepFineNudgeState<E> {
     private final Map<Integer, Map<Integer, Integer>> heldFineStarts = new HashMap<>();
     private final Map<Integer, E> heldEvents = new HashMap<>();
@@ -31,7 +29,9 @@ public final class ChordStepFineNudgeState<E> {
     }
 
     public void putHeldFineStart(final int stepIndex, final int midiNote, final int fineStart) {
-        heldFineStarts.computeIfAbsent(stepIndex, ignored -> new HashMap<>()).put(midiNote, fineStart);
+        heldFineStarts
+                .computeIfAbsent(stepIndex, ignored -> new HashMap<>())
+                .put(midiNote, fineStart);
     }
 
     public void putHeldEvent(final int stepIndex, final E event) {

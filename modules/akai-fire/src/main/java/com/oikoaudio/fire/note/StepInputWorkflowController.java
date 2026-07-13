@@ -129,7 +129,8 @@ public final class StepInputWorkflowController {
         resetGesture();
     }
 
-    public boolean handleBankButton(final boolean pressed, final int amount, final boolean altHeld) {
+    public boolean handleBankButton(
+            final boolean pressed, final int amount, final boolean altHeld) {
         if (!enabled() || !pressed || altHeld) {
             return false;
         }
@@ -171,7 +172,9 @@ public final class StepInputWorkflowController {
     public String stepLabel() {
         final int displayStep = stepIndex + 1;
         final int totalSteps = estimatedTotalSteps(clipLengthBeats, displayStepSizeBeats);
-        return totalSteps > 0 ? "Step %d/%d".formatted(displayStep, totalSteps) : "Step %d".formatted(displayStep);
+        return totalSteps > 0
+                ? "Step %d/%d".formatted(displayStep, totalSteps)
+                : "Step %d".formatted(displayStep);
     }
 
     static int estimatedTotalSteps(final double clipLengthBeats, final double stepSizeBeats) {
@@ -201,19 +204,33 @@ public final class StepInputWorkflowController {
 
     public interface Port {
         boolean drumMode();
+
         void showClipInEditor();
+
         void selectTrackInEditor();
+
         void schedule(Runnable task, long delayMs);
+
         boolean focusTrackHeader();
+
         boolean focusClipEditor();
+
         boolean activateStepTool();
+
         boolean activatePointerTool();
+
         boolean moveToFirstItem();
+
         boolean moveBank(int amount);
+
         void display(String value);
+
         void popup(String value);
+
         void logCandidateActions();
+
         void resetIdleDisplay();
+
         void showLiveIdle();
     }
 }

@@ -1,21 +1,31 @@
 package com.oikoaudio.fire.melodic;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class MelodicPitchPoolControllerTest {
     private static final class AuditionPort implements MelodicPitchPoolController.AuditionPort {
         private boolean enabled = true;
         private String events = "";
 
-        @Override public boolean enabled() { return enabled; }
-        @Override public void noteOn(final int pitch) { events += "on:" + pitch + ";"; }
-        @Override public void noteOff(final int pitch) { events += "off:" + pitch + ";"; }
+        @Override
+        public boolean enabled() {
+            return enabled;
+        }
+
+        @Override
+        public void noteOn(final int pitch) {
+            events += "on:" + pitch + ";";
+        }
+
+        @Override
+        public void noteOff(final int pitch) {
+            events += "off:" + pitch + ";";
+        }
     }
 
     @Test
@@ -62,7 +72,8 @@ class MelodicPitchPoolControllerTest {
         pool.replaceGenerated(List.of(60), "motif");
         final String[] assignment = {""};
 
-        assertEquals(MelodicPitchPoolController.PressResult.ASSIGNED,
+        assertEquals(
+                MelodicPitchPoolController.PressResult.ASSIGNED,
                 pool.pressPitch(64, 7, (step, pitch) -> assignment[0] = step + ":" + pitch));
         assertEquals("7:64", assignment[0]);
         assertEquals(List.of(60), List.copyOf(pool.pitches()));

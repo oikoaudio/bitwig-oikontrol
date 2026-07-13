@@ -1,8 +1,8 @@
 package com.oikoaudio.fire.note;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class LivePadSurfaceLayerPitchGlissDisplayTest {
 

@@ -15,6 +15,5 @@ public final class Midi {
     public static final int SNYC_STOP = 252;
     public static final int SNYC_CONTINUE = 251;
 
-    private Midi() {
-    }
+    private Midi() {}
 }

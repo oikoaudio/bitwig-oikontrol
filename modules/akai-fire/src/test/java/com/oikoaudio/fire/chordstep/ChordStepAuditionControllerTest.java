@@ -1,15 +1,14 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extension.controller.api.NoteInput;
-import com.bitwig.extensions.framework.values.Midi;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
+import com.bitwig.extension.controller.api.NoteInput;
+import com.bitwig.extensions.framework.values.Midi;
+import java.util.Arrays;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class ChordStepAuditionControllerTest {
     @Test
@@ -17,7 +16,7 @@ class ChordStepAuditionControllerTest {
         final NoteInput noteInput = mock(NoteInput.class);
         final ChordStepAuditionController controller = new ChordStepAuditionController(noteInput);
 
-        controller.startAudition(new int[]{60, 64}, 90);
+        controller.startAudition(new int[] {60, 64}, 90);
         controller.stopAudition();
 
         verify(noteInput).sendRawMidiEvent(Midi.NOTE_ON, 60, 90);
@@ -31,8 +30,8 @@ class ChordStepAuditionControllerTest {
         final NoteInput noteInput = mock(NoteInput.class);
         final ChordStepAuditionController controller = new ChordStepAuditionController(noteInput);
 
-        controller.startAudition(new int[]{60}, 90);
-        controller.startAudition(new int[]{67}, 80);
+        controller.startAudition(new int[] {60}, 90);
+        controller.startAudition(new int[] {67}, 80);
 
         verify(noteInput).sendRawMidiEvent(Midi.NOTE_ON, 60, 90);
         verify(noteInput).sendRawMidiEvent(Midi.NOTE_OFF, 60, 0);
@@ -46,7 +45,8 @@ class ChordStepAuditionControllerTest {
 
         controller.configureExpression();
 
-        verify(noteInput).assignPolyphonicAftertouchToExpression(0, NoteInput.NoteExpression.TIMBRE_UP, 1);
+        verify(noteInput)
+                .assignPolyphonicAftertouchToExpression(0, NoteInput.NoteExpression.TIMBRE_UP, 1);
     }
 
     @Test

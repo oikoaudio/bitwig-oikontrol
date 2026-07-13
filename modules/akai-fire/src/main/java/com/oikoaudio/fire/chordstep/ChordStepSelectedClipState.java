@@ -25,7 +25,8 @@ public final class ChordStepSelectedClipState {
         return NoteClipAvailability.requireSelectedClipSlot(canHoldNoteData, slotIndex >= 0);
     }
 
-    public NoteClipAvailability.Failure requireClip(final boolean canHoldNoteData, final boolean hasLoadedContent) {
+    public NoteClipAvailability.Failure requireClip(
+            final boolean canHoldNoteData, final boolean hasLoadedContent) {
         final NoteClipAvailability.Failure slotFailure = requireSelectedClipSlot(canHoldNoteData);
         if (slotFailure != null) {
             return slotFailure;

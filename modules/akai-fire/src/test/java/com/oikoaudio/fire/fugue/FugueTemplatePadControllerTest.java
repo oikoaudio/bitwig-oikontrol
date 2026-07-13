@@ -1,14 +1,13 @@
 package com.oikoaudio.fire.fugue;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class FugueTemplatePadControllerTest {
     private static final double STEP_LENGTH = 0.125;
@@ -31,9 +30,10 @@ class FugueTemplatePadControllerTest {
     @Test
     void findsAndRemovesTheLowestPitchExistingNoteWhenReleasedUnchanged() {
         final FakePort port = new FakePort();
-        port.notes = List.of(
-                new FugueTemplatePadController.Note(7, 67, 100, 0.8, 0.5),
-                new FugueTemplatePadController.Note(6, 64, 80, 0.7, 0.375));
+        port.notes =
+                List.of(
+                        new FugueTemplatePadController.Note(7, 67, 100, 0.8, 0.5),
+                        new FugueTemplatePadController.Note(6, 64, 80, 0.7, 0.375));
         final FugueTemplatePadController controller = controller(port);
 
         controller.press(3, 32);
@@ -107,7 +107,10 @@ class FugueTemplatePadControllerTest {
     }
 
     private static FugueTemplatePadController controller(final FakePort port) {
-        return new FugueTemplatePadController(port, STEP_LENGTH, () -> 60,
+        return new FugueTemplatePadController(
+                port,
+                STEP_LENGTH,
+                () -> 60,
                 (pitch, degrees) -> Math.max(0, Math.min(127, pitch + degrees)));
     }
 
@@ -130,10 +133,15 @@ class FugueTemplatePadControllerTest {
 
         @Override
         public void write(final FugueTemplatePadController.Edit edit) {
-            writes.add(new Write(edit.step(), edit.pitch(), edit.velocity(), edit.duration(), edit.chance()));
+            writes.add(
+                    new Write(
+                            edit.step(),
+                            edit.pitch(),
+                            edit.velocity(),
+                            edit.duration(),
+                            edit.chance()));
         }
     }
 
-    private record Write(int step, int pitch, int velocity, double duration, double chance) {
-    }
+    private record Write(int step, int pitch, int velocity, double duration, double chance) {}
 }

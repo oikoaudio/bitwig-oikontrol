@@ -1,21 +1,39 @@
 package com.oikoaudio.fire.nestedrhythm;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class NestedRhythmParameterStateTest {
     @Test
     void defaultsProduceTheBaselineGeneratorAndExpressionSettings() {
         final NestedRhythmParameterState state = new NestedRhythmParameterState();
 
-        assertEquals(new NestedRhythmGenerator.Settings(60, 1.0, 3, 0, 0, 2, 0, 0,
-                        NestedRhythmGenerator.DEFAULT_VELOCITY_DEPTH, 100, 0, 0, 0.0,
-                        7, 8, 1, 1.0, NestedRhythmGenerator.RatchetTargetMode.DEFAULT,
+        assertEquals(
+                new NestedRhythmGenerator.Settings(
+                        60,
+                        1.0,
+                        3,
+                        0,
+                        0,
+                        2,
+                        0,
+                        0,
+                        NestedRhythmGenerator.DEFAULT_VELOCITY_DEPTH,
+                        100,
+                        0,
+                        0,
+                        0.0,
+                        7,
+                        8,
+                        1,
+                        1.0,
+                        NestedRhythmGenerator.RatchetTargetMode.DEFAULT,
                         NestedRhythmGenerator.DensityDirection.KEEP_STRONG),
                 state.generatorSettings(60, 7, 8));
-        assertEquals(new NestedRhythmExpressionSettings(0, 0, 0, 0, 0, 0, 0, 0, 0,
-                1, 1, 0, 0, 0.125), state.expressionSettings(0.125));
+        assertEquals(
+                new NestedRhythmExpressionSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0.125),
+                state.expressionSettings(0.125));
     }
 
     @Test

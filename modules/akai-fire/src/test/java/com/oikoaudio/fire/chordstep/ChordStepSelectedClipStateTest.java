@@ -1,16 +1,16 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLightState;
-import com.oikoaudio.fire.sequence.NoteClipAvailability;
-import com.oikoaudio.fire.sequence.SelectedClipSlotState;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.sequence.NoteClipAvailability;
+import com.oikoaudio.fire.sequence.SelectedClipSlotState;
+import org.junit.jupiter.api.Test;
 
 class ChordStepSelectedClipStateTest {
 
@@ -76,9 +76,8 @@ class ChordStepSelectedClipStateTest {
         assertEquals("No Clip", failure.title());
     }
 
-    private static SelectedClipSlotState selectedState(final int slotIndex,
-                                                       final boolean hasContent,
-                                                       final RgbLightState color) {
+    private static SelectedClipSlotState selectedState(
+            final int slotIndex, final boolean hasContent, final RgbLightState color) {
         return SelectedClipSlotState.fromValues(slotIndex, hasContent, color);
     }
 }

@@ -1,18 +1,14 @@
 package com.oikoaudio.fire.testutil;
 
 import com.bitwig.extension.api.Color;
-import com.bitwig.extension.callback.BooleanValueChangedCallback;
-import com.bitwig.extension.callback.ColorValueChangedCallback;
 import com.bitwig.extension.callback.DoubleValueChangedCallback;
 import com.bitwig.extension.controller.api.BooleanValue;
 import com.bitwig.extension.controller.api.SettableBeatTimeValue;
 import com.bitwig.extension.controller.api.SettableColorValue;
-
 import java.lang.reflect.Proxy;
 
 public final class BitwigApiValueStubs {
-    private BitwigApiValueStubs() {
-    }
+    private BitwigApiValueStubs() {}
 
     public static final class BooleanValueStub {
         private final boolean value;
@@ -24,22 +20,24 @@ public final class BitwigApiValueStubs {
         }
 
         public BooleanValue value() {
-            return (BooleanValue) Proxy.newProxyInstance(
-                    BooleanValue.class.getClassLoader(),
-                    new Class[]{BooleanValue.class},
-                    (proxy, method, args) -> switch (method.getName()) {
-                        case "get", "getAsBoolean" -> value;
-                        case "markInterested" -> {
-                            markInterestedCalls++;
-                            yield null;
-                        }
-                        case "addValueObserver" -> {
-                            addObserverCalls++;
-                            yield null;
-                        }
-                        case "toString" -> "BooleanValueStub[" + value + "]";
-                        default -> defaultValue(method.getReturnType());
-                    });
+            return (BooleanValue)
+                    Proxy.newProxyInstance(
+                            BooleanValue.class.getClassLoader(),
+                            new Class[] {BooleanValue.class},
+                            (proxy, method, args) ->
+                                    switch (method.getName()) {
+                                        case "get", "getAsBoolean" -> value;
+                                        case "markInterested" -> {
+                                            markInterestedCalls++;
+                                            yield null;
+                                        }
+                                        case "addValueObserver" -> {
+                                            addObserverCalls++;
+                                            yield null;
+                                        }
+                                        case "toString" -> "BooleanValueStub[" + value + "]";
+                                        default -> defaultValue(method.getReturnType());
+                                    });
         }
 
         public int markInterestedCalls() {
@@ -61,22 +59,24 @@ public final class BitwigApiValueStubs {
         }
 
         public SettableColorValue value() {
-            return (SettableColorValue) Proxy.newProxyInstance(
-                    SettableColorValue.class.getClassLoader(),
-                    new Class[]{SettableColorValue.class},
-                    (proxy, method, args) -> switch (method.getName()) {
-                        case "get" -> color;
-                        case "markInterested" -> {
-                            markInterestedCalls++;
-                            yield null;
-                        }
-                        case "addValueObserver" -> {
-                            addObserverCalls++;
-                            yield null;
-                        }
-                        case "toString" -> "ColorValueStub";
-                        default -> defaultValue(method.getReturnType());
-                    });
+            return (SettableColorValue)
+                    Proxy.newProxyInstance(
+                            SettableColorValue.class.getClassLoader(),
+                            new Class[] {SettableColorValue.class},
+                            (proxy, method, args) ->
+                                    switch (method.getName()) {
+                                        case "get" -> color;
+                                        case "markInterested" -> {
+                                            markInterestedCalls++;
+                                            yield null;
+                                        }
+                                        case "addValueObserver" -> {
+                                            addObserverCalls++;
+                                            yield null;
+                                        }
+                                        case "toString" -> "ColorValueStub";
+                                        default -> defaultValue(method.getReturnType());
+                                    });
         }
 
         public Color color() {
@@ -96,17 +96,19 @@ public final class BitwigApiValueStubs {
         private DoubleValueChangedCallback observer;
 
         public SettableBeatTimeValue value() {
-            return (SettableBeatTimeValue) Proxy.newProxyInstance(
-                    SettableBeatTimeValue.class.getClassLoader(),
-                    new Class[]{SettableBeatTimeValue.class},
-                    (proxy, method, args) -> switch (method.getName()) {
-                        case "addValueObserver" -> {
-                            observer = (DoubleValueChangedCallback) args[0];
-                            yield null;
-                        }
-                        case "toString" -> "BeatTimeValueStub";
-                        default -> defaultValue(method.getReturnType());
-                    });
+            return (SettableBeatTimeValue)
+                    Proxy.newProxyInstance(
+                            SettableBeatTimeValue.class.getClassLoader(),
+                            new Class[] {SettableBeatTimeValue.class},
+                            (proxy, method, args) ->
+                                    switch (method.getName()) {
+                                        case "addValueObserver" -> {
+                                            observer = (DoubleValueChangedCallback) args[0];
+                                            yield null;
+                                        }
+                                        case "toString" -> "BeatTimeValueStub";
+                                        default -> defaultValue(method.getReturnType());
+                                    });
         }
 
         public void emit(final double value) {

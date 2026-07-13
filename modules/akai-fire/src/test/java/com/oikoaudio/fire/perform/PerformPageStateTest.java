@@ -1,10 +1,10 @@
 package com.oikoaudio.fire.perform;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
 
 class PerformPageStateTest {
     @Test
@@ -20,14 +20,16 @@ class PerformPageStateTest {
 
     @Test
     void enteringAnyTopLevelPageLeavesMixDeviceOverlays() {
-        final PerformPageState deviceLayers = PerformPageState.launcher()
-                .withTrackActionMode(true)
-                .withMixDeviceMode(true)
-                .withDeviceLayers(true);
+        final PerformPageState deviceLayers =
+                PerformPageState.launcher()
+                        .withTrackActionMode(true)
+                        .withMixDeviceMode(true)
+                        .withDeviceLayers(true);
 
         assertEquals(PerformPageState.Page.SCENE_LAUNCH, deviceLayers.toggleSceneLaunch().page());
         assertEquals(PerformPageState.Page.BIRDS_EYE, deviceLayers.toggleBirdsEye().page());
-        assertEquals(PerformPageState.Page.LAUNCHER, deviceLayers.withTrackActionMode(false).page());
+        assertEquals(
+                PerformPageState.Page.LAUNCHER, deviceLayers.withTrackActionMode(false).page());
     }
 
     @Test
@@ -49,10 +51,11 @@ class PerformPageStateTest {
 
     @Test
     void reapplyingRememberedMixModePreservesItsCurrentSubpage() {
-        final PerformPageState devices = PerformPageState.launcher()
-                .withTrackActionMode(true)
-                .withMixDeviceMode(true)
-                .withMixDevicePage(1);
+        final PerformPageState devices =
+                PerformPageState.launcher()
+                        .withTrackActionMode(true)
+                        .withMixDeviceMode(true)
+                        .withMixDevicePage(1);
 
         assertEquals(devices, devices.withTrackActionMode(true));
     }
@@ -70,10 +73,11 @@ class PerformPageStateTest {
 
     @Test
     void deviceLayerOverlayReturnsToTheSameDevicePage() {
-        final PerformPageState devices = PerformPageState.launcher()
-                .withTrackActionMode(true)
-                .withMixDeviceMode(true)
-                .withMixDevicePage(2);
+        final PerformPageState devices =
+                PerformPageState.launcher()
+                        .withTrackActionMode(true)
+                        .withMixDeviceMode(true)
+                        .withMixDevicePage(2);
 
         assertEquals(devices, devices.withDeviceLayers(true).withDeviceLayers(false));
     }
@@ -83,7 +87,8 @@ class PerformPageStateTest {
         final PerformPageState scene = PerformPageState.launcher().toggleSceneLaunch();
         assertEquals(scene, scene.leaveBirdsEye());
 
-        final PerformPageState launcher = PerformPageState.launcher().toggleBirdsEye().leaveBirdsEye();
+        final PerformPageState launcher =
+                PerformPageState.launcher().toggleBirdsEye().leaveBirdsEye();
         assertEquals(PerformPageState.Page.LAUNCHER, launcher.page());
         assertFalse(launcher.isBirdsEye());
     }

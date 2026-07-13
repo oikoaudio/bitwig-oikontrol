@@ -1,19 +1,18 @@
 package com.oikoaudio.fire.chordstep;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.UnaryOperator;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.Test;
 
 class ChordStepPadControllerTest {
     private static final int CLIP_ROW_PAD_COUNT = 16;
@@ -108,11 +107,14 @@ class ChordStepPadControllerTest {
         return controller(new ChordStepPadSurface(), host);
     }
 
-    private static ChordStepPadController controller(final ChordStepPadSurface surface, final FakeHost host) {
-        return new ChordStepPadController(surface, CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, host);
+    private static ChordStepPadController controller(
+            final ChordStepPadSurface surface, final FakeHost host) {
+        return new ChordStepPadController(
+                surface, CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, host);
     }
 
-    private static NoteStep note(final int x, final int recurrenceLength, final int recurrenceMask) {
+    private static NoteStep note(
+            final int x, final int recurrenceLength, final int recurrenceMask) {
         final NoteStep note = mock(NoteStep.class);
         when(note.x()).thenReturn(x);
         when(note.recurrenceLength()).thenReturn(recurrenceLength);
@@ -187,7 +189,8 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public boolean assignSelectedChordToSteps(final Set<Integer> stepIndexes, final int velocity) {
+        public boolean assignSelectedChordToSteps(
+                final Set<Integer> stepIndexes, final int velocity) {
             assignedSteps = Set.copyOf(stepIndexes);
             assignedVelocity = velocity;
             return true;
@@ -215,10 +218,12 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public void applyChordStepRecurrence(final List<NoteStep> targets,
-                                             final UnaryOperator<RecurrencePattern> updater) {
+        public void applyChordStepRecurrence(
+                final List<NoteStep> targets, final UnaryOperator<RecurrencePattern> updater) {
             recurrenceEdits++;
-            updater.apply(RecurrencePattern.of(targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
+            updater.apply(
+                    RecurrencePattern.of(
+                            targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
         }
 
         @Override
@@ -277,7 +282,8 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public boolean canExtendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+        public boolean canExtendHeldChordRange(
+                final int anchorStepIndex, final int targetStepIndex) {
             return true;
         }
 

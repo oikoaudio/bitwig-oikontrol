@@ -1,127 +1,298 @@
 package com.oikoaudio.fire.sequence;
 
-import java.util.List;
-
+import com.bitwig.extension.controller.api.NoteOccurrence;
+import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteDoubleGetter;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteDoubleSetter;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteIntGetter;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer.NoteIntSetter;
-import com.bitwig.extension.controller.api.NoteOccurrence;
-import com.bitwig.extension.controller.api.NoteStep;
+import java.util.List;
 
 public enum NoteStepAccess implements EncoderAccess {
+    VELOCITY(
+            "Velocity",
+            ns -> ns.velocity(), //
+            (final NoteStep ns, final double v) -> ns.setVelocity(v), //
+            NoteValueUnit.MIDI,
+            0,
+            127,
+            1,
+            0.25,
+            1), //
+    CHANCE(
+            "Chance",
+            ns -> ns.chance(), //
+            (final NoteStep ns, final double v) -> ns.setChance(v), //
+            NoteValueUnit.PERCENT,
+            0,
+            1,
+            0.05,
+            1,
+            1.0,
+            1),
+    REPEATS(
+            "Repeats",
+            ns -> ns.repeatCount(), //
+            (final NoteStep ns, final int v) -> ns.setRepeatCount(v), //
+            NoteValueUnit.NONE,
+            0,
+            16,
+            1,
+            2,
+            0.0,
+            3),
+    TIMBRE(
+            "Timbre",
+            ns -> ns.timbre(), //
+            (final NoteStep ns, final double v) -> ns.setTimbre(v), //
+            NoteValueUnit.PERCENT,
+            -1,
+            1,
+            0.01,
+            0.25,
+            0.0,
+            1),
+    VELOCITY_SPREAD(
+            "Vel.Spread",
+            ns -> ns.velocitySpread(), //
+            (final NoteStep ns, final double v) -> ns.setVelocitySpread(v), //
+            NoteValueUnit.PERCENT,
+            0,
+            1,
+            0.01,
+            0.25,
+            0.0,
+            1),
+    PRESSURE(
+            "Pressure",
+            ns -> ns.pressure(), //
+            (final NoteStep ns, final double v) -> ns.setPressure(v), //
+            NoteValueUnit.PERCENT,
+            0,
+            1,
+            0.01,
+            0.25,
+            1),
+    DURATION(
+            "N.Length",
+            ns -> ns.duration(), //
+            (final NoteStep ns, final double v) -> ns.setDuration(v), //
+            NoteValueUnit.NOTE_LEN,
+            0,
+            1,
+            0.01,
+            0.5,
+            2),
+    OCCURENCE("Occurence", NoteValueUnit.OCCURENCE, 1, 4, 2), //
+    RECURRENCE(
+            "Recurrence",
+            ns -> ns.recurrenceLength(), //
+            (final NoteStep ns, final int v) -> ns.setRecurrence(v, ns.recurrenceMask()), //
+            NoteValueUnit.RECURRENCE,
+            1,
+            8,
+            1,
+            2,
+            0.0,
+            2),
+    REPEATCURVE(
+            "Repeat Curve",
+            ns -> ns.repeatCurve(), //
+            (final NoteStep ns, final double v) -> ns.setRepeatCurve(v), //
+            NoteValueUnit.PERCENT,
+            -1,
+            1,
+            0.01,
+            0.25,
+            0.0,
+            1),
+    REPEAT_VEL_CRV(
+            "Rpt.Vel.Crv",
+            ns -> ns.repeatVelocityCurve(), //
+            (final NoteStep ns, final double v) -> ns.setRepeatVelocityCurve(v), //
+            NoteValueUnit.PERCENT,
+            -1,
+            1,
+            0.01,
+            0.25,
+            0.0,
+            1),
+    REPEAT_VEL_END(
+            "Rpt.Vel.End",
+            ns -> ns.repeatVelocityEnd(), //
+            (final NoteStep ns, final double v) -> ns.setRepeatVelocityEnd(v), //
+            NoteValueUnit.PERCENT,
+            -1,
+            1,
+            0.01,
+            0.25,
+            0.0,
+            1),
+    PITCH(
+            "Pitch",
+            ns -> ns.transpose(), //
+            (final NoteStep ns, final double v) -> ns.setTranspose(v), //
+            NoteValueUnit.SEMI,
+            -96,
+            96,
+            1,
+            1,
+            0.0,
+            2);
 
-	VELOCITY("Velocity", ns -> ns.velocity(), //
-			(final NoteStep ns, final double v) -> ns.setVelocity(v), //
-			NoteValueUnit.MIDI, 0, 127, 1, 0.25, 1), //
-	CHANCE("Chance", ns -> ns.chance(), //
-			(final NoteStep ns, final double v) -> ns.setChance(v), //
-			NoteValueUnit.PERCENT, 0, 1, 0.05, 1, 1.0, 1),
-	REPEATS("Repeats", ns -> ns.repeatCount(), //
-			(final NoteStep ns, final int v) -> ns.setRepeatCount(v), //
-			NoteValueUnit.NONE, 0, 16, 1, 2, 0.0, 3),
-	TIMBRE("Timbre", ns -> ns.timbre(), //
-			(final NoteStep ns, final double v) -> ns.setTimbre(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
-	VELOCITY_SPREAD("Vel.Spread", ns -> ns.velocitySpread(), //
-			(final NoteStep ns, final double v) -> ns.setVelocitySpread(v), //
-			NoteValueUnit.PERCENT, 0, 1, 0.01, 0.25, 0.0, 1),
-	PRESSURE("Pressure", ns -> ns.pressure(), //
-			(final NoteStep ns, final double v) -> ns.setPressure(v), //
-			NoteValueUnit.PERCENT, 0, 1, 0.01, 0.25, 1),
-	DURATION("N.Length", ns -> ns.duration(), //
-			(final NoteStep ns, final double v) -> ns.setDuration(v), //
-			NoteValueUnit.NOTE_LEN, 0, 1, 0.01, 0.5, 2),
-	OCCURENCE("Occurence", NoteValueUnit.OCCURENCE, 1, 4, 2), //
-	RECURRENCE("Recurrence", ns -> ns.recurrenceLength(), //
-			(final NoteStep ns, final int v) -> ns.setRecurrence(v, ns.recurrenceMask()), //
-			NoteValueUnit.RECURRENCE, 1, 8, 1, 2, 0.0, 2),
-	REPEATCURVE("Repeat Curve", ns -> ns.repeatCurve(), //
-			(final NoteStep ns, final double v) -> ns.setRepeatCurve(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
-	REPEAT_VEL_CRV("Rpt.Vel.Crv", ns -> ns.repeatVelocityCurve(), //
-			(final NoteStep ns, final double v) -> ns.setRepeatVelocityCurve(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
-	REPEAT_VEL_END("Rpt.Vel.End", ns -> ns.repeatVelocityEnd(), //
-			(final NoteStep ns, final double v) -> ns.setRepeatVelocityEnd(v), //
-			NoteValueUnit.PERCENT, -1, 1, 0.01, 0.25, 0.0, 1),
-	PITCH("Pitch", ns -> ns.transpose(), //
-			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
-			NoteValueUnit.SEMI, -96, 96, 1, 1, 0.0, 2);
+    //	TRANSPOSE("Transpose", ns -> ns.transpose(), //
+    //			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
+    //			NoteValueUnit.SEMI, -24, 24, 1.0, 1.0, 0.0)
 
-//	TRANSPOSE("Transpose", ns -> ns.transpose(), //
-//			(final NoteStep ns, final double v) -> ns.setTranspose(v), //
-//			NoteValueUnit.SEMI, -24, 24, 1.0, 1.0, 0.0)
-
-	private final String name;
-	private final NoteDoubleGetter doubleGetter;
-	private final NoteIntGetter intGetter;
-	private final NoteDoubleSetter doubleSetter;
-	private final NoteIntSetter intSetter;
-	private final NoteValueUnit unit;
-	private final double min;
-	private final double max;
-	private final double incStep;
-	private final double resolution;
-	private final Double resetValue;
+    private final String name;
+    private final NoteDoubleGetter doubleGetter;
+    private final NoteIntGetter intGetter;
+    private final NoteDoubleSetter doubleSetter;
+    private final NoteIntSetter intSetter;
+    private final NoteValueUnit unit;
+    private final double min;
+    private final double max;
+    private final double incStep;
+    private final double resolution;
+    private final Double resetValue;
     private final int stepThreshold;
 
-	NoteStepAccess(final String name, final NoteValueUnit unit, final double increment,
-			final double encoderResolution, final int stepThreshold) {
-		this(name, null, null, null, null, unit, 0.0, 1.0, increment, encoderResolution, null, stepThreshold);
-	}
-
-	NoteStepAccess(final String name, final NoteDoubleGetter getterDoubl, final NoteDoubleSetter setterDoubl,
-			final NoteValueUnit unit, final double min, final double max, final double increment,
-			final double encoderResolution, final int stepThreshold) {
-		this(name, getterDoubl, setterDoubl, unit, min, max, increment, encoderResolution, null, stepThreshold);
-	}
-
-	NoteStepAccess(final String name, final NoteDoubleGetter getterDoubl, final NoteDoubleSetter setterDoubl,
-			final NoteValueUnit unit, final double min, final double max, final double increment,
-			final double encoderResolution, final Double resetValue, final int stepThreshold) {
-		this(name, getterDoubl, setterDoubl, null, null, unit, min, max, increment, encoderResolution, resetValue,
-                stepThreshold);
-	}
-
-	NoteStepAccess(final String name, final NoteIntGetter intGetter, final NoteIntSetter intSetter,
-			final NoteValueUnit unit, final double min, final double max, final double increment,
-			final double encoderResolution, final Double resetValue, final int stepThreshold) {
-		this(name, null, null, intGetter, intSetter, unit, min, max, increment, encoderResolution, resetValue,
-                stepThreshold);
-	}
-
-	NoteStepAccess(final String name, final NoteDoubleGetter getterDoubl, final NoteDoubleSetter setterDoubl,
-			final NoteIntGetter intGetter, final NoteIntSetter intSetter, final NoteValueUnit unit, final double min,
-			final double max, final double increment, final double encoderResolution, final Double resetValue,
+    NoteStepAccess(
+            final String name,
+            final NoteValueUnit unit,
+            final double increment,
+            final double encoderResolution,
             final int stepThreshold) {
-		this.name = name;
-		this.doubleGetter = getterDoubl;
-		this.doubleSetter = setterDoubl;
-		this.intGetter = intGetter;
-		this.intSetter = intSetter;
-		this.unit = unit;
-		this.min = min;
-		this.max = max;
-		this.incStep = increment;
-		this.resolution = encoderResolution;
-		this.resetValue = resetValue;
+        this(
+                name,
+                null,
+                null,
+                null,
+                null,
+                unit,
+                0.0,
+                1.0,
+                increment,
+                encoderResolution,
+                null,
+                stepThreshold);
+    }
+
+    NoteStepAccess(
+            final String name,
+            final NoteDoubleGetter getterDoubl,
+            final NoteDoubleSetter setterDoubl,
+            final NoteValueUnit unit,
+            final double min,
+            final double max,
+            final double increment,
+            final double encoderResolution,
+            final int stepThreshold) {
+        this(
+                name,
+                getterDoubl,
+                setterDoubl,
+                unit,
+                min,
+                max,
+                increment,
+                encoderResolution,
+                null,
+                stepThreshold);
+    }
+
+    NoteStepAccess(
+            final String name,
+            final NoteDoubleGetter getterDoubl,
+            final NoteDoubleSetter setterDoubl,
+            final NoteValueUnit unit,
+            final double min,
+            final double max,
+            final double increment,
+            final double encoderResolution,
+            final Double resetValue,
+            final int stepThreshold) {
+        this(
+                name,
+                getterDoubl,
+                setterDoubl,
+                null,
+                null,
+                unit,
+                min,
+                max,
+                increment,
+                encoderResolution,
+                resetValue,
+                stepThreshold);
+    }
+
+    NoteStepAccess(
+            final String name,
+            final NoteIntGetter intGetter,
+            final NoteIntSetter intSetter,
+            final NoteValueUnit unit,
+            final double min,
+            final double max,
+            final double increment,
+            final double encoderResolution,
+            final Double resetValue,
+            final int stepThreshold) {
+        this(
+                name,
+                null,
+                null,
+                intGetter,
+                intSetter,
+                unit,
+                min,
+                max,
+                increment,
+                encoderResolution,
+                resetValue,
+                stepThreshold);
+    }
+
+    NoteStepAccess(
+            final String name,
+            final NoteDoubleGetter getterDoubl,
+            final NoteDoubleSetter setterDoubl,
+            final NoteIntGetter intGetter,
+            final NoteIntSetter intSetter,
+            final NoteValueUnit unit,
+            final double min,
+            final double max,
+            final double increment,
+            final double encoderResolution,
+            final Double resetValue,
+            final int stepThreshold) {
+        this.name = name;
+        this.doubleGetter = getterDoubl;
+        this.doubleSetter = setterDoubl;
+        this.intGetter = intGetter;
+        this.intSetter = intSetter;
+        this.unit = unit;
+        this.min = min;
+        this.max = max;
+        this.incStep = increment;
+        this.resolution = encoderResolution;
+        this.resetValue = resetValue;
         this.stepThreshold = stepThreshold;
-	}
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public NoteValueUnit getUnit() {
-		return unit;
-	}
+    public NoteValueUnit getUnit() {
+        return unit;
+    }
 
-	@Override
-	public double getResolution() {
-		return resolution;
-	}
+    @Override
+    public double getResolution() {
+        return resolution;
+    }
 
     public int getStepThreshold() {
         return stepThreshold;
@@ -138,66 +309,67 @@ public enum NoteStepAccess implements EncoderAccess {
         return stepThreshold <= 1;
     }
 
-	public double getDouble(final NoteStep step) {
-		return doubleGetter.get(step);
-	}
+    public double getDouble(final NoteStep step) {
+        return doubleGetter.get(step);
+    }
 
-	public int getInt(final NoteStep step) {
-		if (intGetter != null) {
-			return intGetter.get(step);
-		}
-		return (int) (doubleGetter.get(step) * max);
-	}
+    public int getInt(final NoteStep step) {
+        if (intGetter != null) {
+            return intGetter.get(step);
+        }
+        return (int) (doubleGetter.get(step) * max);
+    }
 
-	public Double applyDoubleIncrement(final int inc, final NoteStep step) {
-		final double value = getDouble(step);
-		final double newValue = Math.min(Math.max(min, value + inc * this.incStep), max);
-		if (newValue != value) {
-			doubleSetter.set(step, newValue);
-			return newValue;
-		}
-		return null;
-	}
+    public Double applyDoubleIncrement(final int inc, final NoteStep step) {
+        final double value = getDouble(step);
+        final double newValue = Math.min(Math.max(min, value + inc * this.incStep), max);
+        if (newValue != value) {
+            doubleSetter.set(step, newValue);
+            return newValue;
+        }
+        return null;
+    }
 
-	public Integer applyIntIncrement(final int inc, final NoteStep step) {
-		final int value = getInt(step);
-		final int newValue = Math.min(Math.max(getMinInt(), value + inc * (int) incStep), getMaxInt());
-		if (newValue != value) {
-			if (intSetter != null) {
-				intSetter.set(step, newValue);
-			} else {
-				doubleSetter.set(step, newValue / max);
-			}
-			return newValue;
-		}
-		return null;
-	}
+    public Integer applyIntIncrement(final int inc, final NoteStep step) {
+        final int value = getInt(step);
+        final int newValue =
+                Math.min(Math.max(getMinInt(), value + inc * (int) incStep), getMaxInt());
+        if (newValue != value) {
+            if (intSetter != null) {
+                intSetter.set(step, newValue);
+            } else {
+                doubleSetter.set(step, newValue / max);
+            }
+            return newValue;
+        }
+        return null;
+    }
 
-	public int getMaxInt() {
-		return (int) max;
-	}
+    public int getMaxInt() {
+        return (int) max;
+    }
 
-	public int getMinInt() {
-		return (int) min;
-	}
+    public int getMinInt() {
+        return (int) min;
+    }
 
-	public double getMax() {
-		return max;
-	}
+    public double getMax() {
+        return max;
+    }
 
-	public double getMin() {
-		return min;
-	}
+    public double getMin() {
+        return min;
+    }
 
-	boolean canReset() {
-		return resetValue != null
+    boolean canReset() {
+        return resetValue != null
                 || this == VELOCITY
                 || this == PRESSURE
                 || this == DURATION
                 || this == OCCURENCE;
-	}
+    }
 
-	void applyReset(final StepSequencerHost host, final List<NoteStep> onNotes) {
+    void applyReset(final StepSequencerHost host, final List<NoteStep> onNotes) {
         if (this == VELOCITY) {
             final double defaultVelocity = host.getDefaultStepVelocity() / 127.0;
             for (final NoteStep noteStep : onNotes) {
@@ -225,18 +397,18 @@ public enum NoteStepAccess implements EncoderAccess {
             }
             return;
         }
-		if (resetValue == null) {
-			return;
-		}
-		if (intSetter != null) {
-			final int rv = resetValue.intValue();
-			for (final NoteStep noteStep : onNotes) {
-				intSetter.set(noteStep, rv);
-			}
-		} else {
-			for (final NoteStep noteStep : onNotes) {
-				doubleSetter.set(noteStep, resetValue.doubleValue());
-			}
-		}
-	}
+        if (resetValue == null) {
+            return;
+        }
+        if (intSetter != null) {
+            final int rv = resetValue.intValue();
+            for (final NoteStep noteStep : onNotes) {
+                intSetter.set(noteStep, rv);
+            }
+        } else {
+            for (final NoteStep noteStep : onNotes) {
+                doubleSetter.set(noteStep, resetValue.doubleValue());
+            }
+        }
+    }
 }

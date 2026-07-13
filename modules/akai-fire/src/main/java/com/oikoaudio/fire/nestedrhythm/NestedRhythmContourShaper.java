@@ -3,64 +3,61 @@ package com.oikoaudio.fire.nestedrhythm;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 
 final class NestedRhythmContourShaper {
-    private NestedRhythmContourShaper() {
-    }
+    private NestedRhythmContourShaper() {}
 
-    static double shapeUnitExpression(final int order,
-                                      final double center,
-                                      final double spread,
-                                      final int rotation) {
+    static double shapeUnitExpression(
+            final int order, final double center, final double spread, final int rotation) {
         return clampUnit(center + spread * contourNormalized(order, rotation));
     }
 
-    static double shapeSignedExpression(final int order,
-                                        final double center,
-                                        final double spread,
-                                        final int rotation) {
+    static double shapeSignedExpression(
+            final int order, final double center, final double spread, final int rotation) {
         return clampSignedUnit(center + spread * contourNormalized(order, rotation));
     }
 
-    static double shapePitchExpression(final int order,
-                                       final double center,
-                                       final double spread,
-                                       final int rotation) {
+    static double shapePitchExpression(
+            final int order, final double center, final double spread, final int rotation) {
         return clampPitchExpression(center + spread * contourNormalized(order, rotation));
     }
 
-    static double shapeChance(final int order,
-                              final NestedRhythmPattern.Role role,
-                              final double indispensability,
-                              final double baseline,
-                              final double playChance,
-                              final int rotation) {
+    static double shapeChance(
+            final int order,
+            final NestedRhythmPattern.Role role,
+            final double indispensability,
+            final double baseline,
+            final double playChance,
+            final int rotation) {
         final double contour = (1.0 - contourNormalized(order, rotation)) * 0.5;
         final double weakness = 1.0 - Math.max(0.0, Math.min(1.0, indispensability));
-        final double attenuation = (1.0 - playChance) * chanceRoleWeight(role)
-                * (0.35 + weakness * 0.65) * contour;
+        final double attenuation =
+                (1.0 - playChance) * chanceRoleWeight(role) * (0.35 + weakness * 0.65) * contour;
         return clampUnit(baseline - attenuation);
     }
 
-    static double shapeChance(final int order,
-                              final NestedRhythmPattern.Role role,
-                              final double baseline,
-                              final double playChance,
-                              final int rotation) {
+    static double shapeChance(
+            final int order,
+            final NestedRhythmPattern.Role role,
+            final double baseline,
+            final double playChance,
+            final int rotation) {
         return shapeChance(order, role, 0.5, baseline, playChance, rotation);
     }
 
-    static RecurrencePattern generatedRecurrence(final int order,
-                                                 final NestedRhythmPattern.Role role,
-                                                 final double indispensability,
-                                                 final double recurrenceDepth) {
+    static RecurrencePattern generatedRecurrence(
+            final int order,
+            final NestedRhythmPattern.Role role,
+            final double indispensability,
+            final double recurrenceDepth) {
         if (recurrenceDepth <= 0.0001) {
             return RecurrencePattern.of(0, 0);
         }
         final int span = RecurrencePattern.EDITOR_DEFAULT_SPAN;
         final double rankWeakness = 1.0 - Math.max(0.0, Math.min(1.0, indispensability));
         final double weakness = ((1.0 - contourNormalized(order, 0)) * 0.25) + rankWeakness * 0.75;
-        final double dropoutStrength = recurrenceDepth * recurrenceRoleWeight(role) * (0.5 + weakness * 0.5);
-        final int dropoutCount = Math.max(0, Math.min(span - 1,
-                (int) Math.round(dropoutStrength * (span - 1))));
+        final double dropoutStrength =
+                recurrenceDepth * recurrenceRoleWeight(role) * (0.5 + weakness * 0.5);
+        final int dropoutCount =
+                Math.max(0, Math.min(span - 1, (int) Math.round(dropoutStrength * (span - 1))));
         if (dropoutCount == 0) {
             return RecurrencePattern.of(0, 0);
         }
@@ -68,9 +65,8 @@ final class NestedRhythmContourShaper {
         return RecurrencePattern.of(span, distributedMask(span, activeCount, order));
     }
 
-    static RecurrencePattern generatedRecurrence(final int order,
-                                                 final NestedRhythmPattern.Role role,
-                                                 final double recurrenceDepth) {
+    static RecurrencePattern generatedRecurrence(
+            final int order, final NestedRhythmPattern.Role role, final double recurrenceDepth) {
         return generatedRecurrence(order, role, 0.5, recurrenceDepth);
     }
 

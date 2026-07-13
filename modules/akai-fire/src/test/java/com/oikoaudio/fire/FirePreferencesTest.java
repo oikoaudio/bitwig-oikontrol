@@ -1,19 +1,5 @@
 package com.oikoaudio.fire;
 
-import com.bitwig.extension.callback.BooleanValueChangedCallback;
-import com.bitwig.extension.callback.DoubleValueChangedCallback;
-import com.bitwig.extension.callback.EnumValueChangedCallback;
-import com.bitwig.extension.controller.api.Preferences;
-import com.bitwig.extension.controller.api.SettableBooleanValue;
-import com.bitwig.extension.controller.api.SettableEnumValue;
-import com.bitwig.extension.controller.api.SettableRangedValue;
-import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,10 +7,23 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.callback.BooleanValueChangedCallback;
+import com.bitwig.extension.callback.DoubleValueChangedCallback;
+import com.bitwig.extension.callback.EnumValueChangedCallback;
+import com.bitwig.extension.controller.api.Preferences;
+import com.bitwig.extension.controller.api.SettableBooleanValue;
+import com.bitwig.extension.controller.api.SettableEnumValue;
+import com.bitwig.extension.controller.api.SettableRangedValue;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Test;
 
 class FirePreferencesTest {
     @Test
@@ -55,12 +54,18 @@ class FirePreferencesTest {
         assertEquals(FireControlPreferences.PAD_SATURATION_DEFAULT, preferences.padSaturation());
 
         verify(listener).launchQuantizationChanged("1");
-        verify(listener).mainEncoderStartupChanged(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
-        verify(listener).screenMessageHoldChanged(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS);
-        verify(listener).encoderLegendPositionChanged(FireControlPreferences.ENCODER_LEGEND_POSITION_BOTTOM);
-        verify(listener).padAppearanceChanged(
-                FireControlPreferences.PAD_BRIGHTNESS_DEFAULT,
-                FireControlPreferences.PAD_SATURATION_DEFAULT);
+        verify(listener)
+                .mainEncoderStartupChanged(
+                        FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
+        verify(listener)
+                .screenMessageHoldChanged(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS);
+        verify(listener)
+                .encoderLegendPositionChanged(
+                        FireControlPreferences.ENCODER_LEGEND_POSITION_BOTTOM);
+        verify(listener)
+                .padAppearanceChanged(
+                        FireControlPreferences.PAD_BRIGHTNESS_DEFAULT,
+                        FireControlPreferences.PAD_SATURATION_DEFAULT);
     }
 
     @Test
@@ -73,25 +78,29 @@ class FirePreferencesTest {
         source.changeRaw("Pad Brightness", 500.0);
         source.changeRaw("Pad Saturation", -20.0);
         source.changeEnum("Screen Message Hold", "unexpected");
-        source.changeEnum("Drum Mode Pinning", FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION);
+        source.changeEnum(
+                "Drum Mode Pinning", FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION);
 
         assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MAX, preferences.padBrightness());
         assertEquals(FireControlPreferences.PAD_SATURATION_MIN, preferences.padSaturation());
-        verify(listener).padAppearanceChanged(
-                FireControlPreferences.PAD_BRIGHTNESS_MAX,
-                FireControlPreferences.PAD_SATURATION_DEFAULT);
-        verify(listener).padAppearanceChanged(
-                FireControlPreferences.PAD_BRIGHTNESS_MAX,
-                FireControlPreferences.PAD_SATURATION_MIN);
-        verify(listener).screenMessageHoldChanged(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS);
+        verify(listener)
+                .padAppearanceChanged(
+                        FireControlPreferences.PAD_BRIGHTNESS_MAX,
+                        FireControlPreferences.PAD_SATURATION_DEFAULT);
+        verify(listener)
+                .padAppearanceChanged(
+                        FireControlPreferences.PAD_BRIGHTNESS_MAX,
+                        FireControlPreferences.PAD_SATURATION_MIN);
+        verify(listener)
+                .screenMessageHoldChanged(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS);
         verify(listener).drumPinModeChanged(false);
     }
 
     @Test
     void writesThroughNarrowTypedMethods() {
         final PreferenceSource source = new PreferenceSource();
-        final FirePreferences preferences = new FirePreferences(
-                source.preferences, mock(FirePreferences.Listener.class));
+        final FirePreferences preferences =
+                new FirePreferences(source.preferences, mock(FirePreferences.Listener.class));
 
         preferences.setPadBrightness(75.0);
         preferences.setPadSaturation(125.0);
@@ -102,10 +111,13 @@ class FirePreferencesTest {
 
         assertEquals(75.0, source.rawValue("Pad Brightness"));
         assertEquals(125.0, source.rawValue("Pad Saturation"));
-        assertEquals(FireControlPreferences.CLIP_LENGTH_4_BARS, source.enumValue("Default Clip Length"));
-        assertEquals(FireControlPreferences.LAUNCHER_RECORD_LENGTH_MANUAL,
+        assertEquals(
+                FireControlPreferences.CLIP_LENGTH_4_BARS, source.enumValue("Default Clip Length"));
+        assertEquals(
+                FireControlPreferences.LAUNCHER_RECORD_LENGTH_MANUAL,
                 source.enumValue("Launcher Record Length"));
-        assertEquals(FireControlPreferences.NOTE_CHORD_DISPLAY_PADS_AND_DAW,
+        assertEquals(
+                FireControlPreferences.NOTE_CHORD_DISPLAY_PADS_AND_DAW,
                 source.enumValue("Note OLED Notes/Chords"));
         assertTrue(source.booleanValue("Show deactivated tracks"));
     }
@@ -120,13 +132,29 @@ class FirePreferencesTest {
         private final Map<String, BooleanValueChangedCallback> booleanObservers = new HashMap<>();
 
         private PreferenceSource() {
-            when(preferences.getEnumSetting(anyString(), anyString(), any(String[].class), anyString()))
-                    .thenAnswer(invocation -> enumSetting(invocation.getArgument(0), invocation.getArgument(3)));
-            when(preferences.getNumberSetting(anyString(), anyString(), anyDouble(), anyDouble(), anyDouble(),
-                    anyString(), anyDouble()))
-                    .thenAnswer(invocation -> rangedSetting(invocation.getArgument(0), invocation.getArgument(6)));
+            when(preferences.getEnumSetting(
+                            anyString(), anyString(), any(String[].class), anyString()))
+                    .thenAnswer(
+                            invocation ->
+                                    enumSetting(
+                                            invocation.getArgument(0), invocation.getArgument(3)));
+            when(preferences.getNumberSetting(
+                            anyString(),
+                            anyString(),
+                            anyDouble(),
+                            anyDouble(),
+                            anyDouble(),
+                            anyString(),
+                            anyDouble()))
+                    .thenAnswer(
+                            invocation ->
+                                    rangedSetting(
+                                            invocation.getArgument(0), invocation.getArgument(6)));
             when(preferences.getBooleanSetting(anyString(), anyString(), anyBoolean()))
-                    .thenAnswer(invocation -> booleanSetting(invocation.getArgument(0), invocation.getArgument(2)));
+                    .thenAnswer(
+                            invocation ->
+                                    booleanSetting(
+                                            invocation.getArgument(0), invocation.getArgument(2)));
         }
 
         private SettableEnumValue enumSetting(final String name, final String defaultValue) {
@@ -134,14 +162,20 @@ class FirePreferencesTest {
             enumValues.put(name, state);
             final SettableEnumValue value = mock(SettableEnumValue.class);
             when(value.get()).thenAnswer(ignored -> state.get());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                state.set(invocation.getArgument(0));
-                return null;
-            }).when(value).set(anyString());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                enumObservers.put(name, invocation.getArgument(0));
-                return null;
-            }).when(value).addValueObserver(any(EnumValueChangedCallback.class));
+            org.mockito.Mockito.doAnswer(
+                            invocation -> {
+                                state.set(invocation.getArgument(0));
+                                return null;
+                            })
+                    .when(value)
+                    .set(anyString());
+            org.mockito.Mockito.doAnswer(
+                            invocation -> {
+                                enumObservers.put(name, invocation.getArgument(0));
+                                return null;
+                            })
+                    .when(value)
+                    .addValueObserver(any(EnumValueChangedCallback.class));
             return value;
         }
 
@@ -150,14 +184,20 @@ class FirePreferencesTest {
             rawValues.put(name, state);
             final SettableRangedValue value = mock(SettableRangedValue.class);
             when(value.getRaw()).thenAnswer(ignored -> state.get());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                state.set(invocation.getArgument(0));
-                return null;
-            }).when(value).setRaw(anyDouble());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                rawObservers.put(name, invocation.getArgument(0));
-                return null;
-            }).when(value).addRawValueObserver(any(DoubleValueChangedCallback.class));
+            org.mockito.Mockito.doAnswer(
+                            invocation -> {
+                                state.set(invocation.getArgument(0));
+                                return null;
+                            })
+                    .when(value)
+                    .setRaw(anyDouble());
+            org.mockito.Mockito.doAnswer(
+                            invocation -> {
+                                rawObservers.put(name, invocation.getArgument(0));
+                                return null;
+                            })
+                    .when(value)
+                    .addRawValueObserver(any(DoubleValueChangedCallback.class));
             return value;
         }
 
@@ -166,14 +206,20 @@ class FirePreferencesTest {
             booleanValues.put(name, state);
             final SettableBooleanValue value = mock(SettableBooleanValue.class);
             when(value.get()).thenAnswer(ignored -> state.get());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                state.set(invocation.getArgument(0));
-                return null;
-            }).when(value).set(anyBoolean());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                booleanObservers.put(name, invocation.getArgument(0));
-                return null;
-            }).when(value).addValueObserver(any(BooleanValueChangedCallback.class));
+            org.mockito.Mockito.doAnswer(
+                            invocation -> {
+                                state.set(invocation.getArgument(0));
+                                return null;
+                            })
+                    .when(value)
+                    .set(anyBoolean());
+            org.mockito.Mockito.doAnswer(
+                            invocation -> {
+                                booleanObservers.put(name, invocation.getArgument(0));
+                                return null;
+                            })
+                    .when(value)
+                    .addValueObserver(any(BooleanValueChangedCallback.class));
             return value;
         }
 

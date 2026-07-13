@@ -7,13 +7,12 @@ public class IncrementDecelerator implements IntConsumer {
     private final int minTime;
     private long lastEventTimeMs = -1;
     private int lastValue;
-    
-    
+
     public IncrementDecelerator(final IntConsumer incrementer, final int minTime) {
         this.incrementer = incrementer;
         this.minTime = minTime;
     }
-    
+
     @Override
     public void accept(final int value) {
         final long time = System.currentTimeMillis();

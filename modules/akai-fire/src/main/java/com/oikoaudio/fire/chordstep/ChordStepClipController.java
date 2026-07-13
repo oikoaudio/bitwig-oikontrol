@@ -3,12 +3,9 @@ package com.oikoaudio.fire.chordstep;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
-
 import java.util.function.BooleanSupplier;
 
-/**
- * Owns chord-step selected-clip state refresh and clip-availability checks.
- */
+/** Owns chord-step selected-clip state refresh and clip-availability checks. */
 public final class ChordStepClipController {
     private final ChordStepSelectedClipState selectedClipState = new ChordStepSelectedClipState();
     private final BooleanSupplier canHoldNoteData;
@@ -16,10 +13,11 @@ public final class ChordStepClipController {
     private final ResyncRequester resyncRequester;
     private final AvailabilityFeedback availabilityFeedback;
 
-    public ChordStepClipController(final BooleanSupplier canHoldNoteData,
-                                   final BooleanSupplier hasLoadedNoteClipContent,
-                                   final ResyncRequester resyncRequester,
-                                   final AvailabilityFeedback availabilityFeedback) {
+    public ChordStepClipController(
+            final BooleanSupplier canHoldNoteData,
+            final BooleanSupplier hasLoadedNoteClipContent,
+            final ResyncRequester resyncRequester,
+            final AvailabilityFeedback availabilityFeedback) {
         this.canHoldNoteData = canHoldNoteData;
         this.hasLoadedNoteClipContent = hasLoadedNoteClipContent;
         this.resyncRequester = resyncRequester;
@@ -34,7 +32,8 @@ public final class ChordStepClipController {
 
     public boolean ensureSelectedClip() {
         final NoteClipAvailability.Failure failure =
-                selectedClipState.requireClip(canHoldNoteData.getAsBoolean(), hasLoadedNoteClipContent.getAsBoolean());
+                selectedClipState.requireClip(
+                        canHoldNoteData.getAsBoolean(), hasLoadedNoteClipContent.getAsBoolean());
         if (failure != null) {
             availabilityFeedback.show(failure);
             return false;

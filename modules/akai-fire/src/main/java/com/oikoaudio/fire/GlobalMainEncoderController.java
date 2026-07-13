@@ -1,7 +1,6 @@
 package com.oikoaudio.fire;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
-
 import java.util.function.BooleanSupplier;
 
 /** Owns the global main-encoder role and press/turn gesture state. */
@@ -38,8 +37,9 @@ public final class GlobalMainEncoderController {
     private boolean pressed;
     private boolean turnedWhilePressed;
 
-    public GlobalMainEncoderController(final BooleanSupplier drumGridRoleAvailable,
-                                       final BooleanSupplier autoPinFirstDrumMachine) {
+    public GlobalMainEncoderController(
+            final BooleanSupplier drumGridRoleAvailable,
+            final BooleanSupplier autoPinFirstDrumMachine) {
         this.drumGridRoleAvailable = drumGridRoleAvailable;
         this.autoPinFirstDrumMachine = autoPinFirstDrumMachine;
     }
@@ -49,19 +49,23 @@ public final class GlobalMainEncoderController {
     }
 
     public void applyStartupPreference(final String preferenceValue) {
-        final String startupState = FireControlPreferences.normalizeMainEncoderStartupState(preferenceValue);
-        currentRole = FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED.equals(startupState)
-                ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
-                : FireControlPreferences.normalizeMainEncoderRole(alternateRole);
+        final String startupState =
+                FireControlPreferences.normalizeMainEncoderStartupState(preferenceValue);
+        currentRole =
+                FireControlPreferences.MAIN_ENCODER_STARTUP_LAST_TOUCHED.equals(startupState)
+                        ? FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED
+                        : FireControlPreferences.normalizeMainEncoderRole(alternateRole);
     }
 
     public String cycleRole() {
         final String effectiveRole = currentRole();
-        final String cycleSource = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(effectiveRole)
-                ? alternateRole
-                : effectiveRole;
-        final String nextRole = FireControlPreferences.nextAlternateMainEncoderRole(
-                cycleSource, drumGridRoleAvailable.getAsBoolean());
+        final String cycleSource =
+                FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(effectiveRole)
+                        ? alternateRole
+                        : effectiveRole;
+        final String nextRole =
+                FireControlPreferences.nextAlternateMainEncoderRole(
+                        cycleSource, drumGridRoleAvailable.getAsBoolean());
         currentRole = nextRole;
         alternateRole = nextRole;
         return currentRole();
@@ -70,11 +74,13 @@ public final class GlobalMainEncoderController {
     public String toggleRole() {
         final String effectiveRole = currentRole();
         final String effectiveAlternateRole = resolveRole(alternateRole);
-        currentRole = FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(effectiveRole)
-                ? (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(effectiveAlternateRole)
-                ? FireControlPreferences.MAIN_ENCODER_TRACK_SELECT
-                : effectiveAlternateRole)
-                : FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
+        currentRole =
+                FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(effectiveRole)
+                        ? (FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED.equals(
+                                        effectiveAlternateRole)
+                                ? FireControlPreferences.MAIN_ENCODER_TRACK_SELECT
+                                : effectiveAlternateRole)
+                        : FireControlPreferences.MAIN_ENCODER_LAST_TOUCHED;
         return currentRole();
     }
 
@@ -120,14 +126,16 @@ public final class GlobalMainEncoderController {
         return false;
     }
 
-    public boolean handleGlobalChord(final int inc,
-                                     final boolean popupBrowserActive,
-                                     final boolean patternPressed,
-                                     final boolean shiftHeld,
-                                     final boolean altHeld,
-                                     final GlobalChordActions actions) {
-        final MainEncoderGlobalChord.Action action = MainEncoderGlobalChord.resolve(
-                inc, popupBrowserActive, patternPressed, shiftHeld, altHeld);
+    public boolean handleGlobalChord(
+            final int inc,
+            final boolean popupBrowserActive,
+            final boolean patternPressed,
+            final boolean shiftHeld,
+            final boolean altHeld,
+            final GlobalChordActions actions) {
+        final MainEncoderGlobalChord.Action action =
+                MainEncoderGlobalChord.resolve(
+                        inc, popupBrowserActive, patternPressed, shiftHeld, altHeld);
         switch (action) {
             case PLAYBACK_START_GRID -> actions.adjustPlaybackStartByGrid(inc);
             case PLAYBACK_START_FINE -> {
@@ -155,17 +163,19 @@ public final class GlobalMainEncoderController {
                 && autoPinFirstDrumMachine.getAsBoolean()) {
             return FireControlPreferences.MAIN_ENCODER_DRUM_GRID;
         }
-        if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(normalizedRole) && !drumGridAvailable) {
+        if (FireControlPreferences.MAIN_ENCODER_DRUM_GRID.equals(normalizedRole)
+                && !drumGridAvailable) {
             return FireControlPreferences.MAIN_ENCODER_TRACK_SELECT;
         }
         return normalizedRole;
     }
 
-    static int cueMarkerIndexAfterTurn(final double reference,
-                                       final int inc,
-                                       final boolean[] exists,
-                                       final double[] positions,
-                                       final int itemCount) {
+    static int cueMarkerIndexAfterTurn(
+            final double reference,
+            final int inc,
+            final boolean[] exists,
+            final double[] positions,
+            final int itemCount) {
         final int observedLimit = itemCount > 0 ? itemCount : exists.length;
         final int limit = Math.min(Math.min(exists.length, positions.length), observedLimit);
         if (inc == 0 || limit == 0) {
@@ -188,7 +198,8 @@ public final class GlobalMainEncoderController {
         return -1;
     }
 
-    static int remotePageIndexAfterTurn(final int currentPage, final int pageCount, final int direction) {
+    static int remotePageIndexAfterTurn(
+            final int currentPage, final int pageCount, final int direction) {
         if (pageCount <= 0) {
             return currentPage;
         }
@@ -199,9 +210,8 @@ public final class GlobalMainEncoderController {
         return pageCount > 1 ? (pageIndex + 1) + "/" + pageCount : "";
     }
 
-    static BiColorLightState remotePageNavigationLightState(final int currentPage,
-                                                            final int pageCount,
-                                                            final int direction) {
+    static BiColorLightState remotePageNavigationLightState(
+            final int currentPage, final int pageCount, final int direction) {
         if (pageCount <= 1) {
             return BiColorLightState.OFF;
         }
@@ -209,7 +219,9 @@ public final class GlobalMainEncoderController {
             return currentPage > 0 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
         }
         if (direction > 0) {
-            return currentPage < pageCount - 1 ? BiColorLightState.AMBER_HALF : BiColorLightState.OFF;
+            return currentPage < pageCount - 1
+                    ? BiColorLightState.AMBER_HALF
+                    : BiColorLightState.OFF;
         }
         return BiColorLightState.OFF;
     }

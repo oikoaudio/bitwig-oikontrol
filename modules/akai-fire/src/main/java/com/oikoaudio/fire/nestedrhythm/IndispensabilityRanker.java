@@ -7,8 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 final class IndispensabilityRanker {
-    private IndispensabilityRanker() {
-    }
+    private IndispensabilityRanker() {}
 
     static Map<Integer, RankedPulse> rank(final List<Integer> starts, final int totalFineSteps) {
         if (starts.isEmpty() || totalFineSteps <= 0) {
@@ -25,14 +24,16 @@ final class IndispensabilityRanker {
             rawScores.put(start, coincidence + anticipation + downbeat);
         }
 
-        final double min = rawScores.values().stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
-        final double max = rawScores.values().stream().mapToDouble(Double::doubleValue).max().orElse(1.0);
+        final double min =
+                rawScores.values().stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+        final double max =
+                rawScores.values().stream().mapToDouble(Double::doubleValue).max().orElse(1.0);
         final double range = Math.max(0.0001, max - min);
         final List<Integer> strongestFirst = new ArrayList<>(orderedStarts);
-        strongestFirst.sort(Comparator
-                .comparingDouble((Integer start) -> rawScores.get(start))
-                .reversed()
-                .thenComparingInt(Integer::intValue));
+        strongestFirst.sort(
+                Comparator.comparingDouble((Integer start) -> rawScores.get(start))
+                        .reversed()
+                        .thenComparingInt(Integer::intValue));
 
         final Map<Integer, RankedPulse> ranked = new HashMap<>();
         for (int order = 0; order < strongestFirst.size(); order++) {

@@ -75,7 +75,8 @@ public final class DrumAutoPinController {
         }
 
         final boolean invalidPins = !port.isTrackPinned() || !port.isDevicePinned();
-        final boolean invalidDevice = !port.focusedDeviceExists() || !port.focusedDeviceHasDrumPads();
+        final boolean invalidDevice =
+                !port.focusedDeviceExists() || !port.focusedDeviceHasDrumPads();
         if (!invalidPins && !invalidDevice) {
             return;
         }

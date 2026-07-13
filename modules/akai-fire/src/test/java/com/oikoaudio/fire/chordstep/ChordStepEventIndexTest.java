@@ -1,15 +1,14 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import org.junit.jupiter.api.Test;
-
-import java.util.Map;
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 class ChordStepEventIndexTest {
     @Test

@@ -1,8 +1,8 @@
 package com.oikoaudio.fire.sequence;
 
 /**
- * Maps a clip-row pad press plus the current modifier state to a concrete clip-row action.
- * This keeps the gesture-to-action policy out of the row binding code.
+ * Maps a clip-row pad press plus the current modifier state to a concrete clip-row action. This
+ * keeps the gesture-to-action policy out of the row binding code.
  */
 final class ClipRowActionResolver {
     enum Action {
@@ -16,13 +16,17 @@ final class ClipRowActionResolver {
         CREATE_EMPTY
     }
 
-    private ClipRowActionResolver() {
-    }
+    private ClipRowActionResolver() {}
 
-    static Action resolve(final boolean pressed, final boolean hasContent,
-                          final boolean deleteHeld, final boolean copyHeld,
-                          final boolean selectHeld, final boolean shiftHeld,
-                          final int selectedSlotIndex, final int index) {
+    static Action resolve(
+            final boolean pressed,
+            final boolean hasContent,
+            final boolean deleteHeld,
+            final boolean copyHeld,
+            final boolean selectHeld,
+            final boolean shiftHeld,
+            final int selectedSlotIndex,
+            final int index) {
         if (!pressed) {
             return Action.IGNORE;
         }

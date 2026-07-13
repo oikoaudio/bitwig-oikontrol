@@ -1,11 +1,11 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.lights.BiColorLightState;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.oikoaudio.fire.lights.BiColorLightState;
+import org.junit.jupiter.api.Test;
 
 class AccentButtonModelTest {
 

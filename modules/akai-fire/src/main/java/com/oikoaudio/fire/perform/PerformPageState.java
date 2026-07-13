@@ -82,9 +82,7 @@ public record PerformPageState(Page page, int mixDevicePageIndex) {
     }
 
     public PerformPageState withMixDevicePage(final int pageIndex) {
-        return isMixDeviceMode()
-                ? new PerformPageState(page, Math.max(0, pageIndex))
-                : this;
+        return isMixDeviceMode() ? new PerformPageState(page, Math.max(0, pageIndex)) : this;
     }
 
     public PerformPageState withDeviceLayers(final boolean enabled) {

@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.fugue;
 
 import com.bitwig.extension.controller.api.NoteStep;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,7 +50,8 @@ public final class FugueObservationController {
             for (int y = 0; y < 128; y++) {
                 final NoteStep note = lookup.get(x, y);
                 if (note.state() == NoteStep.State.NoteOn) {
-                    steps.computeIfAbsent(FugueClipAdapter.SOURCE_CHANNEL, ignored -> new HashMap<>())
+                    steps.computeIfAbsent(
+                                    FugueClipAdapter.SOURCE_CHANNEL, ignored -> new HashMap<>())
                             .computeIfAbsent(x, ignored -> new HashMap<>())
                             .put(y, note);
                 }

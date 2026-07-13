@@ -2,7 +2,6 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteInput;
 import com.bitwig.extensions.framework.values.Midi;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;

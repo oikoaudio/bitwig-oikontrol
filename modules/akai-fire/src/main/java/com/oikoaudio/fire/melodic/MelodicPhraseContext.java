@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.melodic;
 
 import com.bitwig.extensions.framework.MusicalScale;
-
 import java.util.ArrayList;
 import java.util.List;
 

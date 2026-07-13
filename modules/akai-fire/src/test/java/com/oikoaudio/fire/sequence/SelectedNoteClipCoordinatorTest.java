@@ -1,19 +1,18 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extension.controller.api.BooleanValue;
-import com.bitwig.extension.controller.api.ClipLauncherSlot;
-import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayDeque;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.BooleanValue;
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
+import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
+import java.util.ArrayDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
 
 class SelectedNoteClipCoordinatorTest {
     @Test
@@ -37,10 +36,12 @@ class SelectedNoteClipCoordinatorTest {
         final Fixture fixture = new Fixture();
         final AtomicInteger completions = new AtomicInteger();
         final ArrayDeque<Runnable> tasks = new ArrayDeque<>();
-        final SelectedNoteClipCoordinator coordinator = fixture.coordinator(new AtomicInteger(), new AtomicInteger());
+        final SelectedNoteClipCoordinator coordinator =
+                fixture.coordinator(new AtomicInteger(), new AtomicInteger());
         coordinator.refreshState();
 
-        coordinator.scheduleRefresh((task, delay) -> tasks.add(task), 150, completions::incrementAndGet);
+        coordinator.scheduleRefresh(
+                (task, delay) -> tasks.add(task), 150, completions::incrementAndGet);
         fixture.selected.set(false);
         coordinator.refreshState();
         tasks.remove().run();
@@ -64,12 +65,20 @@ class SelectedNoteClipCoordinatorTest {
             when(bank.getItemAt(0)).thenReturn(slot);
         }
 
-        SelectedNoteClipCoordinator coordinator(final AtomicInteger failures, final AtomicInteger resets) {
-            return new SelectedNoteClipCoordinator(bank, null, () -> true, () -> 0,
-                    ignored -> failures.incrementAndGet(), ignored -> { }, resets::incrementAndGet);
+        SelectedNoteClipCoordinator coordinator(
+                final AtomicInteger failures, final AtomicInteger resets) {
+            return new SelectedNoteClipCoordinator(
+                    bank,
+                    null,
+                    () -> true,
+                    () -> 0,
+                    ignored -> failures.incrementAndGet(),
+                    ignored -> {},
+                    resets::incrementAndGet);
         }
 
-        private static BooleanValue booleanValue(final java.util.function.BooleanSupplier supplier) {
+        private static BooleanValue booleanValue(
+                final java.util.function.BooleanSupplier supplier) {
             final BooleanValue value = mock(BooleanValue.class);
             when(value.get()).thenAnswer(ignored -> supplier.getAsBoolean());
             return value;

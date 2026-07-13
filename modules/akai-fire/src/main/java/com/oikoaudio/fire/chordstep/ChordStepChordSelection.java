@@ -3,7 +3,6 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.oikoaudio.fire.note.ChordBank;
 import com.oikoaudio.fire.note.NoteGridLayout;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -43,7 +42,8 @@ public final class ChordStepChordSelection {
     }
 
     public boolean hasSlot(final int sourcePadIndex) {
-        return !isBuilderFamily() && chordBank.hasSlot(currentPresetFamilyIndex(), page, sourcePadIndex);
+        return !isBuilderFamily()
+                && chordBank.hasSlot(currentPresetFamilyIndex(), page, sourcePadIndex);
     }
 
     public ChordBank.Slot slot(final int sourcePadIndex) {
@@ -106,8 +106,10 @@ public final class ChordStepChordSelection {
         if (amount == 0) {
             return false;
         }
-        final int nextOffset = Math.max(MIN_CHORD_OCTAVE_OFFSET,
-                Math.min(MAX_CHORD_OCTAVE_OFFSET, octaveOffset + amount));
+        final int nextOffset =
+                Math.max(
+                        MIN_CHORD_OCTAVE_OFFSET,
+                        Math.min(MAX_CHORD_OCTAVE_OFFSET, octaveOffset + amount));
         if (nextOffset == octaveOffset) {
             return false;
         }
@@ -128,9 +130,10 @@ public final class ChordStepChordSelection {
     }
 
     public void toggleInterpretation() {
-        interpretation = interpretation == ChordInterpretation.AS_IS
-                ? ChordInterpretation.IN_SCALE
-                : ChordInterpretation.AS_IS;
+        interpretation =
+                interpretation == ChordInterpretation.AS_IS
+                        ? ChordInterpretation.IN_SCALE
+                        : ChordInterpretation.AS_IS;
     }
 
     public void resetInterpretation() {
@@ -154,10 +157,12 @@ public final class ChordStepChordSelection {
     }
 
     public String interpretationSuffix(final int rootNote) {
-        return "F%d %s K%s O%s".formatted(selectedFamily + 1,
-                interpretation.displayName,
-                NoteGridLayout.noteName(rootNote),
-                formatSignedValue(octaveOffset));
+        return "F%d %s K%s O%s"
+                .formatted(
+                        selectedFamily + 1,
+                        interpretation.displayName,
+                        NoteGridLayout.noteName(rootNote),
+                        formatSignedValue(octaveOffset));
     }
 
     public int[] renderSelectedChord(final MusicalScale scale, final int rootNote) {
@@ -166,10 +171,17 @@ public final class ChordStepChordSelection {
         }
         ensureSelectedSlotValid();
         if (interpretation == ChordInterpretation.IN_SCALE) {
-            return transpose(chordBank.renderCast(currentPresetFamilyIndex(), page, selectedSlot, scale,
-                    Math.floorMod(rootNote, 12)), octaveOffset * 12);
+            return transpose(
+                    chordBank.renderCast(
+                            currentPresetFamilyIndex(),
+                            page,
+                            selectedSlot,
+                            scale,
+                            Math.floorMod(rootNote, 12)),
+                    octaveOffset * 12);
         }
-        return chordBank.renderAsIs(currentPresetFamilyIndex(), page, selectedSlot, chordRootMidi(rootNote));
+        return chordBank.renderAsIs(
+                currentPresetFamilyIndex(), page, selectedSlot, chordRootMidi(rootNote));
     }
 
     public void resetToBuilder() {
@@ -228,7 +240,9 @@ public final class ChordStepChordSelection {
     }
 
     public String rawFamilyName() {
-        return isBuilderFamily() ? BUILDER_FAMILY_LABEL : chordBank.family(currentPresetFamilyIndex()).family();
+        return isBuilderFamily()
+                ? BUILDER_FAMILY_LABEL
+                : chordBank.family(currentPresetFamilyIndex()).family();
     }
 
     public int currentPresetFamilyIndex() {
@@ -272,20 +286,16 @@ public final class ChordStepChordSelection {
     }
 
     private int[] renderBuilderChord() {
-        return builderSelectedNotes.stream()
-                .sorted()
-                .mapToInt(Integer::intValue)
-                .toArray();
+        return builderSelectedNotes.stream().sorted().mapToInt(Integer::intValue).toArray();
     }
 
     private String builderSelectionSummary() {
-        final List<Integer> renderedNotes = builderSelectedNotes.stream()
-                .sorted()
-                .toList();
-        final List<String> noteNames = renderedNotes.stream()
-                .limit(4)
-                .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
-                .toList();
+        final List<Integer> renderedNotes = builderSelectedNotes.stream().sorted().toList();
+        final List<String> noteNames =
+                renderedNotes.stream()
+                        .limit(4)
+                        .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
+                        .toList();
         final String suffix = renderedNotes.size() > 4 ? " +" + (renderedNotes.size() - 4) : "";
         return "%s%s".formatted(String.join(" ", noteNames), suffix).trim();
     }

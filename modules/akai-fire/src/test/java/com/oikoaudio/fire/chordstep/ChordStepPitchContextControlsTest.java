@@ -1,9 +1,9 @@
 package com.oikoaudio.fire.chordstep;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ChordStepPitchContextControlsTest {
     @Test
@@ -45,7 +45,8 @@ class ChordStepPitchContextControlsTest {
 
     @Test
     void rootLightIsAlwaysAvailable() {
-        final ChordStepPitchContextControls controls = new ChordStepPitchContextControls(new Host());
+        final ChordStepPitchContextControls controls =
+                new ChordStepPitchContextControls(new Host());
 
         assertEquals(BiColorLightState.AMBER_HALF, controls.lightState(1, true));
     }

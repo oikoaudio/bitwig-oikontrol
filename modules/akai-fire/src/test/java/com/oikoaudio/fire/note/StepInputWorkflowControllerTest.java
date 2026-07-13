@@ -1,14 +1,13 @@
 package com.oikoaudio.fire.note;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class StepInputWorkflowControllerTest {
     @Test
@@ -22,8 +21,19 @@ class StepInputWorkflowControllerTest {
 
         port.runAll();
 
-        assertEquals(List.of("show-clip", "display:Opening", "select-track", "focus-track", "focus-editor",
-                "step-tool", "first-item", "reset-idle", "display:Step 1", "popup:On"), port.events);
+        assertEquals(
+                List.of(
+                        "show-clip",
+                        "display:Opening",
+                        "select-track",
+                        "focus-track",
+                        "focus-editor",
+                        "step-tool",
+                        "first-item",
+                        "reset-idle",
+                        "display:Step 1",
+                        "popup:On"),
+                port.events);
         assertTrue(controller.enabled());
         assertEquals(StepInputWorkflowController.Phase.ACTIVE, controller.phase());
     }
@@ -83,7 +93,10 @@ class StepInputWorkflowControllerTest {
 
         controller.deactivate(true);
         assertFalse(controller.enabled());
-        assertFalse(port.events.subList(port.events.size() - 3, port.events.size()).contains("pointer-tool"));
+        assertFalse(
+                port.events
+                        .subList(port.events.size() - 3, port.events.size())
+                        .contains("pointer-tool"));
     }
 
     @Test
@@ -143,20 +156,85 @@ class StepInputWorkflowControllerTest {
             }
         }
 
-        @Override public boolean drumMode() { return drumMode; }
-        @Override public void showClipInEditor() { events.add("show-clip"); }
-        @Override public void selectTrackInEditor() { events.add("select-track"); }
-        @Override public void schedule(final Runnable task, final long delayMs) { tasks.add(task); }
-        @Override public boolean focusTrackHeader() { events.add("focus-track"); return true; }
-        @Override public boolean focusClipEditor() { events.add("focus-editor"); return focusEditor; }
-        @Override public boolean activateStepTool() { events.add("step-tool"); return stepTool; }
-        @Override public boolean activatePointerTool() { events.add("pointer-tool"); return pointerTool; }
-        @Override public boolean moveToFirstItem() { events.add("first-item"); return true; }
-        @Override public boolean moveBank(final int amount) { events.add(amount > 0 ? "right" : "left"); return true; }
-        @Override public void display(final String value) { events.add("display:" + value); }
-        @Override public void popup(final String value) { events.add("popup:" + value); }
-        @Override public void logCandidateActions() { events.add("log-actions"); }
-        @Override public void resetIdleDisplay() { events.add("reset-idle"); }
-        @Override public void showLiveIdle() { events.add("show-live-idle"); }
+        @Override
+        public boolean drumMode() {
+            return drumMode;
+        }
+
+        @Override
+        public void showClipInEditor() {
+            events.add("show-clip");
+        }
+
+        @Override
+        public void selectTrackInEditor() {
+            events.add("select-track");
+        }
+
+        @Override
+        public void schedule(final Runnable task, final long delayMs) {
+            tasks.add(task);
+        }
+
+        @Override
+        public boolean focusTrackHeader() {
+            events.add("focus-track");
+            return true;
+        }
+
+        @Override
+        public boolean focusClipEditor() {
+            events.add("focus-editor");
+            return focusEditor;
+        }
+
+        @Override
+        public boolean activateStepTool() {
+            events.add("step-tool");
+            return stepTool;
+        }
+
+        @Override
+        public boolean activatePointerTool() {
+            events.add("pointer-tool");
+            return pointerTool;
+        }
+
+        @Override
+        public boolean moveToFirstItem() {
+            events.add("first-item");
+            return true;
+        }
+
+        @Override
+        public boolean moveBank(final int amount) {
+            events.add(amount > 0 ? "right" : "left");
+            return true;
+        }
+
+        @Override
+        public void display(final String value) {
+            events.add("display:" + value);
+        }
+
+        @Override
+        public void popup(final String value) {
+            events.add("popup:" + value);
+        }
+
+        @Override
+        public void logCandidateActions() {
+            events.add("log-actions");
+        }
+
+        @Override
+        public void resetIdleDisplay() {
+            events.add("reset-idle");
+        }
+
+        @Override
+        public void showLiveIdle() {
+            events.add("show-live-idle");
+        }
     }
 }

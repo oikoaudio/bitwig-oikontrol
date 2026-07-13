@@ -2,9 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 
-/**
- * Owns chord-step behavior for the physical PATTERN up/down buttons.
- */
+/** Owns chord-step behavior for the physical PATTERN up/down buttons. */
 public final class ChordStepPatternButtonControls {
     private final Host host;
 

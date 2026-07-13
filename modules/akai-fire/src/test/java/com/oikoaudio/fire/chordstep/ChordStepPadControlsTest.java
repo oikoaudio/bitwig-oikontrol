@@ -1,15 +1,14 @@
 package com.oikoaudio.fire.chordstep;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.SharedMusicalContext;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class ChordStepPadControlsTest {
     private static final int CLIP_ROW = 16;
@@ -31,15 +30,16 @@ class ChordStepPadControlsTest {
     void delegatesPadLightsToRenderer() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
         surface.addHeldStep(0);
-        final ChordStepPadControls controls = controls(surface, new ChordStepPadControllerTest.FakeHost());
+        final ChordStepPadControls controls =
+                controls(surface, new ChordStepPadControllerTest.FakeHost());
 
         final RgbLightState expected = new RgbLightState(120, 88, 0, true).getBrightest();
 
         assertEquals(expected, controls.padLight(STEP_OFFSET));
     }
 
-    private static ChordStepPadControls controls(final ChordStepPadSurface surface,
-                                                final ChordStepPadController.Host host) {
+    private static ChordStepPadControls controls(
+            final ChordStepPadSurface surface, final ChordStepPadController.Host host) {
         final ChordStepPadController controller =
                 new ChordStepPadController(surface, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET, host);
         final MusicalScaleLibrary library = MusicalScaleLibrary.getInstance();
@@ -49,19 +49,20 @@ class ChordStepPadControlsTest {
         final ChordStepChordSelection selection = new ChordStepChordSelection();
         final ChordStepBuilderController builder =
                 new ChordStepBuilderController(selection, pitchContext, () -> 60, 16);
-        final ChordStepPadLightRenderer renderer = new ChordStepPadLightRenderer(
-                surface,
-                builder,
-                selection,
-                ignored -> RgbLightState.GRAY_1,
-                List::of,
-                () -> RgbLightState.PURPLE,
-                () -> 32,
-                () -> -1,
-                () -> -1,
-                step -> false,
-                step -> false,
-                step -> false);
+        final ChordStepPadLightRenderer renderer =
+                new ChordStepPadLightRenderer(
+                        surface,
+                        builder,
+                        selection,
+                        ignored -> RgbLightState.GRAY_1,
+                        List::of,
+                        () -> RgbLightState.PURPLE,
+                        () -> 32,
+                        () -> -1,
+                        () -> -1,
+                        step -> false,
+                        step -> false,
+                        step -> false);
         return new ChordStepPadControls(controller, renderer, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET);
     }
 }

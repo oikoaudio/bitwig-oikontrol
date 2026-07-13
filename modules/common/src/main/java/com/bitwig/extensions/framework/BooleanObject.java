@@ -2,35 +2,29 @@ package com.bitwig.extensions.framework;
 
 import java.util.function.BooleanSupplier;
 
-public class BooleanObject implements BooleanSupplier
-{
-   public BooleanObject(final boolean value)
-   {
-      super();
+public class BooleanObject implements BooleanSupplier {
+    public BooleanObject(final boolean value) {
+        super();
 
-      mValue = value;
-   }
+        mValue = value;
+    }
 
-   public BooleanObject()
-   {
-      this(false);
-   }
+    public BooleanObject() {
+        this(false);
+    }
 
-   @Override
-   public boolean getAsBoolean()
-   {
-      return mValue;
-   }
+    @Override
+    public boolean getAsBoolean() {
+        return mValue;
+    }
 
-   public void setValue(final boolean value)
-   {
-      mValue = value;
-   }
+    public void setValue(final boolean value) {
+        mValue = value;
+    }
 
-   public void toggle()
-   {
-      mValue = !mValue;
-   }
+    public void toggle() {
+        mValue = !mValue;
+    }
 
-   private boolean mValue;
+    private boolean mValue;
 }

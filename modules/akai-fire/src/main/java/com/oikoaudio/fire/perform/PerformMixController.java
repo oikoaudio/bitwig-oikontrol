@@ -27,10 +27,10 @@ public final class PerformMixController {
 
     private final Map<Integer, Integer> rememberedDeviceByTrack = new HashMap<>();
 
-    public static TrackAction trackAction(final int padIndex,
-                                          final boolean altHeld,
-                                          final boolean exclusiveArmEnabled) {
-        final PerformPadRenderer.TrackAction row = PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
+    public static TrackAction trackAction(
+            final int padIndex, final boolean altHeld, final boolean exclusiveArmEnabled) {
+        final PerformPadRenderer.TrackAction row =
+                PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
         if (row == null) {
             return TrackAction.NONE;
         }
@@ -38,7 +38,8 @@ public final class PerformMixController {
             case SELECT -> altHeld ? TrackAction.STOP : TrackAction.SELECT;
             case SOLO -> TrackAction.SOLO;
             case MUTE -> TrackAction.MUTE;
-            case ARM -> altHeld != exclusiveArmEnabled ? TrackAction.ARM_EXCLUSIVE : TrackAction.ARM;
+            case ARM ->
+                    altHeld != exclusiveArmEnabled ? TrackAction.ARM_EXCLUSIVE : TrackAction.ARM;
         };
     }
 
@@ -59,7 +60,8 @@ public final class PerformMixController {
         return page * DEVICE_ROWS + row;
     }
 
-    public static DeviceAction deviceAction(final boolean altHeld, final boolean mainEncoderPressed) {
+    public static DeviceAction deviceAction(
+            final boolean altHeld, final boolean mainEncoderPressed) {
         if (altHeld) {
             return DeviceAction.TOGGLE_ENABLED;
         }
@@ -78,7 +80,9 @@ public final class PerformMixController {
     }
 
     public int rememberedDevice(final int absoluteTrackIndex) {
-        return absoluteTrackIndex < 0 ? -1 : rememberedDeviceByTrack.getOrDefault(absoluteTrackIndex, -1);
+        return absoluteTrackIndex < 0
+                ? -1
+                : rememberedDeviceByTrack.getOrDefault(absoluteTrackIndex, -1);
     }
 
     public void forgetDevice(final int absoluteTrackIndex) {

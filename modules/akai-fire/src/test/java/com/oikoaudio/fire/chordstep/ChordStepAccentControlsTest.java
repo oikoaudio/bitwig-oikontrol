@@ -1,12 +1,12 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.display.OledDisplay;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
+import com.oikoaudio.fire.display.OledDisplay;
+import org.junit.jupiter.api.Test;
 
 class ChordStepAccentControlsTest {
     @Test

@@ -1,13 +1,14 @@
 package com.oikoaudio.fire;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Test;
+
 class GlobalMainEncoderControllerTest {
-    private static final class RecordingRoleActions implements GlobalMainEncoderController.RoleActions {
+    private static final class RecordingRoleActions
+            implements GlobalMainEncoderController.RoleActions {
         private String call = "";
 
         @Override
@@ -33,7 +34,8 @@ class GlobalMainEncoderControllerTest {
 
     @Test
     void appliesStartupPreferenceAndTogglesTheLastAlternateRole() {
-        final GlobalMainEncoderController controller = new GlobalMainEncoderController(() -> false, () -> false);
+        final GlobalMainEncoderController controller =
+                new GlobalMainEncoderController(() -> false, () -> false);
 
         controller.applyStartupPreference(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
         assertEquals(FireControlPreferences.MAIN_ENCODER_TRACK_SELECT, controller.currentRole());
@@ -44,19 +46,24 @@ class GlobalMainEncoderControllerTest {
 
     @Test
     void resolvesAutoPinnedDrumRoleAndSkipsItWhenUnavailable() {
-        final GlobalMainEncoderController drumController = new GlobalMainEncoderController(() -> true, () -> true);
-        drumController.applyStartupPreference(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
+        final GlobalMainEncoderController drumController =
+                new GlobalMainEncoderController(() -> true, () -> true);
+        drumController.applyStartupPreference(
+                FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
         assertEquals(FireControlPreferences.MAIN_ENCODER_DRUM_GRID, drumController.currentRole());
 
-        final GlobalMainEncoderController nonDrumController = new GlobalMainEncoderController(() -> false, () -> false);
-        nonDrumController.applyStartupPreference(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
+        final GlobalMainEncoderController nonDrumController =
+                new GlobalMainEncoderController(() -> false, () -> false);
+        nonDrumController.applyStartupPreference(
+                FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
         assertEquals(FireControlPreferences.MAIN_ENCODER_SHUFFLE, nonDrumController.cycleRole());
         assertEquals(FireControlPreferences.MAIN_ENCODER_TEMPO, nonDrumController.cycleRole());
     }
 
     @Test
     void ownsPressAndTurnConsumptionState() {
-        final GlobalMainEncoderController controller = new GlobalMainEncoderController(() -> false, () -> false);
+        final GlobalMainEncoderController controller =
+                new GlobalMainEncoderController(() -> false, () -> false);
 
         controller.setPressed(true);
         assertTrue(controller.isPressed());
@@ -75,7 +82,8 @@ class GlobalMainEncoderControllerTest {
 
     @Test
     void routesGlobalRoleTurnsAndUsesPressForTrackPageSteps() {
-        final GlobalMainEncoderController controller = new GlobalMainEncoderController(() -> false, () -> false);
+        final GlobalMainEncoderController controller =
+                new GlobalMainEncoderController(() -> false, () -> false);
         final RecordingRoleActions actions = new RecordingRoleActions();
         controller.applyStartupPreference(FireControlPreferences.MAIN_ENCODER_STARTUP_FUNCTION_SET);
         controller.setPressed(true);

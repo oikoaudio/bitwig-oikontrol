@@ -10,11 +10,11 @@ public final class PerformDeviceLayersController {
         TOGGLE_ACTIVE
     }
 
-    private PerformDeviceLayersController() {
-    }
+    private PerformDeviceLayersController() {}
 
     public static Action actionForPad(final int padIndex) {
-        final PerformPadRenderer.TrackAction row = PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
+        final PerformPadRenderer.TrackAction row =
+                PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
         if (row == null) {
             return Action.NONE;
         }

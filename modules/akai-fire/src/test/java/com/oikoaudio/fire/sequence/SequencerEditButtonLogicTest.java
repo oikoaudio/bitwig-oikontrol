@@ -1,15 +1,14 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extensions.framework.values.BooleanValueObject;
-import com.oikoaudio.fire.NoteAssign;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extensions.framework.values.BooleanValueObject;
+import com.oikoaudio.fire.NoteAssign;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class SequencerEditButtonLogicTest {
 
@@ -118,7 +117,8 @@ class SequencerEditButtonLogicTest {
         assertFalse(actionTaken.get());
     }
 
-    private record TestFeedback(List<String> events) implements SequencerEditButtonBinder.EditFunctionFeedback {
+    private record TestFeedback(List<String> events)
+            implements SequencerEditButtonBinder.EditFunctionFeedback {
         @Override
         public void activate(final FunctionInfo info, final boolean shiftHeld) {
             events.add("activate:" + info.getName(shiftHeld) + ":" + info.getDetail());

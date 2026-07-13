@@ -1,17 +1,16 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import org.junit.jupiter.api.Test;
-
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 class ChordStepAccentEditorTest {
     @Test
@@ -20,7 +19,9 @@ class ChordStepAccentEditorTest {
         final NoteStep first = note(0.79, NoteStep.State.NoteOn);
         final NoteStep second = note(0.79, NoteStep.State.NoteOn);
 
-        assertTrue(editor.toggleAccent(List.of(first, second), ChordStepAccentEditor.STANDARD_VELOCITY));
+        assertTrue(
+                editor.toggleAccent(
+                        List.of(first, second), ChordStepAccentEditor.STANDARD_VELOCITY));
 
         verify(first).setVelocity(1.0);
         verify(second).setVelocity(1.0);

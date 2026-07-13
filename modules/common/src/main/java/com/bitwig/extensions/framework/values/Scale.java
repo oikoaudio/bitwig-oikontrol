@@ -1,7 +1,6 @@
 package com.bitwig.extensions.framework.values;
 
 public enum Scale implements IScale {
-    
     CHROMATIC("Chromatic", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), //
     MAJOR("Ionian/Major", 0, 2, 4, 5, 7, 9, 11), //
     MINOR("Aeolian/Minor", 0, 2, 3, 5, 7, 8, 10), //
@@ -20,12 +19,11 @@ public enum Scale implements IScale {
     EGYPTIAN("Egyptian", 0, 2, 5, 7, 10), //
     GYPSI("Gypsi", 0, 2, 3, 6, 7, 8, 11), //
     SPANISH("Spanish", 0, 1, 3, 4, 5, 7, 8, 10);
-    
-    
+
     private final String name;
     private final int[] intervals;
     private final boolean[] inscaleMatch = new boolean[12];
-    
+
     Scale(final String name, final int... notes) {
         this.name = name;
         this.intervals = notes;
@@ -33,27 +31,27 @@ public enum Scale implements IScale {
             inscaleMatch[this.intervals[i] % 12] = true;
         }
     }
-    
+
     @Override
     public IScale[] getValues() {
         return Scale.values();
     }
-    
+
     @Override
     public String getName() {
         return name;
     }
-    
+
     @Override
     public int[] getIntervals() {
         return intervals;
     }
-    
+
     @Override
     public boolean inScale(final int noteBase) {
         return inscaleMatch[noteBase % 12];
     }
-    
+
     /**
      * Given a starting note, determines the highest note at the end of the range.
      *
@@ -67,6 +65,4 @@ public enum Scale implements IScale {
         final int lastValue = intervals[(noteRange - 1) % intervals.length];
         return startNote + octaves * 12 + lastValue;
     }
-    
-    
 }

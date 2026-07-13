@@ -5,14 +5,12 @@ import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.oikoaudio.common.OikontrolVersion;
-
 import java.util.UUID;
 
 public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
     private static final UUID DRIVER_ID = UUID.fromString("c1f8d20a-3da4-4d2c-8ce1-8b2aa6a8e5b6");
 
-    public AkaiFireOikontrolDefinition() {
-    }
+    public AkaiFireOikontrolDefinition() {}
 
     @Override
     public String getName() {
@@ -70,14 +68,14 @@ public class AkaiFireOikontrolDefinition extends ControllerExtensionDefinition {
     }
 
     @Override
-    public void listAutoDetectionMidiPortNames(final AutoDetectionMidiPortNamesList list,
-                                               final PlatformType platformType) {
+    public void listAutoDetectionMidiPortNames(
+            final AutoDetectionMidiPortNamesList list, final PlatformType platformType) {
         if (platformType == PlatformType.WINDOWS) {
-            list.add(new String[]{"FL STUDIO FIRE"}, new String[]{"FL STUDIO FIRE"});
+            list.add(new String[] {"FL STUDIO FIRE"}, new String[] {"FL STUDIO FIRE"});
         } else if (platformType == PlatformType.MAC) {
-            list.add(new String[]{"FL STUDIO FIRE"}, new String[]{"FL STUDIO FIRE"});
+            list.add(new String[] {"FL STUDIO FIRE"}, new String[] {"FL STUDIO FIRE"});
         } else if (platformType == PlatformType.LINUX) {
-            list.add(new String[]{"FL STUDIO FIRE"}, new String[]{"FL STUDIO FIRE"});
+            list.add(new String[] {"FL STUDIO FIRE"}, new String[] {"FL STUDIO FIRE"});
         }
     }
 

@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import org.junit.jupiter.api.Test;
-
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 class ChordStepObservedStateTest {
     private static final int FINE_STEPS_PER_STEP = 16;
@@ -45,10 +44,13 @@ class ChordStepObservedStateTest {
         final ChordStepObservedState state = new ChordStepObservedState();
 
         state.handleObservedStepData(32, 60, NoteStep.State.NoteOn.ordinal(), FINE_STEPS_PER_STEP);
-        state.handleObservedStepData(33, 60, NoteStep.State.NoteSustain.ordinal(), FINE_STEPS_PER_STEP);
-        state.handleObservedStepData(34, 60, NoteStep.State.NoteSustain.ordinal(), FINE_STEPS_PER_STEP);
+        state.handleObservedStepData(
+                33, 60, NoteStep.State.NoteSustain.ordinal(), FINE_STEPS_PER_STEP);
+        state.handleObservedStepData(
+                34, 60, NoteStep.State.NoteSustain.ordinal(), FINE_STEPS_PER_STEP);
 
-        state.moveFineStart(32, 48, 60, 3 * FINE_STEP_LENGTH, FINE_STEPS_PER_STEP, FINE_STEP_LENGTH);
+        state.moveFineStart(
+                32, 48, 60, 3 * FINE_STEP_LENGTH, FINE_STEPS_PER_STEP, FINE_STEP_LENGTH);
 
         assertFalse(state.hasStepContent(2));
         assertFalse(state.hasStepStart(2));
@@ -68,9 +70,11 @@ class ChordStepObservedStateTest {
         state.handleObservedStepData(16, 60, NoteStep.State.NoteOn.ordinal(), FINE_STEPS_PER_STEP);
         state.handleObservedStepData(48, 64, NoteStep.State.NoteOn.ordinal(), FINE_STEPS_PER_STEP);
 
-        assertEquals(Set.of(1, 3),
+        assertEquals(
+                Set.of(1, 3),
                 state.visibleOccupiedSteps(global -> global >= 1 && global <= 3, global -> global));
-        assertEquals(Set.of(1, 3),
+        assertEquals(
+                Set.of(1, 3),
                 state.visibleStartedSteps(global -> global >= 1 && global <= 3, global -> global));
     }
 

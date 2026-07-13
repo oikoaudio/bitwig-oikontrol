@@ -13,10 +13,21 @@ public final class NestedRhythmPattern {
         return events;
     }
 
-    public record PulseEvent(int order, int fineStart, int duration, int midiNote, int velocity, Role role,
-                             double indispensability) {
-        public PulseEvent(final int order, final int fineStart, final int duration, final int midiNote,
-                          final int velocity, final Role role) {
+    public record PulseEvent(
+            int order,
+            int fineStart,
+            int duration,
+            int midiNote,
+            int velocity,
+            Role role,
+            double indispensability) {
+        public PulseEvent(
+                final int order,
+                final int fineStart,
+                final int duration,
+                final int midiNote,
+                final int velocity,
+                final Role role) {
             this(order, fineStart, duration, midiNote, velocity, role, 0.5);
         }
     }

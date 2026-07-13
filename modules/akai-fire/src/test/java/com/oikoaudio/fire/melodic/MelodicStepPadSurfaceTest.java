@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.melodic;
 
-import com.oikoaudio.fire.lights.RgbLightState;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+
+import com.oikoaudio.fire.lights.RgbLightState;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class MelodicStepPadSurfaceTest {
     @Test
@@ -50,9 +49,8 @@ class MelodicStepPadSurfaceTest {
     @Test
     void heldStepsTurnClipRowPadsIntoRecurrenceControls() {
         final FakeCallbacks callbacks = new FakeCallbacks();
-        callbacks.pattern = callbacks.pattern
-                .withStep(activeStep(2, 60))
-                .withStep(activeStep(5, 64));
+        callbacks.pattern =
+                callbacks.pattern.withStep(activeStep(2, 60)).withStep(activeStep(5, 64));
         final MelodicStepPadSurface surface = new MelodicStepPadSurface(callbacks);
 
         surface.handlePadPress(MelodicStepPadSurface.STEP_PAD_OFFSET + 2, true);
@@ -122,8 +120,7 @@ class MelodicStepPadSurfaceTest {
         }
 
         @Override
-        public void markAccentModified() {
-        }
+        public void markAccentModified() {}
 
         @Override
         public boolean isFixedLengthHeld() {
@@ -151,8 +148,7 @@ class MelodicStepPadSurfaceTest {
         }
 
         @Override
-        public void stopPitchPoolAudition(final int poolPadIndex) {
-        }
+        public void stopPitchPoolAudition(final int poolPadIndex) {}
 
         @Override
         public void togglePitchPoolPad(final int poolPadIndex, final Integer heldStep) {
@@ -171,24 +167,19 @@ class MelodicStepPadSurfaceTest {
         }
 
         @Override
-        public void toggleAccent(final int stepIndex) {
-        }
+        public void toggleAccent(final int stepIndex) {}
 
         @Override
-        public void setLoopSteps(final int loopSteps) {
-        }
+        public void setLoopSteps(final int loopSteps) {}
 
         @Override
-        public void showPasteClipRowOnly() {
-        }
+        public void showPasteClipRowOnly() {}
 
         @Override
-        public void clearStep(final int stepIndex) {
-        }
+        public void clearStep(final int stepIndex) {}
 
         @Override
-        public void showStepSelection(final int stepIndex) {
-        }
+        public void showStepSelection(final int stepIndex) {}
 
         @Override
         public MelodicPattern currentPattern() {

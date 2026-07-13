@@ -1,24 +1,34 @@
 package com.oikoaudio.fire.note;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 class LivePadSurfaceLayerIdleDisplayTest {
     @Test
     void liveMetersOnlyShowWhileTransportIsPlaying() {
-        assertEquals(true, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, false, false, EncoderMode.MIXER, true));
-        assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, false, false, EncoderMode.MIXER, false));
-        assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, true, false, EncoderMode.MIXER, true));
-        assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, false, true, EncoderMode.MIXER, true));
-        assertEquals(false, LivePadSurfaceLayer.shouldShowLiveMeters(
-                true, false, false, EncoderMode.CHANNEL, true));
+        assertEquals(
+                true,
+                LivePadSurfaceLayer.shouldShowLiveMeters(
+                        true, false, false, EncoderMode.MIXER, true));
+        assertEquals(
+                false,
+                LivePadSurfaceLayer.shouldShowLiveMeters(
+                        true, false, false, EncoderMode.MIXER, false));
+        assertEquals(
+                false,
+                LivePadSurfaceLayer.shouldShowLiveMeters(
+                        true, true, false, EncoderMode.MIXER, true));
+        assertEquals(
+                false,
+                LivePadSurfaceLayer.shouldShowLiveMeters(
+                        true, false, true, EncoderMode.MIXER, true));
+        assertEquals(
+                false,
+                LivePadSurfaceLayer.shouldShowLiveMeters(
+                        true, false, false, EncoderMode.CHANNEL, true));
     }
 
     @Test
@@ -33,7 +43,8 @@ class LivePadSurfaceLayerIdleDisplayTest {
     void noteChordDisplayStaysVisibleDuringShortNoteGaps() {
         assertEquals(true, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(true, 1_000, 1_500));
         assertEquals(false, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(true, 1_500, 1_500));
-        assertEquals(false, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(false, 1_000, 1_500));
+        assertEquals(
+                false, LivePadSurfaceLayer.shouldHoldLiveNoteChordDisplay(false, 1_000, 1_500));
     }
 
     @Test
@@ -48,9 +59,11 @@ class LivePadSurfaceLayerIdleDisplayTest {
     void holdCapturedPadLightBlinksBetweenBrightAndBase() {
         final RgbLightState base = new RgbLightState(0, 72, 110, true);
 
-        assertEquals(base.getBrightest(), LivePadSurfaceLayer.heldLivePadLight(base, true, true, 0));
+        assertEquals(
+                base.getBrightest(), LivePadSurfaceLayer.heldLivePadLight(base, true, true, 0));
         assertEquals(base, LivePadSurfaceLayer.heldLivePadLight(base, true, true, 4));
-        assertEquals(base.getBrightest(), LivePadSurfaceLayer.heldLivePadLight(base, true, false, 4));
+        assertEquals(
+                base.getBrightest(), LivePadSurfaceLayer.heldLivePadLight(base, true, false, 4));
         assertEquals(base, LivePadSurfaceLayer.heldLivePadLight(base, false, false, 0));
     }
 }

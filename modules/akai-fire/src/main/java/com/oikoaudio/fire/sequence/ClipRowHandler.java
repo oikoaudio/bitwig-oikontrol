@@ -1,18 +1,17 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.control.RgbButton;
-import com.oikoaudio.fire.lights.RgbLightState;
 import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extensions.framework.Layer;
+import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.RgbButton;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 /**
- * Owns the shared 16-pad clip row used by the Akai sequencer modes.
- * Tracks clip-slot state, binds the row buttons, and renders the pad lights for selected, playing,
- * queued, and empty clip slots.
+ * Owns the shared 16-pad clip row used by the Akai sequencer modes. Tracks clip-slot state, binds
+ * the row buttons, and renders the pad lights for selected, playing, queued, and empty clip slots.
  */
 public class ClipRowHandler {
     private static final String DEFAULT_LAUNCH_QUANTIZATION = "default";
@@ -39,7 +38,8 @@ public class ClipRowHandler {
             final RgbButton button = rgbButtons[i];
             final int index = i;
             final ClipLauncherSlot cs = slotBank.getItemAt(index);
-            button.bindPressed(clipLayer, p -> handleClip(index, cs, p), () -> getClipState(index, cs));
+            button.bindPressed(
+                    clipLayer, p -> handleClip(index, cs, p), () -> getClipState(index, cs));
         }
     }
 
@@ -48,14 +48,18 @@ public class ClipRowHandler {
             final int index = i;
             final ClipLauncherSlot cs = slotBank.getItemAt(index);
 
-            cs.color().addValueObserver((r, g, b) -> {
-                slotColors[index] = ColorLookup.getColor(r, g, b);
-            });
-            cs.isSelected().addValueObserver(selected -> {
-                if (selected) {
-                    selectedSlotIndex = index;
-                }
-            });
+            cs.color()
+                    .addValueObserver(
+                            (r, g, b) -> {
+                                slotColors[index] = ColorLookup.getColor(r, g, b);
+                            });
+            cs.isSelected()
+                    .addValueObserver(
+                            selected -> {
+                                if (selected) {
+                                    selectedSlotIndex = index;
+                                }
+                            });
             cs.isPlaying().addValueObserver(playing -> playingSlots[index] = playing);
             cs.isRecording().addValueObserver(recording -> recordingSlots[index] = recording);
             slotColors[index] = ColorLookup.getColor(cs.color().get());
@@ -67,7 +71,6 @@ public class ClipRowHandler {
             cs.isRecordingQueued().markInterested();
             cs.isSelected().markInterested();
             cs.isStopQueued().markInterested();
-
         }
     }
 
@@ -128,13 +131,19 @@ public class ClipRowHandler {
     }
 
     private void handleClip(final int index, final ClipLauncherSlot slot, final boolean pressed) {
-        final int copySourceIndex = ClipRowCopySourceResolver.resolve(selectedSlotIndex, playingSlots, recordingSlots);
+        final int copySourceIndex =
+                ClipRowCopySourceResolver.resolve(selectedSlotIndex, playingSlots, recordingSlots);
         final boolean hasContent = slot.hasContent().get();
-        switch (ClipRowActionResolver.resolve(pressed, hasContent,
-                host.isDeleteHeld(), host.isCopyHeld(), host.isSelectHeld(), host.isShiftHeld(),
-                copySourceIndex, index)) {
-            case IGNORE -> {
-            }
+        switch (ClipRowActionResolver.resolve(
+                pressed,
+                hasContent,
+                host.isDeleteHeld(),
+                host.isCopyHeld(),
+                host.isSelectHeld(),
+                host.isShiftHeld(),
+                copySourceIndex,
+                index)) {
+            case IGNORE -> {}
             case DELETE_OBJECT -> slot.deleteObject();
             case CLEAR_STEPS -> {
                 final int previous = selectedSlotIndex;
@@ -147,7 +156,8 @@ public class ClipRowHandler {
             case COPY_TO_TARGET -> {
                 slot.replaceInsertionPoint().copySlotsOrScenes(slotBank.getItemAt(copySourceIndex));
                 host.getOled().valueInfo("Copy Clip", "Select target");
-                host.notifyPopup("Copy Clip", slotLabel(copySourceIndex) + " -> " + slotLabel(index));
+                host.notifyPopup(
+                        "Copy Clip", slotLabel(copySourceIndex) + " -> " + slotLabel(index));
             }
             case SELECT_ONLY -> slot.select();
             case CYCLE_COLOR -> slot.color().set(getSlotColor(slot));
@@ -170,32 +180,31 @@ public class ClipRowHandler {
     public void notifyBlink(final int blinkState) {
         this.blinkState = blinkState;
     }
-	private Color getSlotColor(ClipLauncherSlot slot) {
-		Color[] colors = {
-			Color.fromHex("#d92e24"), // red
-			Color.fromHex("#ff5706"), // orange
-			Color.fromHex("#44c8ff"), // dark blue
-			Color.fromHex("#0099d9"), // light blue
-			Color.fromHex("#009d47"), // dark green
-			Color.fromHex("#3ebb62"), // light green
-			Color.fromHex("#d99d10"), // yellow
-			Color.fromHex("#c9c9c9"), // white
-			Color.fromHex("#5761c6"), // dark purple
-			Color.fromHex("#bc76f0"), // light purple
-		};
-		Color currentColor = slot.color().get();
 
-		int colorIndex = 0;
-		for (int i = 0; i < colors.length; i++) {
-			if (colors[i].toHex().equals(currentColor.toHex())) {
-				colorIndex = i + 1;
-			}
-		}
-		if (colorIndex == colors.length) {
-			colorIndex = 0;
-		}
-		return colors[colorIndex];
-	}
+    private Color getSlotColor(ClipLauncherSlot slot) {
+        Color[] colors = {
+            Color.fromHex("#d92e24"), // red
+            Color.fromHex("#ff5706"), // orange
+            Color.fromHex("#44c8ff"), // dark blue
+            Color.fromHex("#0099d9"), // light blue
+            Color.fromHex("#009d47"), // dark green
+            Color.fromHex("#3ebb62"), // light green
+            Color.fromHex("#d99d10"), // yellow
+            Color.fromHex("#c9c9c9"), // white
+            Color.fromHex("#5761c6"), // dark purple
+            Color.fromHex("#bc76f0"), // light purple
+        };
+        Color currentColor = slot.color().get();
 
-
+        int colorIndex = 0;
+        for (int i = 0; i < colors.length; i++) {
+            if (colors[i].toHex().equals(currentColor.toHex())) {
+                colorIndex = i + 1;
+            }
+        }
+        if (colorIndex == colors.length) {
+            colorIndex = 0;
+        }
+        return colors[colorIndex];
+    }
 }

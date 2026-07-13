@@ -14,10 +14,14 @@ public class MainCursor {
     private final CursorRemoteControlsPage cursorRemoteControlsPage;
     private final PinnableCursorDevice cursorDevice;
 
-    public MainCursor(ControllerHost host, int numSends, int numScenes){
+    public MainCursor(ControllerHost host, int numSends, int numScenes) {
         cursorTrack = host.createCursorTrack(numSends, numScenes);
-        cursorDevice = cursorTrack.createCursorDevice("MAIN_CURSOR_DEVICE", "Main Cursor Device", 8,
-                CursorDeviceFollowMode.FOLLOW_SELECTION);
+        cursorDevice =
+                cursorTrack.createCursorDevice(
+                        "MAIN_CURSOR_DEVICE",
+                        "Main Cursor Device",
+                        8,
+                        CursorDeviceFollowMode.FOLLOW_SELECTION);
         cursorRemoteControlsPage = cursorDevice.createCursorRemoteControlsPage(8);
     }
 

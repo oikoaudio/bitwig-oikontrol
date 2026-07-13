@@ -16,16 +16,18 @@ public final class PeakRmsOledView {
         this.oled = oled;
     }
 
-    public void show(final int maxPeak,
-                     final int maxRms,
-                     final int currentPeak,
-                     final int currentRms,
-                     final String bottomLegend) {
+    public void show(
+            final int maxPeak,
+            final int maxRms,
+            final int currentPeak,
+            final int currentRms,
+            final String bottomLegend) {
         final String normalizedBottomLegend = normalizeBottomLegend(bottomLegend);
         final EncoderLegendPosition displayLegendPosition = oled.footerLegendPosition();
-        final EncoderLegendPosition currentLegendPosition = displayLegendPosition == null
-                ? EncoderLegendPosition.BOTTOM
-                : displayLegendPosition;
+        final EncoderLegendPosition currentLegendPosition =
+                displayLegendPosition == null
+                        ? EncoderLegendPosition.BOTTOM
+                        : displayLegendPosition;
         if (!initialized
                 || layoutRevision != oled.layoutRevision()
                 || !Objects.equals(this.bottomLegend, normalizedBottomLegend)
@@ -43,9 +45,15 @@ public final class PeakRmsOledView {
             legendPosition = currentLegendPosition;
             layoutRevision = oled.layoutRevision();
         }
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, maxMeterRow(legendPosition),
+        oled.sendString(
+                2,
+                OledDisplay.TextJustification.LEFT,
+                maxMeterRow(legendPosition),
                 VuMeterFormatter.meterPairLine(maxPeak, maxRms));
-        oled.sendString(2, OledDisplay.TextJustification.LEFT, currentMeterRow(legendPosition),
+        oled.sendString(
+                2,
+                OledDisplay.TextJustification.LEFT,
+                currentMeterRow(legendPosition),
                 VuMeterFormatter.meterPairLine(currentPeak, currentRms));
     }
 
@@ -54,8 +62,11 @@ public final class PeakRmsOledView {
         oled.valueInfoNoClear(title, value);
     }
 
-    public void showValueInfo(final String title, final String value, final double normalizedValue,
-                              final boolean biPolar) {
+    public void showValueInfo(
+            final String title,
+            final String value,
+            final double normalizedValue,
+            final boolean biPolar) {
         prepareValueInfo();
         oled.valueInfoWithBarNoClear(title, value, normalizedValue, biPolar);
     }

@@ -1,11 +1,10 @@
 package com.oikoaudio.fire.sequence;
 
-import java.util.List;
-
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
+import java.util.List;
 
 public interface StepSequencerHost {
     boolean isSelectHeld();
@@ -66,6 +65,5 @@ public interface StepSequencerHost {
         return getEncoderBankLayout().bank(mode).footerLegend();
     }
 
-    default void handleEncoderModeChanged(final EncoderMode mode) {
-    }
+    default void handleEncoderModeChanged(final EncoderMode mode) {}
 }

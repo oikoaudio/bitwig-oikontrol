@@ -1,25 +1,23 @@
 package com.oikoaudio.fire.music;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.SharedMusicalContext;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 class SharedPitchContextControllerTest {
 
     @Test
     void initializesFromPreferences() {
-        final SharedPitchContextController controller = new SharedPitchContextController(
-                new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
-                MusicalScaleLibrary.getInstance());
+        final SharedPitchContextController controller =
+                new SharedPitchContextController(
+                        new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
+                        MusicalScaleLibrary.getInstance());
 
-        controller.initializeFromPreferences(
-                FireControlPreferences.DEFAULT_SCALE_DORIAN,
-                9,
-                5);
+        controller.initializeFromPreferences(FireControlPreferences.DEFAULT_SCALE_DORIAN, 9, 5);
 
         assertEquals(9, controller.getRootNote());
         assertEquals(5, controller.getOctave());
@@ -29,9 +27,8 @@ class SharedPitchContextControllerTest {
     @Test
     void formatsShortScaleNamesForControllerDisplays() {
         final MusicalScaleLibrary library = MusicalScaleLibrary.getInstance();
-        final SharedPitchContextController controller = new SharedPitchContextController(
-                new SharedMusicalContext(library),
-                library);
+        final SharedPitchContextController controller =
+                new SharedPitchContextController(new SharedMusicalContext(library), library);
 
         controller.setScaleIndex(controller.findScaleIndex("Phrygian Dominant", 1));
 
@@ -41,9 +38,8 @@ class SharedPitchContextControllerTest {
     @Test
     void walksScaleDegreesFromSharedRootAndScale() {
         final MusicalScaleLibrary library = MusicalScaleLibrary.getInstance();
-        final SharedPitchContextController controller = new SharedPitchContextController(
-                new SharedMusicalContext(library),
-                library);
+        final SharedPitchContextController controller =
+                new SharedPitchContextController(new SharedMusicalContext(library), library);
         controller.setRootNote(0);
         controller.setScaleIndex(controller.findScaleIndex("Major", 1));
 

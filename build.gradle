@@ -1,5 +1,11 @@
 import com.oikoaudio.gradle.BundledDocumentationRenderer
 
+plugins {
+    id 'com.diffplug.spotless' version '8.8.0'
+}
+
+apply plugin: 'base'
+
 allprojects {
     group = 'com.oikoaudio'
     repositories {
@@ -33,6 +39,28 @@ subprojects {
         jvmArgs += [
                 '--add-opens=java.base/java.util.function=ALL-UNNAMED'
         ]
+    }
+}
+
+spotless {
+    java {
+        target 'modules/**/src/**/*.java'
+        googleJavaFormat().aosp()
+        formatAnnotations()
+    }
+
+    format 'buildScripts', {
+        target '*.gradle', 'modules/**/*.gradle', 'buildSrc/**/*.gradle', 'buildSrc/**/*.groovy'
+        targetExclude 'buildSrc/build/**', 'buildSrc/.gradle/**'
+        trimTrailingWhitespace()
+        leadingTabsToSpaces(4)
+        endWithNewline()
+    }
+
+    format 'repositoryText', {
+        target '.editorconfig', '.gitattributes', '.gitignore', 'Justfile'
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 }
 

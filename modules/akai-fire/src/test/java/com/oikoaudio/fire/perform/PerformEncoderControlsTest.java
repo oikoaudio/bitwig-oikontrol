@@ -1,9 +1,9 @@
 package com.oikoaudio.fire.perform;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PerformEncoderControlsTest {
     @Test

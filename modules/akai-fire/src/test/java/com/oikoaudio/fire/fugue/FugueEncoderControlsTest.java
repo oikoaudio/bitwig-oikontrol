@@ -1,10 +1,10 @@
 package com.oikoaudio.fire.fugue;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FugueEncoderControlsTest {
     @Test

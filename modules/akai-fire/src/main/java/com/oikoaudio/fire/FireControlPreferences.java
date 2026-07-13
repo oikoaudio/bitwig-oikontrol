@@ -34,28 +34,20 @@ public final class FireControlPreferences {
     public static final long SCREEN_MESSAGE_HOLD_NORMAL_MS = 1500;
     public static final long SCREEN_MESSAGE_HOLD_LONG_MS = 3000;
     public static final String[] SCREEN_MESSAGE_HOLDS = {
-            SCREEN_MESSAGE_HOLD_SHORT,
-            SCREEN_MESSAGE_HOLD_NORMAL,
-            SCREEN_MESSAGE_HOLD_LONG
+        SCREEN_MESSAGE_HOLD_SHORT, SCREEN_MESSAGE_HOLD_NORMAL, SCREEN_MESSAGE_HOLD_LONG
     };
-    public static final String[] IDLE_OLED_MODES = {
-            IDLE_OLED_CONTEXT,
-            IDLE_OLED_METERS
-    };
+    public static final String[] IDLE_OLED_MODES = {IDLE_OLED_CONTEXT, IDLE_OLED_METERS};
     public static final String[] ENCODER_LEGEND_POSITIONS = {
-            ENCODER_LEGEND_POSITION_BOTTOM,
-            ENCODER_LEGEND_POSITION_TOP
+        ENCODER_LEGEND_POSITION_BOTTOM, ENCODER_LEGEND_POSITION_TOP
     };
     public static final String[] NOTE_CHORD_DISPLAY_MODES = {
-            NOTE_CHORD_DISPLAY_PADS,
-            NOTE_CHORD_DISPLAY_PADS_AND_DAW
+        NOTE_CHORD_DISPLAY_PADS, NOTE_CHORD_DISPLAY_PADS_AND_DAW
     };
 
     public static final String CLIP_LAUNCH_MODE_SYNCED = "Synced";
     public static final String CLIP_LAUNCH_MODE_FROM_START = "From Start";
     public static final String[] CLIP_LAUNCH_MODES = {
-            CLIP_LAUNCH_MODE_SYNCED,
-            CLIP_LAUNCH_MODE_FROM_START
+        CLIP_LAUNCH_MODE_SYNCED, CLIP_LAUNCH_MODE_FROM_START
     };
 
     public static final String QUANTIZATION_NONE = "None";
@@ -68,15 +60,15 @@ public final class FireControlPreferences {
     public static final String QUANTIZATION_1_8 = "1/8";
     public static final String QUANTIZATION_1_16 = "1/16";
     public static final String[] CLIP_LAUNCH_QUANTIZATIONS = {
-            QUANTIZATION_NONE,
-            QUANTIZATION_8,
-            QUANTIZATION_4,
-            QUANTIZATION_2,
-            QUANTIZATION_1,
-            QUANTIZATION_1_2,
-            QUANTIZATION_1_4,
-            QUANTIZATION_1_8,
-            QUANTIZATION_1_16
+        QUANTIZATION_NONE,
+        QUANTIZATION_8,
+        QUANTIZATION_4,
+        QUANTIZATION_2,
+        QUANTIZATION_1,
+        QUANTIZATION_1_2,
+        QUANTIZATION_1_4,
+        QUANTIZATION_1_8,
+        QUANTIZATION_1_16
     };
 
     public static final String CLIP_LENGTH_1_BAR = "1 bar";
@@ -94,22 +86,18 @@ public final class FireControlPreferences {
     public static final String PERFORM_LAYOUT_VERTICAL = "Vertical";
     public static final String PERFORM_LAYOUT_HORIZONTAL = "Horizontal";
     public static final String[] PERFORM_LAYOUTS = {
-            PERFORM_LAYOUT_VERTICAL,
-            PERFORM_LAYOUT_HORIZONTAL
+        PERFORM_LAYOUT_VERTICAL, PERFORM_LAYOUT_HORIZONTAL
     };
     public static final String[] DEFAULT_CLIP_LENGTHS = {
-            CLIP_LENGTH_1_BAR,
-            CLIP_LENGTH_2_BARS,
-            CLIP_LENGTH_4_BARS,
-            CLIP_LENGTH_8_BARS
+        CLIP_LENGTH_1_BAR, CLIP_LENGTH_2_BARS, CLIP_LENGTH_4_BARS, CLIP_LENGTH_8_BARS
     };
     public static final String[] LAUNCHER_RECORD_LENGTHS = {
-            LAUNCHER_RECORD_LENGTH_MANUAL,
-            LAUNCHER_RECORD_LENGTH_FIXED_1_BAR,
-            LAUNCHER_RECORD_LENGTH_FIXED_2_BARS,
-            LAUNCHER_RECORD_LENGTH_FIXED_4_BARS,
-            LAUNCHER_RECORD_LENGTH_FIXED_8_BARS,
-            CLIP_LENGTH_ROUND_NEAREST_BAR
+        LAUNCHER_RECORD_LENGTH_MANUAL,
+        LAUNCHER_RECORD_LENGTH_FIXED_1_BAR,
+        LAUNCHER_RECORD_LENGTH_FIXED_2_BARS,
+        LAUNCHER_RECORD_LENGTH_FIXED_4_BARS,
+        LAUNCHER_RECORD_LENGTH_FIXED_8_BARS,
+        CLIP_LENGTH_ROUND_NEAREST_BAR
     };
 
     public static final String STARTUP_MODE_NOTE = "Note";
@@ -118,11 +106,11 @@ public final class FireControlPreferences {
     public static final String STARTUP_MODE_LAUNCHER = "Launcher";
     public static final String STARTUP_MODE_MIX = "Mix";
     public static final String[] STARTUP_MODES = {
-            STARTUP_MODE_NOTE,
-            STARTUP_MODE_HARMONY,
-            STARTUP_MODE_DRUM_XOX,
-            STARTUP_MODE_LAUNCHER,
-            STARTUP_MODE_MIX
+        STARTUP_MODE_NOTE,
+        STARTUP_MODE_HARMONY,
+        STARTUP_MODE_DRUM_XOX,
+        STARTUP_MODE_LAUNCHER,
+        STARTUP_MODE_MIX
     };
 
     public static final String MAIN_ENCODER_LAST_TOUCHED = "Last Touched Parameter";
@@ -133,32 +121,29 @@ public final class FireControlPreferences {
     public static final String MAIN_ENCODER_PLAYBACK_START = "Playback Start";
     public static final String MAIN_ENCODER_DRUM_GRID = "Drum Grid";
     public static final String[] MAIN_ENCODER_ROLES = {
-            MAIN_ENCODER_LAST_TOUCHED,
-            MAIN_ENCODER_SHUFFLE,
-            MAIN_ENCODER_TEMPO,
-            MAIN_ENCODER_NOTE_REPEAT,
-            MAIN_ENCODER_TRACK_SELECT,
-            MAIN_ENCODER_DRUM_GRID
+        MAIN_ENCODER_LAST_TOUCHED,
+        MAIN_ENCODER_SHUFFLE,
+        MAIN_ENCODER_TEMPO,
+        MAIN_ENCODER_NOTE_REPEAT,
+        MAIN_ENCODER_TRACK_SELECT,
+        MAIN_ENCODER_DRUM_GRID
     };
     public static final String MAIN_ENCODER_STARTUP_LAST_TOUCHED = "Last Touched";
     public static final String MAIN_ENCODER_STARTUP_FUNCTION_SET = "Function Set";
     public static final String[] MAIN_ENCODER_STARTUP_STATES = {
-            MAIN_ENCODER_STARTUP_LAST_TOUCHED,
-            MAIN_ENCODER_STARTUP_FUNCTION_SET
+        MAIN_ENCODER_STARTUP_LAST_TOUCHED, MAIN_ENCODER_STARTUP_FUNCTION_SET
     };
 
     public static final String EUCLID_SCOPE_VISIBLE_PAGE = "Visible Page";
     public static final String EUCLID_SCOPE_FULL_CLIP = "Full Clip";
     public static final String[] EUCLID_SCOPES = {
-            EUCLID_SCOPE_VISIBLE_PAGE,
-            EUCLID_SCOPE_FULL_CLIP
+        EUCLID_SCOPE_VISIBLE_PAGE, EUCLID_SCOPE_FULL_CLIP
     };
 
     public static final String LIVE_PITCH_OFFSET_NEW_NOTES = "New Notes Only";
     public static final String LIVE_PITCH_OFFSET_RETUNE_HELD = "Retune Held Notes";
     public static final String[] LIVE_PITCH_OFFSET_BEHAVIORS = {
-            LIVE_PITCH_OFFSET_NEW_NOTES,
-            LIVE_PITCH_OFFSET_RETUNE_HELD
+        LIVE_PITCH_OFFSET_NEW_NOTES, LIVE_PITCH_OFFSET_RETUNE_HELD
     };
 
     public static final String DEFAULT_SCALE_PIANO = "Chromatic";
@@ -170,55 +155,29 @@ public final class FireControlPreferences {
     public static final String DEFAULT_SCALE_DORIAN = "Dorian";
     public static final String DEFAULT_SCALE_MIXOLYDIAN = "Mixolydian";
     public static final String[] DEFAULT_SCALES = {
-            DEFAULT_SCALE_MAJOR,
-            DEFAULT_SCALE_MINOR,
-            DEFAULT_SCALE_HARMONIC_MINOR,
-            DEFAULT_SCALE_MELODIC_MINOR,
-            DEFAULT_SCALE_MINOR_PENTATONIC,
-            DEFAULT_SCALE_DORIAN,
-            DEFAULT_SCALE_MIXOLYDIAN
+        DEFAULT_SCALE_MAJOR,
+        DEFAULT_SCALE_MINOR,
+        DEFAULT_SCALE_HARMONIC_MINOR,
+        DEFAULT_SCALE_MELODIC_MINOR,
+        DEFAULT_SCALE_MINOR_PENTATONIC,
+        DEFAULT_SCALE_DORIAN,
+        DEFAULT_SCALE_MIXOLYDIAN
     };
     public static final String[] DEFAULT_ROOT_KEYS = {
-            "C",
-            "C#",
-            "D",
-            "D#",
-            "E",
-            "F",
-            "F#",
-            "G",
-            "G#",
-            "A",
-            "A#",
-            "B"
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
     };
     public static final String DEFAULT_ROOT_KEY = "C";
-    public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {
-            "2",
-            "3",
-            "4"
-    };
+    public static final String[] DEFAULT_NOTE_INPUT_OCTAVES = {"2", "3", "4"};
     public static final String DEFAULT_NOTE_INPUT_OCTAVE = "3";
     public static final String[] DEFAULT_VELOCITY_SENSITIVITIES = {
-            "0",
-            "10",
-            "20",
-            "30",
-            "40",
-            "50",
-            "60",
-            "70",
-            "80",
-            "90",
-            "100"
+        "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"
     };
     public static final String DEFAULT_VELOCITY_SENSITIVITY = "80";
 
     public static final String MELODIC_SEED_MODE_RANDOM = "Random";
     public static final String MELODIC_SEED_MODE_FIXED = "Fixed";
     public static final String[] MELODIC_SEED_MODES = {
-            MELODIC_SEED_MODE_RANDOM,
-            MELODIC_SEED_MODE_FIXED
+        MELODIC_SEED_MODE_RANDOM, MELODIC_SEED_MODE_FIXED
     };
     public static final long MELODIC_FIXED_SEED_DEFAULT = 1234L;
     public static final long MELODIC_FIXED_SEED_MIN = 1L;
@@ -227,12 +186,10 @@ public final class FireControlPreferences {
     public static final String DRUM_PIN_MODE_FOLLOW_SELECTION = "Follow Selection";
     public static final String DRUM_PIN_MODE_FIRST_DRUM_MACHINE = "Auto-select First Drum Machine";
     public static final String[] DRUM_PIN_MODES = {
-            DRUM_PIN_MODE_FOLLOW_SELECTION,
-            DRUM_PIN_MODE_FIRST_DRUM_MACHINE
+        DRUM_PIN_MODE_FOLLOW_SELECTION, DRUM_PIN_MODE_FIRST_DRUM_MACHINE
     };
 
-    private FireControlPreferences() {
-    }
+    private FireControlPreferences() {}
 
     public static String toClipLaunchModeValue(final String preferenceValue) {
         if (CLIP_LAUNCH_MODE_FROM_START.equals(preferenceValue)) {
@@ -275,7 +232,8 @@ public final class FireControlPreferences {
         return nextAlternateMainEncoderRole(currentRole, true);
     }
 
-    public static String nextAlternateMainEncoderRole(final String currentRole, final boolean includeDrumGrid) {
+    public static String nextAlternateMainEncoderRole(
+            final String currentRole, final boolean includeDrumGrid) {
         final String normalizedRole = normalizeMainEncoderRole(currentRole);
         if (MAIN_ENCODER_SHUFFLE.equals(normalizedRole)) {
             return MAIN_ENCODER_TEMPO;
@@ -344,7 +302,6 @@ public final class FireControlPreferences {
         }
         return MELODIC_SEED_MODE_RANDOM;
     }
-
 
     public static String normalizeDefaultRootKey(final String preferenceValue) {
         for (final String value : DEFAULT_ROOT_KEYS) {
@@ -529,13 +486,15 @@ public final class FireControlPreferences {
 
     public static double toPadBrightnessScale(final double preferenceValue) {
         final double normalizedBrightness = normalizePadBrightness(preferenceValue);
-        final double rangePosition = (normalizedBrightness - PAD_BRIGHTNESS_MIN)
-                / (PAD_BRIGHTNESS_MAX - PAD_BRIGHTNESS_MIN);
+        final double rangePosition =
+                (normalizedBrightness - PAD_BRIGHTNESS_MIN)
+                        / (PAD_BRIGHTNESS_MAX - PAD_BRIGHTNESS_MIN);
         return PAD_BRIGHTNESS_SCALE_MIN
                 + rangePosition * (PAD_BRIGHTNESS_SCALE_MAX - PAD_BRIGHTNESS_SCALE_MIN);
     }
 
-    public static int scalePadColorComponent(final int component, final double brightnessPreference) {
+    public static int scalePadColorComponent(
+            final int component, final double brightnessPreference) {
         if (component <= 0) {
             return 0;
         }
@@ -550,12 +509,13 @@ public final class FireControlPreferences {
         return Math.max(PAD_SATURATION_MIN, Math.min(PAD_SATURATION_MAX, preferenceValue));
     }
 
-    public static int scalePadColorComponent(final int component,
-                                             final int red,
-                                             final int green,
-                                             final int blue,
-                                             final double brightnessPreference,
-                                             final double saturationPreference) {
+    public static int scalePadColorComponent(
+            final int component,
+            final int red,
+            final int green,
+            final int blue,
+            final double brightnessPreference,
+            final double saturationPreference) {
         if (component <= 0 && red <= 0 && green <= 0 && blue <= 0) {
             return 0;
         }

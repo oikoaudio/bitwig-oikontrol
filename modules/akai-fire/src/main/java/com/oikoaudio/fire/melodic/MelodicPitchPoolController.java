@@ -1,20 +1,29 @@
 package com.oikoaudio.fire.melodic;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
-/** Owns Melodic Step pitch membership, generator provenance, user edits, and MIDI audition cleanup. */
+/**
+ * Owns Melodic Step pitch membership, generator provenance, user edits, and MIDI audition cleanup.
+ */
 public final class MelodicPitchPoolController {
-    public enum PressResult { INVALID, ASSIGNED, ENABLED, DISABLED }
+    public enum PressResult {
+        INVALID,
+        ASSIGNED,
+        ENABLED,
+        DISABLED
+    }
 
     public interface AuditionPort {
         boolean enabled();
+
         void noteOn(int pitch);
+
         void noteOff(int pitch);
     }
 
@@ -28,12 +37,29 @@ public final class MelodicPitchPoolController {
         this.auditionPort = auditionPort;
     }
 
-    public Set<Integer> pitches() { return Collections.unmodifiableSet(pitches); }
-    public boolean contains(final int pitch) { return pitches.contains(pitch); }
-    public boolean isEmpty() { return pitches.isEmpty(); }
-    public int size() { return pitches.size(); }
-    public boolean userEdited() { return userEdited; }
-    public boolean generatedBy(final Object source) { return !userEdited && generatorSource == source; }
+    public Set<Integer> pitches() {
+        return Collections.unmodifiableSet(pitches);
+    }
+
+    public boolean contains(final int pitch) {
+        return pitches.contains(pitch);
+    }
+
+    public boolean isEmpty() {
+        return pitches.isEmpty();
+    }
+
+    public int size() {
+        return pitches.size();
+    }
+
+    public boolean userEdited() {
+        return userEdited;
+    }
+
+    public boolean generatedBy(final Object source) {
+        return !userEdited && generatorSource == source;
+    }
 
     public boolean toggleMembership(final int pitch) {
         final boolean enabled;
@@ -47,9 +73,10 @@ public final class MelodicPitchPoolController {
         return enabled;
     }
 
-    public PressResult pressPitch(final int pitch,
-                                  final Integer heldStep,
-                                  final BiConsumer<Integer, Integer> assignment) {
+    public PressResult pressPitch(
+            final int pitch,
+            final Integer heldStep,
+            final BiConsumer<Integer, Integer> assignment) {
         if (pitch < 0 || pitch > 127) {
             return PressResult.INVALID;
         }
@@ -76,11 +103,21 @@ public final class MelodicPitchPoolController {
         replace(observed);
     }
 
-    public void markUserEdited() { userEdited = true; }
+    public void markUserEdited() {
+        userEdited = true;
+    }
 
-    public void clear() { pitches.clear(); }
-    public void add(final int pitch) { pitches.add(pitch); }
-    public Integer firstOrNull() { return pitches.isEmpty() ? null : pitches.iterator().next(); }
+    public void clear() {
+        pitches.clear();
+    }
+
+    public void add(final int pitch) {
+        pitches.add(pitch);
+    }
+
+    public Integer firstOrNull() {
+        return pitches.isEmpty() ? null : pitches.iterator().next();
+    }
 
     public void startAudition(final int pitch) {
         if (!auditionPort.enabled() || pitch < 0 || pitch > 127 || !auditioningPitches.add(pitch)) {
@@ -103,9 +140,8 @@ public final class MelodicPitchPoolController {
         auditioningPitches.clear();
     }
 
-    public static List<Integer> layout(final MelodicPhraseContext context,
-                                       final int rootPitch,
-                                       final int pitchCount) {
+    public static List<Integer> layout(
+            final MelodicPhraseContext context, final int rootPitch, final int pitchCount) {
         if (pitchCount <= 0) {
             return List.of();
         }

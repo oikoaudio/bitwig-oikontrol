@@ -3,7 +3,6 @@ package com.oikoaudio.fire.melodic;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,7 +26,9 @@ final class MelodicStepPadSurface {
     }
 
     void handlePadPress(final int padIndex, final boolean pressed) {
-        if (!heldSteps.isEmpty() && padIndex < CLIP_ROW_PAD_COUNT && handleRecurrencePadPress(padIndex, pressed)) {
+        if (!heldSteps.isEmpty()
+                && padIndex < CLIP_ROW_PAD_COUNT
+                && handleRecurrencePadPress(padIndex, pressed)) {
             return;
         }
         if (padIndex < CLIP_ROW_PAD_COUNT) {
@@ -66,8 +67,12 @@ final class MelodicStepPadSurface {
             return callbacks.pitchPoolPadLight(padIndex - PITCH_POOL_PAD_OFFSET);
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
-        return MelodicRenderer.stepLight(callbacks.currentPattern().step(stepIndex), heldSteps.contains(stepIndex),
-                stepIndex < callbacks.loopSteps(), stepIndex == callbacks.playingStep(), stepIndex,
+        return MelodicRenderer.stepLight(
+                callbacks.currentPattern().step(stepIndex),
+                heldSteps.contains(stepIndex),
+                stepIndex < callbacks.loopSteps(),
+                stepIndex == callbacks.playingStep(),
+                stepIndex,
                 callbacks.selectedClipColor());
     }
 
@@ -110,7 +115,9 @@ final class MelodicStepPadSurface {
     }
 
     String detailsLabel() {
-        return heldSteps.size() > 1 ? "%d steps".formatted(heldSteps.size()) : "Step " + (selectedStep + 1);
+        return heldSteps.size() > 1
+                ? "%d steps".formatted(heldSteps.size())
+                : "Step " + (selectedStep + 1);
     }
 
     private void pressStepPad(final int stepIndex) {
@@ -149,8 +156,11 @@ final class MelodicStepPadSurface {
     private void releaseStepPad(final int stepIndex) {
         final boolean accentGesture = callbacks.isAccentGestureActive();
         if (heldSteps.remove(stepIndex)) {
-            if (!heldStepConsumed && heldSteps.isEmpty() && !accentGesture
-                    && !callbacks.isFixedLengthHeld() && !callbacks.isDeleteHeld()) {
+            if (!heldStepConsumed
+                    && heldSteps.isEmpty()
+                    && !accentGesture
+                    && !callbacks.isFixedLengthHeld()
+                    && !callbacks.isDeleteHeld()) {
                 callbacks.toggleStep(stepIndex);
             }
             heldStep = heldSteps.isEmpty() ? null : heldSteps.iterator().next();
@@ -174,7 +184,10 @@ final class MelodicStepPadSurface {
             return true;
         }
         final MelodicPattern.Step step = callbacks.currentPattern().step(targets.get(0));
-        return recurrenceRow.handlePadPress(padIndex, pressed, !targets.isEmpty(),
+        return recurrenceRow.handlePadPress(
+                padIndex,
+                pressed,
+                !targets.isEmpty(),
                 recurrenceOf(step),
                 this::consumeHeldStepGesture,
                 pad -> callbacks.applyHeldRecurrenceToggle(targets, pad),

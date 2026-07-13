@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import org.junit.jupiter.api.Test;
-
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 class ChordStepVisibleClipCacheTest {
     @Test

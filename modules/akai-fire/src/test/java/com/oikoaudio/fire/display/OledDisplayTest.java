@@ -1,22 +1,21 @@
 package com.oikoaudio.fire.display;
 
-import com.bitwig.extension.controller.api.MidiOut;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+
+import com.bitwig.extension.controller.api.MidiOut;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class OledDisplayTest {
 
@@ -210,9 +209,10 @@ class OledDisplayTest {
         final ArgumentCaptor<byte[]> sysex = ArgumentCaptor.forClass(byte[].class);
         verify(midiOut, atLeastOnce()).sendSysex(sysex.capture());
         assertTrue(messagesContain(sysex.getAllValues(), "Vol  Pan  S1  S2"));
-        assertTrue(sysex.getAllValues().stream()
-                .filter(this::isImagePageMessage)
-                .noneMatch(message -> message[7] == 7 && message[8] == 7));
+        assertTrue(
+                sysex.getAllValues().stream()
+                        .filter(this::isImagePageMessage)
+                        .noneMatch(message -> message[7] == 7 && message[8] == 7));
     }
 
     @Test
@@ -227,9 +227,10 @@ class OledDisplayTest {
         final ArgumentCaptor<byte[]> sysex = ArgumentCaptor.forClass(byte[].class);
         verify(midiOut, atLeastOnce()).sendSysex(sysex.capture());
         assertTrue(messagesContainAtRow(sysex.getAllValues(), "Vol  Pan  S1  S2", 0));
-        assertTrue(sysex.getAllValues().stream()
-                .filter(this::isImagePageMessage)
-                .noneMatch(message -> message[7] == 0 && message[8] == 0));
+        assertTrue(
+                sysex.getAllValues().stream()
+                        .filter(this::isImagePageMessage)
+                        .noneMatch(message -> message[7] == 0 && message[8] == 0));
     }
 
     @Test
@@ -363,7 +364,8 @@ class OledDisplayTest {
         return false;
     }
 
-    private boolean messagesContainAtRow(final List<byte[]> messages, final String text, final int row) {
+    private boolean messagesContainAtRow(
+            final List<byte[]> messages, final String text, final int row) {
         for (final byte[] message : messages) {
             if (message.length > 9
                     && message[9] == row

@@ -32,9 +32,10 @@ public enum DawColor {
 
     DawColor(final String name, final double red, final double green, final double blue) {
         this.name = name;
-        lookupIndex = (int) Math.floor(red * 255) << 16 //
-                | (int) Math.floor(green * 255) << 8 //
-                | (int) Math.floor(blue * 255);
+        lookupIndex =
+                (int) Math.floor(red * 255) << 16 //
+                        | (int) Math.floor(green * 255) << 8 //
+                        | (int) Math.floor(blue * 255);
     }
 
     public String getName() {

@@ -1,14 +1,16 @@
 package com.oikoaudio.fire.sequence;
 
 /**
- * Chooses which clip slot should act as the source for clip-row copy actions.
- * Prefers the locally selected slot, then falls back to a playing slot, then a recording slot.
+ * Chooses which clip slot should act as the source for clip-row copy actions. Prefers the locally
+ * selected slot, then falls back to a playing slot, then a recording slot.
  */
 final class ClipRowCopySourceResolver {
-    private ClipRowCopySourceResolver() {
-    }
+    private ClipRowCopySourceResolver() {}
 
-    static int resolve(final int selectedSlotIndex, final boolean[] playingSlots, final boolean[] recordingSlots) {
+    static int resolve(
+            final int selectedSlotIndex,
+            final boolean[] playingSlots,
+            final boolean[] recordingSlots) {
         if (selectedSlotIndex >= 0) {
             return selectedSlotIndex;
         }

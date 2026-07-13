@@ -1,17 +1,16 @@
 package com.oikoaudio.fire.melodic;
 
-import com.bitwig.extensions.framework.MusicalScaleLibrary;
-import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 class MelodicEngineTest {
 
@@ -48,8 +47,15 @@ class MelodicEngineTest {
                 new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 0.2, 5, 0, 0.0, 9L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
-        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
-                MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
+        final MelodicPattern mutated =
+                new MelodicMutator()
+                        .mutate(
+                                original,
+                                context,
+                                MelodicMutator.Mode.PRESERVE_RHYTHM,
+                                0.8,
+                                0.6,
+                                77L);
 
         assertArrayEquals(activeMask(original), activeMask(mutated));
     }
@@ -62,10 +68,10 @@ class MelodicEngineTest {
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
         final MelodicMutator mutator = new MelodicMutator();
 
-        final MelodicPattern simplified = mutator.mutate(original, context,
-                MelodicMutator.Mode.SIMPLIFY, 0.9, 0.1, 4L);
-        final MelodicPattern densified = mutator.mutate(original, context,
-                MelodicMutator.Mode.DENSIFY, 0.9, 0.1, 4L);
+        final MelodicPattern simplified =
+                mutator.mutate(original, context, MelodicMutator.Mode.SIMPLIFY, 0.9, 0.1, 4L);
+        final MelodicPattern densified =
+                mutator.mutate(original, context, MelodicMutator.Mode.DENSIFY, 0.9, 0.1, 4L);
 
         assertTrue(activeCount(simplified) <= activeCount(original));
         assertTrue(activeCount(densified) >= activeCount(original));
@@ -78,15 +84,25 @@ class MelodicEngineTest {
                 new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 0.2, 5, 0, 0.0, 9L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
-        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
-                MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
+        final MelodicPattern mutated =
+                new MelodicMutator()
+                        .mutate(
+                                original,
+                                context,
+                                MelodicMutator.Mode.PRESERVE_RHYTHM,
+                                0.8,
+                                0.6,
+                                77L);
 
-        assertNotEquals(java.util.Arrays.toString(pitchMask(original)), java.util.Arrays.toString(pitchMask(mutated)));
+        assertNotEquals(
+                java.util.Arrays.toString(pitchMask(original)),
+                java.util.Arrays.toString(pitchMask(mutated)));
     }
 
     @Test
     void clipAdapterAlwaysBuildsExactlyThirtyTwoSteps() {
-        final Map<Integer, Map<Integer, com.bitwig.extension.controller.api.NoteStep>> map = new HashMap<>();
+        final Map<Integer, Map<Integer, com.bitwig.extension.controller.api.NoteStep>> map =
+                new HashMap<>();
         final MelodicPattern pattern = MelodicClipAdapter.fromNoteSteps(map, 16, 0.25);
         assertEquals(32, pattern.steps().size());
     }
@@ -174,10 +190,10 @@ class MelodicEngineTest {
     @Test
     void generatorsWithFamiliesExposeAnyAndNamedSubtypeCycling() {
         final MelodicGenerator[] generators = {
-                new AcidGenerator(),
-                new MotifGenerator(),
-                new CallResponseGenerator(),
-                new RollingBassGenerator()
+            new AcidGenerator(),
+            new MotifGenerator(),
+            new CallResponseGenerator(),
+            new RollingBassGenerator()
         };
 
         for (final MelodicGenerator generator : generators) {
@@ -192,9 +208,7 @@ class MelodicEngineTest {
 
     private MelodicPhraseContext context() {
         return new MelodicPhraseContext(
-                MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"),
-                0,
-                36);
+                MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0, 36);
     }
 
     private boolean[] activeMask(final MelodicPattern pattern) {

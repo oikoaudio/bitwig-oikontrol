@@ -3,18 +3,18 @@ package com.oikoaudio.fire.sequence;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 
 public final class SequencerEditButtonLogic {
-    private SequencerEditButtonLogic() {
-    }
+    private SequencerEditButtonLogic() {}
 
-    static void handleAlternatePressed(final BooleanValueObject mainValue,
-                                       final BooleanValueObject altValue,
-                                       final BooleanValueObject alternateFunctionActive,
-                                       final BooleanValueObject actionTakenFlag,
-                                       final boolean shiftHeld,
-                                       final FunctionInfo primaryInfo,
-                                       final FunctionInfo alternateInfo,
-                                       final boolean pressed,
-                                       final SequencerEditButtonBinder.EditFunctionFeedback feedback) {
+    static void handleAlternatePressed(
+            final BooleanValueObject mainValue,
+            final BooleanValueObject altValue,
+            final BooleanValueObject alternateFunctionActive,
+            final BooleanValueObject actionTakenFlag,
+            final boolean shiftHeld,
+            final FunctionInfo primaryInfo,
+            final FunctionInfo alternateInfo,
+            final boolean pressed,
+            final SequencerEditButtonBinder.EditFunctionFeedback feedback) {
         if (pressed) {
             if (shiftHeld) {
                 alternateFunctionActive.set(!alternateFunctionActive.get());
@@ -37,10 +37,11 @@ public final class SequencerEditButtonLogic {
         feedback.deactivate();
     }
 
-    static void handleValueChanged(final boolean active,
-                                   final FunctionInfo info,
-                                   final boolean shiftHeld,
-                                   final SequencerEditButtonBinder.EditFunctionFeedback feedback) {
+    static void handleValueChanged(
+            final boolean active,
+            final FunctionInfo info,
+            final boolean shiftHeld,
+            final SequencerEditButtonBinder.EditFunctionFeedback feedback) {
         if (active) {
             feedback.activate(info, shiftHeld);
         } else {

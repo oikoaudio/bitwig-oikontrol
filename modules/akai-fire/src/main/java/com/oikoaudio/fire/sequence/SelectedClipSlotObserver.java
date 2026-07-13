@@ -4,17 +4,18 @@ import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 
 /**
- * Wires clip-slot observers needed to keep Akai mode state in sync with the currently selected clip.
- * Callers choose whether color and playback state should also be observed based on their lighting needs.
+ * Wires clip-slot observers needed to keep Akai mode state in sync with the currently selected
+ * clip. Callers choose whether color and playback state should also be observed based on their
+ * lighting needs.
  */
 public final class SelectedClipSlotObserver {
-    private SelectedClipSlotObserver() {
-    }
+    private SelectedClipSlotObserver() {}
 
-    public static void observe(final ClipLauncherSlotBank slotBank,
-                               final boolean includeColor,
-                               final boolean includePlaybackState,
-                               final Runnable refresh) {
+    public static void observe(
+            final ClipLauncherSlotBank slotBank,
+            final boolean includeColor,
+            final boolean includePlaybackState,
+            final Runnable refresh) {
         for (int i = 0; i < slotBank.getSizeOfBank(); i++) {
             final ClipLauncherSlot slot = slotBank.getItemAt(i);
             slot.exists().markInterested();

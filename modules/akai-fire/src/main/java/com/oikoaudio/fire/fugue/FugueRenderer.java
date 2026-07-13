@@ -11,29 +11,43 @@ import com.oikoaudio.fire.sequence.StepPadLightHelper;
 public final class FugueRenderer {
     private static final int COLUMNS = 16;
 
-    private FugueRenderer() {
-    }
+    private FugueRenderer() {}
 
-    public static RgbLightState padLight(final FuguePattern pattern, final int column, final int loopSteps,
-                                         final int playingStep, final int shiftedStartColumn,
-                                         final RgbLightState lineColor, final boolean selected,
-                                         final boolean enabled) {
+    public static RgbLightState padLight(
+            final FuguePattern pattern,
+            final int column,
+            final int loopSteps,
+            final int playingStep,
+            final int shiftedStartColumn,
+            final RgbLightState lineColor,
+            final boolean selected,
+            final boolean enabled) {
         final boolean inLoop = column < activeBucketCount(loopSteps);
         final boolean playing = playingBucket(playingStep, loopSteps) == column;
         final RgbLightState color = selected ? lineColor.getBrightend() : lineColor;
-        final RgbLightState rendered = MelodicRenderer.stepLight(
-                bucketStep(pattern, column, loopSteps), false, inLoop, playing, column, color);
+        final RgbLightState rendered =
+                MelodicRenderer.stepLight(
+                        bucketStep(pattern, column, loopSteps),
+                        false,
+                        inLoop,
+                        playing,
+                        column,
+                        color);
         final RgbLightState enabledState = enabled ? rendered : rendered.getVeryDimmed();
         return inLoop
-                ? StepPadLightHelper.renderClipStartColumnOverlay(column, shiftedStartColumn, enabledState)
+                ? StepPadLightHelper.renderClipStartColumnOverlay(
+                        column, shiftedStartColumn, enabledState)
                 : enabledState;
     }
 
-    public static MelodicPattern.Step bucketStep(final FuguePattern pattern, final int column, final int loopSteps) {
+    public static MelodicPattern.Step bucketStep(
+            final FuguePattern pattern, final int column, final int loopSteps) {
         if (column >= activeBucketCount(loopSteps)) {
             return MelodicPattern.Step.rest(column);
         }
-        for (int step = bucketStart(column, loopSteps); step < bucketEnd(column, loopSteps); step++) {
+        for (int step = bucketStart(column, loopSteps);
+                step < bucketEnd(column, loopSteps);
+                step++) {
             final MelodicPattern.Step candidate = pattern.step(step);
             if (candidate.active() && !candidate.tieFromPrevious()) {
                 return candidate.withIndex(column);
@@ -66,6 +80,8 @@ public final class FugueRenderer {
     }
 
     public static BiColorLightState lineStatusLight(final boolean enabled) {
-        return enabled ? TrackSelectIndicatorLights.green(true) : TrackSelectIndicatorLights.red(false);
+        return enabled
+                ? TrackSelectIndicatorLights.green(true)
+                : TrackSelectIndicatorLights.red(false);
     }
 }

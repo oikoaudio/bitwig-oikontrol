@@ -4,17 +4,16 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 
-/**
- * Internal controller for chord-step sequencing behavior.
- */
+/** Internal controller for chord-step sequencing behavior. */
 public final class ChordStepController {
     private final ChordStepEditControls editControls;
     private final ChordStepClipController clipController;
     private final ChordStepObservationController observationController;
 
-    public ChordStepController(final ChordStepEditControls editControls,
-                               final ChordStepClipController clipController,
-                               final ChordStepObservationController observationController) {
+    public ChordStepController(
+            final ChordStepEditControls editControls,
+            final ChordStepClipController clipController,
+            final ChordStepObservationController observationController) {
         this.editControls = editControls;
         this.clipController = clipController;
         this.observationController = observationController;

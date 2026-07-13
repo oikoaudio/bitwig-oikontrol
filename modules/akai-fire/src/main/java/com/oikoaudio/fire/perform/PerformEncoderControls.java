@@ -1,26 +1,41 @@
 package com.oikoaudio.fire.perform;
 
-import com.oikoaudio.fire.sequence.EncoderMode;
 import com.bitwig.extensions.framework.Layer;
-
+import com.oikoaudio.fire.sequence.EncoderMode;
 import java.util.EnumMap;
 import java.util.Map;
 
-/** Owns Perform encoder-page identity, cycling, remote target, and temporary Device-page restoration. */
+/**
+ * Owns Perform encoder-page identity, cycling, remote target, and temporary Device-page
+ * restoration.
+ */
 public final class PerformEncoderControls {
-    public enum RemoteTarget { NONE, PROJECT, TRACK, DEVICE }
+    public enum RemoteTarget {
+        NONE,
+        PROJECT,
+        TRACK,
+        DEVICE
+    }
 
     private EncoderMode mode = EncoderMode.CHANNEL;
     private EncoderMode modeBeforeMixDevice;
     private final Map<EncoderMode, Layer> layers = new EnumMap<>(EncoderMode.class);
 
-    public EncoderMode mode() { return mode; }
+    public EncoderMode mode() {
+        return mode;
+    }
 
-    public void registerLayer(final EncoderMode mode, final Layer layer) { layers.put(mode, layer); }
+    public void registerLayer(final EncoderMode mode, final Layer layer) {
+        layers.put(mode, layer);
+    }
 
-    public Layer currentLayer() { return layers.get(mode); }
+    public Layer currentLayer() {
+        return layers.get(mode);
+    }
 
-    public void switchMode(final EncoderMode mode) { this.mode = mode; }
+    public void switchMode(final EncoderMode mode) {
+        this.mode = mode;
+    }
 
     public EncoderMode nextMode() {
         return switch (mode) {
@@ -43,9 +58,13 @@ public final class PerformEncoderControls {
         }
     }
 
-    public boolean hasModeBeforeMixDevice() { return modeBeforeMixDevice != null; }
+    public boolean hasModeBeforeMixDevice() {
+        return modeBeforeMixDevice != null;
+    }
 
-    public void forgetModeBeforeMixDevice() { modeBeforeMixDevice = null; }
+    public void forgetModeBeforeMixDevice() {
+        modeBeforeMixDevice = null;
+    }
 
     public RemoteTarget remoteTarget() {
         return switch (mode) {

@@ -1,46 +1,55 @@
 package com.oikoaudio.fire.chordstep;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.Test;
 
 class ChordStepControllerTest {
 
     @Test
     void delegatesEditButtonsAndClipState() {
         final List<String> events = new ArrayList<>();
-        final ChordStepClipController clipController = new ChordStepClipController(
-                () -> true,
-                () -> true,
-                () -> events.add("resync"),
-                failure -> events.add("failure:" + failure.title()));
+        final ChordStepClipController clipController =
+                new ChordStepClipController(
+                        () -> true,
+                        () -> true,
+                        () -> events.add("resync"),
+                        failure -> events.add("failure:" + failure.title()));
         clipController.refresh(SelectedClipSlotState.fromValues(2, true, RgbLightState.GRAY_2));
-        final ChordStepController mode = new ChordStepController(
-                new ChordStepEditControls((title, detail) -> events.add(title + ":" + detail), () -> events.add("clear")),
-                clipController,
-                new ChordStepObservationController(
-                        (task, delayTicks) -> events.add("schedule:" + delayTicks),
-                        null,
-                        () -> 0,
-                        () -> RgbLightState.GRAY_1,
+        final ChordStepController mode =
+                new ChordStepController(
+                        new ChordStepEditControls(
+                                (title, detail) -> events.add(title + ":" + detail),
+                                () -> events.add("clear")),
                         clipController,
-                        () -> events.add("clear-cache"),
-                        () -> {},
-                        () -> {},
-                        () -> {},
-                        () -> {},
-                        (slotBank, selectedClipSlotIndex, refreshSelectedClipState, slotIndexSupplier,
-                         scrollNoteClipToKeyStart, scrollObservedClipToKeyStart,
-                         scrollNoteClipToCurrentStep, scrollObservedClipToStepStart) -> events.add("pass"),
-                        (slotBank, defaultColor) -> SelectedClipSlotState.fromValues(2, true, defaultColor)));
+                        new ChordStepObservationController(
+                                (task, delayTicks) -> events.add("schedule:" + delayTicks),
+                                null,
+                                () -> 0,
+                                () -> RgbLightState.GRAY_1,
+                                clipController,
+                                () -> events.add("clear-cache"),
+                                () -> {},
+                                () -> {},
+                                () -> {},
+                                () -> {},
+                                (slotBank,
+                                        selectedClipSlotIndex,
+                                        refreshSelectedClipState,
+                                        slotIndexSupplier,
+                                        scrollNoteClipToKeyStart,
+                                        scrollObservedClipToKeyStart,
+                                        scrollNoteClipToCurrentStep,
+                                        scrollObservedClipToStepStart) -> events.add("pass"),
+                                (slotBank, defaultColor) ->
+                                        SelectedClipSlotState.fromValues(2, true, defaultColor)));
 
         mode.handleMute1(true);
         mode.handleMute4(true);

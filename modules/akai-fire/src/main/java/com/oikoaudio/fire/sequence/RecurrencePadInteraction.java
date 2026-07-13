@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.RgbLightState;
-
 import java.util.function.IntConsumer;
 
 public final class RecurrencePadInteraction {
@@ -40,13 +39,14 @@ public final class RecurrencePadInteraction {
                 && System.currentTimeMillis() - holdStartedAtMs >= lightHoldMs;
     }
 
-    public boolean handlePadPress(final int padIndex,
-                                  final boolean pressed,
-                                  final boolean hasTarget,
-                                  final RecurrencePattern recurrence,
-                                  final Runnable markConsumed,
-                                  final IntConsumer togglePad,
-                                  final IntConsumer applySpan) {
+    public boolean handlePadPress(
+            final int padIndex,
+            final boolean pressed,
+            final boolean hasTarget,
+            final RecurrencePattern recurrence,
+            final Runnable markConsumed,
+            final IntConsumer togglePad,
+            final IntConsumer applySpan) {
         if (!hasTarget || padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
             return false;
         }
@@ -81,9 +81,8 @@ public final class RecurrencePadInteraction {
         return true;
     }
 
-    public RgbLightState padLight(final int padIndex,
-                                  final RecurrencePattern recurrence,
-                                  final RgbLightState baseColor) {
+    public RgbLightState padLight(
+            final int padIndex, final RecurrencePattern recurrence, final RgbLightState baseColor) {
         if (padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
             return RgbLightState.OFF;
         }

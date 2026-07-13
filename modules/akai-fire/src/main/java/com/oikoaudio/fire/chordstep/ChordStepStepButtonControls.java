@@ -2,14 +2,13 @@ package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
 
-/**
- * Owns chord-step behavior for the physical STEP button.
- */
+/** Owns chord-step behavior for the physical STEP button. */
 public final class ChordStepStepButtonControls {
     private final ChordStepAccentControls accentControls;
     private final Host host;
 
-    public ChordStepStepButtonControls(final ChordStepAccentControls accentControls, final Host host) {
+    public ChordStepStepButtonControls(
+            final ChordStepAccentControls accentControls, final Host host) {
         this.accentControls = accentControls;
         this.host = host;
     }
@@ -41,7 +40,9 @@ public final class ChordStepStepButtonControls {
             return BiColorLightState.OFF;
         }
         if (host.isShiftHeld()) {
-            return accentControls.isActive() ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;
+            return accentControls.isActive()
+                    ? BiColorLightState.AMBER_FULL
+                    : BiColorLightState.AMBER_HALF;
         }
         if (host.isAltHeld()) {
             return host.stepFillLightState();
@@ -49,7 +50,9 @@ public final class ChordStepStepButtonControls {
         if (accentControls.isActive()) {
             return BiColorLightState.AMBER_FULL;
         }
-        return host.isStandaloneChordStepSurface() ? host.modeButtonLightState() : BiColorLightState.OFF;
+        return host.isStandaloneChordStepSurface()
+                ? host.modeButtonLightState()
+                : BiColorLightState.OFF;
     }
 
     public interface Host {

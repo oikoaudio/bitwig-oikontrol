@@ -1,13 +1,10 @@
 package com.oikoaudio.fire.note;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
-
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/**
- * Live-note performance controls owned by Note mode's mute buttons outside chord-step editing.
- */
+/** Live-note performance controls owned by Note mode's mute buttons outside chord-step editing. */
 final class NoteLivePerformanceControls {
     private final Consumer<Integer> sustainSender;
     private final Consumer<Integer> sostenutoSender;
@@ -19,22 +16,30 @@ final class NoteLivePerformanceControls {
     private boolean sustainActive;
     private boolean sostenutoActive;
 
-    NoteLivePerformanceControls(final Consumer<Integer> sustainSender,
-                                final Consumer<Integer> sostenutoSender,
-                                final Runnable noteRepeatToggle,
-                                final BooleanSupplier noteRepeatActive,
-                                final StatusDisplay statusDisplay) {
-        this(sustainSender, sostenutoSender, noteRepeatToggle, noteRepeatActive, () -> false, () -> false,
+    NoteLivePerformanceControls(
+            final Consumer<Integer> sustainSender,
+            final Consumer<Integer> sostenutoSender,
+            final Runnable noteRepeatToggle,
+            final BooleanSupplier noteRepeatActive,
+            final StatusDisplay statusDisplay) {
+        this(
+                sustainSender,
+                sostenutoSender,
+                noteRepeatToggle,
+                noteRepeatActive,
+                () -> false,
+                () -> false,
                 statusDisplay);
     }
 
-    NoteLivePerformanceControls(final Consumer<Integer> sustainSender,
-                                final Consumer<Integer> sostenutoSender,
-                                final Runnable noteRepeatToggle,
-                                final BooleanSupplier noteRepeatActive,
-                                final HoldToggle holdToggle,
-                                final BooleanSupplier holdActive,
-                                final StatusDisplay statusDisplay) {
+    NoteLivePerformanceControls(
+            final Consumer<Integer> sustainSender,
+            final Consumer<Integer> sostenutoSender,
+            final Runnable noteRepeatToggle,
+            final BooleanSupplier noteRepeatActive,
+            final HoldToggle holdToggle,
+            final BooleanSupplier holdActive,
+            final StatusDisplay statusDisplay) {
         this.sustainSender = sustainSender;
         this.sostenutoSender = sostenutoSender;
         this.noteRepeatToggle = noteRepeatToggle;
@@ -85,11 +90,15 @@ final class NoteLivePerformanceControls {
     }
 
     BiColorLightState mute3LightState() {
-        return noteRepeatActive.getAsBoolean() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        return noteRepeatActive.getAsBoolean()
+                ? BiColorLightState.GREEN_FULL
+                : BiColorLightState.GREEN_HALF;
     }
 
     BiColorLightState mute4LightState() {
-        return holdActive.getAsBoolean() ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
+        return holdActive.getAsBoolean()
+                ? BiColorLightState.GREEN_FULL
+                : BiColorLightState.GREEN_HALF;
     }
 
     void resetToggles() {

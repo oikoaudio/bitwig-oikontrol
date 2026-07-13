@@ -3,7 +3,6 @@ package com.oikoaudio.fire.nestedrhythm;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -19,21 +18,26 @@ final class NestedRhythmClipWriter {
         this.clipStepSize = clipStepSize;
     }
 
-    void write(final List<NestedRhythmEditablePulse> pulses,
-               final NestedRhythmExpressionSettings settings,
-               final double loopLengthBeats) {
+    void write(
+            final List<NestedRhythmEditablePulse> pulses,
+            final NestedRhythmExpressionSettings settings,
+            final double loopLengthBeats) {
         cursorClip.setStepSize(clipStepSize);
         pendingPulseWrites.clear();
         cursorClip.clearSteps();
         cursorClip.getLoopLength().set(loopLengthBeats);
-        final List<NestedRhythmEditablePulse> active = pulses.stream()
-                .filter(pulse -> pulse.enabled)
-                .sorted(Comparator.comparingInt(pulse -> pulse.fineStart))
-                .toList();
+        final List<NestedRhythmEditablePulse> active =
+                pulses.stream()
+                        .filter(pulse -> pulse.enabled)
+                        .sorted(Comparator.comparingInt(pulse -> pulse.fineStart))
+                        .toList();
         for (final NestedRhythmEditablePulse pulse : active) {
             pendingPulseWrites.put(pulse.fineStart, PendingPulseWrite.fromPulse(pulse, settings));
-            cursorClip.setStep(pulse.fineStart, pulse.midiNote,
-                    pulse.effectiveVelocity(), pulse.effectiveBeatDuration(settings));
+            cursorClip.setStep(
+                    pulse.fineStart,
+                    pulse.midiNote,
+                    pulse.effectiveVelocity(),
+                    pulse.effectiveBeatDuration(settings));
         }
     }
 
@@ -60,14 +64,16 @@ final class NestedRhythmClipWriter {
         step.setRecurrence(recurrence.bitwigLength(), recurrence.bitwigMask());
     }
 
-    private record PendingPulseWrite(int midiNote,
-                                     double pressure,
-                                     double timbre,
-                                     double pitchExpression,
-                                     double chance,
-                                     RecurrencePattern recurrence) {
-        private static PendingPulseWrite fromPulse(final NestedRhythmEditablePulse pulse,
-                                                   final NestedRhythmExpressionSettings settings) {
+    private record PendingPulseWrite(
+            int midiNote,
+            double pressure,
+            double timbre,
+            double pitchExpression,
+            double chance,
+            RecurrencePattern recurrence) {
+        private static PendingPulseWrite fromPulse(
+                final NestedRhythmEditablePulse pulse,
+                final NestedRhythmExpressionSettings settings) {
             return new PendingPulseWrite(
                     pulse.midiNote,
                     pulse.effectivePressure(settings),

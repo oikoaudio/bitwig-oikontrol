@@ -1,12 +1,12 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.display.OledDisplay;
-import com.oikoaudio.fire.lights.BiColorLightState;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+
+import com.oikoaudio.fire.display.OledDisplay;
+import com.oikoaudio.fire.lights.BiColorLightState;
+import org.junit.jupiter.api.Test;
 
 class ChordStepStepButtonControlsTest {
     @Test
@@ -67,7 +67,8 @@ class ChordStepStepButtonControlsTest {
     }
 
     private static ChordStepStepButtonControls controls(final Host host) {
-        return new ChordStepStepButtonControls(new ChordStepAccentControls(mock(OledDisplay.class)), host);
+        return new ChordStepStepButtonControls(
+                new ChordStepAccentControls(mock(OledDisplay.class)), host);
     }
 
     private static final class Host implements ChordStepStepButtonControls.Host {

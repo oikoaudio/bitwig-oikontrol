@@ -3,17 +3,16 @@ package com.oikoaudio.fire.chordstep;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Owns the held-step fine-nudge bank-button gesture lifecycle.
- */
+/** Owns the held-step fine-nudge bank-button gesture lifecycle. */
 public final class ChordStepFineNudgeController<E> {
     private final ChordStepFineNudgeState<E> state;
     private final EventSnapshot<E> eventSnapshot;
     private final FineNudgeAction<E> fineNudgeAction;
 
-    public ChordStepFineNudgeController(final ChordStepFineNudgeState<E> state,
-                                        final EventSnapshot<E> eventSnapshot,
-                                        final FineNudgeAction<E> fineNudgeAction) {
+    public ChordStepFineNudgeController(
+            final ChordStepFineNudgeState<E> state,
+            final EventSnapshot<E> eventSnapshot,
+            final FineNudgeAction<E> fineNudgeAction) {
         this.state = state;
         this.eventSnapshot = eventSnapshot;
         this.fineNudgeAction = fineNudgeAction;

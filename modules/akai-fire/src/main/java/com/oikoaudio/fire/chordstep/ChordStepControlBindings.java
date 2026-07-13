@@ -14,16 +14,23 @@ final class ChordStepControlBindings {
     private final Layer layer;
     private final Host host;
 
-    ChordStepControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host) {
+    ChordStepControlBindings(
+            final AkaiFireOikontrolExtension driver, final Layer layer, final Host host) {
         this.driver = driver;
         this.layer = layer;
         this.host = host;
     }
 
     void bind() {
-        PadBankRowControlBindings.velocitySensitivePads(driver, layer, padBankRowHost(),
-                new PadBankRowControlBindings.ExtraButtonBinding(NoteAssign.STEP_SEQ,
-                        host::handleStepSeqPressed, host::stepSeqLightState)).bind();
+        PadBankRowControlBindings.velocitySensitivePads(
+                        driver,
+                        layer,
+                        padBankRowHost(),
+                        new PadBankRowControlBindings.ExtraButtonBinding(
+                                NoteAssign.STEP_SEQ,
+                                host::handleStepSeqPressed,
+                                host::stepSeqLightState))
+                .bind();
         bindEditStatusLights();
     }
 
@@ -33,8 +40,8 @@ final class ChordStepControlBindings {
     }
 
     void deactivatePatternButtons() {
-        driver.getPatternButtons().setUpCallback(pressed -> { }, () -> BiColorLightState.OFF);
-        driver.getPatternButtons().setDownCallback(pressed -> { }, () -> BiColorLightState.OFF);
+        driver.getPatternButtons().setUpCallback(pressed -> {}, () -> BiColorLightState.OFF);
+        driver.getPatternButtons().setDownCallback(pressed -> {}, () -> BiColorLightState.OFF);
     }
 
     private PadBankRowControlBindings.Host padBankRowHost() {
@@ -45,7 +52,8 @@ final class ChordStepControlBindings {
             }
 
             @Override
-            public void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
+            public void handlePadPress(
+                    final int padIndex, final boolean pressed, final int velocity) {
                 host.handlePadPress(padIndex, pressed, velocity);
             }
 
@@ -71,7 +79,9 @@ final class ChordStepControlBindings {
                     case 1 -> host.handleMute2Button(pressed);
                     case 2 -> host.handleMute3Button(pressed);
                     case 3 -> host.handleMute4Button(pressed);
-                    default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+                    default ->
+                            throw new IllegalArgumentException(
+                                    "Unsupported mute button index: " + index);
                 }
             }
 
@@ -82,7 +92,9 @@ final class ChordStepControlBindings {
                     case 1 -> host.mute2LightState();
                     case 2 -> host.mute3LightState();
                     case 3 -> host.mute4LightState();
-                    default -> throw new IllegalArgumentException("Unsupported mute button index: " + index);
+                    default ->
+                            throw new IllegalArgumentException(
+                                    "Unsupported mute button index: " + index);
                 };
             }
         };
@@ -98,11 +110,21 @@ final class ChordStepControlBindings {
 
     private BiColorLightState editStatusLightState(final int index) {
         return switch (index) {
-            case 0 -> TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(host.mute1LightState()));
-            case 1 -> TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(host.mute2LightState()));
-            case 2 -> TrackSelectIndicatorLights.green(BiColorLightState.GREEN_FULL.equals(host.mute3LightState()));
-            case 3 -> TrackSelectIndicatorLights.red(BiColorLightState.GREEN_FULL.equals(host.mute4LightState()));
-            default -> throw new IllegalArgumentException("Unsupported edit status light index: " + index);
+            case 0 ->
+                    TrackSelectIndicatorLights.green(
+                            BiColorLightState.GREEN_FULL.equals(host.mute1LightState()));
+            case 1 ->
+                    TrackSelectIndicatorLights.green(
+                            BiColorLightState.GREEN_FULL.equals(host.mute2LightState()));
+            case 2 ->
+                    TrackSelectIndicatorLights.green(
+                            BiColorLightState.GREEN_FULL.equals(host.mute3LightState()));
+            case 3 ->
+                    TrackSelectIndicatorLights.red(
+                            BiColorLightState.GREEN_FULL.equals(host.mute4LightState()));
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unsupported edit status light index: " + index);
         };
     }
 

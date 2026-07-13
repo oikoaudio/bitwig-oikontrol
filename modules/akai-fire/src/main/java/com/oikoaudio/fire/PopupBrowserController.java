@@ -6,7 +6,9 @@ import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.PopupBrowser;
 import com.oikoaudio.fire.display.OledDisplay;
 
-/** Owns Akai Popup Browser gesture policy, delayed opening, result priming, and encoder navigation. */
+/**
+ * Owns Akai Popup Browser gesture policy, delayed opening, result priming, and encoder navigation.
+ */
 final class PopupBrowserController {
     private static final int[] RESULTS_PRIME_DELAYS_MS = {0, 1, 10, 30};
     private static final int OPEN_DEFER_MS = 40;
@@ -19,25 +21,28 @@ final class PopupBrowserController {
     private final Host host;
     private int pressToken;
 
-    static PopupBrowserController create(final ControllerHost controllerHost,
-                                         final ViewCursorControl viewControl,
-                                         final OledDisplay oled,
-                                         final Host host) {
+    static PopupBrowserController create(
+            final ControllerHost controllerHost,
+            final ViewCursorControl viewControl,
+            final OledDisplay oled,
+            final Host host) {
         final PopupBrowser browser = controllerHost.createPopupBrowser();
         browser.exists().markInterested();
         final BrowserResultsItem resultsCursor = browser.resultsColumn().createCursorItem();
         resultsCursor.exists().markInterested();
         resultsCursor.isSelected().markInterested();
         resultsCursor.name().markInterested();
-        return new PopupBrowserController(controllerHost, browser, resultsCursor, viewControl, oled, host);
+        return new PopupBrowserController(
+                controllerHost, browser, resultsCursor, viewControl, oled, host);
     }
 
-    PopupBrowserController(final ControllerHost scheduler,
-                           final PopupBrowser browser,
-                           final BrowserResultsItem resultsCursor,
-                           final ViewCursorControl viewControl,
-                           final OledDisplay oled,
-                           final Host host) {
+    PopupBrowserController(
+            final ControllerHost scheduler,
+            final PopupBrowser browser,
+            final BrowserResultsItem resultsCursor,
+            final ViewCursorControl viewControl,
+            final OledDisplay oled,
+            final Host host) {
         this.scheduler = scheduler;
         this.browser = browser;
         this.resultsCursor = resultsCursor;
@@ -166,7 +171,9 @@ final class PopupBrowserController {
                 browser.selectPreviousFile();
             }
         }
-        oled.valueInfo("Browser", resultsCursor.exists().get() ? resultsCursor.name().get() : "No Results");
+        oled.valueInfo(
+                "Browser",
+                resultsCursor.exists().get() ? resultsCursor.name().get() : "No Results");
     }
 
     void handleMainEncoderPress(final boolean pressed) {

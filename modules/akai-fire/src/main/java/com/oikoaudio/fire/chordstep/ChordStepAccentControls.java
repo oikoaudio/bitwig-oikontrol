@@ -3,7 +3,6 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.sequence.AccentLatchState;
-
 import java.util.Collection;
 import java.util.Map;
 
@@ -49,7 +48,8 @@ public final class ChordStepAccentControls {
         return editor.toggleAccent(notes, standardVelocity);
     }
 
-    public boolean isStepAccented(final Map<Integer, NoteStep> notesAtStep, final int standardVelocity) {
+    public boolean isStepAccented(
+            final Map<Integer, NoteStep> notesAtStep, final int standardVelocity) {
         return editor.isStepAccented(notesAtStep, standardVelocity);
     }
 }

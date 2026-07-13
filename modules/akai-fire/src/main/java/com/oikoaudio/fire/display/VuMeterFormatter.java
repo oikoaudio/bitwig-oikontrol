@@ -4,8 +4,7 @@ public final class VuMeterFormatter {
     public static final int RANGE = 128;
     private static final double MIN_DB = -60.0;
 
-    private VuMeterFormatter() {
-    }
+    private VuMeterFormatter() {}
 
     public static String meterValue(final int value) {
         return formatDb(value, true);
@@ -44,7 +43,9 @@ public final class VuMeterFormatter {
             return 0;
         }
         final int clamped = clamp(value, 0, RANGE - 1);
-        return Math.max(0, Math.min(maxHeight, (int) Math.round(clamped * (double) maxHeight / (RANGE - 1))));
+        return Math.max(
+                0,
+                Math.min(maxHeight, (int) Math.round(clamped * (double) maxHeight / (RANGE - 1))));
     }
 
     public static int clamp(final int value, final int min, final int max) {

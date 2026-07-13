@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.Clip;
-
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
 
@@ -17,13 +16,14 @@ public final class ChordStepClipEditor<E> {
     private final Runnable queueObservationResync;
     private final int fineStepsPerStep;
 
-    public ChordStepClipEditor(final Clip observedClip,
-                               final ChordStepObservedState observedState,
-                               final ChordStepFineNudgeState<E> fineNudgeState,
-                               final IntUnaryOperator localToGlobalStep,
-                               final IntUnaryOperator localToGlobalFineStep,
-                               final Runnable queueObservationResync,
-                               final int fineStepsPerStep) {
+    public ChordStepClipEditor(
+            final Clip observedClip,
+            final ChordStepObservedState observedState,
+            final ChordStepFineNudgeState<E> fineNudgeState,
+            final IntUnaryOperator localToGlobalStep,
+            final IntUnaryOperator localToGlobalFineStep,
+            final Runnable queueObservationResync,
+            final int fineStepsPerStep) {
         this.observedClip = observedClip;
         this.observedState = observedState;
         this.fineNudgeState = fineNudgeState;
@@ -33,7 +33,8 @@ public final class ChordStepClipEditor<E> {
         this.fineStepsPerStep = fineStepsPerStep;
     }
 
-    public void writeChordAtStep(final int stepIndex, final int[] notes, final int velocity, final double duration) {
+    public void writeChordAtStep(
+            final int stepIndex, final int[] notes, final int velocity, final double duration) {
         clearChordStep(stepIndex);
         for (final int midiNote : notes) {
             setChordStep(stepIndex, midiNote, velocity, duration);
@@ -49,14 +50,17 @@ public final class ChordStepClipEditor<E> {
         }
     }
 
-    public void setChordStep(final int stepIndex, final int midiNote, final int velocity, final double duration) {
-        observedClip.setStep(localToGlobalFineStep.applyAsInt(stepIndex), midiNote, velocity, duration);
+    public void setChordStep(
+            final int stepIndex, final int midiNote, final int velocity, final double duration) {
+        observedClip.setStep(
+                localToGlobalFineStep.applyAsInt(stepIndex), midiNote, velocity, duration);
     }
 
     public void clearChordNote(final int stepIndex, final int midiNote) {
         final Map<Integer, Integer> observedStarts =
                 observedState.noteStartsForStep(localToGlobalStep.applyAsInt(stepIndex));
-        final int fineStart = observedStarts.getOrDefault(midiNote, localToGlobalFineStep.applyAsInt(stepIndex));
+        final int fineStart =
+                observedStarts.getOrDefault(midiNote, localToGlobalFineStep.applyAsInt(stepIndex));
         observedClip.clearStep(fineStart, midiNote);
         invalidateObservedChordStep(stepIndex);
         queueObservationResync.run();
@@ -67,5 +71,4 @@ public final class ChordStepClipEditor<E> {
         observedState.invalidateStep(globalStep);
         fineNudgeState.invalidateStep(stepIndex);
     }
-
 }

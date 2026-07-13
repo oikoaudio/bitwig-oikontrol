@@ -1,13 +1,13 @@
 package com.oikoaudio.fire.fugue;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import org.junit.jupiter.api.Test;
 
 class FugueObservationControllerTest {
     @Test
@@ -32,8 +32,11 @@ class FugueObservationControllerTest {
         observations.setActive(true);
         final NoteStep source = note(0, 1, 61, NoteStep.State.NoteOn);
 
-        observations.refreshSource((step, pitch) -> step == 1 && pitch == 61
-                ? source : note(0, step, pitch, NoteStep.State.Empty));
+        observations.refreshSource(
+                (step, pitch) ->
+                        step == 1 && pitch == 61
+                                ? source
+                                : note(0, step, pitch, NoteStep.State.Empty));
 
         assertEquals(source, observations.steps().get(0).get(1).get(61));
         assertFalse(observations.steps().containsKey(1));
@@ -49,7 +52,8 @@ class FugueObservationControllerTest {
         assertEquals(-1, observations.playingStep());
     }
 
-    private static NoteStep note(final int channel, final int step, final int pitch, final NoteStep.State state) {
+    private static NoteStep note(
+            final int channel, final int step, final int pitch, final NoteStep.State state) {
         final NoteStep note = mock(NoteStep.class);
         when(note.channel()).thenReturn(channel);
         when(note.x()).thenReturn(step);

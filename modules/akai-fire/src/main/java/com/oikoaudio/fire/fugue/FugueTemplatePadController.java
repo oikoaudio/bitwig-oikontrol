@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.fugue;
 
 import com.oikoaudio.fire.note.NoteGridLayout;
-
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.function.IntSupplier;
@@ -20,8 +19,11 @@ public final class FugueTemplatePadController {
     private final Transposer transposer;
     private Edit edit;
 
-    public FugueTemplatePadController(final ClipPort clip, final double stepLength,
-                                      final IntSupplier defaultPitch, final Transposer transposer) {
+    public FugueTemplatePadController(
+            final ClipPort clip,
+            final double stepLength,
+            final IntSupplier defaultPitch,
+            final Transposer transposer) {
         this.clip = clip;
         this.stepLength = stepLength;
         this.defaultPitch = defaultPitch;
@@ -31,11 +33,32 @@ public final class FugueTemplatePadController {
     public Edit press(final int column, final int loopSteps) {
         final int start = column * loopSteps / 16;
         final int end = Math.max(start + 1, (column + 1) * loopSteps / 16);
-        edit = clip.findNote(start, end)
-                .map(note -> new Edit(column, start, note.step(), note.pitch(), true, false,
-                        note.velocity(), note.chance(), note.duration()))
-                .orElseGet(() -> new Edit(column, start, start, clampPitch(defaultPitch.getAsInt()), false, false,
-                        DEFAULT_VELOCITY, DEFAULT_CHANCE, stepLength * 2));
+        edit =
+                clip.findNote(start, end)
+                        .map(
+                                note ->
+                                        new Edit(
+                                                column,
+                                                start,
+                                                note.step(),
+                                                note.pitch(),
+                                                true,
+                                                false,
+                                                note.velocity(),
+                                                note.chance(),
+                                                note.duration()))
+                        .orElseGet(
+                                () ->
+                                        new Edit(
+                                                column,
+                                                start,
+                                                start,
+                                                clampPitch(defaultPitch.getAsInt()),
+                                                false,
+                                                false,
+                                                DEFAULT_VELOCITY,
+                                                DEFAULT_CHANCE,
+                                                stepLength * 2));
         return edit;
     }
 
@@ -66,7 +89,9 @@ public final class FugueTemplatePadController {
     }
 
     public String pitchLabel() {
-        return edit == null ? "" : "%s%d".formatted(NoteGridLayout.noteName(edit.pitch()), edit.pitch() / 12 - 1);
+        return edit == null
+                ? ""
+                : "%s%d".formatted(NoteGridLayout.noteName(edit.pitch()), edit.pitch() / 12 - 1);
     }
 
     public void adjustVelocity(final int increment) {
@@ -83,8 +108,12 @@ public final class FugueTemplatePadController {
 
     public void adjustGate(final int increment) {
         if (edit != null) {
-            write(edit.withDuration(Math.max(stepLength * 0.02,
-                    edit.duration() + increment * stepLength)).withChanged(true));
+            write(
+                    edit.withDuration(
+                                    Math.max(
+                                            stepLength * 0.02,
+                                            edit.duration() + increment * stepLength))
+                            .withChanged(true));
         }
     }
 
@@ -152,36 +181,62 @@ public final class FugueTemplatePadController {
         KEPT
     }
 
-    public record Note(int step, int pitch, int velocity, double chance, double duration) {
-    }
+    public record Note(int step, int pitch, int velocity, double chance, double duration) {}
 
-    public record Edit(int column, int bucketStart, int step, int pitch, boolean existed, boolean changed,
-                       int velocity, double chance, double duration) {
+    public record Edit(
+            int column,
+            int bucketStart,
+            int step,
+            int pitch,
+            boolean existed,
+            boolean changed,
+            int velocity,
+            double chance,
+            double duration) {
         private Edit withPitch(final int value) {
-            return new Edit(column, bucketStart, step, value, existed, changed, velocity, chance, duration);
+            return new Edit(
+                    column, bucketStart, step, value, existed, changed, velocity, chance, duration);
         }
 
         private Edit withVelocity(final int value) {
-            return new Edit(column, bucketStart, step, pitch, existed, changed,
-                    Math.max(1, Math.min(127, value)), chance, duration);
+            return new Edit(
+                    column,
+                    bucketStart,
+                    step,
+                    pitch,
+                    existed,
+                    changed,
+                    Math.max(1, Math.min(127, value)),
+                    chance,
+                    duration);
         }
 
         private Edit withChance(final double value) {
-            return new Edit(column, bucketStart, step, pitch, existed, changed, velocity,
-                    Math.max(0.0, Math.min(1.0, value)), duration);
+            return new Edit(
+                    column,
+                    bucketStart,
+                    step,
+                    pitch,
+                    existed,
+                    changed,
+                    velocity,
+                    Math.max(0.0, Math.min(1.0, value)),
+                    duration);
         }
 
         private Edit withDuration(final double value) {
-            return new Edit(column, bucketStart, step, pitch, existed, changed, velocity, chance,
-                    value);
+            return new Edit(
+                    column, bucketStart, step, pitch, existed, changed, velocity, chance, value);
         }
 
         private Edit withExisted(final boolean value) {
-            return new Edit(column, bucketStart, step, pitch, value, changed, velocity, chance, duration);
+            return new Edit(
+                    column, bucketStart, step, pitch, value, changed, velocity, chance, duration);
         }
 
         private Edit withChanged(final boolean value) {
-            return new Edit(column, bucketStart, step, pitch, existed, value, velocity, chance, duration);
+            return new Edit(
+                    column, bucketStart, step, pitch, existed, value, velocity, chance, duration);
         }
     }
 }

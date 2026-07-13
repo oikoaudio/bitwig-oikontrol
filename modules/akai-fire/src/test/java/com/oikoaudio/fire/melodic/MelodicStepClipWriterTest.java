@@ -1,20 +1,21 @@
 package com.oikoaudio.fire.melodic;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+
+import org.junit.jupiter.api.Test;
 
 class MelodicStepClipWriterTest {
     @Test
     void remembersOnlyWritableActiveUntiedSteps() {
         final MelodicStepClipWriter writer = new MelodicStepClipWriter();
         final MelodicPattern.Step active = activeStep(2, 64);
-        MelodicPattern pattern = MelodicPattern.empty(16)
-                .withStep(active)
-                .withStep(activeStep(3, 65).withTieFromPrevious(true))
-                .withStep(MelodicPattern.Step.rest(4).withActive(true));
+        MelodicPattern pattern =
+                MelodicPattern.empty(16)
+                        .withStep(active)
+                        .withStep(activeStep(3, 65).withTieFromPrevious(true))
+                        .withStep(MelodicPattern.Step.rest(4).withActive(true));
 
         writer.rememberPendingWrite(12, activeStep(12, 72));
         writer.rememberPendingWrites(pattern);
