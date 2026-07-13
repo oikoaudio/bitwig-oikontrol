@@ -53,15 +53,18 @@ public final class SelectedNoteClipCoordinator {
     }
 
     public boolean ensureAvailable() {
-        refreshState();
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
-                canHoldNoteData.getAsBoolean(), state.hasSelection());
+        final NoteClipAvailability.Failure failure = availabilityFailure();
         if (failure != null) {
             failureHandler.accept(failure);
             return false;
         }
         refreshCursor();
         return true;
+    }
+
+    public NoteClipAvailability.Failure availabilityFailure() {
+        refreshState();
+        return NoteClipAvailability.requireSelectedClipSlot(canHoldNoteData.getAsBoolean(), state.hasSelection());
     }
 
     public boolean refreshCursor() {

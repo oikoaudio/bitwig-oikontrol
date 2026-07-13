@@ -1987,8 +1987,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     private void showNoClipIfNeeded() {
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(
-                cursorTrack.canHoldNoteData().get(), selectedClipSlotIndex >= 0);
+        final NoteClipAvailability.Failure failure = selectedClipCoordinator.availabilityFailure();
         if (failure != null) {
             oled.valueInfo(failure.title(), failure.oledDetail());
             driver.notifyPopup(failure.title(), failure.popupDetail());
