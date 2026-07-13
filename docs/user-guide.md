@@ -408,7 +408,7 @@ Press `STEP` from `Poly Step` to enter `Melo Gen`; press `STEP` again to enter `
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Engine / `ALT`: subtype | Density / `ALT`: thin-fill current phrase | Pitch-pool octave / `ALT`: shared root | Mutation type / `ALT`: strength |
+| `Channel` | Engine / `ALT`: subtype | Density / `ALT`: thin-fill current phrase | Pitch-pool octave / `ALT`: shared root / `SHIFT`: shared scale | Mutation type / `ALT`: strength |
 | `Mixer` | Length / `ALT`: channel shape | Swivel / Mirror x2 / `ALT`: tension | Reverse / `ALT`: legato | Invert down / up / `ALT`: recurrence info |
 | `User 1` | Velocity | Pressure | Timbre | Pitch |
 | `User 2` | Note length | Chance | Velocity spread | Repeats |

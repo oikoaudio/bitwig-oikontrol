@@ -10,6 +10,12 @@ import java.util.Map;
 
 /** Defines the immutable Melodic Step encoder-bank mapping. */
 public final class MelodicStepEncoderLayout {
+    public enum PoolContextTarget {
+        POOL_OCTAVE,
+        SHARED_ROOT,
+        SHARED_SCALE
+    }
+
     private final EncoderBankLayout layout;
 
     public MelodicStepEncoderLayout(
@@ -44,5 +50,12 @@ public final class MelodicStepEncoderLayout {
 
     public EncoderBankLayout layout() {
         return layout;
+    }
+
+    static PoolContextTarget poolContextTarget(final boolean shiftHeld, final boolean altHeld) {
+        if (shiftHeld) {
+            return PoolContextTarget.SHARED_SCALE;
+        }
+        return altHeld ? PoolContextTarget.SHARED_ROOT : PoolContextTarget.POOL_OCTAVE;
     }
 }

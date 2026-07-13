@@ -33,6 +33,22 @@ class MelodicStepEncoderLayoutTest {
                 layout.layout().bank(EncoderMode.USER_2).footerLegend());
     }
 
+    @Test
+    void poolContextEncoderUsesTheSharedPitchModifierGrammar() {
+        assertEquals(
+                MelodicStepEncoderLayout.PoolContextTarget.POOL_OCTAVE,
+                MelodicStepEncoderLayout.poolContextTarget(false, false));
+        assertEquals(
+                MelodicStepEncoderLayout.PoolContextTarget.SHARED_ROOT,
+                MelodicStepEncoderLayout.poolContextTarget(false, true));
+        assertEquals(
+                MelodicStepEncoderLayout.PoolContextTarget.SHARED_SCALE,
+                MelodicStepEncoderLayout.poolContextTarget(true, false));
+        assertEquals(
+                MelodicStepEncoderLayout.PoolContextTarget.SHARED_SCALE,
+                MelodicStepEncoderLayout.poolContextTarget(true, true));
+    }
+
     private static EncoderSlotBinding[] slots() {
         return new EncoderSlotBinding[] {slot(), slot(), slot(), slot()};
     }

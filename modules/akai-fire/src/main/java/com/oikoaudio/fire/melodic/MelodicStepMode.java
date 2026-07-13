@@ -2511,46 +2511,56 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 encoder.bindEncoder(
                         layer,
                         inc -> {
-                            if (driver.isGlobalAltHeld()) {
-                                adjustGlobalRootKey(inc);
-                            } else {
-                                adjustPoolOctave(inc);
+                            switch (MelodicStepEncoderLayout.poolContextTarget(
+                                    driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())) {
+                                case POOL_OCTAVE -> adjustPoolOctave(inc);
+                                case SHARED_ROOT -> adjustGlobalRootKey(inc);
+                                case SHARED_SCALE -> adjustGlobalScale(inc);
                             }
                         });
                 encoder.bindTouched(
                         layer,
                         touched -> {
                             if (touched) {
-                                if (driver.isGlobalAltHeld()) {
-                                    if (driver.handleKnobModeEncoderReset(
-                                            true,
-                                            true,
-                                            "Root",
-                                            "No reset",
-                                            () -> driver.setSharedRootNote(0),
-                                            () ->
-                                                    oled.valueInfo(
-                                                            "Root",
-                                                            NoteAssignHelper.noteName(
-                                                                    driver.getSharedRootNote())))) {
-                                        return;
+                                switch (MelodicStepEncoderLayout.poolContextTarget(
+                                        driver.isGlobalShiftHeld(), driver.isGlobalAltHeld())) {
+                                    case POOL_OCTAVE -> {
+                                        if (driver.handleKnobModeEncoderReset(
+                                                true,
+                                                true,
+                                                "Pool Oct",
+                                                "No reset",
+                                                () -> poolLayoutRootPitch = -1,
+                                                () ->
+                                                        oled.valueInfo(
+                                                                "Pool Oct", poolOctaveSummary()))) {
+                                            return;
+                                        }
+                                        oled.valueInfo("Pool Oct", poolOctaveSummary());
                                     }
-                                    oled.valueInfo(
-                                            "Root",
-                                            NoteAssignHelper.noteName(driver.getSharedRootNote()));
-                                } else {
-                                    if (driver.handleKnobModeEncoderReset(
-                                            true,
-                                            true,
-                                            "Pool Oct",
-                                            "No reset",
-                                            () -> poolLayoutRootPitch = -1,
-                                            () ->
-                                                    oled.valueInfo(
-                                                            "Pool Oct", poolOctaveSummary()))) {
-                                        return;
+                                    case SHARED_ROOT -> {
+                                        if (driver.handleKnobModeEncoderReset(
+                                                true,
+                                                true,
+                                                "Root",
+                                                "No reset",
+                                                () -> driver.setSharedRootNote(0),
+                                                () ->
+                                                        oled.valueInfo(
+                                                                "Root",
+                                                                NoteAssignHelper.noteName(
+                                                                        driver
+                                                                                .getSharedRootNote())))) {
+                                            return;
+                                        }
+                                        oled.valueInfo(
+                                                "Root",
+                                                NoteAssignHelper.noteName(
+                                                        driver.getSharedRootNote()));
                                     }
-                                    oled.valueInfo("Pool Oct", poolOctaveSummary());
+                                    case SHARED_SCALE ->
+                                            oled.valueInfo(
+                                                    "Scale", driver.getSharedScaleDisplayName());
                                 }
                             } else {
                                 oled.clearScreenDelayed();
@@ -2597,6 +2607,16 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         final String rootName = NoteAssignHelper.noteName(driver.getSharedRootNote());
         oled.valueInfo("Root", rootName);
         driver.notifyPopup("Root", rootName);
+    }
+
+    private void adjustGlobalScale(final int amount) {
+        if (amount == 0) {
+            return;
+        }
+        driver.adjustSharedScaleIndex(amount, 1);
+        final String scaleName = driver.getSharedScaleDisplayName();
+        oled.valueInfo("Scale", scaleName);
+        driver.notifyPopup("Scale", scaleName);
     }
 
     private static final class NoteAssignHelper {
