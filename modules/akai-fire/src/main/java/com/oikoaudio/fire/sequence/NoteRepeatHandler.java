@@ -10,17 +10,17 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 public class NoteRepeatHandler {
-    private static final int DEFAULT_TOGGLE_RATE_INDEX = 2;
+    private static final int DEFAULT_TOGGLE_RATE_INDEX = 4;
 
     private final OledDisplay oled;
     private final BooleanValueObject noteRepeatActive = new BooleanValueObject();
     private boolean repeatButtonHeld = false;
     private static final double[] ARP_RATES =
-            new double[] {0.125, 0.25, 0.5, 1.0, 1.0 / 12, 1.0 / 6, 1.0 / 3, 2.0 / 3};
+            new double[] {1.0 / 12, 0.125, 1.0 / 6, 0.25, 1.0 / 3, 0.5, 2.0 / 3, 1.0};
     private static final String[] GRID_RATES_STR =
             new String[] {
-                "Off", "1/32", "1/16", "1/8", "1/4", //
-                "1/32T", "1/16T", "1/8T", "1/4T"
+                "Off", "1/32T", "1/32", "1/16T", "1/16", //
+                "1/8T", "1/8", "1/4T", "1/4"
             };
     private final Arpeggiator arp;
     private final NoteInput noteInput;

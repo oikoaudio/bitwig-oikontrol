@@ -1495,8 +1495,8 @@ public class LaunchControlXlControllerExtension extends ControllerExtension {
         final FactoryLedRenderer.LedFrame factoryFrame =
                 mFactoryTemplateActive || mArpLayerActive
                         ? FactoryLedRenderer.render(factoryUiSnapshot())
-                        : null;
-        paintRightButtons(factoryFrame);
+                        : FactoryLedRenderer.off();
+        paintModeAndNavigationButtons(factoryFrame);
         paintKnobs(factoryFrame);
         paintBottomButtons(factoryFrame);
 
@@ -1765,7 +1765,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension {
         }
     }
 
-    private void paintRightButtons(final FactoryLedRenderer.LedFrame factoryFrame) {
+    private void paintModeAndNavigationButtons(final FactoryLedRenderer.LedFrame factoryFrame) {
         final int yellow = SimpleLedColor.Yellow.value();
         final int off = SimpleLedColor.Off.value();
 
@@ -1804,7 +1804,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension {
             return;
         }
 
-        final int[] colors = factoryFrame.rightButtons();
+        final int[] colors = factoryFrame.modeAndNavigationButtons();
         mDeviceLed.setColor(colors[0]);
         mMuteLed.setColor(colors[1]);
         mSoloLed.setColor(colors[2]);

@@ -2,17 +2,26 @@ package com.bitwig.extensions.controllers.novation.launch_control_xl.support;
 
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.Device;
+import com.bitwig.extension.controller.api.DeviceBank;
+import com.bitwig.extension.controller.api.DeviceMatcher;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Keeps track of devices on tracks and provides cached lookup/focus results. */
 public final class DeviceLocator {
     public enum Role {
-        DRUM,
-        ARP
+        DRUM("8ea97e45-0255-40fd-bc7e-94419741e9d1"),
+        ARP("4d407a2b-c91b-4e4c-9a89-c53c19fe6251");
+
+        private final UUID deviceId;
+
+        Role(final String deviceId) {
+            this.deviceId = UUID.fromString(deviceId);
+        }
     }
 
     public static final class FocusResult {
@@ -40,12 +49,10 @@ public final class DeviceLocator {
     }
 
     private static final class RoleState {
-        private final String nameMatch;
         private final Device[] devices;
         private int cachedIndex = -1;
 
-        RoleState(final String nameMatch, final Device[] devices) {
-            this.nameMatch = nameMatch;
+        RoleState(final Device[] devices) {
             this.devices = devices;
         }
 
@@ -61,20 +68,23 @@ public final class DeviceLocator {
         this.trackBank = host.createMainTrackBank(width, 0, 0);
         for (int i = 0; i < width; i++) this.trackBank.getItemAt(i).exists().markInterested();
 
-        this.states.put(Role.DRUM, this.createRoleState("drum machine", width));
-        this.states.put(Role.ARP, this.createRoleState("arpeggiator", width));
+        for (final Role role : Role.values()) {
+            this.states.put(role, this.createRoleState(host, role, width));
+        }
     }
 
-    private RoleState createRoleState(final String match, final int width) {
+    private RoleState createRoleState(final ControllerHost host, final Role role, final int width) {
         final Device[] devices = new Device[width];
+        final DeviceMatcher matcher = host.createBitwigDeviceMatcher(role.deviceId);
         for (int i = 0; i < width; i++) {
             final Track track = this.trackBank.getItemAt(i);
-            final Device device = track.createDeviceBank(1).getItemAt(0);
+            final DeviceBank deviceBank = track.createDeviceBank(1);
+            deviceBank.setDeviceMatcher(matcher);
+            final Device device = deviceBank.getItemAt(0);
             device.exists().markInterested();
-            device.name().markInterested();
             devices[i] = device;
         }
-        return new RoleState(match == null ? null : match.toLowerCase(), devices);
+        return new RoleState(devices);
     }
 
     /**
@@ -128,11 +138,6 @@ public final class DeviceLocator {
         final Device device = state.devices[index];
         if (device == null || !device.exists().get()) return Optional.empty();
 
-        final String name = device.name().get();
-        if (state.nameMatch != null
-                && (name == null || !name.toLowerCase().contains(state.nameMatch)))
-            return Optional.empty();
-
         return Optional.of(new FocusResult(index, track, device));
     }
 
@@ -141,9 +146,6 @@ public final class DeviceLocator {
             final Device device = state.devices[i];
             if (device == null || !device.exists().get()) continue;
 
-            final String name = device.name().get();
-            if (state.nameMatch != null
-                    && (name == null || !name.toLowerCase().contains(state.nameMatch))) continue;
             return i;
         }
         return -1;

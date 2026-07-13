@@ -352,6 +352,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `User 1` | Global velocity sensitivity / `SHIFT`: velocity center | Aftertouch | Breath | Pitch expression |
 | `User 2` | Selected device remote 1 | Device remote 2 | Device remote 3 | Device remote 4 |
 
+Note Repeat divisions run from fastest to slowest as `1/32T`, `1/32`, `1/16T`, `1/16`, `1/8T`, `1/8`, `1/4T`, and `1/4`; the default is `1/16`.
+
 When live `NOTE` is idle, the OLED returns to useful selected-track context after transient encoder values. Playing Fire pads show the current note or detected chord on the OLED and hold that display briefly across short gaps so repeated notes do not flash the screen. On the `Mixer` page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS with the compact encoder legend. On `Channel`, `User 1`, and `User 2`, it falls back to the selected track name with the current encoder-page legend. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the legend falls back to `D1`-style labels.
 
 `SHIFT + STEP` opens the selected launcher clip in Bitwig's Detail Editor, selects Bitwig's Step Input tool, and tries to move the editor position to the first item. The OLED shows `Step Input`, an estimated one-based `Step N/M` position, and the current encoder footer. Fire pad note/chord gestures advance the estimate once per released note-entry gesture. While the helper is active, `BANK RIGHT` sends Bitwig's right-arrow command for rest/advance or held-note extension, and `BANK LEFT` sends left-arrow for back. Press `SHIFT + STEP` again to return Bitwig to the Pointer tool.

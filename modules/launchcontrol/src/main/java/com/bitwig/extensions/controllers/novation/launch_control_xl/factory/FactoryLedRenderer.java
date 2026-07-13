@@ -7,12 +7,13 @@ import java.util.Arrays;
 public final class FactoryLedRenderer {
     private FactoryLedRenderer() {}
 
-    public record LedFrame(int[] topButtons, int[] bottomButtons, int[] knobs, int[] rightButtons) {
+    public record LedFrame(
+            int[] topButtons, int[] bottomButtons, int[] knobs, int[] modeAndNavigationButtons) {
         public LedFrame {
             topButtons = topButtons.clone();
             bottomButtons = bottomButtons.clone();
             knobs = knobs.clone();
-            rightButtons = rightButtons.clone();
+            modeAndNavigationButtons = modeAndNavigationButtons.clone();
         }
 
         @Override
@@ -31,8 +32,8 @@ public final class FactoryLedRenderer {
         }
 
         @Override
-        public int[] rightButtons() {
-            return rightButtons.clone();
+        public int[] modeAndNavigationButtons() {
+            return modeAndNavigationButtons.clone();
         }
     }
 
@@ -55,7 +56,21 @@ public final class FactoryLedRenderer {
             bottom[i] = bottomColor(state, strip, i);
             renderKnobs(state, strip, i, knobs, deviceRemotes, projectRemotes);
         }
-        return new LedFrame(top, bottom, knobs, rightButtons(state));
+        return new LedFrame(top, bottom, knobs, modeAndNavigationButtons(state));
+    }
+
+    /** Returns a complete dark frame for surfaces that paint only their owned LED groups. */
+    public static LedFrame off() {
+        final int off = color(SimpleLedColor.Off);
+        final int[] top = new int[8];
+        final int[] bottom = new int[8];
+        final int[] knobs = new int[24];
+        final int[] modeAndNavigation = new int[8];
+        Arrays.fill(top, off);
+        Arrays.fill(bottom, off);
+        Arrays.fill(knobs, off);
+        Arrays.fill(modeAndNavigation, off);
+        return new LedFrame(top, bottom, knobs, modeAndNavigation);
     }
 
     private static int bottomColor(
@@ -113,7 +128,7 @@ public final class FactoryLedRenderer {
         }
     }
 
-    private static int[] rightButtons(final FactoryUiSnapshot state) {
+    private static int[] modeAndNavigationButtons(final FactoryUiSnapshot state) {
         final int on = color(SimpleLedColor.Yellow);
         final int off = color(SimpleLedColor.Off);
         return new int[] {

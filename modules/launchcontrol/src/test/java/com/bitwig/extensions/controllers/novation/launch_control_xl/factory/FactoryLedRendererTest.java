@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.bitwig.extensions.controllers.novation.common.SimpleLedColor;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 class FactoryLedRendererTest {
@@ -74,7 +75,7 @@ class FactoryLedRendererTest {
     }
 
     @Test
-    void rendersFactoryRightButtonsForTrackAndDeviceNavigation() {
+    void rendersFactoryModeAndNavigationButtons() {
         final FactoryUiSnapshot track =
                 snapshot(
                                 FactoryUiSnapshot.Mode.SEND_3,
@@ -89,10 +90,21 @@ class FactoryLedRendererTest {
 
         assertArrayEquals(
                 new int[] {12, 12, 62, 12, 62, 12, 62, 12},
-                FactoryLedRenderer.render(track).rightButtons());
+                FactoryLedRenderer.render(track).modeAndNavigationButtons());
         assertArrayEquals(
                 new int[] {62, 12, 62, 12, 62, 12, 62, 62},
-                FactoryLedRenderer.render(device).rightButtons());
+                FactoryLedRenderer.render(device).modeAndNavigationButtons());
+    }
+
+    @Test
+    void createsSafeOffFrameForSurfacesWithDedicatedPainters() {
+        final FactoryLedRenderer.LedFrame frame = FactoryLedRenderer.off();
+        final int off = SimpleLedColor.Off.value();
+
+        assertArrayEquals(filled(8, off), frame.topButtons());
+        assertArrayEquals(filled(8, off), frame.bottomButtons());
+        assertArrayEquals(filled(24, off), frame.knobs());
+        assertArrayEquals(filled(8, off), frame.modeAndNavigationButtons());
     }
 
     @Test
@@ -153,6 +165,12 @@ class FactoryLedRendererTest {
     private static FactoryUiSnapshot.Value[] missingValues(final int count) {
         final FactoryUiSnapshot.Value[] values = new FactoryUiSnapshot.Value[count];
         for (int i = 0; i < count; i++) values[i] = FactoryUiSnapshot.Value.missing();
+        return values;
+    }
+
+    private static int[] filled(final int count, final int value) {
+        final int[] values = new int[count];
+        Arrays.fill(values, value);
         return values;
     }
 }
