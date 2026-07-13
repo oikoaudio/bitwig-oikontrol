@@ -66,7 +66,7 @@ public final class FugueStepMode extends Layer {
         FuguePreset.THIRD_TRIPLET,
         FuguePreset.TENTH_DOUBLE
     };
-    private final boolean[] lineEnabled = {true, true, true, true};
+    private final FugueLineState lineState = new FugueLineState();
 
     private final FugueEncoderControls encoderControls = new FugueEncoderControls();
     private final NoteVariationAmounts noteVariationAmounts;
@@ -139,7 +139,8 @@ public final class FugueStepMode extends Layer {
     @Override
     protected void onActivate() {
         observations.setActive(true);
-        refreshSourceCacheFromClip();
+        refreshAllChannelsFromClip();
+        lineState.enterClip(observations.hasDerivedNotes());
         patternButtons.setUpCallback(
                 pressed -> {
                     if (pressed) {
@@ -155,7 +156,11 @@ public final class FugueStepMode extends Layer {
                 },
                 () -> BiColorLightState.AMBER_HALF);
         applyEncoderFooterLegend();
-        showEncoderModeInfo();
+        if (lineState.isProtected()) {
+            showProtectedDerivedLines();
+        } else {
+            showEncoderModeInfo();
+        }
         oled.clearScreenDelayed();
     }
 
@@ -792,6 +797,10 @@ public final class FugueStepMode extends Layer {
     }
 
     private void applyNoteVariation(final NoteVariationParameter parameter) {
+        if (lineState.isProtected()) {
+            showProtectedDerivedLines();
+            return;
+        }
         final ObservedNoteVariationAdapter.Result result =
                 noteVariationAdapter.apply(
                         parameter,
@@ -880,7 +889,7 @@ public final class FugueStepMode extends Layer {
                 shiftedClipStartColumn(),
                 LINE_COLORS[line],
                 line == activeLineIndex(),
-                lineEnabled[line]);
+                lineState.isEnabled(line));
     }
 
     private MelodicPattern.Step bucketStep(final FuguePattern pattern, final int column) {
@@ -928,7 +937,7 @@ public final class FugueStepMode extends Layer {
         if (line == 0) {
             return sourcePattern();
         }
-        if (!lineEnabled[line]) {
+        if (!lineState.isEnabled(line)) {
             return FuguePattern.empty(loopSteps);
         }
         return MelodicLineTransformer.transform(
@@ -987,7 +996,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private BiColorLightState lineLight(final int line) {
-        return FugueRenderer.lineLight(lineEnabled[line]);
+        return FugueRenderer.lineLight(lineState.isEnabled(line));
     }
 
     private void bindLineStatusLights() {
@@ -999,18 +1008,23 @@ public final class FugueStepMode extends Layer {
     }
 
     private BiColorLightState lineStatusLight(final int line) {
-        return FugueRenderer.lineStatusLight(lineEnabled[line]);
+        return FugueRenderer.lineStatusLight(lineState.isEnabled(line));
     }
 
     private void toggleLineEnabled(final int line, final boolean pressed) {
         if (!pressed) {
             return;
         }
-        lineEnabled[line] = !lineEnabled[line];
+        if (!lineState.toggle(line)) {
+            if (lineState.isProtected() && line >= FugueClipAdapter.FIRST_DERIVED_CHANNEL) {
+                showProtectedDerivedLines();
+            }
+            return;
+        }
         if (line > 0) {
             regenerateLine(line);
         }
-        oled.valueInfo(lineLabel(line), lineEnabled[line] ? "On" : "Muted");
+        oled.valueInfo(lineLabel(line), lineState.isEnabled(line) ? "On" : "Off");
         oled.clearScreenDelayed();
     }
 
@@ -1288,7 +1302,7 @@ public final class FugueStepMode extends Layer {
         for (int line = FugueClipAdapter.FIRST_DERIVED_CHANNEL;
                 line <= FugueClipAdapter.LAST_DERIVED_CHANNEL;
                 line++) {
-            if (lineEnabled[line]) {
+            if (lineState.isEnabled(line)) {
                 regenerateLine(line);
             }
         }
@@ -1314,6 +1328,7 @@ public final class FugueStepMode extends Layer {
             oled.clearScreenDelayed();
             return;
         }
+        lineState.claimAllDerivedLines();
         for (int line = FugueClipAdapter.FIRST_DERIVED_CHANNEL;
                 line <= FugueClipAdapter.LAST_DERIVED_CHANNEL;
                 line++) {
@@ -1389,7 +1404,11 @@ public final class FugueStepMode extends Layer {
         if (line <= FugueClipAdapter.SOURCE_CHANNEL || line >= LINE_COUNT) {
             return;
         }
-        if (!lineEnabled[line]) {
+        if (lineState.isProtected()) {
+            showProtectedDerivedLines();
+            return;
+        }
+        if (!lineState.isEnabled(line)) {
             FugueClipAdapter.clearChannel(cursorClip, observations.steps(), line);
             return;
         }
@@ -1414,6 +1433,15 @@ public final class FugueStepMode extends Layer {
     private void refreshSourceCacheFromClip() {
         observations.refreshSource(
                 (step, pitch) -> cursorClip.getStep(FugueClipAdapter.SOURCE_CHANNEL, step, pitch));
+    }
+
+    private void refreshAllChannelsFromClip() {
+        observations.refreshAll(cursorClip::getStep);
+    }
+
+    private void showProtectedDerivedLines() {
+        oled.valueInfo("Existing voices", "PTRN DOWN");
+        driver.notifyPopup("Existing voices", "Press PATTERN DOWN to overwrite");
     }
 
     private boolean hasSourceNotes() {

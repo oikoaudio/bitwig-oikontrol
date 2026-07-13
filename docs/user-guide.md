@@ -489,7 +489,7 @@ Press `STEP` from `Melo Gen` to enter `Fugue`. `Fugue` treats MIDI channel 1 as 
 | Control | Action |
 | --- | --- |
 | `KNOB MODE` | Cycle active line: channel 1 source, then derived lines 2-4 |
-| `MUTE_1`-`MUTE_4` | Enable / mute the corresponding line |
+| `MUTE_1`-`MUTE_4` | Enable / turn off the corresponding line; turning off a derived line clears its MIDI channel |
 | `PATTERN UP` | Cycle preset for the active derived line |
 | `PATTERN DOWN` | Reread channel 1 from the clip and rebuild derived lines |
 | `BANK LEFT/RIGHT` | Adjust active line start; on channel 1, adjust clip length |
@@ -505,6 +505,8 @@ Press `STEP` from `Melo Gen` to enter `Fugue`. `Fugue` treats MIDI channel 1 as 
 | Held channel 1 pad | Velocity | Chance | Gate | Pitch |
 
 When a sequencer clip start is shifted in `Poly Step`, `Nested Rhythm`, or `Fugue`, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.
+
+For a source-only clip, Fugue starts with derived lines 2-4 off. Enable a line to generate it from channel 1; turn it off to clear that generated MIDI channel. If channels 2-4 already contain notes when you enter Fugue, those notes are protected and the OLED prompts for `PATTERN DOWN`. Pressing `PATTERN DOWN` explicitly replaces all three derived channels and enables them for subsequent Fugue editing.
 
 If you change channel 1 notes or expression directly in Bitwig, press `PATTERN DOWN` to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.
 

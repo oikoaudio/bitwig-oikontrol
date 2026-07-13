@@ -45,7 +45,7 @@ public final class FugueObservationController {
     }
 
     public void refreshSource(final StepLookup lookup) {
-        steps.clear();
+        steps.remove(FugueClipAdapter.SOURCE_CHANNEL);
         for (int x = 0; x < stepCount; x++) {
             for (int y = 0; y < 128; y++) {
                 final NoteStep note = lookup.get(x, y);
@@ -57,6 +57,35 @@ public final class FugueObservationController {
                 }
             }
         }
+    }
+
+    public void refreshAll(final ChannelStepLookup lookup) {
+        steps.clear();
+        for (int channel = FugueClipAdapter.SOURCE_CHANNEL;
+                channel <= FugueClipAdapter.LAST_DERIVED_CHANNEL;
+                channel++) {
+            for (int x = 0; x < stepCount; x++) {
+                for (int y = 0; y < 128; y++) {
+                    final NoteStep note = lookup.get(channel, x, y);
+                    if (note.state() == NoteStep.State.NoteOn) {
+                        steps.computeIfAbsent(channel, ignored -> new HashMap<>())
+                                .computeIfAbsent(x, ignored -> new HashMap<>())
+                                .put(y, note);
+                    }
+                }
+            }
+        }
+    }
+
+    public boolean hasDerivedNotes() {
+        for (int channel = FugueClipAdapter.FIRST_DERIVED_CHANNEL;
+                channel <= FugueClipAdapter.LAST_DERIVED_CHANNEL;
+                channel++) {
+            if (!steps.getOrDefault(channel, Map.of()).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void cacheSource(final NoteStep note) {
@@ -91,5 +120,10 @@ public final class FugueObservationController {
     @FunctionalInterface
     public interface StepLookup {
         NoteStep get(int step, int pitch);
+    }
+
+    @FunctionalInterface
+    public interface ChannelStepLookup {
+        NoteStep get(int channel, int step, int pitch);
     }
 }

@@ -599,7 +599,7 @@
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>KNOB MODE</code></td><td>Cycle active line: channel 1 source, then derived lines 2-4</td></tr>
-          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Enable / mute the corresponding line</td></tr>
+          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Enable / turn off the corresponding line; turning off a derived line clears its MIDI channel</td></tr>
           <tr><td><code>PATTERN UP</code></td><td>Cycle preset for the active derived line</td></tr>
           <tr><td><code>PATTERN DOWN</code></td><td>Reread channel 1 from the clip and rebuild derived lines</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Adjust active line start; on channel 1, adjust clip length</td></tr>
@@ -618,6 +618,7 @@
       </tbody>
       </table>
       <p>When a sequencer clip start is shifted in <code>Poly Step</code>, <code>Nested Rhythm</code>, or <code>Fugue</code>, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.</p>
+      <p>For a source-only clip, Fugue starts with derived lines 2-4 off. Enable a line to generate it from channel 1; turn it off to clear that generated MIDI channel. If channels 2-4 already contain notes when you enter Fugue, those notes are protected and the OLED prompts for <code>PATTERN DOWN</code>. Pressing <code>PATTERN DOWN</code> explicitly replaces all three derived channels and enables them for subsequent Fugue editing.</p>
       <p>If you change channel 1 notes or expression directly in Bitwig, press <code>PATTERN DOWN</code> to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.</p>
       <p>For immediate derived-line feedback, change source expression from the controller instead. Controller-owned edits update the clip and regenerate from the controller's current source state.</p>
       <h3>Launcher mode (<code>PERFORM</code>)</h3>
