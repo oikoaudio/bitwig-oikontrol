@@ -28,6 +28,29 @@ class MelodicEngineTest {
     }
 
     @Test
+    void acidDensityChangesPopulationWhilePreservingTheSeededSkeleton() {
+        final MelodicPhraseContext context = context();
+        final AcidGenerator generator = new AcidGenerator();
+        final MelodicPattern sparse =
+                generator.generate(
+                        context,
+                        new MelodicGenerator.GenerateParameters(
+                                16, 0.35, 0.62, 1.0, 0.36, 5, 0, 0.0, 17L));
+        final MelodicPattern dense =
+                generator.generate(
+                        context,
+                        new MelodicGenerator.GenerateParameters(
+                                16, 0.9, 0.62, 1.0, 0.36, 5, 0, 0.0, 17L));
+
+        assertTrue(activeCount(sparse) < activeCount(dense));
+        for (int step = 0; step < sparse.loopSteps(); step++) {
+            if (sparse.step(step).active()) {
+                assertTrue(dense.step(step).active());
+            }
+        }
+    }
+
+    @Test
     void euclideanGeneratorUsesExpectedPulseCount() {
         final boolean[] pattern = EuclideanPhraseGenerator.euclidean(16, 5, 2);
         int count = 0;

@@ -2,6 +2,8 @@ package com.oikoaudio.fire.nestedrhythm;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker;
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker.RankedPosition;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -10,8 +12,8 @@ class IndispensabilityRankerTest {
 
     @Test
     void ranksFourFourQuarterNotesByMetricIndispensability() {
-        final Map<Integer, RankedPulse> ranked =
-                IndispensabilityRanker.rank(
+        final Map<Integer, RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(
                         List.of(0, 420, 840, 1260), NestedRhythmGenerator.FINE_STEPS_PER_WHOLE);
 
         assertTrue(ranked.get(0).normalizedScore() > ranked.get(840).normalizedScore());
@@ -21,8 +23,8 @@ class IndispensabilityRankerTest {
 
     @Test
     void ranksSixEightDottedQuarterAnchorAboveEighthInteriors() {
-        final Map<Integer, RankedPulse> ranked =
-                IndispensabilityRanker.rank(
+        final Map<Integer, RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(
                         List.of(0, 210, 420, 630, 840, 1050),
                         NestedRhythmGenerator.fineStepsPerBar(6, 8));
 
@@ -33,8 +35,8 @@ class IndispensabilityRankerTest {
 
     @Test
     void ranksSixFourMidpointAboveInteriorQuarterNotes() {
-        final Map<Integer, RankedPulse> ranked =
-                IndispensabilityRanker.rank(
+        final Map<Integer, RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(
                         List.of(0, 420, 840, 1260, 1680, 2100),
                         NestedRhythmGenerator.fineStepsPerBar(6, 4));
 
@@ -45,8 +47,8 @@ class IndispensabilityRankerTest {
 
     @Test
     void ranksMultiBarPhraseDownbeatAboveLaterBarStarts() {
-        final Map<Integer, RankedPulse> ranked =
-                IndispensabilityRanker.rank(
+        final Map<Integer, RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(
                         List.of(0, 420, 840, 1260, 1680, 2100, 2520, 2940),
                         NestedRhythmGenerator.fineStepsPerBar(4, 4) * 2);
 

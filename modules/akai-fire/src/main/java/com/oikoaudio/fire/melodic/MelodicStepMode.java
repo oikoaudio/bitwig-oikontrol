@@ -112,6 +112,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private int euclideanRotation = 0;
     private double mutateIntensity = 0.45;
     private long seed;
+    private long lastGenerationSeed = -1L;
     private int poolLayoutRootPitch = -1;
     private View view = View.PROCESS;
     private Generator generator = Generator.ACID;
@@ -773,16 +774,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             return;
         }
         final long generationSeed = seed;
-        final MelodicPhraseContext context = phraseContext();
-        if (pitchPool.isEmpty() || (!pitchPool.userEdited() && !pitchPool.generatedBy(generator))) {
-            buildGeneratedPitchPool(generationSeed, false);
-        }
-        final MelodicGenerator.GenerateParameters parameters =
-                generatorParametersForCurrentEngine(generationSeed);
         final MelodicGenerator activeGenerator = activeGenerator();
-        MelodicPattern generated = activeGenerator.generate(context, parameters);
-        generated = enrichLatentSteps(generated);
-        generated = constrainPatternToPool(generated);
+        final MelodicPattern generated = generatePatternForSeed(generationSeed, activeGenerator);
+        lastGenerationSeed = generationSeed;
         patternState.setBasePattern(generated);
         final String familyLabel = activeGenerator.lastFamilyLabel();
         applyPattern(
@@ -792,6 +786,19 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         ? shortGeneratorLabel(generator)
                         : "%s.%s".formatted(shortGeneratorLabel(generator), familyLabel));
         seed = nextSeed(generationSeed);
+    }
+
+    private MelodicPattern generatePatternForSeed(
+            final long generationSeed, final MelodicGenerator activeGenerator) {
+        final MelodicPhraseContext context = phraseContext();
+        if (pitchPool.isEmpty() || (!pitchPool.userEdited() && !pitchPool.generatedBy(generator))) {
+            buildGeneratedPitchPool(generationSeed, false);
+        }
+        final MelodicGenerator.GenerateParameters parameters =
+                generatorParametersForCurrentEngine(generationSeed);
+        MelodicPattern generated = activeGenerator.generate(context, parameters);
+        generated = enrichLatentSteps(generated);
+        return constrainPatternToPool(generated);
     }
 
     private String shortGeneratorLabel(final Generator selectedGenerator) {
@@ -1309,8 +1316,20 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void adjustDensity(final int amount) {
-        density = clampUnit(density + amount * 0.05);
-        oled.valueInfo("Density", "%.2f".formatted(density));
+        final double nextDensity = clampUnit(density + amount * 0.05);
+        if (Double.compare(nextDensity, density) == 0) {
+            oled.valueInfo("Density", "%.2f".formatted(density));
+            return;
+        }
+        density = nextDensity;
+        if (lastGenerationSeed < 0 || activeStepCount(patternState.currentPattern()) == 0) {
+            oled.valueInfo("Density", "%.2f".formatted(density));
+            return;
+        }
+        final MelodicPattern generated =
+                generatePatternForSeed(lastGenerationSeed, activeGenerator());
+        patternState.setBasePattern(generated);
+        applyPattern(generated, "Density", Integer.toString(activeStepCount(generated)));
     }
 
     private void adjustPoolOctave(final int amount) {
@@ -1380,34 +1399,31 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private MelodicPattern thinOnce(final MelodicPattern pattern) {
-        final MelodicPatternAnalyzer.Analysis analysis = MelodicPatternAnalyzer.analyze(pattern);
-        for (int i = analysis.activeSteps().size() - 1; i >= 0; i--) {
-            final int stepIndex = analysis.activeSteps().get(i);
-            if (analysis.anchorSteps().contains(stepIndex)) {
-                continue;
-            }
-            MelodicPattern out = pattern.withStep(MelodicPattern.Step.rest(stepIndex));
-            if (stepIndex + 1 < STEP_COUNT && out.step(stepIndex + 1).tieFromPrevious()) {
-                out = out.withStep(out.step(stepIndex + 1).withTieFromPrevious(false));
-            }
-            return out;
+        final java.util.OptionalInt target = MelodicDensityEditor.weakestRemovableStep(pattern);
+        if (target.isEmpty()) {
+            return pattern;
         }
-        return pattern;
+        final int stepIndex = target.getAsInt();
+        MelodicPattern out = pattern.withStep(MelodicPattern.Step.rest(stepIndex));
+        if (stepIndex + 1 < STEP_COUNT && out.step(stepIndex + 1).tieFromPrevious()) {
+            out = out.withStep(out.step(stepIndex + 1).withTieFromPrevious(false));
+        }
+        return out;
     }
 
     private MelodicPattern restoreOnce(final MelodicPattern pattern) {
-        for (int i = 0; i < pattern.loopSteps(); i++) {
-            final MelodicPattern.Step current = pattern.step(i);
-            final MelodicPattern.Step base = patternState.basePattern().step(i);
-            if (!current.active() && base.active()) {
-                final MelodicPattern.Step restored =
-                        pitchPool.pitches().isEmpty() || base.pitch() == null
-                                ? base.withIndex(i)
-                                : base.withIndex(i).withPitch(nearestAllowedPitch(base.pitch()));
-                return pattern.withStep(restored);
-            }
+        final java.util.OptionalInt target =
+                MelodicDensityEditor.strongestRestorableStep(pattern, patternState.basePattern());
+        if (target.isEmpty()) {
+            return pattern;
         }
-        return pattern;
+        final int stepIndex = target.getAsInt();
+        final MelodicPattern.Step base = patternState.basePattern().step(stepIndex);
+        final MelodicPattern.Step restored =
+                pitchPool.pitches().isEmpty() || base.pitch() == null
+                        ? base.withIndex(stepIndex)
+                        : base.withIndex(stepIndex).withPitch(nearestAllowedPitch(base.pitch()));
+        return pattern.withStep(restored);
     }
 
     private void adjustTension(final int amount) {

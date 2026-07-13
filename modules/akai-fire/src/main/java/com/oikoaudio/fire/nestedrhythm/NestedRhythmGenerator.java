@@ -1,5 +1,7 @@
 package com.oikoaudio.fire.nestedrhythm;
 
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker;
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker.RankedPosition;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -837,10 +839,11 @@ public final class NestedRhythmGenerator {
 
     private void applyIndispensability(
             final TreeMap<Integer, PulseSpec> structure, final int totalFineSteps) {
-        final Map<Integer, RankedPulse> ranked =
-                IndispensabilityRanker.rank(new ArrayList<>(structure.keySet()), totalFineSteps);
+        final Map<Integer, RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(
+                        new ArrayList<>(structure.keySet()), totalFineSteps);
         for (final Map.Entry<Integer, PulseSpec> entry : new ArrayList<>(structure.entrySet())) {
-            final RankedPulse rank = ranked.get(entry.getKey());
+            final RankedPosition rank = ranked.get(entry.getKey());
             if (rank == null) {
                 continue;
             }
