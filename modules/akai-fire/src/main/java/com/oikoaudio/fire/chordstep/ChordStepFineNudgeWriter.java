@@ -115,7 +115,7 @@ final class ChordStepFineNudgeWriter {
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
             final int targetGlobalStep = Math.floorDiv(move.targetFineStart(), fineStepsPerStep);
             if (move.visibleStep() != null && visibleGlobalStep.test(targetGlobalStep)) {
-                eventIndex.addPendingMoveSnapshot(
+                eventIndex.addPendingNoteSnapshot(
                         globalToLocalStep.applyAsInt(targetGlobalStep),
                         move.midiNote(),
                         move.visibleStep());

@@ -4,6 +4,9 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Renamed the user-facing Chord Step workflow to Poly Step and added a source-first replacement gesture: hold one
+  or more source pitches/chords, then tap an occupied step to replace only its pitches while preserving timing,
+  duration, velocity, probability, expression, repeat, recurrence, occurrence, and other note conditions.
 - Fixed Drum XOX pad-pattern copy so destination steps preserve source velocity, duration, probability, and the
   existing copied note-expression parameters instead of receiving fixed velocity and zero probability.
 - Refactored Akai Fire Chord Step around direct responsibility owners, workflow-level regression scenarios,

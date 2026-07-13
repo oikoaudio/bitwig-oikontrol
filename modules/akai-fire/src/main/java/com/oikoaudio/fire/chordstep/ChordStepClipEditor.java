@@ -43,6 +43,20 @@ final class ChordStepClipEditor<E> {
         queueObservationResync.run();
     }
 
+    public void replaceChordPitchesAtFineStart(
+            final int stepIndex,
+            final int fineStart,
+            final int[] notes,
+            final int velocity,
+            final double duration) {
+        clearChordStep(stepIndex);
+        for (final int midiNote : notes) {
+            observedClip.setStep(fineStart, midiNote, velocity, duration);
+        }
+        invalidateObservedChordStep(stepIndex);
+        queueObservationResync.run();
+    }
+
     public void clearChordStep(final int stepIndex) {
         final int fineStart = localToGlobalFineStep.applyAsInt(stepIndex);
         for (int offset = 0; offset < fineStepsPerStep; offset++) {

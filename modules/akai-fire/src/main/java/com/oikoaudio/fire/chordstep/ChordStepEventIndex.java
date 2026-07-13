@@ -67,7 +67,7 @@ final class ChordStepEventIndex {
         }
     }
 
-    public void addPendingMoveSnapshot(
+    public void addPendingNoteSnapshot(
             final int localStep, final int midiNote, final NoteStep noteStep) {
         pendingMovedNotes.put(moveKey(localStep, midiNote), NoteStepSnapshot.capture(noteStep));
     }
@@ -332,46 +332,70 @@ final class ChordStepEventIndex {
     }
 
     private record NoteStepSnapshot(
+            double releaseVelocity,
             double chance,
+            boolean chanceEnabled,
             double pressure,
             double timbre,
             double velocitySpread,
+            double gain,
+            double transpose,
             int repeatCount,
             double repeatCurve,
             double repeatVelocityCurve,
             double repeatVelocityEnd,
+            boolean repeatEnabled,
             double pan,
             int recurrenceLength,
             int recurrenceMask,
-            NoteOccurrence occurrence) {
+            boolean recurrenceEnabled,
+            NoteOccurrence occurrence,
+            boolean occurrenceEnabled,
+            boolean muted) {
         static NoteStepSnapshot capture(final NoteStep step) {
             return new NoteStepSnapshot(
+                    step.releaseVelocity(),
                     step.chance(),
+                    step.isChanceEnabled(),
                     step.pressure(),
                     step.timbre(),
                     step.velocitySpread(),
+                    step.gain(),
+                    step.transpose(),
                     step.repeatCount(),
                     step.repeatCurve(),
                     step.repeatVelocityCurve(),
                     step.repeatVelocityEnd(),
+                    step.isRepeatEnabled(),
                     step.pan(),
                     step.recurrenceLength(),
                     step.recurrenceMask(),
-                    step.occurrence());
+                    step.isRecurrenceEnabled(),
+                    step.occurrence(),
+                    step.isOccurrenceEnabled(),
+                    step.isMuted());
         }
 
         void applyTo(final NoteStep dest) {
+            dest.setReleaseVelocity(releaseVelocity);
             dest.setChance(chance);
+            dest.setIsChanceEnabled(chanceEnabled);
             dest.setPressure(pressure);
             dest.setTimbre(timbre);
             dest.setVelocitySpread(velocitySpread);
+            dest.setGain(gain);
+            dest.setTranspose(transpose);
             dest.setRepeatCount(repeatCount);
             dest.setRepeatCurve(repeatCurve);
             dest.setRepeatVelocityCurve(repeatVelocityCurve);
             dest.setRepeatVelocityEnd(repeatVelocityEnd);
+            dest.setIsRepeatEnabled(repeatEnabled);
             dest.setPan(pan);
             dest.setRecurrence(recurrenceLength, recurrenceMask);
+            dest.setIsRecurrenceEnabled(recurrenceEnabled);
             dest.setOccurrence(occurrence);
+            dest.setIsOccurrenceEnabled(occurrenceEnabled);
+            dest.setIsMuted(muted);
         }
     }
 }

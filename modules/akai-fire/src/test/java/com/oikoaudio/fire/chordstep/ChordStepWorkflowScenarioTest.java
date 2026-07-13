@@ -309,6 +309,11 @@ class ChordStepWorkflowScenarioTest {
         }
 
         @Override
+        public boolean hasHeldSourcePads() {
+            return false;
+        }
+
+        @Override
         public void handleSelectStep(final int stepIndex) {}
 
         @Override
@@ -354,6 +359,12 @@ class ChordStepWorkflowScenarioTest {
 
         @Override
         public boolean assignSelectedChordToStep(final int stepIndex, final int velocity) {
+            occupiedSteps.add(stepIndex);
+            return true;
+        }
+
+        @Override
+        public boolean replaceSelectedChordAtStep(final int stepIndex) {
             occupiedSteps.add(stepIndex);
             return true;
         }

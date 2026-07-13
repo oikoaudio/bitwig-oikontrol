@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/** Owns the held and pending state for one Chord Step fine-nudge interaction session. */
+/** Owns the held and pending state for one Poly Step fine-nudge interaction session. */
 final class ChordStepFineNudgeSession<E> {
     private final EventSnapshot<E> eventSnapshot;
     private final FineNudgeAction<E> fineNudgeAction;

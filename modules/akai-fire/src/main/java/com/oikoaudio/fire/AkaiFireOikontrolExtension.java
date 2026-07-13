@@ -1831,7 +1831,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         showModeChangeInfo(
                 switch (activeMode) {
                     case DRUM -> drumModeLabel(modeState.activeDrumMode());
-                    case CHORD_STEP -> "Chord Step";
+                    case CHORD_STEP -> "Poly Step";
                     case PERFORM -> "Perform";
                     default -> "Note";
                 });
@@ -1847,7 +1847,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public void enterChordStepMode() {
         modeState.activateChordStep();
         switchActiveMode();
-        showModeChangeInfo("Chord Step");
+        showModeChangeInfo("Poly Step");
     }
 
     public void enterFugueStepMode() {
@@ -2008,7 +2008,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             case DRUM -> drumModeLabel(modeState.activeDrumMode());
             case NOTE_PLAY ->
                     notePlayMode == null ? "Note" : notePlayMode.currentNoteSubModeLabel();
-            case CHORD_STEP -> "Chord Step";
+            case CHORD_STEP -> "Poly Step";
             case MELODIC_STEP -> "Melo Gen";
             case FUGUE_STEP -> "Fugue";
             case PERFORM -> performMode == null ? "Perform" : performMode.activePageLabel();

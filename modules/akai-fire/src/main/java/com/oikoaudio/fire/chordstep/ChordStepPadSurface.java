@@ -28,6 +28,7 @@ final class ChordStepPadSurface {
     enum StepPressAction {
         HOLD_EXISTING,
         ADD_STEP,
+        REPLACE_STEP,
         LOAD_BUILDER
     }
 
@@ -51,6 +52,8 @@ final class ChordStepPadSurface {
 
         boolean isDeleteHeld();
 
+        boolean hasHeldSourcePads();
+
         void handleSelectStep(int stepIndex);
 
         void setLastStep(int stepIndex);
@@ -72,6 +75,8 @@ final class ChordStepPadSurface {
         boolean hasStepStartNote(int stepIndex);
 
         boolean assignSelectedChordToStep(int stepIndex, int velocity);
+
+        boolean replaceSelectedChordAtStep(int stepIndex);
 
         void loadBuilderFromStep(int stepIndex);
 
@@ -203,7 +208,8 @@ final class ChordStepPadSurface {
                 stepPressAction(
                         stepIndex,
                         callbacks.hasStepStartNote(stepIndex),
-                        callbacks.isBuilderFamily());
+                        callbacks.isBuilderFamily(),
+                        callbacks.hasHeldSourcePads());
         if (!handleNormalPressAction(stepIndex, velocity, stepAction, callbacks)) {
             return;
         }
@@ -279,6 +285,14 @@ final class ChordStepPadSurface {
                 markAddedStep(stepIndex);
                 return true;
             }
+            case REPLACE_STEP -> {
+                if (!callbacks.replaceSelectedChordAtStep(stepIndex)) {
+                    cancelStepPress(stepIndex);
+                    return false;
+                }
+                markModifiedStep(stepIndex);
+                return true;
+            }
             case LOAD_BUILDER -> {
                 callbacks.loadBuilderFromStep(stepIndex);
                 return true;
@@ -306,6 +320,14 @@ final class ChordStepPadSurface {
 
     StepPressAction stepPressAction(
             final int stepIndex, final boolean hasStepStartNote, final boolean builderFamily) {
+        return stepPressAction(stepIndex, hasStepStartNote, builderFamily, false);
+    }
+
+    StepPressAction stepPressAction(
+            final int stepIndex,
+            final boolean hasStepStartNote,
+            final boolean builderFamily,
+            final boolean sourcePadsHeld) {
         beginRecurrenceHoldIfNeeded();
         addHeldStep(stepIndex);
         if (heldStepAnchor == null) {
@@ -313,6 +335,9 @@ final class ChordStepPadSurface {
         }
         if (!hasStepStartNote) {
             return StepPressAction.ADD_STEP;
+        }
+        if (sourcePadsHeld) {
+            return StepPressAction.REPLACE_STEP;
         }
         if (builderFamily) {
             return StepPressAction.LOAD_BUILDER;

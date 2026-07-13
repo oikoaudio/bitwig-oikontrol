@@ -46,7 +46,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Melodic Step**: The Akai Fire `STEP` mono phrase sequencer for generated and editable basslines, motifs, and melodic hooks.
 
-**Chord Step**: The Akai Fire `STEP` chord-oriented sequencing workflow for builder chords, preset chord banks, and shared-pitch chord progression editing.
+**Poly Step**: The Akai Fire `STEP` polyphonic sequencing workflow for individual notes, builder chords, preset chord banks, and shared-pitch progression editing. Its implementation retains the historical `ChordStep*` names.
 
 **Fugue**: The Akai Fire `STEP` mode that derives related MIDI lines from a source line using direction, speed, start offset, and scale-aware interval settings.
 
@@ -92,7 +92,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 ## Musical terms
 
-**Shared Pitch Context**: The Akai Fire shared root, scale, and octave state used by `NOTE`, Melodic Step, Chord Step, and the global settings overlay.
+**Shared Pitch Context**: The Akai Fire shared root, scale, and octave state used by `NOTE`, Melodic Step, Poly Step, and the global settings overlay.
 
 **Pitch Pool**: The Melodic Step row of selectable notes that constrains generated and edited mono phrases.
 
@@ -100,13 +100,13 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Melodic Mutator**: The Melodic Step process that changes an existing generated phrase while preserving or changing selected musical aspects.
 
-**Chord Builder**: The Chord Step manual chord source where builder pads select notes and render the current chord.
+**Chord Builder**: The Poly Step manual pitch source where builder pads select notes and render the current note or chord.
 
-**Builder Latch**: The Chord Step builder setting that switches source pads between latch-off replacement/grip entry and latch-on gradual add/remove chord construction.
+**Builder Latch**: The Poly Step builder setting that switches source pads between latch-off replacement/grip entry and latch-on gradual add/remove pitch construction.
 
-**Chord Bank**: A static library of Chord Step preset chord formulas and voicing variants.
+**Chord Bank**: A static library of Poly Step preset chord formulas and voicing variants.
 
-**Chord Interpretation**: The Chord Step choice between keeping a stored semitone shape as `Raw` or casting it through the current Bitwig scale as `InKey`.
+**Chord Interpretation**: The Poly Step choice between keeping a stored semitone shape as `Raw` or casting it through the current Bitwig scale as `InKey`.
 
 **Source Line**: In Fugue, the MIDI channel 1 template line used to regenerate derived lines.
 
@@ -174,7 +174,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 ## Historical or deprecated terms
 
-**ChordStepSurfaceLayer**: A historical Chord Step extraction artifact from the transition away from live-note-surface inheritance.
+**ChordStepSurfaceLayer**: A historical Poly Step extraction artifact from the transition away from live-note-surface inheritance.
 
 **SurfaceLayer**: A historical or transitional architecture term for an internal mode-owned hardware/control surface.
 

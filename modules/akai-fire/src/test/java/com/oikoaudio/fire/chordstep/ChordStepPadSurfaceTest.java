@@ -250,6 +250,15 @@ class ChordStepPadSurfaceTest {
     }
 
     @Test
+    void heldSourcePadsReplaceAnExistingStepInsteadOfLoadingItIntoTheBuilder() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+
+        assertEquals(
+                ChordStepPadSurface.StepPressAction.REPLACE_STEP,
+                surface.stepPressAction(6, true, true, true));
+    }
+
+    @Test
     void releaseActionPreservesAddedAndModifiedStepsButClearsPlainExistingSteps() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
@@ -347,6 +356,7 @@ class ChordStepPadSurfaceTest {
         private boolean fixedLengthHeld;
         private boolean copyHeld;
         private boolean deleteHeld;
+        private boolean sourcePadsHeld;
         private boolean builderFamily;
         private boolean hasStepStartNote;
         private boolean canExtend = true;
@@ -386,6 +396,11 @@ class ChordStepPadSurfaceTest {
         @Override
         public boolean isDeleteHeld() {
             return deleteHeld;
+        }
+
+        @Override
+        public boolean hasHeldSourcePads() {
+            return sourcePadsHeld;
         }
 
         @Override
@@ -434,6 +449,12 @@ class ChordStepPadSurfaceTest {
 
         @Override
         public boolean assignSelectedChordToStep(final int stepIndex, final int velocity) {
+            assignedSteps.add(stepIndex);
+            return true;
+        }
+
+        @Override
+        public boolean replaceSelectedChordAtStep(final int stepIndex) {
             assignedSteps.add(stepIndex);
             return true;
         }

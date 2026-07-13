@@ -72,7 +72,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private static final RgbLightState HELD_STEP = new RgbLightState(120, 88, 0, true);
     private static final RgbLightState DEFERRED_TOP = new RgbLightState(110, 38, 0, true);
     private static final RgbLightState DEFERRED_BOTTOM = new RgbLightState(36, 16, 0, true);
-    private static final String MODE_NAME = "Chord Step";
+    private static final String MODE_NAME = "Poly Step";
 
     // Shared mode dependencies
     private final AkaiFireOikontrolExtension driver;
@@ -278,8 +278,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private CursorTrack createChordStepCursorTrack(final ControllerHost host) {
         final CursorTrack cursorTrack =
-                host.createCursorTrack(
-                        "CHORD_STEP_MODE", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
+                host.createCursorTrack("CHORD_STEP_MODE", "Poly Step", 8, CLIP_ROW_PAD_COUNT, true);
         cursorTrack.name().markInterested();
         cursorTrack.color().markInterested();
         cursorTrack.canHoldNoteData().markInterested();
@@ -551,6 +550,11 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             public boolean assignSelectedChordToSteps(
                     final Set<Integer> stepIndexes, final int velocity) {
                 return ChordStepMode.this.assignSelectedChordToSteps(stepIndexes, velocity);
+            }
+
+            @Override
+            public boolean replaceSelectedChordAtStep(final int stepIndex) {
+                return ChordStepMode.this.replaceSelectedChordAtStep(stepIndex);
             }
 
             @Override
@@ -1216,7 +1220,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         final Map<Integer, NoteStep> anchorNotes = chordStepEventIndex.noteStepsAt(anchorStepIndex);
         if (!anchorNotes.isEmpty()) {
             for (final NoteStep note : anchorNotes.values()) {
-                chordStepEventIndex.addPendingMoveSnapshot(startStep, note.y(), note);
+                chordStepEventIndex.addPendingNoteSnapshot(startStep, note.y(), note);
                 chordStepClipEditor.setChordStep(
                         startStep, note.y(), (int) Math.round(note.velocity() * 127), duration);
                 chordStepClipEditor.clearChordNote(note.x(), note.y());
@@ -1270,6 +1274,42 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             chordStepClipEditor.writeChordAtStep(stepIndex, notes, appliedVelocity, STEP_LENGTH);
         }
         showCurrentChord();
+        return true;
+    }
+
+    private boolean replaceSelectedChordAtStep(final int stepIndex) {
+        if (!ensureSelectedNoteClip()) {
+            return false;
+        }
+        final int[] notes = renderSelectedChord();
+        if (notes.length == 0) {
+            oled.valueInfo("Select", "Notes 1st");
+            return false;
+        }
+        final ChordStepEventIndex.Event event = snapshotChordEventForStep(stepIndex, false);
+        if (event == null || event.notes().isEmpty()) {
+            return assignSelectedChordToSteps(Set.of(stepIndex), 127);
+        }
+        final ChordStepEventIndex.EventNote template =
+                event.notes().stream()
+                        .filter(note -> note.visibleStep() != null)
+                        .findFirst()
+                        .orElse(event.notes().get(0));
+        if (template.visibleStep() != null) {
+            for (final int midiNote : notes) {
+                chordStepEventIndex.addPendingNoteSnapshot(
+                        stepIndex, midiNote, template.visibleStep());
+            }
+        }
+        final double duration =
+                event.notes().stream()
+                        .mapToDouble(ChordStepEventIndex.EventNote::duration)
+                        .max()
+                        .orElse(template.duration());
+        chordStepClipEditor.replaceChordPitchesAtFineStart(
+                stepIndex, event.anchorFineStart(), notes, template.velocity(), duration);
+        oled.valueInfo("Replace Step", Integer.toString(stepIndex + 1));
+        driver.notifyPopup("Replace Step", "Step " + (stepIndex + 1));
         return true;
     }
 
@@ -1333,14 +1373,14 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private void toggleChordInterpretation() {
         chordSelection.toggleInterpretation();
-        oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
-        driver.notifyPopup("Chord Step Mode", chordSelection.interpretationDisplayName());
+        oled.valueInfo("Poly Step Mode", chordSelection.interpretationDisplayName());
+        driver.notifyPopup("Poly Step Mode", chordSelection.interpretationDisplayName());
     }
 
     private void adjustChordInterpretation(final int amount) {
         if (chordSelection.adjustInterpretation(amount)) {
-            oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
-            driver.notifyPopup("Chord Step Mode", chordSelection.interpretationDisplayName());
+            oled.valueInfo("Poly Step Mode", chordSelection.interpretationDisplayName());
+            driver.notifyPopup("Poly Step Mode", chordSelection.interpretationDisplayName());
         }
     }
 
@@ -1515,7 +1555,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return;
         }
         if ("Interpretation".equals(focus) && noteStepActive) {
-            oled.valueInfo("Chord Step Mode", chordSelection.interpretationDisplayName());
+            oled.valueInfo("Poly Step Mode", chordSelection.interpretationDisplayName());
             return;
         }
         oled.lineInfo(
@@ -1862,7 +1902,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         oled.paramInfo(
                 "Velocity Center",
                 chordStepVelocity.centerVelocity(),
-                "Chord Step",
+                "Poly Step",
                 chordStepVelocity.minCenterVelocity(),
                 chordStepVelocity.maxCenterVelocity());
     }
@@ -1871,7 +1911,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         if (!chordStepVelocity.adjustSensitivity(inc)) {
             return;
         }
-        oled.paramInfo("Velocity Sens", chordStepVelocity.sensitivity(), "Chord Step", 0, 100);
+        oled.paramInfo("Velocity Sens", chordStepVelocity.sensitivity(), "Poly Step", 0, 100);
     }
 
     private void resetChordVelocityTargets() {
@@ -1950,6 +1990,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         noteStepActive = true;
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
+        chordStepPadController.clearHeldSourcePads();
         selectedPresetStepIndex = null;
         chordStepClips.position().setPage(0);
         chordStepControlBindings.activatePatternButtons();
@@ -1965,6 +2006,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         stopAuditionNotes();
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
+        chordStepPadController.clearHeldSourcePads();
         clearAllBankFineNudgeSessions();
         selectedPresetStepIndex = null;
         encoderLayer.deactivate();

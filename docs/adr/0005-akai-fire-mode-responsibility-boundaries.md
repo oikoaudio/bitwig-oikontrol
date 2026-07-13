@@ -4,7 +4,7 @@
 
 - Recent Akai Fire refactors split several large mode classes into named collaborators.
 - The most important repeated problem is not only class size. It is that equivalent responsibilities had different names and locations across modes, increasing the cost of understanding, changing, or borrowing the extension code.
-- Chord Step proved the pattern outside generated-pattern modes: it was extracted from live pad surface inheritance into a chord-step-owned mode and collaborators under `com.oikoaudio.fire.chordstep`.
+- Poly Step (implemented under the historical `com.oikoaudio.fire.chordstep` package and `ChordStep*` class names) proved the pattern outside generated-pattern modes: it was extracted from live pad surface inheritance into a mode-owned set of collaborators.
 - Nested Rhythm and Melodic Step proved complementary parts of the same pattern through pad interaction collaborators, generated/editable pattern state, and clip writer collaborators.
 - Drum XOX, Perform, Fugue, and remaining live pad surfaces do not all fit the same domain model, but they should still use the same vocabulary when they own equivalent responsibilities.
 

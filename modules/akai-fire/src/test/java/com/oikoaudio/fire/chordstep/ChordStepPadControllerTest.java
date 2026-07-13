@@ -90,6 +90,22 @@ class ChordStepPadControllerTest {
     }
 
     @Test
+    void holdingBuilderPitchesThenTappingAnOccupiedStepReplacesAndKeepsTheStep() {
+        final FakeHost host = new FakeHost();
+        host.builderFamily = true;
+        host.startedSteps.add(6);
+        final ChordStepPadController controller = controller(host);
+
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 4, true, 100);
+        controller.handlePadPress(STEP_PAD_OFFSET + 6, true, 90);
+        controller.handlePadPress(STEP_PAD_OFFSET + 6, false, 0);
+
+        assertTrue(host.events.contains("replace 6"));
+        assertTrue(host.events.stream().noneMatch(event -> event.equals("load-builder 6")));
+        assertTrue(host.events.stream().noneMatch(event -> event.equals("clear 6")));
+    }
+
+    @Test
     void heldClipRowPadsEditRecurrenceInsteadOfLaunchingClips() {
         final FakeHost host = new FakeHost();
         host.heldNotes = List.of(note(5, 8, 0b00000001));
@@ -125,6 +141,7 @@ class ChordStepPadControllerTest {
     static final class FakeHost implements ChordStepPadController.Host {
         final List<String> events = new ArrayList<>();
         private final Set<Integer> chordSlots = new HashSet<>();
+        private final Set<Integer> startedSteps = new HashSet<>();
         private List<NoteStep> heldNotes = List.of();
         private boolean builderFamily;
         private boolean builderSourceChanged = true;
@@ -193,6 +210,12 @@ class ChordStepPadControllerTest {
                 final Set<Integer> stepIndexes, final int velocity) {
             assignedSteps = Set.copyOf(stepIndexes);
             assignedVelocity = velocity;
+            return true;
+        }
+
+        @Override
+        public boolean replaceSelectedChordAtStep(final int stepIndex) {
+            events.add("replace " + stepIndex);
             return true;
         }
 
@@ -305,7 +328,7 @@ class ChordStepPadControllerTest {
 
         @Override
         public boolean hasStepStartNote(final int stepIndex) {
-            return false;
+            return startedSteps.contains(stepIndex);
         }
 
         @Override

@@ -79,7 +79,10 @@ Akai Fire class names below are rooted under `modules/akai-fire/src/main/java/co
   cleanup for live note and drum-pad surfaces.
 - Layouts live in `NoteGridLayout.java`, `HarmonicLatticeLayout.java`, and `DrumMachinePadLayout.java`.
 
-## Chord Step mode
+## Poly Step mode (`ChordStep*` internally)
+
+The user-facing mode is named Poly Step because it sequences single notes as well as chords. The established
+package and implementation class names remain `chordstep`/`ChordStep*`.
 
 - `ChordStepMode.java` is the sole public package entry point and explicit composition root. Its constructor is
   grouped into musical/edit state, clip observation/mutation, pads/feedback, buttons/encoders, and physical
