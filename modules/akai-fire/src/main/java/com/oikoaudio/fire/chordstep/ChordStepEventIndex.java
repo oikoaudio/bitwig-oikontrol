@@ -11,7 +11,7 @@ import java.util.function.IntPredicate;
 import java.util.function.IntUnaryOperator;
 
 /** Owns chord-step visible note objects, fine-grid observed-note state, and event snapshots. */
-public final class ChordStepEventIndex {
+final class ChordStepEventIndex {
     private final ChordStepObservedState observedState = new ChordStepObservedState();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final Map<String, NoteStepSnapshot> pendingMovedNotes = new HashMap<>();

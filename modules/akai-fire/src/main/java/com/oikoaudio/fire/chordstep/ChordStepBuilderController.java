@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.function.IntSupplier;
 
 /** Owns chord-builder source-pad note mapping and builder-note selection gestures. */
-public final class ChordStepBuilderController {
+final class ChordStepBuilderController {
     public enum PadRole {
         ROOT,
         IN_SCALE,

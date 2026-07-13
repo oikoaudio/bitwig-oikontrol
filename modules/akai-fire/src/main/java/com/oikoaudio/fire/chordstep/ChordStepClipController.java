@@ -6,7 +6,7 @@ import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import java.util.function.BooleanSupplier;
 
 /** Owns chord-step selected-clip state refresh and clip-availability checks. */
-public final class ChordStepClipController {
+final class ChordStepClipController {
     private final BooleanSupplier canHoldNoteData;
     private final BooleanSupplier hasLoadedNoteClipContent;
     private final ResyncRequester resyncRequester;

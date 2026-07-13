@@ -10,7 +10,7 @@ import com.oikoaudio.fire.values.StepViewPosition;
 import java.util.function.IntConsumer;
 
 /** Owns the Bitwig clip/cursor resources used by chord-step sequencing. */
-public final class ChordStepClipResources {
+final class ChordStepClipResources {
     private final PinnableCursorClip noteClip;
     private final Clip observedClip;
     private final StepViewPosition position;

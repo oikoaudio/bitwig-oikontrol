@@ -12,7 +12,7 @@ import java.util.function.IntUnaryOperator;
  * Tracks observed chord-step occupancy, visible notes, and fine-step note starts for the note/chord
  * sequencer.
  */
-public final class ChordStepObservedState {
+final class ChordStepObservedState {
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
     private final Map<Integer, Map<Integer, Set<Integer>>> fineOccupancyByStep = new HashMap<>();
     private final Map<Integer, Map<Integer, Integer>> fineNoteStartsByStep = new HashMap<>();

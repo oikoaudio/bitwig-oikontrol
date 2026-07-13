@@ -9,7 +9,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /** Owns the selected-clip observation lifecycle used by chord-step mode. */
-public final class ChordStepObservationController {
+final class ChordStepObservationController {
     private final ClipLauncherSlotBank noteClipSlotBank;
     private final IntSupplier selectedClipSlotIndex;
     private final Supplier<RgbLightState> defaultColorSupplier;

@@ -7,7 +7,7 @@ import java.util.function.IntUnaryOperator;
 /**
  * Owns low-level chord-step note writes and cache invalidation against the observed Bitwig clip.
  */
-public final class ChordStepClipEditor<E> {
+final class ChordStepClipEditor<E> {
     private final Clip observedClip;
     private final ChordStepObservedState observedState;
     private final ChordStepFineNudgeSession<E> fineNudgeSession;

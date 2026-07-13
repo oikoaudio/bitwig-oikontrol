@@ -71,36 +71,45 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private static final RgbLightState DEFERRED_BOTTOM = new RgbLightState(36, 16, 0, true);
     private static final String MODE_NAME = "Chord Step";
 
+    // Shared mode dependencies
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
     private final NoteChordOledView noteChordOledView;
     private final SharedPitchContextController pitchContext;
-    private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
-    private final ChordStepPadController chordStepPadController;
-    private final ChordStepPadLightRenderer chordStepPadLightRenderer;
+    private final VelocitySettings chordStepVelocity;
+
+    // Musical and edit state
     private final ChordStepAccentControls chordStepAccentControls;
-    private final ChordStepModeButtons chordStepModeButtons;
-    private final ChordStepBankButtonControls chordStepBankButtonControls;
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
     private final ChordStepAuditionController chordStepAudition;
-    private final VelocitySettings chordStepVelocity;
+    private final ChordStepEditControls chordStepEditControls;
+
+    // Clip resources, observation, and mutation
     private final ChordStepVisibleClipCache visibleClipCache =
             new ChordStepVisibleClipCache(STEP_COUNT);
-    private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> fineNudgeSession;
-    private final ChordStepFineNudgeWriter chordStepFineNudgeWriter;
-    private final ChordStepClipController chordStepClipController;
-    private final ChordStepClipEditor<ChordStepEventIndex.Event> chordStepClipEditor;
-    private final ChordStepClipNavigation chordStepClipNavigation;
-    private final ChordStepObservationController chordStepObservationController;
+    private final CursorTrack chordStepCursorTrack;
     private final ChordStepClipResources chordStepClips;
     private final ChordStepEventIndex chordStepEventIndex;
+    private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> fineNudgeSession;
+    private final ChordStepClipController chordStepClipController;
+    private final ChordStepClipEditor<ChordStepEventIndex.Event> chordStepClipEditor;
+    private final ChordStepFineNudgeWriter chordStepFineNudgeWriter;
+    private final ChordStepClipNavigation chordStepClipNavigation;
+    private final ChordStepObservationController chordStepObservationController;
+
+    // Pads and feedback
+    private final ChordStepPadSurface chordStepPadSurface = new ChordStepPadSurface();
+    private final ChordStepPadController chordStepPadController;
     private final ClipRowHandler clipHandler;
-    private final CursorTrack chordStepCursorTrack;
-    private final ChordStepControlBindings chordStepControlBindings;
+    private final ChordStepPadLightRenderer chordStepPadLightRenderer;
+
+    // Buttons, encoders, and physical bindings
+    private final ChordStepModeButtons chordStepModeButtons;
+    private final ChordStepBankButtonControls chordStepBankButtonControls;
     private final ChordStepEncoderControls chordStepEncoderControls;
     private final StepSequencerEncoderLayer stepEncoderLayer;
-    private final ChordStepEditControls chordStepEditControls;
+    private final ChordStepControlBindings chordStepControlBindings;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
     private boolean noteStepActive = false;
@@ -116,36 +125,22 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.oled = driver.getOled();
         this.noteChordOledView = new NoteChordOledView(oled);
         this.chordStepVelocity = driver.getSharedVelocitySettings();
+
+        // Musical and edit state
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
-        this.chordStepModeButtons =
-                new ChordStepModeButtons(chordStepAccentControls, chordStepModeButtonsHost());
-        this.chordStepBankButtonControls =
-                new ChordStepBankButtonControls(chordStepBankButtonHost());
         this.chordBuilder =
                 new ChordStepBuilderController(
                         chordSelection,
                         pitchContext,
                         this::getBuilderFirstVisibleMidiNote,
                         CHORD_SOURCE_PAD_COUNT);
-        this.chordStepPadController =
-                new ChordStepPadController(
-                        chordStepPadSurface,
-                        CLIP_ROW_PAD_COUNT,
-                        CHORD_SOURCE_PAD_OFFSET,
-                        STEP_PAD_OFFSET,
-                        chordStepPadHost());
         this.chordStepAudition = new ChordStepAuditionController(driver.getNoteInput());
+        this.chordStepEditControls =
+                new ChordStepEditControls(oled::valueInfo, oled::clearScreenDelayed);
+
+        // Clip resources, observation, and mutation
         final ControllerHost host = driver.getHost();
-        this.chordStepCursorTrack =
-                host.createCursorTrack(
-                        "CHORD_STEP_MODE", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
-        this.chordStepCursorTrack.name().markInterested();
-        this.chordStepCursorTrack.color().markInterested();
-        this.chordStepCursorTrack.canHoldNoteData().markInterested();
-        this.chordStepCursorTrack
-                .color()
-                .addValueObserver((r, g, b) -> chordStepBaseColor = ColorLookup.getColor(r, g, b));
-        chordStepBaseColor = ColorLookup.getColor(this.chordStepCursorTrack.color().get());
+        this.chordStepCursorTrack = createChordStepCursorTrack(host);
         this.chordStepClips =
                 new ChordStepClipResources(
                         host,
@@ -166,11 +161,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 new ChordStepFineNudgeSession<>(
                         stepIndex -> snapshotChordEventForStep(stepIndex, true),
                         this::nudgeHeldNotes);
-        this.chordStepClips.observe(
-                this::handleStepData,
-                this::handleNoteStepObject,
-                this::handleObservedStepData,
-                this::handlePlayingStep);
+        observeClipData();
         this.chordStepClipController =
                 new ChordStepClipController(
                         () -> chordStepCursorTrack.canHoldNoteData().get(),
@@ -221,10 +212,15 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         chordStepClips::scrollObservedClipToKeyStart,
                         () -> chordStepClips.scrollNoteClipToStep(chordStepOffset()),
                         chordStepClips::scrollObservedClipToStepStart);
-        this.chordStepEditControls =
-                new ChordStepEditControls(oled::valueInfo, oled::clearScreenDelayed);
-        chordStepAudition.configureExpression();
-        chordStepObservationController.observeSelectedClip();
+
+        // Pads and feedback
+        this.chordStepPadController =
+                new ChordStepPadController(
+                        chordStepPadSurface,
+                        CLIP_ROW_PAD_COUNT,
+                        CHORD_SOURCE_PAD_OFFSET,
+                        STEP_PAD_OFFSET,
+                        chordStepPadHost());
         this.clipHandler = new ClipRowHandler(this);
         this.chordStepPadLightRenderer =
                 new ChordStepPadLightRenderer(
@@ -241,13 +237,48 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         stepIndex ->
                                 hasVisibleStepContent(stepIndex) && isChordStepAccented(stepIndex),
                         this::isChordStepSustained);
+
+        // Buttons and encoders
+        this.chordStepModeButtons =
+                new ChordStepModeButtons(chordStepAccentControls, chordStepModeButtonsHost());
+        this.chordStepBankButtonControls =
+                new ChordStepBankButtonControls(chordStepBankButtonHost());
         this.chordStepEncoderControls =
                 new ChordStepEncoderControls(
                         driver, oled, chordStepCursorTrack, chordStepEncoderHost());
         this.stepEncoderLayer = new StepSequencerEncoderLayer(this, driver);
 
+        // Physical bindings and activation
         this.chordStepControlBindings =
                 new ChordStepControlBindings(driver, this, chordStepControlBindingsHost());
+        activateControls();
+    }
+
+    private CursorTrack createChordStepCursorTrack(final ControllerHost host) {
+        final CursorTrack cursorTrack =
+                host.createCursorTrack(
+                        "CHORD_STEP_MODE", "Chord Step", 8, CLIP_ROW_PAD_COUNT, true);
+        cursorTrack.name().markInterested();
+        cursorTrack.color().markInterested();
+        cursorTrack.canHoldNoteData().markInterested();
+        cursorTrack
+                .color()
+                .addValueObserver((r, g, b) -> chordStepBaseColor = ColorLookup.getColor(r, g, b));
+        chordStepBaseColor = ColorLookup.getColor(cursorTrack.color().get());
+        return cursorTrack;
+    }
+
+    private void observeClipData() {
+        chordStepClips.observe(
+                this::handleStepData,
+                this::handleNoteStepObject,
+                this::handleObservedStepData,
+                this::handlePlayingStep);
+    }
+
+    private void activateControls() {
+        chordStepAudition.configureExpression();
+        chordStepObservationController.observeSelectedClip();
         chordStepControlBindings.bind();
         chordStepEncoderControls.bindMainEncoder(this);
     }

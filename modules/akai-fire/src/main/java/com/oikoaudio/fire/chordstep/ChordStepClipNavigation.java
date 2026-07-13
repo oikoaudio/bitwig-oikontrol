@@ -8,7 +8,7 @@ import com.oikoaudio.fire.values.StepViewPosition;
  * Owns chord-step clip navigation controls: step-page movement, clip length, and play-start
  * offsets.
  */
-public final class ChordStepClipNavigation {
+final class ChordStepClipNavigation {
     private static final double STEP_LENGTH = 0.25;
 
     private final PinnableCursorClip clip;

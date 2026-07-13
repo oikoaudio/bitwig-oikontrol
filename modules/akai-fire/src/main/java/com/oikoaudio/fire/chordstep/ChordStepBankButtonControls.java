@@ -3,7 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import java.util.Set;
 
 /** Owns chord-step behavior for the physical BANK buttons. */
-public final class ChordStepBankButtonControls {
+final class ChordStepBankButtonControls {
     private final Host host;
     private boolean leftHeld = false;
     private boolean rightHeld = false;

@@ -6,7 +6,7 @@ import com.oikoaudio.fire.sequence.AccentLatchState;
 import java.util.Collection;
 import java.util.Map;
 
-public final class ChordStepAccentControls {
+final class ChordStepAccentControls {
     public static final int STANDARD_VELOCITY = 100;
     public static final int ACCENTED_VELOCITY = 127;
 

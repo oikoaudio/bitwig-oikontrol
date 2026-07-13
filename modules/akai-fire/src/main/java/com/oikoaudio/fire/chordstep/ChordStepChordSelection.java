@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * Owns the selected chord source, preset page, octave, interpretation, and builder-note selection.
  */
-public final class ChordStepChordSelection {
+final class ChordStepChordSelection {
     public static final int BUILDER_FAMILY_INDEX = 0;
     public static final String BUILDER_FAMILY_LABEL = "Builder";
     private static final int MIN_CHORD_OCTAVE_OFFSET = -3;

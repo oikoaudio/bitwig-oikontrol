@@ -16,7 +16,7 @@ import java.util.function.IntUnaryOperator;
 /**
  * Owns held-step fine-nudge clip rewrites and the short in-flight suppression window after writes.
  */
-public final class ChordStepFineNudgeWriter {
+final class ChordStepFineNudgeWriter {
     private final Clip observedClip;
     private final ChordStepEventIndex eventIndex;
     private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> session;

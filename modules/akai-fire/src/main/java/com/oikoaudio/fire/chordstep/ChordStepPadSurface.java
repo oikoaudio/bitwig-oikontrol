@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.IntConsumer;
 
-public final class ChordStepPadSurface {
+final class ChordStepPadSurface {
     enum ModifierPressAction {
         NONE,
         SELECT,

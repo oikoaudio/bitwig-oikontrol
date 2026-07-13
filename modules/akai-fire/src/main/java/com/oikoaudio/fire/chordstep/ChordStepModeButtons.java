@@ -3,7 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import com.oikoaudio.fire.lights.BiColorLightState;
 
 /** Owns the stateless STEP, PATTERN, and pitch-context button policies for Chord Step. */
-public final class ChordStepModeButtons {
+final class ChordStepModeButtons {
     private final ChordStepAccentControls accentControls;
     private final Host host;
 

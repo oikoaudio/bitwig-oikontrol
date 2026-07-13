@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
-public final class ChordStepPadController {
+final class ChordStepPadController {
     public interface Host {
         void handleClipRowPad(int padIndex, boolean pressed);
 

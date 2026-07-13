@@ -11,7 +11,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /** Owns chord-step pad RGB projection for clip-row, chord-source, and step pads. */
-public final class ChordStepPadLightRenderer {
+final class ChordStepPadLightRenderer {
     private static final int PAD_COLUMNS = 16;
     private static final RgbLightState ROOT_COLOR = new RgbLightState(120, 64, 0, true);
     private static final RgbLightState IN_SCALE_COLOR = new RgbLightState(0, 72, 110, true);
