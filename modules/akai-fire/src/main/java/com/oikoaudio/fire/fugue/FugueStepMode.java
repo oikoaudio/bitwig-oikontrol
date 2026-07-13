@@ -15,9 +15,16 @@ import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.melodic.MelodicPattern;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
+import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationParameter;
+import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.utils.PatternButtons;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class FugueStepMode extends Layer {
     private static final int STEP_COUNT = FuguePattern.MAX_STEPS;
@@ -61,6 +68,10 @@ public final class FugueStepMode extends Layer {
     private final boolean[] lineEnabled = {true, true, true, true};
 
     private final FugueEncoderControls encoderControls = new FugueEncoderControls();
+    private final NoteVariationAmounts noteVariationAmounts;
+    private final ObservedNoteVariationAdapter noteVariationAdapter =
+            new ObservedNoteVariationAdapter(STEP_COUNT);
+    private final Set<Integer> activeVariationTouches = new HashSet<>();
     private int loopSteps = DEFAULT_LOOP_STEPS;
     private boolean mainEncoderPressConsumed = false;
 
@@ -69,6 +80,7 @@ public final class FugueStepMode extends Layer {
         this.driver = driver;
         this.oled = driver.getOled();
         this.patternButtons = driver.getPatternButtons();
+        this.noteVariationAmounts = driver.getNoteVariationAmounts();
 
         final ControllerHost host = driver.getHost();
         final CursorTrack cursorTrack =
@@ -93,7 +105,11 @@ public final class FugueStepMode extends Layer {
                                                 Math.min(
                                                         STEP_COUNT,
                                                         (int) Math.round(length / STEP_LENGTH))));
-        this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
+        this.cursorClip.addNoteStepObserver(
+                noteStep -> {
+                    noteVariationAdapter.handleObservedNote(noteStep);
+                    handleNoteStepObject(noteStep);
+                });
         this.cursorClip.playingStep().addValueObserver(observations::updatePlayingStep);
         this.templatePads =
                 new FugueTemplatePadController(
@@ -695,6 +711,9 @@ public final class FugueStepMode extends Layer {
     private final class EncoderHandler implements FugueEncoderControls.Handler {
         @Override
         public void turn(final int encoderIndex, final int increment) {
+            if (handleNoteVariationTurn(encoderIndex, increment)) {
+                return;
+            }
             if (templatePads.isEditing()) {
                 switch (encoderIndex) {
                     case 0 -> templatePads.adjustVelocity(increment);
@@ -717,8 +736,80 @@ public final class FugueStepMode extends Layer {
 
         @Override
         public void touch(final int encoderIndex, final boolean touched) {
+            if (handleNoteVariationTouch(encoderIndex, touched)) {
+                return;
+            }
             showEncoderTouchValue(encoderIndex, touched);
         }
+    }
+
+    private boolean handleNoteVariationTurn(final int encoderIndex, final int increment) {
+        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final Optional<NoteVariationParameter> parameter = noteVariationParameter(encoderIndex);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        final double amount = noteVariationAmounts.adjust(parameter.get(), increment * 0.05);
+        oled.valueInfo(
+                parameter.get().displayName() + " Rand",
+                "%d%%".formatted(Math.round(amount * 100.0)));
+        return true;
+    }
+
+    private boolean handleNoteVariationTouch(final int encoderIndex, final boolean touched) {
+        if (!touched && activeVariationTouches.remove(encoderIndex)) {
+            oled.clearScreenDelayed();
+            return true;
+        }
+        if (!touched
+                || !driver.isGlobalShiftHeld()
+                || !driver.isGlobalAltHeld()
+                || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final Optional<NoteVariationParameter> parameter = noteVariationParameter(encoderIndex);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        activeVariationTouches.add(encoderIndex);
+        applyNoteVariation(parameter.get());
+        return true;
+    }
+
+    static Optional<NoteVariationParameter> noteVariationParameter(final int encoderIndex) {
+        return switch (encoderIndex) {
+            case 0 -> Optional.of(NoteVariationParameter.VELOCITY);
+            case 1 -> Optional.of(NoteVariationParameter.CHANCE);
+            default -> Optional.empty();
+        };
+    }
+
+    private void applyNoteVariation(final NoteVariationParameter parameter) {
+        final ObservedNoteVariationAdapter.Result result =
+                noteVariationAdapter.apply(
+                        parameter,
+                        noteVariationDefault(parameter),
+                        noteVariationAmounts.amount(parameter),
+                        ThreadLocalRandom.current().nextLong(),
+                        loopSteps);
+        switch (result.status()) {
+            case APPLIED -> oled.valueInfo("Randomized", result.noteCount() + " notes");
+            case RESET ->
+                    oled.valueInfo(
+                            "Reset " + parameter.displayName(), result.noteCount() + " notes");
+            case EMPTY -> oled.valueInfo("No notes", "Active loop");
+            case TOO_LARGE -> oled.valueInfo("Clip too large", "No changes");
+        }
+    }
+
+    static double noteVariationDefault(final NoteVariationParameter parameter) {
+        return switch (parameter) {
+            case VELOCITY -> 96.0 / 127.0;
+            case CHANCE -> 1.0;
+            default -> throw new IllegalArgumentException("Unsupported Fugue variation parameter");
+        };
     }
 
     private final class TemplatePadClipPort implements FugueTemplatePadController.ClipPort {

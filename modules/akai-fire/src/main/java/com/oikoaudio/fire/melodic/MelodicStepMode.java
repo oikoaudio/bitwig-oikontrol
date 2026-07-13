@@ -34,6 +34,9 @@ import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
+import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationParameter;
+import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SelectedNoteClipCoordinator;
@@ -51,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClipRowHost {
@@ -78,6 +82,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final CursorRemoteControlsPage remoteControlsPage;
     private final StepSequencerEncoderLayer encoderLayer;
     private final EncoderBankLayout encoderBankLayout;
+    private final NoteVariationAmounts noteVariationAmounts;
+    private final ObservedNoteVariationAdapter noteVariationAdapter =
+            new ObservedNoteVariationAdapter(STEP_COUNT);
+    private final Set<NoteStepAccess> activeVariationTouches = new HashSet<>();
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final MelodicStepClipWriter clipWriter = new MelodicStepClipWriter();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
@@ -152,6 +160,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.oled = driver.getOled();
         this.patternButtons = driver.getPatternButtons();
         this.noteRepeatHandler = noteRepeatHandler;
+        this.noteVariationAmounts = driver.getNoteVariationAmounts();
         this.noteInput = driver.getNoteInput();
         this.pitchPool =
                 new MelodicPitchPoolController(
@@ -183,7 +192,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         "MELODIC_STEP_CLIP", "MELODIC_STEP_CLIP", STEP_COUNT, 128);
         this.cursorClip.scrollToKey(0);
         this.cursorClip.scrollToStep(0);
-        this.cursorClip.addNoteStepObserver(this::handleNoteStepObject);
+        this.cursorClip.addNoteStepObserver(
+                noteStep -> {
+                    noteVariationAdapter.handleObservedNote(noteStep);
+                    handleNoteStepObject(noteStep);
+                });
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
         this.cursorClip.getLoopLength().markInterested();
         this.cursorClip
@@ -2059,6 +2072,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void applySelectedClipState(final SelectedClipSlotState state) {
+        if (selectedClipSlotIndex != state.slotIndex()) {
+            noteVariationAdapter.clear();
+        }
         selectedClipSlotIndex = state.slotIndex();
         selectedClipColor = state.color();
     }
@@ -2993,6 +3009,76 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
         return encoderBankLayout;
+    }
+
+    @Override
+    public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
+        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final java.util.Optional<NoteVariationParameter> parameter =
+                NoteVariationParameter.from(access);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        final double variationAmount = noteVariationAmounts.adjust(parameter.get(), amount * 0.05);
+        oled.valueInfo(
+                parameter.get().displayName() + " Rand",
+                "%d%%".formatted(Math.round(variationAmount * 100.0)));
+        return true;
+    }
+
+    @Override
+    public boolean handleNoteVariationTouch(final NoteStepAccess access, final boolean touched) {
+        if (!touched && activeVariationTouches.remove(access)) {
+            oled.clearScreenDelayed();
+            return true;
+        }
+        if (!touched
+                || !driver.isGlobalShiftHeld()
+                || !driver.isGlobalAltHeld()
+                || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final java.util.Optional<NoteVariationParameter> parameter =
+                NoteVariationParameter.from(access);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        activeVariationTouches.add(access);
+        applyNoteVariation(parameter.get());
+        return true;
+    }
+
+    private void applyNoteVariation(final NoteVariationParameter parameter) {
+        if (!ensureClipAvailable()) {
+            return;
+        }
+        final ObservedNoteVariationAdapter.Result result =
+                noteVariationAdapter.apply(
+                        parameter,
+                        noteVariationDefault(parameter),
+                        noteVariationAmounts.amount(parameter),
+                        ThreadLocalRandom.current().nextLong(),
+                        loopSteps);
+        switch (result.status()) {
+            case APPLIED -> oled.valueInfo("Randomized", result.noteCount() + " notes");
+            case RESET ->
+                    oled.valueInfo(
+                            "Reset " + parameter.displayName(), result.noteCount() + " notes");
+            case EMPTY -> oled.valueInfo("No notes", "Active loop");
+            case TOO_LARGE -> oled.valueInfo("Clip too large", "No changes");
+        }
+    }
+
+    private double noteVariationDefault(final NoteVariationParameter parameter) {
+        return switch (parameter) {
+            case VELOCITY -> DEFAULT_VELOCITY / 127.0;
+            case PRESSURE, TIMBRE, PITCH, PAN -> 0.0;
+            case GAIN -> 0.5;
+            case CHANCE -> 1.0;
+            case VELOCITY_SPREAD -> 0.0;
+        };
     }
 
     @Override

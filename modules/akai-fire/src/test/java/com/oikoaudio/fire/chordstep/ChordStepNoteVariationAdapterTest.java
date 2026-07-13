@@ -20,7 +20,7 @@ class ChordStepNoteVariationAdapterTest {
     void appliesOneCoherentValueToEveryChordVoiceInTheFullLoop() {
         final ObservedNoteVariationAdapter adapter = new ObservedNoteVariationAdapter(64);
         final NoteStep root = note(32, 60, 0, NoteStep.State.NoteOn);
-        final NoteStep third = note(32, 64, 0, NoteStep.State.NoteOn);
+        final NoteStep third = note(32, 64, 2, NoteStep.State.NoteOn);
         final NoteStep later = note(48, 67, 0, NoteStep.State.NoteOn);
         adapter.handleObservedNote(root);
         adapter.handleObservedNote(third);
