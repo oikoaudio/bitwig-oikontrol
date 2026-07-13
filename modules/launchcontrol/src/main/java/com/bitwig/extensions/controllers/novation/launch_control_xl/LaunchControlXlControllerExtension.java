@@ -261,9 +261,9 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       initDiscoveryBanks();
 
       createHardwareSurface();
-      createLayers();
       mFactoryLayerController = new FactoryLayerController(new FactoryPort(), STRIP_COUNT);
       mFactoryLayerController.setExclusiveTrackArmEnabled(mExclusiveTrackArmEnabled);
+      createLayers();
 
       mMainLayer.activate();
       selectMode(Mode.Send2FullDevice);
@@ -438,7 +438,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       // During init the LCXL sends a template-change sysex before we finish creating hardware
       // controls. If that happens, park the request and re-run once hardware is ready so we don't
       // lose all matchers (which would make every control dead).
-      if (!mHardwareReady || mBindingManager == null)
+      if (hardwareAttachShouldDefer(mHardwareReady, mBindingManager != null))
       {
          mPendingAttach = true;
          return;
@@ -481,6 +481,11 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
 
       mPendingAttach = false;
+   }
+
+   static boolean hardwareAttachShouldDefer(final boolean hardwareReady, final boolean bindingManagerReady)
+   {
+      return !hardwareReady || !bindingManagerReady;
    }
 
    private void clearHardwareMatchers()
@@ -1514,9 +1519,12 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      paintRightButtons();
-      paintKnobs();
-      paintBottomButtons();
+      final FactoryLedRenderer.LedFrame factoryFrame = mFactoryTemplateActive || mArpLayerActive
+         ? FactoryLedRenderer.render(factoryUiSnapshot())
+         : null;
+      paintRightButtons(factoryFrame);
+      paintKnobs(factoryFrame);
+      paintBottomButtons(factoryFrame);
 
       final StringBuilder sb = new StringBuilder();
 
@@ -1543,7 +1551,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
    }
 
-   protected void paintBottomButtons()
+   private void paintBottomButtons(final FactoryLedRenderer.LedFrame factoryFrame)
    {
       if (mDrumLayerActive)
       {
@@ -1557,16 +1565,18 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      final FactoryLedRenderer.LedFrame frame = FactoryLedRenderer.render(factoryUiSnapshot());
+      final FactoryLedRenderer.LedFrame frame = factoryFrame;
+      final int[] topButtons = frame.topButtons();
+      final int[] bottomButtons = frame.bottomButtons();
       for (int i = 0; i < STRIP_COUNT; ++i)
       {
          final int focusColor = mArpLayerController != null
-            ? mArpLayerController.applyFocusColor(i, frame.topButtons()[i])
-            : frame.topButtons()[i];
+            ? mArpLayerController.applyFocusColor(i, topButtons[i])
+            : topButtons[i];
          mBottomButtonsLed[i].setColor(focusColor);
          final int appliedControlColor = mArpLayerController != null
-            ? mArpLayerController.applyControlColor(i, frame.bottomButtons()[i])
-            : frame.bottomButtons()[i];
+            ? mArpLayerController.applyControlColor(i, bottomButtons[i])
+            : bottomButtons[i];
          mBottomButtonsLed[8 + i].setColor(appliedControlColor);
       }
    }
@@ -1644,13 +1654,21 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
 
    private FactoryUiSnapshot.Surface factorySurface()
    {
-      if (mDrumLayerActive)
+      return factorySurface(mFactoryTemplateActive, mArpLayerActive, mDrumLayerActive, mDevicePagesLayerActive);
+   }
+
+   static FactoryUiSnapshot.Surface factorySurface(final boolean factoryTemplateActive,
+                                                   final boolean arpLayerActive,
+                                                   final boolean drumLayerActive,
+                                                   final boolean devicePagesLayerActive)
+   {
+      if (drumLayerActive)
          return FactoryUiSnapshot.Surface.DRUM;
-      if (mArpLayerActive)
+      if (arpLayerActive)
          return FactoryUiSnapshot.Surface.ARP;
-      if (mDevicePagesLayerActive)
+      if (devicePagesLayerActive)
          return FactoryUiSnapshot.Surface.DEVICE_PAGES;
-      return mFactoryTemplateActive ? FactoryUiSnapshot.Surface.FACTORY : FactoryUiSnapshot.Surface.RAW_USER;
+      return factoryTemplateActive ? FactoryUiSnapshot.Surface.FACTORY : FactoryUiSnapshot.Surface.RAW_USER;
    }
 
    private static TrackControl fromFactoryTrackControl(final FactoryUiSnapshot.TrackControl trackControl)
@@ -1709,18 +1727,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          mDevicePagesController.paintButtons();
    }
 
-   private void setLedForRemote(final SimpleLed led,
-      final RemoteControl param,
-      final int off,
-      final int mid,
-      final int high)
-   {
-      final boolean exists = param != null && param.exists().get();
-      final double value = exists ? param.value().get() : 0;
-      led.setColor(exists ? levelColor(value, off, mid, high) : off);
-   }
-
-   protected void paintKnobs()
+   private void paintKnobs(final FactoryLedRenderer.LedFrame factoryFrame)
    {
       if (mDrumLayerActive)
       {
@@ -1750,7 +1757,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      final int[] colors = FactoryLedRenderer.render(factoryUiSnapshot()).knobs();
+      final int[] colors = factoryFrame.knobs();
       for (int i = 0; i < colors.length; i++)
          mKnobsLed[i].setColor(colors[i]);
    }
@@ -1796,7 +1803,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
       }
    }
 
-   protected void paintRightButtons()
+   private void paintRightButtons(final FactoryLedRenderer.LedFrame factoryFrame)
    {
       final int yellow = SimpleLedColor.Yellow.value();
       final int off = SimpleLedColor.Off.value();
@@ -1830,7 +1837,7 @@ public class LaunchControlXlControllerExtension extends ControllerExtension
          return;
       }
 
-      final int[] colors = FactoryLedRenderer.render(factoryUiSnapshot()).rightButtons();
+      final int[] colors = factoryFrame.rightButtons();
       mDeviceLed.setColor(colors[0]);
       mMuteLed.setColor(colors[1]);
       mSoloLed.setColor(colors[2]);

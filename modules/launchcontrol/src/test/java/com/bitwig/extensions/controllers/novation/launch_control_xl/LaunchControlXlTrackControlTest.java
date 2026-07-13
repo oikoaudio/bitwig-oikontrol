@@ -27,6 +27,28 @@ class LaunchControlXlTrackControlTest {
    }
 
    @Test
+   void matcherAttachmentDefersUntilHardwareAndManagerAreReady() {
+      assertTrue(LaunchControlXlControllerExtension.hardwareAttachShouldDefer(false, false));
+      assertTrue(LaunchControlXlControllerExtension.hardwareAttachShouldDefer(true, false));
+      assertTrue(LaunchControlXlControllerExtension.hardwareAttachShouldDefer(false, true));
+      assertFalse(LaunchControlXlControllerExtension.hardwareAttachShouldDefer(true, true));
+   }
+
+   @Test
+   void surfaceClassificationPreservesFactoryRawAndCustomTemplatePrecedence() {
+      assertEquals(FactoryUiSnapshot.Surface.FACTORY,
+         LaunchControlXlControllerExtension.factorySurface(true, false, false, false));
+      assertEquals(FactoryUiSnapshot.Surface.RAW_USER,
+         LaunchControlXlControllerExtension.factorySurface(false, false, false, false));
+      assertEquals(FactoryUiSnapshot.Surface.DRUM,
+         LaunchControlXlControllerExtension.factorySurface(true, false, true, false));
+      assertEquals(FactoryUiSnapshot.Surface.ARP,
+         LaunchControlXlControllerExtension.factorySurface(true, true, false, false));
+      assertEquals(FactoryUiSnapshot.Surface.DEVICE_PAGES,
+         LaunchControlXlControllerExtension.factorySurface(true, false, false, true));
+   }
+
+   @Test
    void onlyExclusiveArmFollowsTrackSelection() {
       assertEquals(false, LaunchControlXlControllerExtension.trackBooleanShouldSelect(
          LaunchControlXlControllerExtension.TrackBooleanTarget.MUTE, true));

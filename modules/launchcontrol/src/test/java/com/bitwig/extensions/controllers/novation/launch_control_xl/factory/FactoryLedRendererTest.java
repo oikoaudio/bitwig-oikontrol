@@ -59,6 +59,19 @@ class FactoryLedRendererTest {
          FactoryLedRenderer.render(device).rightButtons());
    }
 
+   @Test
+   void renderedFramesDoNotExposeMutableLedArrays()
+   {
+      final FactoryLedRenderer.LedFrame frame = FactoryLedRenderer.render(snapshot(
+         FactoryUiSnapshot.Mode.SEND_3, FactoryUiSnapshot.TrackControl.NONE, false, 0, 0, emptyStrips()));
+
+      frame.knobs()[0] = 99;
+      frame.bottomButtons()[0] = 99;
+
+      assertEquals(SimpleLedColor.Off.value(), frame.knobs()[0]);
+      assertEquals(SimpleLedColor.Off.value(), frame.bottomButtons()[0]);
+   }
+
    private static FactoryUiSnapshot snapshot(final FactoryUiSnapshot.Mode mode,
                                              final FactoryUiSnapshot.TrackControl control,
                                              final boolean deviceOn,

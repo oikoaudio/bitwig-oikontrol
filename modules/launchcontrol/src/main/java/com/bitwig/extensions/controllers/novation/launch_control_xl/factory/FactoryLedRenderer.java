@@ -9,7 +9,21 @@ public final class FactoryLedRenderer
 {
    private FactoryLedRenderer() {}
 
-   public record LedFrame(int[] topButtons, int[] bottomButtons, int[] knobs, int[] rightButtons) {}
+   public record LedFrame(int[] topButtons, int[] bottomButtons, int[] knobs, int[] rightButtons)
+   {
+      public LedFrame
+      {
+         topButtons = topButtons.clone();
+         bottomButtons = bottomButtons.clone();
+         knobs = knobs.clone();
+         rightButtons = rightButtons.clone();
+      }
+
+      @Override public int[] topButtons() { return topButtons.clone(); }
+      @Override public int[] bottomButtons() { return bottomButtons.clone(); }
+      @Override public int[] knobs() { return knobs.clone(); }
+      @Override public int[] rightButtons() { return rightButtons.clone(); }
+   }
 
    public static LedFrame render(final FactoryUiSnapshot state)
    {
