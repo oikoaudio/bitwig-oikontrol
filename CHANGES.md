@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Rolling generator density now grows monotonically from four characteristic family hits per 16 steps at `0.00` to every step at `1.00`, while keeping the seeded family stable across density changes.
 - Acid generator density now spans the full displayed range, growing deterministically from a sparse metric backbone at `0.00` to the complete seeded rhythm skeleton at `1.00`.
 - Fugue now enters source-only clips with derived lines 2-4 off, protects pre-existing channel 2-4 notes from controller regeneration, and requires `PATTERN DOWN` to explicitly replace and claim those derived channels.
 - Added Baked Note Variation across Drum XOX, Poly Step, Melodic Step, Fugue, and Nested Rhythm: `SHIFT + ALT` adjusts and applies stable clip-wide per-note variation, zero amount resets to mode defaults, and a latched `ALT + KNOB MODE` User 1 page exposes Note Gain and Note Pan in compatible step modes.

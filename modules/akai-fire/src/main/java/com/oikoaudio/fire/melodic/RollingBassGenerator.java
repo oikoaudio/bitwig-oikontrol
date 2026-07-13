@@ -1,7 +1,10 @@
 package com.oikoaudio.fire.melodic;
 
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public final class RollingBassGenerator implements MelodicGenerator {
@@ -35,7 +38,9 @@ public final class RollingBassGenerator implements MelodicGenerator {
         final Random random = new Random(parameters.seed());
         final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
         final int cellLength = loopSteps >= 16 ? 8 : 4;
-        final Family family = chooseFamily(parameters.density(), random);
+        final Family family = chooseFamily(random);
+        final boolean[] activity =
+                buildActivity(loopSteps, cellLength, family, parameters.density());
         lastFamilyLabel = familyLabel(family);
         int cellRoot = CELL_START_DEGREES[random.nextInt(CELL_START_DEGREES.length)];
         int previousDegree = cellRoot;
@@ -55,8 +60,7 @@ public final class RollingBassGenerator implements MelodicGenerator {
             }
 
             final int inCell = i % cellLength;
-            final boolean active = activeAt(inCell, family, parameters.density(), random);
-            if (!active) {
+            if (!activity[i]) {
                 steps.add(MelodicPattern.Step.rest(i));
                 continue;
             }
@@ -122,21 +126,36 @@ public final class RollingBassGenerator implements MelodicGenerator {
         };
     }
 
-    private Family chooseFamily(final double density, final Random random) {
+    private Family chooseFamily(final Random random) {
         if (subtypeIndex >= 0) {
             return Family.values()[subtypeIndex];
         }
-        if (density >= 0.999) {
-            final int pick = random.nextInt(10);
-            if (pick < 5) {
-                return Family.ROOT_DRIVE;
-            }
-            if (pick < 8) {
-                return Family.LATE_LIFT;
-            }
-            return Family.KICK_POCKET;
-        }
         return Family.values()[random.nextInt(Family.values().length)];
+    }
+
+    private boolean[] buildActivity(
+            final int loopSteps, final int cellLength, final Family family, final double density) {
+        final List<Integer> positions = new ArrayList<>(loopSteps);
+        for (int position = 0; position < loopSteps; position++) {
+            positions.add(position);
+        }
+        final Map<Integer, MetricIndispensabilityRanker.RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(positions, loopSteps);
+        positions.sort(
+                Comparator.comparing(
+                                (Integer position) ->
+                                        !FAMILY_ACTIVITY[family.ordinal()][position % cellLength])
+                        .thenComparingInt(position -> ranked.get(position).rankOrder()));
+
+        final int minimumCount = Math.min(loopSteps, Math.max(1, (loopSteps * 4 + 15) / 16));
+        final double normalizedDensity = Math.max(0.0, Math.min(1.0, density));
+        final int targetCount =
+                minimumCount + (int) Math.round(normalizedDensity * (loopSteps - minimumCount));
+        final boolean[] activity = new boolean[loopSteps];
+        for (int index = 0; index < targetCount; index++) {
+            activity[positions.get(index)] = true;
+        }
+        return activity;
     }
 
     private int nextCellRoot(
@@ -151,17 +170,6 @@ public final class RollingBassGenerator implements MelodicGenerator {
         final int limit = tension + movement >= 0.55 ? CELL_SHIFTS.length : CELL_SHIFTS.length - 1;
         final int shift = CELL_SHIFTS[random.nextInt(limit)];
         return clampDegree(currentRoot + shift);
-    }
-
-    private boolean activeAt(
-            final int inCell, final Family family, final double density, final Random random) {
-        if (density >= 0.999) {
-            return true;
-        }
-        if (FAMILY_ACTIVITY[family.ordinal()][inCell]) {
-            return true;
-        }
-        return random.nextDouble() < Math.max(0.18, density * 0.42);
     }
 
     private int degreeAt(

@@ -605,7 +605,7 @@ Use the builder when you want to define the chord yourself from the current scal
 | `Octave` | Simple pulse material built around root / octave jumps; direct, forceful, and easy to steer |
 | `Motif` | Small repeated phrase cells with tails, sequence replies, truncation/extension, and hook returns |
 
-`Density` mainly changes how much of the phrase is populated. Acid spans from a three-hit metric backbone per 16 steps at `0.00` to its complete seeded rhythm skeleton at `1.00`, restoring stronger positions first. `Tension` allows wider or more colorful scale-degree movement. `Legato` encourages longer gates and slides where the engine supports them. Octave activity changes how willing the phrase is to jump registers. After generation, `ALT + PATTERN DOWN`, transform encoders, held-step editing, and pitch-pool edits are the intended way to keep an idea but bend it toward the part you need.
+`Density` mainly changes how much of the phrase is populated. Acid spans from a three-hit metric backbone per 16 steps at `0.00` to its complete seeded rhythm skeleton at `1.00`, restoring stronger positions first. Rolling similarly grows from four characteristic family hits per 16 steps to an active note on every step, without changing the selected family as density moves. `Tension` allows wider or more colorful scale-degree movement. `Legato` encourages longer gates and slides where the engine supports them. Octave activity changes how willing the phrase is to jump registers. After generation, `ALT + PATTERN DOWN`, transform encoders, held-step editing, and pitch-pool edits are the intended way to keep an idea but bend it toward the part you need.
 
 #### Nested Rhythm background
 

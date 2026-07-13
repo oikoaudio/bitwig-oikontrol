@@ -176,6 +176,54 @@ class MelodicEngineTest {
     }
 
     @Test
+    void rollingDensitySpansStableFourHitFamilyBackboneToEveryStep() {
+        final MelodicPhraseContext context = context();
+        final double[] densities = {0.0, 0.25, 0.5, 0.75, 1.0};
+        final MelodicPattern[] patterns = new MelodicPattern[densities.length];
+        final String[] families = new String[densities.length];
+        for (int index = 0; index < densities.length; index++) {
+            final RollingBassGenerator generator = new RollingBassGenerator();
+            patterns[index] =
+                    generator.generate(
+                            context,
+                            new MelodicGenerator.GenerateParameters(
+                                    16, densities[index], 0.25, 0.15, 0.2, 6, 0, 0.0, 31L));
+            families[index] = generator.lastFamilyLabel();
+        }
+
+        assertEquals(4, activeCount(patterns[0]));
+        for (int index = 1; index < patterns.length; index++) {
+            assertEquals(families[0], families[index]);
+            assertTrue(activeCount(patterns[index - 1]) < activeCount(patterns[index]));
+            for (int step = 0; step < patterns[index].loopSteps(); step++) {
+                if (patterns[index - 1].step(step).active()) {
+                    assertTrue(patterns[index].step(step).active());
+                }
+            }
+        }
+        assertEquals(16, activeCount(patterns[patterns.length - 1]));
+    }
+
+    @Test
+    void rollingAnyFamilySelectionDoesNotDependOnDensity() {
+        final MelodicPhraseContext context = context();
+        for (long seed = 0; seed < 32; seed++) {
+            final RollingBassGenerator sparse = new RollingBassGenerator();
+            final RollingBassGenerator dense = new RollingBassGenerator();
+            sparse.generate(
+                    context,
+                    new MelodicGenerator.GenerateParameters(
+                            16, 0.0, 0.25, 0.15, 0.2, 6, 0, 0.0, seed));
+            dense.generate(
+                    context,
+                    new MelodicGenerator.GenerateParameters(
+                            16, 1.0, 0.25, 0.15, 0.2, 6, 0, 0.0, seed));
+
+            assertEquals(sparse.lastFamilyLabel(), dense.lastFamilyLabel());
+        }
+    }
+
+    @Test
     void rollingGeneratorUsesAtLeastThreePitches() {
         final MelodicPhraseContext context = context();
         final MelodicGenerator.GenerateParameters parameters =
