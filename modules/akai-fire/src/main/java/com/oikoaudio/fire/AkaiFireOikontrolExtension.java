@@ -32,6 +32,7 @@ import com.oikoaudio.fire.note.NotePlayMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
+import com.oikoaudio.fire.sequence.NoteVariationAmounts;
 import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -145,6 +146,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private LastClickedParameter lastClickedParameter;
     private Groove groove;
     private final BooleanValueObject altActive = new BooleanValueObject();
+    private final NoteVariationAmounts noteVariationAmounts = new NoteVariationAmounts();
     private PopupBrowserController popupBrowserController;
     private GlobalMainEncoderController globalMainEncoderController;
     private final GlobalMainEncoderController.RoleActions globalMainEncoderRoleActions =
@@ -1349,6 +1351,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public OledDisplay getOled() {
         return oled;
+    }
+
+    public NoteVariationAmounts getNoteVariationAmounts() {
+        return noteVariationAmounts;
     }
 
     public BiColorButton getButton(final NoteAssign which) {

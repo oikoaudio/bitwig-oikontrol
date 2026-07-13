@@ -27,6 +27,9 @@ import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
+import com.oikoaudio.fire.sequence.NoteVariationAmounts;
+import com.oikoaudio.fire.sequence.NoteVariationParameter;
+import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
@@ -39,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public final class ChordStepMode extends Layer implements StepSequencerHost, SeqClipRowHost {
@@ -96,6 +100,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final CursorTrack chordStepCursorTrack;
     private final ChordStepClipResources chordStepClips;
     private final ChordStepEventIndex chordStepEventIndex;
+    private final ObservedNoteVariationAdapter noteVariationAdapter;
+    private final NoteVariationAmounts noteVariationAmounts;
     private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> fineNudgeSession;
     private final ChordStepClipController chordStepClipController;
     private final ChordStepClipEditor<ChordStepEventIndex.Event> chordStepClipEditor;
@@ -123,6 +129,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private Integer selectedPresetStepIndex = null;
     private int playingStep = -1;
     private RgbLightState chordStepBaseColor = OCCUPIED_STEP;
+    private final Set<NoteStepAccess> activeVariationTouches = new HashSet<>();
 
     public ChordStepMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "CHORD_STEP_MODE");
@@ -133,6 +140,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.chordStepVelocity = driver.getSharedVelocitySettings();
         this.insertionDefaults =
                 new ChordStepInsertionDefaults(chordStepVelocity.centerVelocity(), STEP_LENGTH);
+        this.noteVariationAmounts = driver.getNoteVariationAmounts();
 
         // Musical and edit state
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
@@ -166,6 +174,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         FINE_STEP_LENGTH,
                         STEP_LENGTH,
                         this::chordLoopSteps);
+        this.noteVariationAdapter = new ObservedNoteVariationAdapter(OBSERVED_FINE_STEP_CAPACITY);
         this.fineNudgeSession =
                 new ChordStepFineNudgeSession<>(
                         stepIndex -> snapshotChordEventForStep(stepIndex, true),
@@ -298,6 +307,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 this::handleStepData,
                 this::handleNoteStepObject,
                 this::handleObservedStepData,
+                noteVariationAdapter::handleObservedNote,
                 this::handlePlayingStep);
     }
 
@@ -1954,6 +1964,67 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         return encoderBankLayout;
     }
 
+    @Override
+    public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
+        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final java.util.Optional<NoteVariationParameter> parameter =
+                NoteVariationParameter.from(access);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        final double variationAmount = noteVariationAmounts.adjust(parameter.get(), amount * 0.05);
+        oled.valueInfo(
+                parameter.get().displayName() + " Rand",
+                "%d%%".formatted(Math.round(variationAmount * 100.0)));
+        return true;
+    }
+
+    @Override
+    public boolean handleNoteVariationTouch(final NoteStepAccess access, final boolean touched) {
+        if (!touched && activeVariationTouches.remove(access)) {
+            oled.clearScreenDelayed();
+            return true;
+        }
+        if (!touched
+                || !driver.isGlobalShiftHeld()
+                || !driver.isGlobalAltHeld()
+                || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final java.util.Optional<NoteVariationParameter> parameter =
+                NoteVariationParameter.from(access);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        activeVariationTouches.add(access);
+        applyNoteVariation(parameter.get());
+        return true;
+    }
+
+    private void applyNoteVariation(final NoteVariationParameter parameter) {
+        if (!ensureSelectedNoteClip()) {
+            return;
+        }
+        final double amount = noteVariationAmounts.amount(parameter);
+        final ObservedNoteVariationAdapter.Result result =
+                noteVariationAdapter.apply(
+                        parameter,
+                        insertionDefaults.valueFor(parameter),
+                        amount,
+                        ThreadLocalRandom.current().nextLong(),
+                        chordLoopFineSteps());
+        switch (result.status()) {
+            case APPLIED -> oled.valueInfo("Randomized", result.noteCount() + " notes");
+            case RESET ->
+                    oled.valueInfo(
+                            "Reset " + parameter.displayName(), result.noteCount() + " notes");
+            case EMPTY -> oled.valueInfo("No notes", "Active loop");
+            case TOO_LARGE -> oled.valueInfo("Clip too large", "No changes");
+        }
+    }
+
     private void adjustChordVelocityCenter(final int inc) {
         if (!chordStepVelocity.adjustCenterVelocity(inc)) {
             return;
@@ -2008,6 +2079,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private void clearObservedChordCaches() {
         chordStepEventIndex.clear();
+        noteVariationAdapter.clear();
     }
 
     private boolean ensureSelectedNoteClip() {

@@ -66,4 +66,12 @@ public interface StepSequencerHost {
     }
 
     default void handleEncoderModeChanged(final EncoderMode mode) {}
+
+    default boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
+        return false;
+    }
+
+    default boolean handleNoteVariationTouch(final NoteStepAccess access, final boolean touched) {
+        return false;
+    }
 }

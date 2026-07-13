@@ -135,6 +135,9 @@ public class StepSequencerEncoderLayer extends Layer {
                 behavior,
                 effectiveInc -> {
                     if (effectiveInc != 0) {
+                        if (parent.handleNoteVariationTurn(access, effectiveInc)) {
+                            return;
+                        }
                         final List<NoteStep> notes = activeNotesForAccess();
                         if (notes.isEmpty() && emptyHandler != null) {
                             emptyHandler.adjust(effectiveInc);
@@ -148,6 +151,9 @@ public class StepSequencerEncoderLayer extends Layer {
                 touched -> {
                     if (!touched) {
                         behavior.reset();
+                    }
+                    if (parent.handleNoteVariationTouch(access, touched)) {
+                        return;
                     }
                     handleTouch(slotIndex, touched, access, emptyHandler);
                 });

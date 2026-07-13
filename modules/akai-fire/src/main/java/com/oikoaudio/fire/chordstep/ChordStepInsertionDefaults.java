@@ -2,6 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.sequence.NoteStepAccess;
+import com.oikoaudio.fire.sequence.NoteVariationParameter;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -96,6 +97,19 @@ final class ChordStepInsertionDefaults {
 
     double velocitySpread() {
         return velocitySpread;
+    }
+
+    double valueFor(final NoteVariationParameter parameter) {
+        return switch (parameter) {
+            case VELOCITY -> velocity / 127.0;
+            case PRESSURE -> pressure;
+            case TIMBRE -> timbre;
+            case PITCH -> pitch;
+            case PAN -> 0.0;
+            case GAIN -> 0.5;
+            case CHANCE -> chance;
+            case VELOCITY_SPREAD -> velocitySpread;
+        };
     }
 
     int repeats() {

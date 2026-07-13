@@ -37,10 +37,12 @@ final class ChordStepClipResources {
             final StepDataHandler stepDataHandler,
             final NoteStepHandler noteStepHandler,
             final StepDataHandler observedStepDataHandler,
+            final NoteStepHandler observedNoteStepHandler,
             final IntConsumer playingStepHandler) {
         noteClip.addStepDataObserver(stepDataHandler::handle);
         noteClip.addNoteStepObserver(noteStepHandler::handle);
         observedClip.addStepDataObserver(observedStepDataHandler::handle);
+        observedClip.addNoteStepObserver(observedNoteStepHandler::handle);
         noteClip.playingStep().addValueObserver(playingStepHandler::accept);
     }
 
