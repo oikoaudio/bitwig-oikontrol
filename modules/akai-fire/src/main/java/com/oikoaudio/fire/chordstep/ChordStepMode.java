@@ -53,7 +53,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private static final int AUDITION_VELOCITY = 96;
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
-    private static final int ACCENTED_CHORD_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
+    private static final int ACCENTED_CHORD_VELOCITY = ChordStepAccentControls.ACCENTED_VELOCITY;
     private static final RgbLightState ROOT_COLOR = new RgbLightState(120, 64, 0, true);
     private static final RgbLightState IN_SCALE_COLOR = new RgbLightState(0, 72, 110, true);
     private static final RgbLightState HARMONIC_BRIGHT_COLOR = new RgbLightState(0, 72, 122, true);
@@ -79,10 +79,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private final ChordStepPadController chordStepPadController;
     private final ChordStepPadLightRenderer chordStepPadLightRenderer;
     private final ChordStepAccentControls chordStepAccentControls;
-    private final ChordStepStepButtonControls chordStepStepButtonControls;
+    private final ChordStepModeButtons chordStepModeButtons;
     private final ChordStepBankButtonControls chordStepBankButtonControls;
-    private final ChordStepPatternButtonControls chordStepPatternButtonControls;
-    private final ChordStepPitchContextControls chordStepPitchContextControls;
     private final ChordStepChordSelection chordSelection = new ChordStepChordSelection();
     private final ChordStepBuilderController chordBuilder;
     private final ChordStepAuditionController chordStepAudition;
@@ -121,14 +119,10 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         this.noteChordOledView = new NoteChordOledView(oled);
         this.chordStepVelocity = driver.getSharedVelocitySettings();
         this.chordStepAccentControls = new ChordStepAccentControls(oled);
-        this.chordStepStepButtonControls =
-                new ChordStepStepButtonControls(chordStepAccentControls, chordStepStepButtonHost());
+        this.chordStepModeButtons =
+                new ChordStepModeButtons(chordStepAccentControls, chordStepModeButtonsHost());
         this.chordStepBankButtonControls =
                 new ChordStepBankButtonControls(chordStepBankButtonHost());
-        this.chordStepPatternButtonControls =
-                new ChordStepPatternButtonControls(chordStepPatternButtonHost());
-        this.chordStepPitchContextControls =
-                new ChordStepPitchContextControls(chordStepPitchContextHost());
         this.chordBuilder =
                 new ChordStepBuilderController(
                         chordSelection,
@@ -435,7 +429,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     public void handleStepButton(final boolean pressed) {
-        chordStepStepButtonControls.handlePressed(pressed);
+        chordStepModeButtons.handleStepPressed(pressed);
     }
 
     public boolean hasHeldSteps() {
@@ -639,8 +633,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         };
     }
 
-    private ChordStepStepButtonControls.Host chordStepStepButtonHost() {
-        return new ChordStepStepButtonControls.Host() {
+    private ChordStepModeButtons.Host chordStepModeButtonsHost() {
+        return new ChordStepModeButtons.Host() {
             @Override
             public boolean hasHeldSteps() {
                 return chordStepPadSurface.hasHeldSteps();
@@ -694,6 +688,51 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             @Override
             public BiColorLightState modeButtonLightState() {
                 return getModeButtonLightState();
+            }
+
+            @Override
+            public void setBuilderLatchEnabled(final boolean enabled) {
+                ChordStepMode.this.setBuilderLatchEnabled(enabled);
+            }
+
+            @Override
+            public void page(final int direction) {
+                pageChordSteps(direction);
+            }
+
+            @Override
+            public void showPageInfo() {
+                showChordPageInfo();
+            }
+
+            @Override
+            public boolean canPageLeft() {
+                return chordStepClips.position().canScrollLeft().get();
+            }
+
+            @Override
+            public boolean canPageRight() {
+                return chordStepClips.position().canScrollRight().get();
+            }
+
+            @Override
+            public void adjustRoot(final int amount) {
+                adjustChordRoot(amount);
+            }
+
+            @Override
+            public void adjustOctave(final int amount) {
+                adjustChordOctave(amount);
+            }
+
+            @Override
+            public boolean canLowerOctave() {
+                return chordSelection.canLowerOctave();
+            }
+
+            @Override
+            public boolean canRaiseOctave() {
+                return chordSelection.canRaiseOctave();
             }
         };
     }
@@ -761,69 +800,6 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             @Override
             public void clearPendingBankAction() {
                 ChordStepMode.this.clearPendingBankAction();
-            }
-        };
-    }
-
-    private ChordStepPatternButtonControls.Host chordStepPatternButtonHost() {
-        return new ChordStepPatternButtonControls.Host() {
-            @Override
-            public boolean isAltHeld() {
-                return driver.isGlobalAltHeld();
-            }
-
-            @Override
-            public void page(final int direction) {
-                pageChordSteps(direction);
-            }
-
-            @Override
-            public void showPageInfo() {
-                showChordPageInfo();
-            }
-
-            @Override
-            public boolean isShiftHeld() {
-                return driver.isGlobalShiftHeld();
-            }
-
-            @Override
-            public void setBuilderLatchEnabled(final boolean enabled) {
-                ChordStepMode.this.setBuilderLatchEnabled(enabled);
-            }
-
-            @Override
-            public boolean canPageLeft() {
-                return chordStepClips.position().canScrollLeft().get();
-            }
-
-            @Override
-            public boolean canPageRight() {
-                return chordStepClips.position().canScrollRight().get();
-            }
-        };
-    }
-
-    private ChordStepPitchContextControls.Host chordStepPitchContextHost() {
-        return new ChordStepPitchContextControls.Host() {
-            @Override
-            public void adjustRoot(final int amount) {
-                adjustChordRoot(amount);
-            }
-
-            @Override
-            public void adjustOctave(final int amount) {
-                adjustChordOctave(amount);
-            }
-
-            @Override
-            public boolean canLowerOctave() {
-                return chordSelection.canLowerOctave();
-            }
-
-            @Override
-            public boolean canRaiseOctave() {
-                return chordSelection.canRaiseOctave();
             }
         };
     }
@@ -1355,7 +1331,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private BiColorLightState getStepSeqLightState() {
-        return chordStepStepButtonControls.lightState(noteStepActive);
+        return chordStepModeButtons.stepLight(noteStepActive);
     }
 
     private int currentChordVelocity(final int rawVelocity) {
@@ -1651,7 +1627,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return;
         }
         if (noteStepActive) {
-            chordStepPatternButtonControls.handleUpPressed(true);
+            chordStepModeButtons.handlePatternUpPressed(true);
             return;
         }
         adjustOctave(1);
@@ -1662,7 +1638,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             return;
         }
         if (noteStepActive) {
-            chordStepPatternButtonControls.handleDownPressed(true);
+            chordStepModeButtons.handlePatternDownPressed(true);
             return;
         }
         adjustOctave(-1);
@@ -1670,14 +1646,14 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     private BiColorLightState getPatternUpLight() {
         if (noteStepActive) {
-            return chordStepPatternButtonControls.upLight();
+            return chordStepModeButtons.patternUpLight();
         }
         return BiColorLightState.GREEN_HALF;
     }
 
     private BiColorLightState getPatternDownLight() {
         if (noteStepActive) {
-            return chordStepPatternButtonControls.downLight();
+            return chordStepModeButtons.patternDownLight();
         }
         return BiColorLightState.GREEN_HALF;
     }
