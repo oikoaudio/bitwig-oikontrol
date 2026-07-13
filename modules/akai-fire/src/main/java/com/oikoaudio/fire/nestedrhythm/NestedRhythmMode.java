@@ -74,7 +74,8 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private final CursorRemoteControlsPage remoteControlsPage;
     private final ClipRowHandler clipHandler;
     private final NestedRhythmPadSurface padSurface;
-    private final NestedRhythmEncoderControls encoderControls;
+    private final EncoderBankLayout encoderBankLayout;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final NestedRhythmGenerator generator = new NestedRhythmGenerator();
     private final NestedRhythmClipWriter clipWriter;
     private final BooleanValueObject selectHeld = new BooleanValueObject();
@@ -161,9 +162,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                         this::applyEditablePattern);
         new PadBankRowControlBindings(driver, this, nestedRhythmControlBindingsHost()).bind();
         bindEditStatusLights();
+        this.encoderBankLayout = createEncoderBankLayout();
+        this.encoderLayer = new StepSequencerEncoderLayer(this, driver, encoderBankLayout);
         bindMainEncoder();
-        this.encoderControls =
-                new NestedRhythmEncoderControls(this, driver, this::createEncoderBankLayout);
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -204,7 +205,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
                     }
                 },
                 () -> BiColorLightState.GREEN_HALF);
-        encoderControls.activate();
+        encoderLayer.activate();
         showNoClipIfNeeded();
     }
 
@@ -217,7 +218,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         copyHeld.set(false);
         deleteHeld.set(false);
         clearBankChordState();
-        encoderControls.deactivate();
+        encoderLayer.deactivate();
     }
 
     private PadBankRowControlBindings.Host nestedRhythmControlBindingsHost() {
@@ -2402,7 +2403,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
 
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
-        return encoderControls.layout();
+        return encoderBankLayout;
     }
 
     @Override

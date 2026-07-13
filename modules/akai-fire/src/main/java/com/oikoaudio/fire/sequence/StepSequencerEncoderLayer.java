@@ -22,6 +22,7 @@ public class StepSequencerEncoderLayer extends Layer {
     private static final long MODE_INFO_HOLD_MS = 2000L;
     private final StepSequencerHost parent;
     private final AkaiFireOikontrolExtension driver;
+    private final EncoderBankLayout layout;
 
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
     private final Layer channelLayer;
@@ -55,17 +56,13 @@ public class StepSequencerEncoderLayer extends Layer {
     }
 
     public StepSequencerEncoderLayer(
-            final StepSequencerHost host, final AkaiFireOikontrolExtension driver) {
-        this(host, driver, host.getEncoderBankLayout());
-    }
-
-    public StepSequencerEncoderLayer(
             final StepSequencerHost host,
             final AkaiFireOikontrolExtension driver,
             final EncoderBankLayout layout) {
         super(driver.getLayers(), "Encoder_layer");
         this.parent = host;
         this.driver = driver;
+        this.layout = layout;
         this.oled = driver.getOled();
         channelLayer = new Layer(driver.getLayers(), "ENC_CHANNEL_LAYER");
         mixerLayer = new Layer(driver.getLayers(), "ENC_MIXER_LAYER");
@@ -201,7 +198,7 @@ public class StepSequencerEncoderLayer extends Layer {
     }
 
     private void applyResolution(final EncoderMode mode) {
-        final EncoderSlotBinding[] slots = parent.getEncoderBankLayout().bank(mode).slots();
+        final EncoderSlotBinding[] slots = layout.bank(mode).slots();
         for (int i = 0; i < slots.length; i++) {
             encoders[i].setStepSize(slots[i].stepSize());
         }

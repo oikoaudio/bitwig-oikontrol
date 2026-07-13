@@ -8,14 +8,11 @@ import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import java.util.EnumMap;
 import java.util.Map;
 
-/**
- * Owns the Melodic Step encoder-bank layout while shared mechanics remain in
- * StepSequencerEncoderLayer.
- */
-public final class MelodicStepEncoderControls {
+/** Defines the immutable Melodic Step encoder-bank mapping. */
+public final class MelodicStepEncoderLayout {
     private final EncoderBankLayout layout;
 
-    public MelodicStepEncoderControls(
+    public MelodicStepEncoderLayout(
             final EncoderSlotBinding[] channel,
             final EncoderSlotBinding[] mixer,
             final EncoderSlotBinding[] user1,

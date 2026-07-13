@@ -110,8 +110,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     // Buttons, encoders, and physical bindings
     private final ChordStepModeButtons chordStepModeButtons;
     private final ChordStepBankButtonControls chordStepBankButtonControls;
-    private final ChordStepEncoderControls chordStepEncoderControls;
-    private final StepSequencerEncoderLayer stepEncoderLayer;
+    private final ChordStepEncoderControls encoderControls;
+    private final EncoderBankLayout encoderBankLayout;
+    private final StepSequencerEncoderLayer encoderLayer;
     private final ChordStepControlBindings chordStepControlBindings;
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
 
@@ -246,13 +247,14 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                 new ChordStepModeButtons(chordStepAccentControls, chordStepModeButtonsHost());
         this.chordStepBankButtonControls =
                 new ChordStepBankButtonControls(chordStepBankButtonHost());
-        this.chordStepEncoderControls =
+        this.encoderControls =
                 new ChordStepEncoderControls(
                         new MainEncoderRouting(driver),
                         oled,
                         chordStepCursorTrack,
                         chordStepEncoderHost());
-        this.stepEncoderLayer = new StepSequencerEncoderLayer(this, driver);
+        this.encoderBankLayout = encoderControls.layout();
+        this.encoderLayer = new StepSequencerEncoderLayer(this, driver, encoderBankLayout);
 
         // Physical bindings and activation
         this.chordStepControlBindings =
@@ -300,7 +302,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         chordStepAudition.configureExpression();
         chordStepObservationController.observeSelectedClip();
         chordStepControlBindings.bind();
-        chordStepEncoderControls.bindMainEncoder(this);
+        encoderControls.bindMainEncoder(this);
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -311,7 +313,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void syncEncoderLayers() {
-        stepEncoderLayer.activate();
+        encoderLayer.activate();
     }
 
     private ChordStepControlBindings.Host chordStepControlBindingsHost() {
@@ -1850,7 +1852,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
-        return chordStepEncoderControls.layout();
+        return encoderBankLayout;
     }
 
     private void adjustChordVelocityCenter(final int inc) {
@@ -1951,7 +1953,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         selectedPresetStepIndex = null;
         chordStepClips.position().setPage(0);
         chordStepControlBindings.activatePatternButtons();
-        stepEncoderLayer.deactivate();
+        encoderLayer.deactivate();
         enterCurrentStepSubMode();
     }
 
@@ -1965,7 +1967,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         chordStepPadSurface.clearStepTracking();
         clearAllBankFineNudgeSessions();
         selectedPresetStepIndex = null;
-        stepEncoderLayer.deactivate();
+        encoderLayer.deactivate();
         clearTranslation();
     }
 }

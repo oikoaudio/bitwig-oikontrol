@@ -184,7 +184,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         initModeButtons(driver);
         initButtonBehaviour(driver);
         encoderBankLayout = createEncoderBankLayout();
-        encoderLayer = new StepSequencerEncoderLayer(this, driver);
+        encoderLayer = new StepSequencerEncoderLayer(this, driver, encoderBankLayout);
 
         muteMode.addValueObserver(
                 active -> {

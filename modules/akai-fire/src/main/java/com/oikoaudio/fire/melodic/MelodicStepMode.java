@@ -77,7 +77,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final SelectedNoteClipCoordinator selectedClipCoordinator;
     private final CursorRemoteControlsPage remoteControlsPage;
     private final StepSequencerEncoderLayer encoderLayer;
-    private final MelodicStepEncoderControls encoderControls;
+    private final EncoderBankLayout encoderBankLayout;
     private final Map<Integer, Map<Integer, NoteStep>> noteStepsByPosition = new HashMap<>();
     private final MelodicStepClipWriter clipWriter = new MelodicStepClipWriter();
     private final BooleanValueObject lengthDisplay = new BooleanValueObject();
@@ -223,8 +223,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         new PadBankRowControlBindings(driver, this, melodicStepControlBindingsHost()).bind();
         bindEditStatusLights();
         bindMainEncoder();
-        this.encoderControls = createEncoderControls();
-        this.encoderLayer = new StepSequencerEncoderLayer(this, driver);
+        this.encoderBankLayout = createEncoderLayout().layout();
+        this.encoderLayer = new StepSequencerEncoderLayer(this, driver, encoderBankLayout);
         this.seed = driver.initialMelodicSeed();
         this.poolLayoutRootPitch = nearestPhraseRootPitch(phraseContext().baseMidiNote());
     }
@@ -2212,8 +2212,8 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         };
     }
 
-    private MelodicStepEncoderControls createEncoderControls() {
-        return new MelodicStepEncoderControls(
+    private MelodicStepEncoderLayout createEncoderLayout() {
+        return new MelodicStepEncoderLayout(
                 new EncoderSlotBinding[] {
                     engineSlot(), densitySlot(), poolContextSlot(), mutationModeSlot()
                 },
@@ -2976,7 +2976,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
 
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
-        return encoderControls.layout();
+        return encoderBankLayout;
     }
 
     @Override
