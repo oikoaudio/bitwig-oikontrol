@@ -27,8 +27,6 @@ import com.oikoaudio.fire.sequence.DrumSequenceMode;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.sequence.NoteRepeatHandler;
 import com.oikoaudio.fire.utils.PatternButtons;
-import com.bitwig.extension.api.util.midi.ShortMidiMessage;
-import com.bitwig.extension.callback.ShortMidiMessageReceivedCallback;
 import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
@@ -98,7 +96,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final String AUTOMATION_WRITE_MODE_TOUCH = "touch";
     private static final long STOPPED_METER_RING_OUT_MS = 2000;
     private static final long STOPPED_IDLE_TRACK_REFRESH_MS = 2500;
-    private static AkaiFireOikontrolExtension instance;
     private HardwareSurface surface;
     private Application application;
     private Transport transport;
@@ -246,7 +243,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     protected AkaiFireOikontrolExtension(final AkaiFireOikontrolDefinition definition, final ControllerHost host) {
         super(definition, host);
-        instance = this;
     }
 
     @Override
@@ -281,7 +277,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         // Host-backed resources and shared cursor state must exist before global collaborators.
         layers = new Layers(this);
         midiIn = host.getMidiInPort(0);
-        midiIn.setMidiCallback((ShortMidiMessageReceivedCallback) this::onMidi0);
         midiIn.setSysexCallback(this::onSysEx);
         midiOut = host.getMidiOutPort(0);
         transport = host.createTransport();
@@ -1373,10 +1368,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void initializeSharedVelocitySettings() {
         sharedVelocitySettings.setSensitivity(getDefaultVelocitySensitivityPreference());
-    }
-
-    private void onMidi0(final ShortMidiMessage msg) {
-        getHost().println("MIDI " + msg.getStatusByte() + " " + msg.getData1() + " " + msg.getData2());
     }
 
     @Override
@@ -2474,14 +2465,6 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return PatternReleaseAction.TOGGLE_LAUNCHER_OVERDUB;
         }
         return PatternReleaseAction.TOGGLE_AUTOMATION_WRITE;
-    }
-
-    public static AkaiFireOikontrolExtension getInstance() {
-        return instance;
-    }
-
-    public static ControllerHost getGlobalHost() {
-        return instance.getHost();
     }
 
     public PatternButtons getPatternButtons() {
