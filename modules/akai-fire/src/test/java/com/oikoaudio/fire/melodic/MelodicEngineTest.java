@@ -51,6 +51,35 @@ class MelodicEngineTest {
     }
 
     @Test
+    void acidDensitySpansSparseMetricBackboneToFullSkeleton() {
+        final MelodicPhraseContext context = context();
+        final double[] densities = {0.0, 0.25, 0.5, 0.75, 1.0};
+        final MelodicPattern[] patterns = new MelodicPattern[densities.length];
+        for (int index = 0; index < densities.length; index++) {
+            patterns[index] =
+                    new AcidGenerator()
+                            .generate(
+                                    context,
+                                    new MelodicGenerator.GenerateParameters(
+                                            16, densities[index], 0.62, 1.0, 0.36, 5, 0, 0.0, 17L));
+        }
+
+        assertEquals(3, activeCount(patterns[0]));
+        assertTrue(patterns[0].step(0).active());
+        assertTrue(patterns[0].step(8).active());
+        assertTrue(patterns[0].step(15).active());
+        for (int index = 1; index < patterns.length; index++) {
+            assertTrue(activeCount(patterns[index - 1]) < activeCount(patterns[index]));
+            for (int step = 0; step < patterns[index].loopSteps(); step++) {
+                if (patterns[index - 1].step(step).active()) {
+                    assertTrue(patterns[index].step(step).active());
+                }
+            }
+        }
+        assertTrue(activeCount(patterns[patterns.length - 1]) >= 12);
+    }
+
+    @Test
     void euclideanGeneratorUsesExpectedPulseCount() {
         final boolean[] pattern = EuclideanPhraseGenerator.euclidean(16, 5, 2);
         int count = 0;

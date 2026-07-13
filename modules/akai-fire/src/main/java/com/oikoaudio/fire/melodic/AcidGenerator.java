@@ -1,7 +1,10 @@
 package com.oikoaudio.fire.melodic;
 
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public final class AcidGenerator implements MelodicGenerator {
@@ -118,38 +121,41 @@ public final class AcidGenerator implements MelodicGenerator {
     private boolean[] buildActivity(
             final int loopSteps, final double density, final Random random) {
         final boolean[] skeleton = RHYTHM_SKELETONS[random.nextInt(RHYTHM_SKELETONS.length)];
-        final boolean[] active = new boolean[loopSteps];
+        final List<Integer> candidates = new ArrayList<>();
         for (int i = 0; i < loopSteps; i++) {
-            active[i] = skeleton[i % skeleton.length];
-        }
-        if (density < 0.45) {
-            final List<Integer> removable = new ArrayList<>();
-            for (int i = 1; i < loopSteps - 1; i++) {
-                if (active[i]
-                        && !isAnchorStep(i, loopSteps)
-                        && activeAt(active, i - 1)
-                        && activeAt(active, i + 1)) {
-                    removable.add(i);
-                }
-            }
-            final int removals =
-                    Math.min(removable.size(), (int) Math.round((0.45 - density) * 6.0));
-            for (int i = 0; i < removals; i++) {
-                active[removable.get((i * 2) % removable.size())] = false;
-            }
-        } else if (density > 0.72) {
-            for (int i = 1; i < loopSteps - 1; i++) {
-                if (!active[i]
-                        && activeAt(active, i - 1)
-                        && activeAt(active, i + 1)
-                        && random.nextDouble() < (density - 0.72) * 0.8) {
-                    active[i] = true;
-                }
+            if (skeleton[i % skeleton.length]) {
+                candidates.add(i);
             }
         }
+        if (!candidates.contains(0)) {
+            candidates.add(0);
+        }
+        if (!candidates.contains(loopSteps - 1)) {
+            candidates.add(loopSteps - 1);
+        }
+
+        final int minimumCount =
+                Math.min(candidates.size(), Math.max(2, (loopSteps * 3 + 15) / 16));
+        final double normalizedDensity = Math.max(0.0, Math.min(1.0, density));
+        final int targetCount =
+                minimumCount
+                        + (int) Math.round(normalizedDensity * (candidates.size() - minimumCount));
+        final Map<Integer, MetricIndispensabilityRanker.RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(candidates, loopSteps);
+        candidates.sort(Comparator.comparingInt(position -> ranked.get(position).rankOrder()));
+
+        final boolean[] active = new boolean[loopSteps];
         active[0] = true;
-        if (loopSteps > 1) {
-            active[loopSteps - 1] = true;
+        active[loopSteps - 1] = true;
+        int retained = loopSteps == 1 ? 1 : 2;
+        for (final int candidate : candidates) {
+            if (retained >= targetCount) {
+                break;
+            }
+            if (!active[candidate]) {
+                active[candidate] = true;
+                retained++;
+            }
         }
         return active;
     }

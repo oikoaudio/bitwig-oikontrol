@@ -855,7 +855,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             case ACID ->
                     new MelodicGenerator.GenerateParameters(
                             loopSteps,
-                            Math.max(0.35, density),
+                            density,
                             Math.max(0.55, tension),
                             Math.max(0.15, octaveActivity),
                             legato,
