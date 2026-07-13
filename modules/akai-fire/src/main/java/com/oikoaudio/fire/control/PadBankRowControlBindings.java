@@ -4,7 +4,7 @@ import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -52,7 +52,7 @@ public final class PadBankRowControlBindings {
                 }
 
                 @Override
-                public RgbLigthState padLight(final int padIndex) {
+                public RgbLightState padLight(final int padIndex) {
                     return host.padLight(padIndex);
                 }
             });
@@ -65,7 +65,7 @@ public final class PadBankRowControlBindings {
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return host.padLight(padIndex);
             }
         });
@@ -118,7 +118,7 @@ public final class PadBankRowControlBindings {
             handlePadPress(padIndex, pressed);
         }
 
-        RgbLigthState padLight(int padIndex);
+        RgbLightState padLight(int padIndex);
 
         void handleBankButton(boolean pressed, int amount);
 

@@ -231,7 +231,7 @@ public class StepSequencerEncoderLayer extends Layer {
 			} else if (accessor.getUnit() == NoteValueUnit.RECURRENCE) {
 				final Integer newValue = accessor.applyIntIncrement(inc, note);
 				if (first && newValue != null) {
-					parent.updateRecurrencLength(newValue);
+					parent.updateRecurrenceLength(newValue);
 					oled.paramInfo(function, newValue, details, accessor.getMinInt(), accessor.getMaxInt(), 1);
 				}
 			} else {

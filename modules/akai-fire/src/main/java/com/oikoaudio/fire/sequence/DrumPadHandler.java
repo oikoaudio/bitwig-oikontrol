@@ -14,7 +14,7 @@ import com.oikoaudio.fire.display.PeakRmsOledView;
 import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.display.VuMeterPeakHold;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteAction.Type;
 import com.oikoaudio.fire.utils.PatternButtons;
 import com.bitwig.extension.api.Color;
@@ -41,14 +41,14 @@ public class DrumPadHandler {
     private final PinnableCursorClip cursorClip;
     private final NoteInput noteInput;
     private final DrumPadBank padBank;
-    private RgbLigthState trackColor = RgbLigthState.PURPLE;
+    private RgbLightState trackColor = RgbLightState.PURPLE;
 
     private final NoteRepeatHandler noteRepeatHandler;
 
     private final List<PadContainer> pads = new ArrayList<>();
     private final Set<Integer> padsHeld = new HashSet<>();
 
-    RgbLigthState currentPadColor = RgbLigthState.PURPLE;
+    RgbLightState currentPadColor = RgbLightState.PURPLE;
 
     PadContainer selectedPad;
     int selectedPadIndex = -1;
@@ -157,7 +157,7 @@ public class DrumPadHandler {
         }
     }
 
-    RgbLigthState trackColor() {
+    RgbLightState trackColor() {
         return trackColor;
     }
 
@@ -312,7 +312,7 @@ public class DrumPadHandler {
         return !padsHeld.isEmpty();
     }
 
-    public RgbLigthState getCurrentPadColor() {
+    public RgbLightState getCurrentPadColor() {
         return currentPadColor;
     }
 

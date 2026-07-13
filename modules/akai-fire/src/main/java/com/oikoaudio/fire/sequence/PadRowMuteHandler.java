@@ -3,7 +3,7 @@ package com.oikoaudio.fire.sequence;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.RgbButton;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.DrumPad;
@@ -14,7 +14,7 @@ public class PadRowMuteHandler {
 
     private final DrumSequenceMode parent;
     private final DrumPadBank padBank;
-    private final RgbLigthState[] slotColors = new RgbLigthState[16];
+    private final RgbLightState[] slotColors = new RgbLightState[16];
 
     public PadRowMuteHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer muteLayer) {
         this.parent = parent;
@@ -37,7 +37,7 @@ public class PadRowMuteHandler {
 
             // Bind the light state to reflect the mute status.
             button.bindLight(muteLayer, () ->
-                    drumPad.mute().get() ? slotColors[0] : RgbLigthState.OFF
+                    drumPad.mute().get() ? slotColors[0] : RgbLightState.OFF
             );
         }
     }

@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 
@@ -11,7 +11,7 @@ import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 public final class ChordStepSelectedClipState {
     private int slotIndex = -1;
     private boolean hasContent;
-    private RgbLigthState color;
+    private RgbLightState color;
 
     public boolean refresh(final SelectedClipSlotState state) {
         final boolean changed = slotIndex != state.slotIndex() || hasContent != state.hasContent();
@@ -41,7 +41,7 @@ public final class ChordStepSelectedClipState {
         return hasContent;
     }
 
-    public RgbLigthState color() {
+    public RgbLightState color() {
         return color;
     }
 }

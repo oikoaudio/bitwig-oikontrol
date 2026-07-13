@@ -11,7 +11,7 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.utils.PatternButtons;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extension.controller.api.NoteStep.State;
@@ -270,7 +270,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     }
 
                     @Override
-                    public RgbLigthState padLight(final int padIndex) {
+                    public RgbLightState padLight(final int padIndex) {
                         return getClipRowPadLight(padIndex);
                     }
                 });
@@ -283,7 +283,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         clipHandler.handlePadPress(index, pressed);
     }
 
-    private RgbLigthState getClipRowPadLight(final int index) {
+    private RgbLightState getClipRowPadLight(final int index) {
         if (stepPadSurface.shouldShowRecurrenceRow()) {
             return recurrencePadLight(index);
         }
@@ -304,7 +304,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                     }
 
                     @Override
-                    public RgbLigthState padLight(final int padIndex) {
+                    public RgbLightState padLight(final int padIndex) {
                         return stepState(padIndex);
                     }
                 });
@@ -375,7 +375,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         }
     }
 
-    private RgbLigthState stepState(final int index) {
+    private RgbLightState stepState(final int index) {
         return stepPadSurface.stepPadLight(index, positionHandler.getAvailableSteps(), assignments[index],
                 playingStep, lengthDisplay.get(), copyNote, blinkState, padHandler.getCurrentPadColor(),
                 accentHandler.getAccentedVelocity());
@@ -413,7 +413,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         notifyPopup("Recurrence", updated.summary());
     }
 
-    private RgbLigthState recurrencePadLight(final int padIndex) {
+    private RgbLightState recurrencePadLight(final int padIndex) {
         final List<NoteStep> targets = getHeldNotes();
         if (targets.isEmpty()) {
             return clipHandler.getPadLight(padIndex);
@@ -1568,7 +1568,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         recurrenceEditor.enterRecurrenceEdit(notes);
     }
 
-    public void updateRecurrencLength(final int length) {
+    public void updateRecurrenceLength(final int length) {
         recurrenceEditor.updateLength(length);
     }
 

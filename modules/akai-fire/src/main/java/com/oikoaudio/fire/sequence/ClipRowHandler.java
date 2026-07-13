@@ -2,7 +2,7 @@ package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.RgbButton;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
@@ -22,7 +22,7 @@ public class ClipRowHandler {
     private final PinnableCursorClip cursorClip;
     private int selectedSlotIndex = -1;
     private final ClipLauncherSlotBank slotBank;
-    private final RgbLigthState[] slotColors = new RgbLigthState[16];
+    private final RgbLightState[] slotColors = new RgbLightState[16];
     private final boolean[] playingSlots = new boolean[16];
     private final boolean[] recordingSlots = new boolean[16];
     private int blinkState = 0;
@@ -78,19 +78,19 @@ public class ClipRowHandler {
         handleClip(index, slotBank.getItemAt(index), pressed);
     }
 
-    public RgbLigthState getPadLight(final int index) {
+    public RgbLightState getPadLight(final int index) {
         if (index < 0 || index >= 16) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         return getClipState(index, slotBank.getItemAt(index));
     }
 
-    private RgbLigthState getClipState(final int index, final ClipLauncherSlot slot) {
+    private RgbLightState getClipState(final int index, final ClipLauncherSlot slot) {
         if (slot.hasContent().get()) {
             if (slotColors[index] == null) {
-                return RgbLigthState.OFF;
+                return RgbLightState.OFF;
             }
-            final RgbLigthState color = slotColors[index];
+            final RgbLightState color = slotColors[index];
             if (slot.isSelected().get()) {
 
                 if (slot.isPlaying().get()) {
@@ -110,17 +110,17 @@ public class ClipRowHandler {
                 return color.getDimmed();
             }
         }
-        return RgbLigthState.OFF;
+        return RgbLightState.OFF;
     }
 
-    private RgbLigthState blinkSlow(final RgbLigthState on, final RgbLigthState off) {
+    private RgbLightState blinkSlow(final RgbLightState on, final RgbLightState off) {
         if (blinkState % 8 < 4) {
             return on;
         }
         return off;
     }
 
-    private RgbLigthState blinkFast(final RgbLigthState on, final RgbLigthState off) {
+    private RgbLightState blinkFast(final RgbLightState on, final RgbLightState off) {
         if (blinkState % 2 == 0) {
             return on;
         }

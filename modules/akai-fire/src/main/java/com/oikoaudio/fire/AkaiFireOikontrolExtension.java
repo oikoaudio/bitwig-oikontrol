@@ -12,7 +12,7 @@ import com.oikoaudio.fire.display.EncoderLegendPosition;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.fugue.FugueStepMode;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
 import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
@@ -118,7 +118,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final byte[] singleRgb = new byte[]{SE_ST, MAN_ID_AKAI, DEVICE_ID, PRODUCT_ID, SE_CMD_RGB, 0, 4, 0, 0, 0, 0, SE_EN};
 
     private final int[] lastCcValue = new int[128];
-    private final RgbLigthState[] currentPadStates = new RgbLigthState[64];
+    private final RgbLightState[] currentPadStates = new RgbLightState[64];
 
     private Layer mainLayer;
     private GlobalSettingsOverlayController globalSettingsOverlay;
@@ -1387,21 +1387,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
     }
 
-    public void updateRgbPad(final int index, final RgbLigthState state) {
+    public void updateRgbPad(final int index, final RgbLightState state) {
         currentPadStates[index] = state;
         sendScaledPadRgb(index, state);
     }
 
     private void redrawRgbPads() {
         for (int index = 0; index < currentPadStates.length; index++) {
-            final RgbLigthState state = currentPadStates[index];
+            final RgbLightState state = currentPadStates[index];
             if (state != null) {
                 sendScaledPadRgb(index, state);
             }
         }
     }
 
-    private void sendScaledPadRgb(final int index, final RgbLigthState state) {
+    private void sendScaledPadRgb(final int index, final RgbLightState state) {
         final int red = state.getRed() & 0xFF;
         final int green = state.getGreen() & 0xFF;
         final int blue = state.getBlue() & 0xFF;

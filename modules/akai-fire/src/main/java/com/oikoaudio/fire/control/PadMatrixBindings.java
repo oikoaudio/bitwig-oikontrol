@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.control;
 
 import com.bitwig.extensions.framework.Layer;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 public final class PadMatrixBindings {
     private PadMatrixBindings() {
@@ -34,12 +34,12 @@ public final class PadMatrixBindings {
     public interface Host {
         void handlePadPress(int padIndex, boolean pressed, int velocity);
 
-        RgbLigthState padLight(int padIndex);
+        RgbLightState padLight(int padIndex);
     }
 
     public interface PressHost {
         void handlePadPress(int padIndex, boolean pressed);
 
-        RgbLigthState padLight(int padIndex);
+        RgbLightState padLight(int padIndex);
     }
 }

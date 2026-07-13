@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.nestedrhythm;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ class NestedRhythmPadSurfaceTest {
     void shiftedClipStartColumnOverlaysEmptyStructurePads() {
         final NestedRhythmPadSurface surface = surface(new ArrayList<>(), 1680, 0);
 
-        assertEquals(new RgbLigthState(30, 0, 127, true),
+        assertEquals(new RgbLightState(30, 0, 127, true),
                 surface.getPadLight(NestedRhythmPadSurface.STRUCTURE_PAD_OFFSET));
     }
 
@@ -70,8 +70,8 @@ class NestedRhythmPadSurfaceTest {
                 () -> totalFineStepCount,
                 () -> shiftedClipStartColumn,
                 ignored -> { },
-                ignored -> RgbLigthState.OFF,
-                () -> new RgbLigthState(0, 90, 34, true),
+                ignored -> RgbLightState.OFF,
+                () -> new RgbLightState(0, 90, 34, true),
                 (label, value) -> { });
     }
 

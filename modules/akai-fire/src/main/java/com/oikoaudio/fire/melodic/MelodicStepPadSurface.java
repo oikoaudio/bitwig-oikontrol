@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.melodic;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 
@@ -55,7 +55,7 @@ final class MelodicStepPadSurface {
         pressStepPad(padIndex - STEP_PAD_OFFSET);
     }
 
-    RgbLigthState getPadLight(final int padIndex) {
+    RgbLightState getPadLight(final int padIndex) {
         if (padIndex < CLIP_ROW_PAD_COUNT) {
             if (shouldShowRecurrenceRow()) {
                 return getRecurrencePadLight(padIndex);
@@ -181,14 +181,14 @@ final class MelodicStepPadSurface {
                 span -> callbacks.applyHeldRecurrenceSpan(targets, span));
     }
 
-    private RgbLigthState getRecurrencePadLight(final int padIndex) {
+    private RgbLightState getRecurrencePadLight(final int padIndex) {
         final List<Integer> targets = heldRecurrenceTargets();
         if (targets.isEmpty() || padIndex >= 8) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final MelodicPattern.Step step = callbacks.currentPattern().step(targets.get(0));
         if (!step.active() || step.pitch() == null) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         return recurrenceRow.padLight(padIndex, recurrenceOf(step), callbacks.selectedClipColor());
     }
@@ -226,13 +226,13 @@ final class MelodicStepPadSurface {
 
         void handleClipRowPad(int padIndex, boolean pressed);
 
-        RgbLigthState clipRowPadLight(int padIndex);
+        RgbLightState clipRowPadLight(int padIndex);
 
         void stopPitchPoolAudition(int poolPadIndex);
 
         void togglePitchPoolPad(int poolPadIndex, Integer heldStep);
 
-        RgbLigthState pitchPoolPadLight(int poolPadIndex);
+        RgbLightState pitchPoolPadLight(int poolPadIndex);
 
         void toggleStep(int stepIndex);
 
@@ -252,7 +252,7 @@ final class MelodicStepPadSurface {
 
         int playingStep();
 
-        RgbLigthState selectedClipColor();
+        RgbLightState selectedClipColor();
 
         void applyHeldRecurrenceSpan(List<Integer> stepIndices, int newSpan);
 

@@ -7,7 +7,7 @@ import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 final class ChordStepControlBindings {
     private final AkaiFireOikontrolExtension driver;
@@ -50,7 +50,7 @@ final class ChordStepControlBindings {
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return host.padLight(padIndex);
             }
 
@@ -109,7 +109,7 @@ final class ChordStepControlBindings {
     interface Host {
         void handlePadPress(int padIndex, boolean pressed, int velocity);
 
-        RgbLigthState padLight(int padIndex);
+        RgbLightState padLight(int padIndex);
 
         void handleStepSeqPressed(boolean pressed);
 

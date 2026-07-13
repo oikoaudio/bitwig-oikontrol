@@ -40,7 +40,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.display.PeakRmsOledView;
 import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 
 
@@ -584,7 +584,7 @@ public class PerformClipLauncherMode extends Layer {
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return PerformClipLauncherMode.this.getPadState(padIndex);
             }
 
@@ -2239,7 +2239,7 @@ public class PerformClipLauncherMode extends Layer {
         encoderControls.currentLayer().deactivate();
     }
 
-    private RgbLigthState getPadState(final int padIndex) {
+    private RgbLightState getPadState(final int padIndex) {
         if (isSettingsHeld()) {
             return PerformPadRenderer.settingsLogo(padIndex);
         }
@@ -2260,28 +2260,28 @@ public class PerformClipLauncherMode extends Layer {
         if (visibleTrackIndex < 0 || visibleSceneIndex < 0
                 || visibleTrackIndex >= visibleTrackCount()
                 || visibleSceneIndex >= visibleSceneCount()) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
         if (trackAddress == null) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final ClipLauncherSlot slot = trackAddress.track().clipLauncherSlotBank().getItemAt(visibleSceneIndex);
         return getSlotState(slot, trackAddress, visibleSceneIndex);
     }
 
-    private RgbLigthState getSceneActionPadState(final int padIndex) {
+    private RgbLightState getSceneActionPadState(final int padIndex) {
         if (padIndex / PerformLayout.PAD_COLUMNS != SCENE_ROW) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int visibleSceneIndex = padIndex % PerformLayout.PAD_COLUMNS;
         final int absoluteSceneIndex = trackBank.sceneBank().scrollPosition().get() + visibleSceneIndex;
         if (visibleSceneIndex >= MAX_SCENES || absoluteSceneIndex >= totalSceneCount) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final Scene scene = trackBank.sceneBank().getScene(visibleSceneIndex);
         final boolean exists = scene != null && scene.exists().get();
-        final RgbLigthState baseColor = sceneColor(visibleSceneIndex);
+        final RgbLightState baseColor = sceneColor(visibleSceneIndex);
         return PerformPadRenderer.scene(new PerformPadRenderer.SceneSnapshot(
                 exists,
                 baseColor,
@@ -2291,9 +2291,9 @@ public class PerformClipLauncherMode extends Layer {
                 exists && sceneHasPlayingClip(visibleSceneIndex)), blinkState);
     }
 
-    private RgbLigthState getBirdsEyePadState(final int padIndex) {
+    private RgbLightState getBirdsEyePadState(final int padIndex) {
         if (!birdsEyePadAvailable(padIndex, layout, totalTrackCount, totalSceneCount)) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int trackOffset = birdsEyeTrackOffsetForPad(padIndex, layout, totalTrackCount);
         final int sceneOffset = birdsEyeSceneOffsetForPad(padIndex, layout, totalSceneCount);
@@ -2302,10 +2302,10 @@ public class PerformClipLauncherMode extends Layer {
         return PerformPadRenderer.birdsEye(true, current);
     }
 
-    private RgbLigthState getDeviceLayerPadState(final int padIndex) {
+    private RgbLightState getDeviceLayerPadState(final int padIndex) {
         final PerformPadRenderer.TrackAction actionRow = PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
         if (actionRow == null) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int layerIndex = padIndex % PerformLayout.PAD_COLUMNS;
         final DeviceLayer layer = deviceLayer(layerIndex);
@@ -2318,15 +2318,15 @@ public class PerformClipLauncherMode extends Layer {
                 layer != null && layer.isActivated().get()));
     }
 
-    private RgbLigthState getSlotState(final ClipLauncherSlot slot, final TrackAddress trackAddress, final int visibleSceneIndex) {
+    private RgbLightState getSlotState(final ClipLauncherSlot slot, final TrackAddress trackAddress, final int visibleSceneIndex) {
         if (isSettingsHeld()) {
             return PerformPadRenderer.settingsLogo(toPadIndex(trackAddress.visibleIndex(), visibleSceneIndex));
         }
 
-        final RgbLigthState observedColor = observationState.slotColor(
+        final RgbLightState observedColor = observationState.slotColor(
                 trackAddress.sourceIndex(), visibleSceneIndex);
-        final RgbLigthState baseColor = observedColor == null
-                ? RgbLigthState.WHITE
+        final RgbLightState baseColor = observedColor == null
+                ? RgbLightState.WHITE
                 : observedColor;
         return PerformPadRenderer.slot(new PerformPadRenderer.SlotSnapshot(
                 slot.exists().get(),
@@ -2340,20 +2340,20 @@ public class PerformClipLauncherMode extends Layer {
                 baseColor), blinkState);
     }
 
-    private RgbLigthState sceneColor(final int visibleSceneIndex) {
-        final RgbLigthState color = observationState.sceneColor(visibleSceneIndex);
-        return color == null || RgbLigthState.OFF.equals(color) ? RgbLigthState.PURPLE : color;
+    private RgbLightState sceneColor(final int visibleSceneIndex) {
+        final RgbLightState color = observationState.sceneColor(visibleSceneIndex);
+        return color == null || RgbLightState.OFF.equals(color) ? RgbLightState.PURPLE : color;
     }
 
-    private RgbLigthState getTrackActionPadState(final int padIndex) {
+    private RgbLightState getTrackActionPadState(final int padIndex) {
         final PerformPadRenderer.TrackAction actionRow = PerformPadRenderer.TrackAction.fromPadIndex(padIndex);
         if (actionRow == null) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
         final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
         if (trackAddress == null) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final Track track = trackAddress.track();
         return PerformPadRenderer.trackAction(new PerformPadRenderer.TrackSnapshot(
@@ -2368,15 +2368,15 @@ public class PerformClipLauncherMode extends Layer {
                 track.arm().get()), blinkState);
     }
 
-    private RgbLigthState getMixDevicePadState(final int padIndex) {
+    private RgbLightState getMixDevicePadState(final int padIndex) {
         final int deviceIndex = PerformMixController.deviceIndexForPad(padIndex, pageState.mixDevicePageIndex());
         if (deviceIndex < 0) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int visibleTrackIndex = padIndex % PerformLayout.PAD_COLUMNS;
         final TrackAddress trackAddress = trackAddressForVisibleTrack(visibleTrackIndex);
         if (trackAddress == null) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final Device device = mixDevice(trackAddress.sourceIndex(), deviceIndex);
         return PerformPadRenderer.mixDevice(new PerformPadRenderer.MixDeviceSnapshot(
@@ -2490,9 +2490,9 @@ public class PerformClipLauncherMode extends Layer {
         return BiColorLightState.OFF;
     }
 
-    private RgbLigthState trackColor(final int sourceTrackIndex) {
-        final RgbLigthState color = observationState.trackColor(sourceTrackIndex);
-        return color == null || RgbLigthState.OFF.equals(color)
+    private RgbLightState trackColor(final int sourceTrackIndex) {
+        final RgbLightState color = observationState.trackColor(sourceTrackIndex);
+        return color == null || RgbLightState.OFF.equals(color)
                 ? PerformPadRenderer.TrackAction.SELECT.color()
                 : color;
     }
@@ -2557,9 +2557,9 @@ public class PerformClipLauncherMode extends Layer {
                 : "Layer " + (layerIndex + 1);
     }
 
-    private RgbLigthState deviceLayerColor(final int layerIndex) {
-        final RgbLigthState color = observationState.layerColor(layerIndex);
-        return color == null || RgbLigthState.OFF.equals(color)
+    private RgbLightState deviceLayerColor(final int layerIndex) {
+        final RgbLightState color = observationState.layerColor(layerIndex);
+        return color == null || RgbLightState.OFF.equals(color)
                 ? PerformPadRenderer.TrackAction.SELECT.color()
                 : color;
     }

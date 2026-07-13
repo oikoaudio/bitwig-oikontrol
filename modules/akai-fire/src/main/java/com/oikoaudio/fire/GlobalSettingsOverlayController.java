@@ -11,7 +11,7 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -25,10 +25,10 @@ final class GlobalSettingsOverlayController {
     private static final int SCALE_ENCODER_THRESHOLD = 8;
     private static final int OCTAVE_ENCODER_THRESHOLD = 8;
     private static final int VELOCITY_CENTER_DEFAULT = 100;
-    private static final RgbLigthState LOGO_ON = new RgbLigthState(127, 20, 0, true);
-    private static final RgbLigthState LOGO_OFF = RgbLigthState.OFF;
-    private static final RgbLigthState TOGGLE_ON = new RgbLigthState(0, 96, 96, true);
-    private static final RgbLigthState TOGGLE_OFF = new RgbLigthState(0, 32, 32, true);
+    private static final RgbLightState LOGO_ON = new RgbLightState(127, 20, 0, true);
+    private static final RgbLightState LOGO_OFF = RgbLightState.OFF;
+    private static final RgbLightState TOGGLE_ON = new RgbLightState(0, 96, 96, true);
+    private static final RgbLightState TOGGLE_OFF = new RgbLightState(0, 32, 32, true);
     private static final boolean[][] LOGO = {
             {true, true, true, false, true, true, true, false, true, true, true, false, true, true, true, true},
             {true, false, false, false, false, true, false, false, true, false, true, false, true, false, false, false},
@@ -545,14 +545,14 @@ final class GlobalSettingsOverlayController {
         return "%.0f%%".formatted(FireControlPreferences.normalizePadSaturation(value));
     }
 
-    private RgbLigthState padState(final int padIndex) {
+    private RgbLightState padState(final int padIndex) {
         if (padIndex == SHOW_DEACTIVATED_TRACKS_PAD) {
             return preferences.showDeactivatedTracks() ? TOGGLE_ON : TOGGLE_OFF;
         }
         final int row = padIndex / PAD_COLUMNS;
         final int column = padIndex % PAD_COLUMNS;
         if (row < 0 || row >= PAD_ROWS || column < 0 || column >= PAD_COLUMNS) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         return LOGO[row][column] ? LOGO_ON : LOGO_OFF;
     }

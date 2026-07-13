@@ -36,7 +36,7 @@ public interface StepSequencerHost {
 
     void enterRecurrenceEdit(List<NoteStep> notes);
 
-    void updateRecurrencLength(int length);
+    void updateRecurrenceLength(int length);
 
     void registerModifiedSteps(List<NoteStep> notes);
 

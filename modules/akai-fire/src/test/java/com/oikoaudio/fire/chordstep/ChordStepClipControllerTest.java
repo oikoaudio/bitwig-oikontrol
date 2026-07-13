@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import org.junit.jupiter.api.Test;
@@ -24,9 +24,9 @@ class ChordStepClipControllerTest {
                 () -> events.add("resync"),
                 failure -> events.add("failure:" + failure.title()));
 
-        controller.refresh(SelectedClipSlotState.fromValues(1, true, RgbLigthState.GRAY_2));
-        controller.refresh(SelectedClipSlotState.fromValues(1, true, RgbLigthState.GRAY_2));
-        controller.refresh(SelectedClipSlotState.fromValues(2, true, RgbLigthState.GRAY_2));
+        controller.refresh(SelectedClipSlotState.fromValues(1, true, RgbLightState.GRAY_2));
+        controller.refresh(SelectedClipSlotState.fromValues(1, true, RgbLightState.GRAY_2));
+        controller.refresh(SelectedClipSlotState.fromValues(2, true, RgbLightState.GRAY_2));
 
         assertEquals(List.of("resync", "resync"), events);
         assertEquals(2, controller.slotIndex());
@@ -41,7 +41,7 @@ class ChordStepClipControllerTest {
                 () -> false,
                 () -> {},
                 failures::add);
-        controller.refresh(SelectedClipSlotState.fromValues(0, false, RgbLigthState.GRAY_2));
+        controller.refresh(SelectedClipSlotState.fromValues(0, false, RgbLightState.GRAY_2));
 
         assertFalse(controller.ensureSelectedClip());
         assertEquals(1, failures.size());
@@ -68,7 +68,7 @@ class ChordStepClipControllerTest {
                 () -> true,
                 () -> {},
                 failure -> {});
-        controller.refresh(SelectedClipSlotState.fromValues(0, false, RgbLigthState.GRAY_2));
+        controller.refresh(SelectedClipSlotState.fromValues(0, false, RgbLightState.GRAY_2));
 
         assertTrue(controller.ensureSelectedClip());
     }

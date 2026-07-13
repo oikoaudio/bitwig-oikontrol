@@ -11,7 +11,7 @@ import com.oikoaudio.fire.control.ModeButtonLights;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.melodic.MelodicPattern;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -34,11 +34,11 @@ public final class FugueStepMode extends Layer {
             8, 16, 32, 64, 96, 128, 160, 192, 224, 256,
             288, 320, 352, 384, 416, 448, 480, 512
     };
-    private static final RgbLigthState[] LINE_COLORS = {
-            new RgbLigthState(112, 0, 0, true),
-            new RgbLigthState(112, 44, 0, true),
-            new RgbLigthState(104, 88, 0, true),
-            new RgbLigthState(0, 88, 32, true)
+    private static final RgbLightState[] LINE_COLORS = {
+            new RgbLightState(112, 0, 0, true),
+            new RgbLightState(112, 44, 0, true),
+            new RgbLightState(104, 88, 0, true),
+            new RgbLightState(0, 88, 32, true)
     };
 
     private final AkaiFireOikontrolExtension driver;
@@ -498,7 +498,7 @@ public final class FugueStepMode extends Layer {
         }
 
         @Override
-        public RgbLigthState padLight(final int padIndex) {
+        public RgbLightState padLight(final int padIndex) {
             return getPadLight(padIndex);
         }
 
@@ -590,11 +590,11 @@ public final class FugueStepMode extends Layer {
         observations.removeSource(step, pitch);
     }
 
-    private RgbLigthState getPadLight(final int padIndex) {
+    private RgbLightState getPadLight(final int padIndex) {
         final int line = padIndex / PAD_COLUMNS;
         final int column = padIndex % PAD_COLUMNS;
         if (line < 0 || line >= LINE_COUNT) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         return FugueRenderer.padLight(linePattern(line), column, loopSteps, observations.playingStep(),
                 shiftedClipStartColumn(), LINE_COLORS[line], line == activeLineIndex(), lineEnabled[line]);

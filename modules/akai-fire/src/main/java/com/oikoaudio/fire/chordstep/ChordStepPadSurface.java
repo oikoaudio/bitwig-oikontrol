@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 
@@ -385,24 +385,24 @@ public final class ChordStepPadSurface {
         return recurrenceRow.handlePadPress(padIndex, pressed, targets, markConsumed, togglePad, applySpan);
     }
 
-    public RgbLigthState recurrencePadLight(final int padIndex,
+    public RgbLightState recurrencePadLight(final int padIndex,
                                             final List<NoteStep> targets,
-                                            final RgbLigthState color,
-                                            final RgbLigthState fallback) {
+                                            final RgbLightState color,
+                                            final RgbLightState fallback) {
         return recurrenceRow.padLight(padIndex, targets, color, fallback);
     }
 
-    public RgbLigthState stepPadLight(final int stepIndex,
+    public RgbLightState stepPadLight(final int stepIndex,
                                       final int availableSteps,
                                       final boolean occupied,
                                       final boolean accented,
                                       final boolean sustained,
                                       final int playingStep,
-                                      final RgbLigthState occupiedStepColor,
-                                      final RgbLigthState sustainedStepColor,
-                                      final RgbLigthState heldStepColor) {
+                                      final RgbLightState occupiedStepColor,
+                                      final RgbLightState sustainedStepColor,
+                                      final RgbLightState heldStepColor) {
         if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, availableSteps)) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         if (hasHeldStep(stepIndex)) {
             return heldStepColor.getBrightest();

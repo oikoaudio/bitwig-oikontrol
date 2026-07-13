@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.note;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ class LivePadSurfaceLayerIdleDisplayTest {
 
     @Test
     void holdCapturedPadLightBlinksBetweenBrightAndBase() {
-        final RgbLigthState base = new RgbLigthState(0, 72, 110, true);
+        final RgbLightState base = new RgbLightState(0, 72, 110, true);
 
         assertEquals(base.getBrightest(), LivePadSurfaceLayer.heldLivePadLight(base, true, true, 0));
         assertEquals(base, LivePadSurfaceLayer.heldLivePadLight(base, true, true, 4));

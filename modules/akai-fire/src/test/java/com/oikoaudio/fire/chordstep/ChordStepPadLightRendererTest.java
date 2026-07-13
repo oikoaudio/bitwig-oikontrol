@@ -3,7 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.SharedMusicalContext;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +21,7 @@ class ChordStepPadLightRendererTest {
     void clipRowFallsBackToClipPadLightWhenNoRecurrenceRowIsVisible() {
         final Fixture fixture = new Fixture();
 
-        assertSame(RgbLigthState.GRAY_1, fixture.renderer.padLight(0, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
+        assertSame(RgbLightState.GRAY_1, fixture.renderer.padLight(0, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
     }
 
     @Test
@@ -29,7 +29,7 @@ class ChordStepPadLightRendererTest {
         final Fixture fixture = new Fixture();
         fixture.builder.toggleNoteOffset(0);
 
-        final RgbLigthState expected = new RgbLigthState(88, 18, 127, true);
+        final RgbLightState expected = new RgbLightState(88, 18, 127, true);
 
         assertEquals(expected, fixture.renderer.padLight(SOURCE_OFFSET, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
     }
@@ -39,7 +39,7 @@ class ChordStepPadLightRendererTest {
         final Fixture fixture = new Fixture();
         fixture.surface.addHeldStep(0);
 
-        final RgbLigthState expected = new RgbLigthState(120, 88, 0, true).getBrightest();
+        final RgbLightState expected = new RgbLightState(120, 88, 0, true).getBrightest();
 
         assertEquals(expected, fixture.renderer.padLight(STEP_OFFSET, CLIP_ROW, SOURCE_OFFSET, STEP_OFFSET));
     }
@@ -60,9 +60,9 @@ class ChordStepPadLightRendererTest {
                     surface,
                     builder,
                     selection,
-                    ignored -> RgbLigthState.GRAY_1,
+                    ignored -> RgbLightState.GRAY_1,
                     List::of,
-                    () -> RgbLigthState.PURPLE,
+                    () -> RgbLightState.PURPLE,
                     () -> 32,
                     () -> -1,
                     () -> -1,

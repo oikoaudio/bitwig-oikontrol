@@ -24,7 +24,7 @@ import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.note.NoteGridLayout;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.EncoderBank;
@@ -55,7 +55,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private static final int STEPPED_ENCODER_THRESHOLD = 5;
     private static final int STEPPED_ENCODER_FINE_THRESHOLD = 9;
     private static final int CLIP_CREATE_GENERATE_DELAY_MS = 150;
-    private static final RgbLigthState BASE_COLOR = new RgbLigthState(0, 90, 34, true);
+    private static final RgbLightState BASE_COLOR = new RgbLightState(0, 90, 34, true);
     private static final int[] RATCHET_DIVISION_VALUES = {
             2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
     };
@@ -94,7 +94,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     private boolean bankLeftHeld = false;
     private boolean bankRightHeld = false;
     private boolean shiftBankSnapConsumed = false;
-    private RgbLigthState selectedClipColor = BASE_COLOR;
+    private RgbLightState selectedClipColor = BASE_COLOR;
     private final NestedRhythmParameterState parameters = new NestedRhythmParameterState();
     private int lastStepIndex = NestedRhythmLoopLength.STEP_COUNT - 1;
 
@@ -214,7 +214,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return NestedRhythmMode.this.getPadLight(padIndex);
             }
 
@@ -375,15 +375,15 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         padSurface.handlePadPress(padIndex, pressed);
     }
 
-    private RgbLigthState getPadLight(final int padIndex) {
+    private RgbLightState getPadLight(final int padIndex) {
         return padSurface.getPadLight(padIndex);
     }
 
-    private RgbLigthState lastStepPadLight(final int stepIndex) {
+    private RgbLightState lastStepPadLight(final int stepIndex) {
         if (stepIndex > lastStepIndex) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = clipBaseColor();
+        final RgbLightState base = clipBaseColor();
         return stepIndex == lastStepIndex ? base.getBrightest() : base.getVeryDimmed();
     }
 
@@ -578,7 +578,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
         return parameters.expressionSettings(CLIP_STEP_SIZE);
     }
 
-    private RgbLigthState clipBaseColor() {
+    private RgbLightState clipBaseColor() {
         return selectedClipColor != null ? selectedClipColor : BASE_COLOR;
     }
 
@@ -2083,7 +2083,7 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
     }
 
     @Override
-    public void updateRecurrencLength(final int length) {
+    public void updateRecurrenceLength(final int length) {
     }
 
     @Override

@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -79,10 +79,10 @@ class RecurrencePadInteractionTest {
     @Test
     void padLightUsesSharedRecurrenceColors() {
         final RecurrencePadInteraction interaction = new RecurrencePadInteraction(false, 0L);
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
         assertSame(base.getBrightend(), interaction.padLight(0, RecurrencePattern.of(4, 0b0001), base));
         assertSame(base.getDimmed(), interaction.padLight(1, RecurrencePattern.of(4, 0b0001), base));
-        assertSame(RgbLigthState.OFF, interaction.padLight(4, RecurrencePattern.of(4, 0b0001), base));
+        assertSame(RgbLightState.OFF, interaction.padLight(4, RecurrencePattern.of(4, 0b0001), base));
     }
 }

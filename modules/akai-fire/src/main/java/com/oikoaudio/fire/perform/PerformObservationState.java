@@ -2,19 +2,19 @@ package com.oikoaudio.fire.perform;
 
 import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.display.VuMeterPeakHold;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 /** Owns bounded Perform observation caches; track indices are source-bank indices unless named absolute. */
 public final class PerformObservationState {
-    private final RgbLigthState[] slotColors;
-    private final RgbLigthState[] sceneColors;
+    private final RgbLightState[] slotColors;
+    private final RgbLightState[] sceneColors;
     private final String[] sceneNames;
-    private final RgbLigthState[] trackColors;
+    private final RgbLightState[] trackColors;
     private final String[] trackNames;
     private final boolean[] selectedVisibleTracks;
     private final String[][] deviceNames;
     private final String[] layerNames;
-    private final RgbLigthState[] layerColors;
+    private final RgbLightState[] layerColors;
     private final int[] peakMeters;
     private final int[] rmsMeters;
     private final VuMeterPeakHold peakHold;
@@ -24,15 +24,15 @@ public final class PerformObservationState {
     public PerformObservationState(final int trackCount, final int sceneCount, final int deviceCount) {
         final int tracks = Math.max(0, trackCount);
         final int scenes = Math.max(0, sceneCount);
-        slotColors = new RgbLigthState[tracks * scenes];
-        sceneColors = new RgbLigthState[scenes];
+        slotColors = new RgbLightState[tracks * scenes];
+        sceneColors = new RgbLightState[scenes];
         sceneNames = new String[scenes];
-        trackColors = new RgbLigthState[tracks];
+        trackColors = new RgbLightState[tracks];
         trackNames = new String[tracks];
         selectedVisibleTracks = new boolean[tracks];
         deviceNames = new String[tracks][Math.max(0, deviceCount)];
         layerNames = new String[tracks];
-        layerColors = new RgbLigthState[tracks];
+        layerColors = new RgbLightState[tracks];
         peakMeters = new int[tracks];
         rmsMeters = new int[tracks];
         peakHold = new VuMeterPeakHold(tracks);
@@ -40,18 +40,18 @@ public final class PerformObservationState {
 
     public void setTrackName(final int sourceIndex, final String name) { if (track(sourceIndex)) trackNames[sourceIndex] = name; }
     public String trackName(final int sourceIndex) { return track(sourceIndex) ? text(trackNames[sourceIndex]) : ""; }
-    public void setTrackColor(final int sourceIndex, final RgbLigthState color) { if (track(sourceIndex)) trackColors[sourceIndex] = color; }
-    public RgbLigthState trackColor(final int sourceIndex) { return track(sourceIndex) ? trackColors[sourceIndex] : null; }
+    public void setTrackColor(final int sourceIndex, final RgbLightState color) { if (track(sourceIndex)) trackColors[sourceIndex] = color; }
+    public RgbLightState trackColor(final int sourceIndex) { return track(sourceIndex) ? trackColors[sourceIndex] : null; }
     public void setSelectedVisibleTrack(final int sourceIndex, final boolean selected) { if (track(sourceIndex)) selectedVisibleTracks[sourceIndex] = selected; }
     public boolean isSelectedVisibleTrack(final int sourceIndex) { return track(sourceIndex) && selectedVisibleTracks[sourceIndex]; }
     public void setSceneName(final int visibleIndex, final String name) { if (scene(visibleIndex)) sceneNames[visibleIndex] = name; }
     public String sceneName(final int visibleIndex) { return scene(visibleIndex) ? text(sceneNames[visibleIndex]) : ""; }
-    public void setSceneColor(final int visibleIndex, final RgbLigthState color) { if (scene(visibleIndex)) sceneColors[visibleIndex] = color; }
-    public RgbLigthState sceneColor(final int visibleIndex) { return scene(visibleIndex) ? sceneColors[visibleIndex] : null; }
-    public void setSlotColor(final int sourceTrackIndex, final int visibleSceneIndex, final RgbLigthState color) {
+    public void setSceneColor(final int visibleIndex, final RgbLightState color) { if (scene(visibleIndex)) sceneColors[visibleIndex] = color; }
+    public RgbLightState sceneColor(final int visibleIndex) { return scene(visibleIndex) ? sceneColors[visibleIndex] : null; }
+    public void setSlotColor(final int sourceTrackIndex, final int visibleSceneIndex, final RgbLightState color) {
         final int index = slotIndex(sourceTrackIndex, visibleSceneIndex); if (index >= 0) slotColors[index] = color;
     }
-    public RgbLigthState slotColor(final int sourceTrackIndex, final int visibleSceneIndex) {
+    public RgbLightState slotColor(final int sourceTrackIndex, final int visibleSceneIndex) {
         final int index = slotIndex(sourceTrackIndex, visibleSceneIndex); return index >= 0 ? slotColors[index] : null;
     }
     public void setDeviceName(final int sourceTrackIndex, final int deviceIndex, final String name) {
@@ -62,8 +62,8 @@ public final class PerformObservationState {
     }
     public void setLayerName(final int index, final String name) { if (track(index)) layerNames[index] = name; }
     public String layerName(final int index) { return track(index) ? text(layerNames[index]) : ""; }
-    public void setLayerColor(final int index, final RgbLigthState color) { if (track(index)) layerColors[index] = color; }
-    public RgbLigthState layerColor(final int index) { return track(index) ? layerColors[index] : null; }
+    public void setLayerColor(final int index, final RgbLightState color) { if (track(index)) layerColors[index] = color; }
+    public RgbLightState layerColor(final int index) { return track(index) ? layerColors[index] : null; }
     public void selectSlot(final int absoluteTrackIndex, final int absoluteSceneIndex) { selectedAbsoluteTrackIndex = absoluteTrackIndex; selectedAbsoluteSceneIndex = absoluteSceneIndex; }
     public void selectTrack(final int absoluteTrackIndex) { selectedAbsoluteTrackIndex = absoluteTrackIndex; }
     public int selectedAbsoluteTrackIndex() { return selectedAbsoluteTrackIndex; }

@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +75,7 @@ public final class ChordStepSurfaceController {
         padControls.handlePadPress(padIndex, pressed, velocity);
     }
 
-    public RgbLigthState padLight(final int padIndex) {
+    public RgbLightState padLight(final int padIndex) {
         return padControls.padLight(padIndex);
     }
 

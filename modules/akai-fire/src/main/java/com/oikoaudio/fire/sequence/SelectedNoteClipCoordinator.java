@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -10,7 +10,7 @@ import java.util.function.IntSupplier;
 /** Composes selected-slot observation, availability, state scanning, and note-clip cursor refresh. */
 public final class SelectedNoteClipCoordinator {
     private final ClipLauncherSlotBank slotBank;
-    private final RgbLigthState defaultColor;
+    private final RgbLightState defaultColor;
     private final BooleanSupplier canHoldNoteData;
     private final IntSupplier viewSelectedSlot;
     private final Consumer<NoteClipAvailability.Failure> failureHandler;
@@ -19,7 +19,7 @@ public final class SelectedNoteClipCoordinator {
     private SelectedClipSlotState state;
     private int generation;
 
-    public SelectedNoteClipCoordinator(final ClipLauncherSlotBank slotBank, final RgbLigthState defaultColor,
+    public SelectedNoteClipCoordinator(final ClipLauncherSlotBank slotBank, final RgbLightState defaultColor,
                                        final BooleanSupplier canHoldNoteData, final IntSupplier viewSelectedSlot,
                                        final Consumer<NoteClipAvailability.Failure> failureHandler,
                                        final Consumer<SelectedClipSlotState> stateHandler,

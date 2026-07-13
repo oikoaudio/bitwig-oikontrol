@@ -2,7 +2,7 @@ package com.oikoaudio.fire.fugue;
 
 import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.melodic.MelodicPattern;
 import com.oikoaudio.fire.melodic.MelodicRenderer;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
@@ -14,16 +14,16 @@ public final class FugueRenderer {
     private FugueRenderer() {
     }
 
-    public static RgbLigthState padLight(final FuguePattern pattern, final int column, final int loopSteps,
+    public static RgbLightState padLight(final FuguePattern pattern, final int column, final int loopSteps,
                                          final int playingStep, final int shiftedStartColumn,
-                                         final RgbLigthState lineColor, final boolean selected,
+                                         final RgbLightState lineColor, final boolean selected,
                                          final boolean enabled) {
         final boolean inLoop = column < activeBucketCount(loopSteps);
         final boolean playing = playingBucket(playingStep, loopSteps) == column;
-        final RgbLigthState color = selected ? lineColor.getBrightend() : lineColor;
-        final RgbLigthState rendered = MelodicRenderer.stepLight(
+        final RgbLightState color = selected ? lineColor.getBrightend() : lineColor;
+        final RgbLightState rendered = MelodicRenderer.stepLight(
                 bucketStep(pattern, column, loopSteps), false, inLoop, playing, column, color);
-        final RgbLigthState enabledState = enabled ? rendered : rendered.getVeryDimmed();
+        final RgbLightState enabledState = enabled ? rendered : rendered.getVeryDimmed();
         return inLoop
                 ? StepPadLightHelper.renderClipStartColumnOverlay(column, shiftedStartColumn, enabledState)
                 : enabledState;

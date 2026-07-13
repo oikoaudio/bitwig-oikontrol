@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,9 +39,9 @@ class StepPadLightHelperTest {
 
     @Test
     void overlaysClipStartHueOnlyOnMatchingColumn() {
-        assertEquals(new RgbLigthState(30, 0, 127, true),
-                StepPadLightHelper.renderClipStartColumnOverlay(3, 3, RgbLigthState.GRAY_1));
-        assertEquals(RgbLigthState.GRAY_1,
-                StepPadLightHelper.renderClipStartColumnOverlay(2, 3, RgbLigthState.GRAY_1));
+        assertEquals(new RgbLightState(30, 0, 127, true),
+                StepPadLightHelper.renderClipStartColumnOverlay(3, 3, RgbLightState.GRAY_1));
+        assertEquals(RgbLightState.GRAY_1,
+                StepPadLightHelper.renderClipStartColumnOverlay(2, 3, RgbLightState.GRAY_1));
     }
 }

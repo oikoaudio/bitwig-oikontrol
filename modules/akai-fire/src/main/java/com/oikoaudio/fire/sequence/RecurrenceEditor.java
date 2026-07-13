@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.control.PadMatrixBindings;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.Layer;
 
@@ -48,17 +48,17 @@ public class RecurrenceEditor {
 					}
 
 					@Override
-					public RgbLigthState padLight(final int padIndex) {
+					public RgbLightState padLight(final int padIndex) {
 						return getState(padIndex, 0x1 << padIndex);
 					}
 				});
 	}
 
-	private RgbLigthState getState(final int index, final int mask) {
+	private RgbLightState getState(final int index, final int mask) {
 		if (editedSteps == null) {
-			return RgbLigthState.OFF;
+			return RgbLightState.OFF;
 		}
-		return recurrencePads.padLight(index, RecurrencePattern.of(currentLen, currentMask), RgbLigthState.PURPLE);
+		return recurrencePads.padLight(index, RecurrencePattern.of(currentLen, currentMask), RgbLightState.PURPLE);
 	}
 
 	private void handleMask(final boolean pressed, final int index) {

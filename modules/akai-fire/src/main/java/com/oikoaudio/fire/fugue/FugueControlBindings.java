@@ -5,7 +5,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.PadBankRowControlBindings;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 /** Owns Fugue's pad-bank, bank-button, line-button, and encoder-mode hardware mapping. */
 public final class FugueControlBindings implements PadBankRowControlBindings.Host {
@@ -24,7 +24,7 @@ public final class FugueControlBindings implements PadBankRowControlBindings.Hos
     }
 
     @Override
-    public RgbLigthState padLight(final int padIndex) {
+    public RgbLightState padLight(final int padIndex) {
         return port.padLight(padIndex);
     }
 
@@ -51,7 +51,7 @@ public final class FugueControlBindings implements PadBankRowControlBindings.Hos
     public interface Port {
         void padPress(int padIndex, boolean pressed);
 
-        RgbLigthState padLight(int padIndex);
+        RgbLightState padLight(int padIndex);
 
         void bankButton(boolean pressed, int amount);
 

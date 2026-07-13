@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ class ChordStepSelectedClipStateTest {
     @Test
     void refreshReportsWhetherSelectionOrContentChanged() {
         final ChordStepSelectedClipState state = new ChordStepSelectedClipState();
-        final RgbLigthState color = RgbLigthState.GRAY_1;
+        final RgbLightState color = RgbLightState.GRAY_1;
 
         assertTrue(state.refresh(selectedState(2, true, color)));
         assertFalse(state.refresh(selectedState(2, true, color)));
@@ -27,7 +27,7 @@ class ChordStepSelectedClipStateTest {
     @Test
     void refreshStoresLatestSlotContentAndColor() {
         final ChordStepSelectedClipState state = new ChordStepSelectedClipState();
-        final RgbLigthState color = RgbLigthState.GRAY_2;
+        final RgbLightState color = RgbLightState.GRAY_2;
 
         state.refresh(selectedState(3, true, color));
 
@@ -49,7 +49,7 @@ class ChordStepSelectedClipStateTest {
     @Test
     void requireClipReturnsTrackFailureBeforeClipChecks() {
         final ChordStepSelectedClipState state = new ChordStepSelectedClipState();
-        state.refresh(selectedState(1, true, RgbLigthState.GRAY_1));
+        state.refresh(selectedState(1, true, RgbLightState.GRAY_1));
 
         final NoteClipAvailability.Failure failure = state.requireClip(false, true);
 
@@ -60,7 +60,7 @@ class ChordStepSelectedClipStateTest {
     @Test
     void requireClipAcceptsLoadedContentEvenIfSelectionSaysEmpty() {
         final ChordStepSelectedClipState state = new ChordStepSelectedClipState();
-        state.refresh(selectedState(1, false, RgbLigthState.GRAY_1));
+        state.refresh(selectedState(1, false, RgbLightState.GRAY_1));
 
         assertNull(state.requireClip(true, true));
     }
@@ -68,7 +68,7 @@ class ChordStepSelectedClipStateTest {
     @Test
     void requireClipRejectsWhenNoClipContentIsAvailable() {
         final ChordStepSelectedClipState state = new ChordStepSelectedClipState();
-        state.refresh(selectedState(1, false, RgbLigthState.GRAY_1));
+        state.refresh(selectedState(1, false, RgbLightState.GRAY_1));
 
         final NoteClipAvailability.Failure failure = state.requireClip(true, false);
 
@@ -78,7 +78,7 @@ class ChordStepSelectedClipStateTest {
 
     private static SelectedClipSlotState selectedState(final int slotIndex,
                                                        final boolean hasContent,
-                                                       final RgbLigthState color) {
+                                                       final RgbLightState color) {
         return SelectedClipSlotState.fromValues(slotIndex, hasContent, color);
     }
 }

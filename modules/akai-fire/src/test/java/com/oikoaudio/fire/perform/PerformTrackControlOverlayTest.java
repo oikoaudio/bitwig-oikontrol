@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.perform;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import org.junit.jupiter.api.Test;
@@ -82,7 +82,7 @@ class PerformTrackControlOverlayTest {
 
     @Test
     void selectRowUsesTrackColorForAvailableTracks() {
-        final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
+        final RgbLightState trackColor = new RgbLightState(10, 90, 30, true);
 
         assertEquals(trackColor, PerformPadRenderer.mixSelect(trackColor, false, false));
         assertEquals(trackColor.getDimmed(), PerformPadRenderer.mixSelect(trackColor, false, true));
@@ -171,7 +171,7 @@ class PerformTrackControlOverlayTest {
 
     @Test
     void mixDevicePadColorShowsEnabledState() {
-        final RgbLigthState trackColor = new RgbLigthState(10, 90, 30, true);
+        final RgbLightState trackColor = new RgbLightState(10, 90, 30, true);
 
         assertEquals(trackColor.getBrightest(), mixDeviceColor(trackColor, true, true));
         assertEquals(trackColor, mixDeviceColor(trackColor, true, false));
@@ -237,41 +237,41 @@ class PerformTrackControlOverlayTest {
 
     @Test
     void birdsEyePadColorHighlightsCurrentBlock() {
-        assertEquals(RgbLigthState.OFF, PerformPadRenderer.birdsEye(false, false));
-        assertEquals(new RgbLigthState(0, 36, 84, true),
+        assertEquals(RgbLightState.OFF, PerformPadRenderer.birdsEye(false, false));
+        assertEquals(new RgbLightState(0, 36, 84, true),
                 PerformPadRenderer.birdsEye(true, false));
-        assertEquals(new RgbLigthState(0, 108, 127, true),
+        assertEquals(new RgbLightState(0, 108, 127, true),
                 PerformPadRenderer.birdsEye(true, true));
     }
 
     @Test
     void deviceLayerMixerPadColorsFollowLayerRows() {
-        final RgbLigthState layerColor = new RgbLigthState(12, 80, 44, true);
+        final RgbLightState layerColor = new RgbLightState(12, 80, 44, true);
 
         assertEquals(layerColor, deviceLayerColor(0, layerColor, false, false, true));
-        assertEquals(new RgbLigthState(96, 96, 0, true),
+        assertEquals(new RgbLightState(96, 96, 0, true),
                 deviceLayerColor(16, layerColor, true, false, true));
-        assertEquals(RgbLigthState.OFF,
+        assertEquals(RgbLightState.OFF,
                 deviceLayerColor(16, layerColor, false, false, true));
-        assertEquals(new RgbLigthState(110, 48, 0, true),
+        assertEquals(new RgbLightState(110, 48, 0, true),
                 deviceLayerColor(32, layerColor, false, true, true));
-        assertEquals(new RgbLigthState(110, 0, 0, true),
+        assertEquals(new RgbLightState(110, 0, 0, true),
                 deviceLayerColor(48, layerColor, false, false, true));
-        assertEquals(new RgbLigthState(110, 0, 0, true).getSoftDimmed(),
+        assertEquals(new RgbLightState(110, 0, 0, true).getSoftDimmed(),
                 deviceLayerColor(48, layerColor, false, false, false));
         assertEquals(layerColor.getSoftDimmed(),
                 deviceLayerColor(0, layerColor, false, false, false));
     }
 
-    private static RgbLigthState mixDeviceColor(final RgbLigthState trackColor,
+    private static RgbLightState mixDeviceColor(final RgbLightState trackColor,
                                                 final boolean enabled,
                                                 final boolean selected) {
         return PerformPadRenderer.mixDevice(
                 new PerformPadRenderer.MixDeviceSnapshot(true, trackColor, enabled, selected));
     }
 
-    private static RgbLigthState deviceLayerColor(final int padIndex,
-                                                  final RgbLigthState layerColor,
+    private static RgbLightState deviceLayerColor(final int padIndex,
+                                                  final RgbLightState layerColor,
                                                   final boolean solo,
                                                   final boolean muted,
                                                   final boolean active) {

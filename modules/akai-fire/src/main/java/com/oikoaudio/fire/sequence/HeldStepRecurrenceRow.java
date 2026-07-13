@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 import java.util.List;
 import java.util.function.IntConsumer;
@@ -45,19 +45,19 @@ public final class HeldStepRecurrenceRow {
                 markConsumed, togglePad, applySpan);
     }
 
-    public RgbLigthState padLight(final int padIndex,
+    public RgbLightState padLight(final int padIndex,
                                   final List<NoteStep> targets,
-                                  final RgbLigthState color,
-                                  final RgbLigthState fallback) {
+                                  final RgbLightState color,
+                                  final RgbLightState fallback) {
         if (targets.isEmpty()) {
             return fallback;
         }
         return recurrencePads.padLight(padIndex, recurrenceOf(targets.get(0)), color);
     }
 
-    public RgbLigthState padLight(final int padIndex,
+    public RgbLightState padLight(final int padIndex,
                                   final RecurrencePattern recurrence,
-                                  final RgbLigthState color) {
+                                  final RgbLightState color) {
         return recurrencePads.padLight(padIndex, recurrence, color);
     }
 

@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import org.junit.jupiter.api.Test;
 
@@ -21,13 +21,13 @@ class ChordStepObservationControllerTest {
                 () -> false,
                 () -> events.add("clip-resync"),
                 failure -> events.add("failure:" + failure.title()));
-        clipController.refresh(SelectedClipSlotState.fromValues(3, true, RgbLigthState.GRAY_2));
+        clipController.refresh(SelectedClipSlotState.fromValues(3, true, RgbLightState.GRAY_2));
 
         final ChordStepObservationController controller = new ChordStepObservationController(
                 (task, delayTicks) -> {},
                 null,
                 () -> 5,
-                () -> RgbLigthState.GRAY_1,
+                () -> RgbLightState.GRAY_1,
                 clipController,
                 () -> events.add("clear"),
                 () -> events.add("scroll:note-key"),
@@ -70,7 +70,7 @@ class ChordStepObservationControllerTest {
                 (task, delayTicks) -> scheduled.add(new ScheduledTask(task, delayTicks)),
                 null,
                 () -> 0,
-                () -> RgbLigthState.GRAY_1,
+                () -> RgbLightState.GRAY_1,
                 clipController,
                 () -> events.add("clear"),
                 () -> {},

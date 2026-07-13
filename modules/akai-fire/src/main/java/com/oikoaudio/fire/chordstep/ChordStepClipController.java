@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 
@@ -60,7 +60,7 @@ public final class ChordStepClipController {
         return selectedClipState.hasContent();
     }
 
-    public RgbLigthState color() {
+    public RgbLightState color() {
         return selectedClipState.color();
     }
 

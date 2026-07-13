@@ -19,7 +19,7 @@ import com.oikoaudio.fire.control.VelocitySettings;
 import com.oikoaudio.fire.display.NoteChordOledView;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.NoteClipAvailability;
@@ -60,20 +60,20 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private static final int MIN_MIDI_VALUE = 0;
     private static final int MAX_MIDI_VALUE = 127;
     private static final int ACCENTED_CHORD_VELOCITY = ChordStepAccentEditor.ACCENTED_VELOCITY;
-    private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
-    private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
-    private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
-    private static final RgbLigthState HARMONIC_MINOR_COLOR = new RgbLigthState(18, 48, 104, true);
-    private static final RgbLigthState HARMONIC_TENSE_COLOR = new RgbLigthState(68, 48, 116, true);
-    private static final RgbLigthState HARMONIC_EXOTIC_COLOR = new RgbLigthState(108, 28, 72, true);
-    private static final RgbLigthState HARMONIC_SYMMETRIC_COLOR = new RgbLigthState(46, 92, 42, true);
-    private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
-    private static final RgbLigthState EMPTY_STEP_A = RgbLigthState.GRAY_1;
-    private static final RgbLigthState EMPTY_STEP_B = RgbLigthState.GRAY_2;
-    private static final RgbLigthState OCCUPIED_STEP = new RgbLigthState(0, 90, 38, true);
-    private static final RgbLigthState HELD_STEP = new RgbLigthState(120, 88, 0, true);
-    private static final RgbLigthState DEFERRED_TOP = new RgbLigthState(110, 38, 0, true);
-    private static final RgbLigthState DEFERRED_BOTTOM = new RgbLigthState(36, 16, 0, true);
+    private static final RgbLightState ROOT_COLOR = new RgbLightState(120, 64, 0, true);
+    private static final RgbLightState IN_SCALE_COLOR = new RgbLightState(0, 72, 110, true);
+    private static final RgbLightState HARMONIC_BRIGHT_COLOR = new RgbLightState(0, 72, 122, true);
+    private static final RgbLightState HARMONIC_MINOR_COLOR = new RgbLightState(18, 48, 104, true);
+    private static final RgbLightState HARMONIC_TENSE_COLOR = new RgbLightState(68, 48, 116, true);
+    private static final RgbLightState HARMONIC_EXOTIC_COLOR = new RgbLightState(108, 28, 72, true);
+    private static final RgbLightState HARMONIC_SYMMETRIC_COLOR = new RgbLightState(46, 92, 42, true);
+    private static final RgbLightState OUT_OF_SCALE_COLOR = RgbLightState.GRAY_1;
+    private static final RgbLightState EMPTY_STEP_A = RgbLightState.GRAY_1;
+    private static final RgbLightState EMPTY_STEP_B = RgbLightState.GRAY_2;
+    private static final RgbLightState OCCUPIED_STEP = new RgbLightState(0, 90, 38, true);
+    private static final RgbLightState HELD_STEP = new RgbLightState(120, 88, 0, true);
+    private static final RgbLightState DEFERRED_TOP = new RgbLightState(110, 38, 0, true);
+    private static final RgbLightState DEFERRED_BOTTOM = new RgbLightState(36, 16, 0, true);
     private static final String MODE_NAME = "Chord Step";
 
     private final AkaiFireOikontrolExtension driver;
@@ -110,7 +110,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private boolean chordDisplayRefreshPending = false;
     private Integer selectedPresetStepIndex = null;
     private int playingStep = -1;
-    private RgbLigthState chordStepBaseColor = OCCUPIED_STEP;
+    private RgbLightState chordStepBaseColor = OCCUPIED_STEP;
     public ChordStepMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "CHORD_STEP_MODE");
         this.driver = driver;
@@ -272,7 +272,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return ChordStepMode.this.getPadLight(padIndex);
             }
 
@@ -1399,15 +1399,15 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         showContextInfo();
     }
 
-    private RgbLigthState getPadLight(final int padIndex) {
+    private RgbLightState getPadLight(final int padIndex) {
         return getChordStepPadLight(padIndex);
     }
 
-    private RgbLigthState getChordStepPadLight(final int padIndex) {
+    private RgbLightState getChordStepPadLight(final int padIndex) {
         return chordStepSurface.padLight(padIndex);
     }
 
-    private RgbLigthState getChordOccupiedStepColor() {
+    private RgbLightState getChordOccupiedStepColor() {
         if (chordStepController.color() != null) {
             return chordStepController.color();
         }
@@ -1418,13 +1418,13 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         return hasVisibleStepContent(stepIndex) && !hasStepStartNote(stepIndex);
     }
 
-    private RgbLigthState getClipStepRecordPadLight(final int padIndex) {
+    private RgbLightState getClipStepRecordPadLight(final int padIndex) {
         if (padIndex < STEP_PAD_OFFSET) {
             return DEFERRED_TOP;
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
         if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, chordStepClips.position().getAvailableSteps())) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         if (chordStepPadSurface.hasHeldStep(stepIndex)) {
             return HELD_STEP.getBrightest();
@@ -1764,7 +1764,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     @Override
-    public void updateRecurrencLength(final int length) {
+    public void updateRecurrenceLength(final int length) {
     }
 
     @Override

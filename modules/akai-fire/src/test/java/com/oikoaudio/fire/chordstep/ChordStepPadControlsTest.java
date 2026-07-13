@@ -3,7 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.SharedMusicalContext;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +33,7 @@ class ChordStepPadControlsTest {
         surface.addHeldStep(0);
         final ChordStepPadControls controls = controls(surface, new ChordStepPadControllerTest.FakeHost());
 
-        final RgbLigthState expected = new RgbLigthState(120, 88, 0, true).getBrightest();
+        final RgbLightState expected = new RgbLightState(120, 88, 0, true).getBrightest();
 
         assertEquals(expected, controls.padLight(STEP_OFFSET));
     }
@@ -53,9 +53,9 @@ class ChordStepPadControlsTest {
                 surface,
                 builder,
                 selection,
-                ignored -> RgbLigthState.GRAY_1,
+                ignored -> RgbLightState.GRAY_1,
                 List::of,
-                () -> RgbLigthState.PURPLE,
+                () -> RgbLightState.PURPLE,
                 () -> 32,
                 () -> -1,
                 () -> -1,

@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.melodic;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -146,8 +146,8 @@ class MelodicStepPadSurfaceTest {
         }
 
         @Override
-        public RgbLigthState clipRowPadLight(final int padIndex) {
-            return RgbLigthState.OFF;
+        public RgbLightState clipRowPadLight(final int padIndex) {
+            return RgbLightState.OFF;
         }
 
         @Override
@@ -161,8 +161,8 @@ class MelodicStepPadSurfaceTest {
         }
 
         @Override
-        public RgbLigthState pitchPoolPadLight(final int poolPadIndex) {
-            return RgbLigthState.OFF;
+        public RgbLightState pitchPoolPadLight(final int poolPadIndex) {
+            return RgbLightState.OFF;
         }
 
         @Override
@@ -206,7 +206,7 @@ class MelodicStepPadSurfaceTest {
         }
 
         @Override
-        public RgbLigthState selectedClipColor() {
+        public RgbLightState selectedClipColor() {
             return MelodicRenderer.ACTIVE_STEP;
         }
 

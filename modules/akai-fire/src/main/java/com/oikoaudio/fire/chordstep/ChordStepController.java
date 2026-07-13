@@ -2,7 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 /**
  * Internal controller for chord-step sequencing behavior.
@@ -106,7 +106,7 @@ public final class ChordStepController {
         return clipController.slotIndex();
     }
 
-    public RgbLigthState color() {
+    public RgbLightState color() {
         return clipController.color();
     }
 }

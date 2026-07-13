@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -37,12 +37,12 @@ class ChordStepPadSurfaceTest {
     @Test
     void rendersRecurrencePadLightForTarget() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
-        final RgbLigthState light = surface.recurrencePadLight(0,
+        final RgbLightState light = surface.recurrencePadLight(0,
                 List.of(note(5, 4, 0b0001)),
                 base,
-                RgbLigthState.OFF);
+                RgbLightState.OFF);
 
         assertSame(base.getBrightend(), light);
     }
@@ -51,39 +51,39 @@ class ChordStepPadSurfaceTest {
     void fallsBackWhenRecurrenceHasNoTarget() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
-        assertSame(RgbLigthState.GRAY_1, surface.recurrencePadLight(0, List.of(),
-                RgbLigthState.PURPLE,
-                RgbLigthState.GRAY_1));
+        assertSame(RgbLightState.GRAY_1, surface.recurrencePadLight(0, List.of(),
+                RgbLightState.PURPLE,
+                RgbLightState.GRAY_1));
     }
 
     @Test
     void rendersHeldStepAsBrightestHeldColor() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
-        final RgbLigthState held = new RgbLigthState(120, 88, 0, true);
+        final RgbLightState held = new RgbLightState(120, 88, 0, true);
         surface.addHeldStep(5);
 
         assertSame(held.getBrightest(), surface.stepPadLight(5, 16,
                 true, false, false, 0,
-                RgbLigthState.PURPLE, RgbLigthState.GRAY_1, held));
+                RgbLightState.PURPLE, RgbLightState.GRAY_1, held));
     }
 
     @Test
     void rendersOccupiedAccentedStepBright() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
-        final RgbLigthState occupied = RgbLigthState.PURPLE;
+        final RgbLightState occupied = RgbLightState.PURPLE;
 
         assertSame(occupied.getBrightend(), surface.stepPadLight(5, 16,
                 true, true, false, 0,
-                occupied, RgbLigthState.GRAY_1, new RgbLigthState(120, 88, 0, true)));
+                occupied, RgbLightState.GRAY_1, new RgbLightState(120, 88, 0, true)));
     }
 
     @Test
     void rendersOutsideLoopAsOff() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
-        assertSame(RgbLigthState.OFF, surface.stepPadLight(17, 16,
+        assertSame(RgbLightState.OFF, surface.stepPadLight(17, 16,
                 true, true, false, 0,
-                RgbLigthState.PURPLE, RgbLigthState.GRAY_1, new RgbLigthState(120, 88, 0, true)));
+                RgbLightState.PURPLE, RgbLightState.GRAY_1, new RgbLightState(120, 88, 0, true)));
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 
 /**
  * Owns chord-step pad input and light routing for the 64-pad surface.
@@ -28,7 +28,7 @@ public final class ChordStepPadControls {
         controller.handlePadPress(padIndex, pressed, velocity);
     }
 
-    public RgbLigthState padLight(final int padIndex) {
+    public RgbLightState padLight(final int padIndex) {
         return lightRenderer.padLight(padIndex, clipRowPadCount, chordSourcePadOffset, stepPadOffset);
     }
 }

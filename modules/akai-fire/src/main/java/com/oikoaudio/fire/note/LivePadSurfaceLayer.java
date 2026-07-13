@@ -44,7 +44,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.display.PeakRmsOledView;
 import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.utils.PatternButtons;
 import com.oikoaudio.fire.sequence.EncoderMode;
@@ -91,14 +91,14 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final int METER_REFRESH_TICKS = 1;
     private static final long LIVE_PAD_NOTE_CHORD_RELEASE_HOLD_MS = 900L;
     private static final long DAW_NOTE_CHORD_RELEASE_HOLD_MS = 2000L;
-    private static final RgbLigthState ROOT_COLOR = new RgbLigthState(120, 64, 0, true);
-    private static final RgbLigthState IN_SCALE_COLOR = new RgbLigthState(0, 72, 110, true);
-    private static final RgbLigthState HARMONIC_BRIGHT_COLOR = new RgbLigthState(0, 72, 122, true);
-    private static final RgbLigthState HARMONIC_MINOR_COLOR = new RgbLigthState(18, 48, 104, true);
-    private static final RgbLigthState HARMONIC_TENSE_COLOR = new RgbLigthState(68, 48, 116, true);
-    private static final RgbLigthState HARMONIC_EXOTIC_COLOR = new RgbLigthState(108, 28, 72, true);
-    private static final RgbLigthState HARMONIC_SYMMETRIC_COLOR = new RgbLigthState(46, 92, 42, true);
-    private static final RgbLigthState OUT_OF_SCALE_COLOR = RgbLigthState.GRAY_1;
+    private static final RgbLightState ROOT_COLOR = new RgbLightState(120, 64, 0, true);
+    private static final RgbLightState IN_SCALE_COLOR = new RgbLightState(0, 72, 110, true);
+    private static final RgbLightState HARMONIC_BRIGHT_COLOR = new RgbLightState(0, 72, 122, true);
+    private static final RgbLightState HARMONIC_MINOR_COLOR = new RgbLightState(18, 48, 104, true);
+    private static final RgbLightState HARMONIC_TENSE_COLOR = new RgbLightState(68, 48, 116, true);
+    private static final RgbLightState HARMONIC_EXOTIC_COLOR = new RgbLightState(108, 28, 72, true);
+    private static final RgbLightState HARMONIC_SYMMETRIC_COLOR = new RgbLightState(46, 92, 42, true);
+    private static final RgbLightState OUT_OF_SCALE_COLOR = RgbLightState.GRAY_1;
 
     private final AkaiFireOikontrolExtension driver;
     private final OledDisplay oled;
@@ -177,10 +177,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean drumMachineDefaultPageApplied = false;
     private final boolean[][] heldBongoPads = new boolean[2][NoteGridLayout.PAD_COUNT];
     private final int[] heldBongoPadCounts = new int[2];
-    private final RgbLigthState[] drumMachinePadColors = new RgbLigthState[DrumMachinePadLayout.PAD_WINDOW_SIZE];
+    private final RgbLightState[] drumMachinePadColors = new RgbLightState[DrumMachinePadLayout.PAD_WINDOW_SIZE];
     private final String[] drumMachinePadNames = new String[DrumMachinePadLayout.PAD_WINDOW_SIZE];
     private final boolean[] drumMachinePadExists = new boolean[DrumMachinePadLayout.PAD_WINDOW_SIZE];
-    private RgbLigthState trackBaseColor = IN_SCALE_COLOR;
+    private RgbLightState trackBaseColor = IN_SCALE_COLOR;
     private int livePitchBend = DEFAULT_LIVE_PITCH_BEND;
     private boolean livePitchBendTouched = false;
     private int livePitchBendReturnGeneration = 0;
@@ -382,13 +382,13 @@ public abstract class LivePadSurfaceLayer extends Layer {
         }
     }
 
-    private static RgbLigthState explicitDrumMachinePadColorOrNull(final DrumPad pad) {
+    private static RgbLightState explicitDrumMachinePadColorOrNull(final DrumPad pad) {
         final Color color = pad.color().get();
         if (color == null || color.getAlpha255() == 0) {
             return null;
         }
-        final RgbLigthState light = ColorLookup.getColor(color);
-        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
+        final RgbLightState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLightState.OFF) ? null : light;
     }
 
     private void applyDefaultLayoutPreference() {
@@ -587,7 +587,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return LivePadSurfaceLayer.this.getPadLight(padIndex);
             }
 
@@ -2265,38 +2265,38 @@ public abstract class LivePadSurfaceLayer extends Layer {
         oled.valueInfo("Velocity", liveVelocity.summary());
     }
 
-    private RgbLigthState getPadLight(final int padIndex) {
+    private RgbLightState getPadLight(final int padIndex) {
         return getLivePadLight(padIndex);
     }
 
-    private RgbLigthState getLivePadLight(final int padIndex) {
+    private RgbLightState getLivePadLight(final int padIndex) {
         final LiveNoteLayout layout = createLayout();
         if (isDrumMachineLiveMode() && layout instanceof DrumMachinePadLayout drumMachinePadLayout) {
-            final RgbLigthState base = getDrumMachinePadBaseLight(padIndex, drumMachinePadLayout);
+            final RgbLightState base = getDrumMachinePadBaseLight(padIndex, drumMachinePadLayout);
             return heldLivePadLight(base, livePadPerformer.isPadHeld(padIndex),
                     livePadPerformer.isPadHeldByHoldMode(padIndex), blinkState);
         }
         final int midiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
-        final RgbLigthState base;
+        final RgbLightState base;
         if (midiNote < 0) {
-            base = RgbLigthState.OFF;
+            base = RgbLightState.OFF;
         } else if (isHarmonicLiveMode()) {
             base = getHarmonicLivePadBaseLight(padIndex, layout);
         } else {
             final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
-            final RgbLigthState melodicFamilyColor = harmonicScaleFamilyColor();
+            final RgbLightState melodicFamilyColor = harmonicScaleFamilyColor();
             base = switch (role) {
                 case ROOT -> ROOT_COLOR;
                 case IN_SCALE -> melodicFamilyColor;
                 case OUT_OF_SCALE -> OUT_OF_SCALE_COLOR;
-                case UNAVAILABLE -> RgbLigthState.OFF;
+                case UNAVAILABLE -> RgbLightState.OFF;
             };
         }
         return heldLivePadLight(base, livePadPerformer.isPadHeld(padIndex),
                 livePadPerformer.isPadHeldByHoldMode(padIndex), blinkState);
     }
 
-    static RgbLigthState heldLivePadLight(final RgbLigthState base,
+    static RgbLightState heldLivePadLight(final RgbLightState base,
                                           final boolean padHeld,
                                           final boolean heldByHoldMode,
                                           final int blinkState) {
@@ -2309,16 +2309,16 @@ public abstract class LivePadSurfaceLayer extends Layer {
         return base.getBrightest();
     }
 
-    private RgbLigthState getDrumMachinePadBaseLight(final int padIndex, final DrumMachinePadLayout layout) {
+    private RgbLightState getDrumMachinePadBaseLight(final int padIndex, final DrumMachinePadLayout layout) {
         if (!liveDrumMachineDevice.hasDrumPads().get()) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int bankIndex = layout.padBankIndexForPad(padIndex);
         if (bankIndex < 0 || bankIndex >= drumMachinePadColors.length || !drumMachinePadExists[bankIndex]) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState color = drumMachinePadColors[bankIndex];
-        final RgbLigthState base = color != null ? color : trackPadColor();
+        final RgbLightState color = drumMachinePadColors[bankIndex];
+        final RgbLightState base = color != null ? color : trackPadColor();
         if (layout.selectorOffsetForPad(padIndex) == selectedDrumPadOffset) {
             return base.getBrightest();
         }
@@ -2328,11 +2328,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
         return base;
     }
 
-    private RgbLigthState trackPadColor() {
+    private RgbLightState trackPadColor() {
         return trackBaseColor != null ? trackBaseColor : IN_SCALE_COLOR;
     }
 
-    private RgbLigthState velocityRampColor(final RgbLigthState base, final int velocity) {
+    private RgbLightState velocityRampColor(final RgbLightState base, final int velocity) {
         if (velocity >= 112) {
             return base.getBrightest();
         }
@@ -2348,19 +2348,19 @@ public abstract class LivePadSurfaceLayer extends Layer {
         return base.getDimmed();
     }
 
-    private RgbLigthState getHarmonicLivePadBaseLight(final int padIndex, final LiveNoteLayout layout) {
+    private RgbLightState getHarmonicLivePadBaseLight(final int padIndex, final LiveNoteLayout layout) {
         final NoteGridLayout.PadRole role = layout.roleForPad(padIndex);
         final boolean bassColumnPad = harmonicBassColumns && (padIndex % NoteGridLayout.PAD_COLUMNS) < 2;
         if (role == NoteGridLayout.PadRole.UNAVAILABLE) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         if (role == NoteGridLayout.PadRole.ROOT) {
             final int primaryMidiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
-            final RgbLigthState rootBase = bassColumnPad ? ROOT_COLOR.getSoftDimmed() : ROOT_COLOR;
+            final RgbLightState rootBase = bassColumnPad ? ROOT_COLOR.getSoftDimmed() : ROOT_COLOR;
             return livePadPerformer.isMidiNoteSounding(primaryMidiNote) ? rootBase.getBrightend() : rootBase;
         }
-        final RgbLigthState familyColor = harmonicScaleFamilyColor();
-        final RgbLigthState padBase = bassColumnPad ? familyColor.getSoftDimmed() : familyColor;
+        final RgbLightState familyColor = harmonicScaleFamilyColor();
+        final RgbLightState padBase = bassColumnPad ? familyColor.getSoftDimmed() : familyColor;
         final int primaryMidiNote = applyLivePitchOffset(layout.primaryNoteForPad(padIndex));
         if (livePadPerformer.isMidiNoteSounding(primaryMidiNote)) {
             return padBase.getBrightend();
@@ -2368,7 +2368,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
         return padBase;
     }
 
-    private RgbLigthState harmonicScaleFamilyColor() {
+    private RgbLightState harmonicScaleFamilyColor() {
         final String scaleName = getScale().getName().toLowerCase();
         if (scaleName.contains("ion")
                 || scaleName.contains("major")

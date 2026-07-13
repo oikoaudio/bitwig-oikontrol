@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 public final class ChordStepObservationController {
     private final ClipLauncherSlotBank noteClipSlotBank;
     private final IntSupplier selectedClipSlotIndex;
-    private final Supplier<RgbLigthState> defaultColorSupplier;
+    private final Supplier<RgbLightState> defaultColorSupplier;
     private final ChordStepClipController clipController;
     private final Runnable clearObservedCaches;
     private final Runnable scrollNoteClipToKeyStart;
@@ -29,7 +29,7 @@ public final class ChordStepObservationController {
     public ChordStepObservationController(final ChordStepObservationRefresher.TaskScheduler scheduler,
                                           final ClipLauncherSlotBank noteClipSlotBank,
                                           final IntSupplier selectedClipSlotIndex,
-                                          final Supplier<RgbLigthState> defaultColorSupplier,
+                                          final Supplier<RgbLightState> defaultColorSupplier,
                                           final ChordStepClipController clipController,
                                           final Runnable clearObservedCaches,
                                           final Runnable scrollNoteClipToKeyStart,
@@ -45,7 +45,7 @@ public final class ChordStepObservationController {
     public ChordStepObservationController(final ChordStepObservationRefresher.TaskScheduler scheduler,
                                           final ClipLauncherSlotBank noteClipSlotBank,
                                           final IntSupplier selectedClipSlotIndex,
-                                          final Supplier<RgbLigthState> defaultColorSupplier,
+                                          final Supplier<RgbLightState> defaultColorSupplier,
                                           final ChordStepClipController clipController,
                                           final Runnable clearObservedCaches,
                                           final Runnable scrollNoteClipToKeyStart,
@@ -62,7 +62,7 @@ public final class ChordStepObservationController {
     public ChordStepObservationController(final ChordStepObservationRefresher.TaskScheduler scheduler,
                                           final ClipLauncherSlotBank noteClipSlotBank,
                                           final IntSupplier selectedClipSlotIndex,
-                                          final Supplier<RgbLigthState> defaultColorSupplier,
+                                          final Supplier<RgbLightState> defaultColorSupplier,
                                           final ChordStepClipController clipController,
                                           final Runnable clearObservedCaches,
                                           final Runnable scrollNoteClipToKeyStart,
@@ -132,6 +132,6 @@ public final class ChordStepObservationController {
 
     @FunctionalInterface
     public interface StateScanner {
-        SelectedClipSlotState scan(ClipLauncherSlotBank slotBank, RgbLigthState defaultColor);
+        SelectedClipSlotState scan(ClipLauncherSlotBank slotBank, RgbLightState defaultColor);
     }
 }

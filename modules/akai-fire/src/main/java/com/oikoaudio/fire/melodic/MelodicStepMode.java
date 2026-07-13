@@ -27,7 +27,7 @@ import com.oikoaudio.fire.control.TrackSelectIndicatorLights;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.EncoderBankLayout;
 import com.oikoaudio.fire.sequence.EncoderSlotBinding;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
@@ -103,7 +103,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private final MelodicStepPatternState patternState = new MelodicStepPatternState(DEFAULT_LOOP_STEPS);
     private int playingStep = -1;
     private int selectedClipSlotIndex = -1;
-    private RgbLigthState selectedClipColor = MelodicRenderer.ACTIVE_STEP;
+    private RgbLightState selectedClipColor = MelodicRenderer.ACTIVE_STEP;
     private int loopSteps = DEFAULT_LOOP_STEPS;
     private final AccentLatchState accentState = new AccentLatchState();
     private boolean mainEncoderPressConsumed = false;
@@ -222,7 +222,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
 
             @Override
-            public RgbLigthState padLight(final int padIndex) {
+            public RgbLightState padLight(final int padIndex) {
                 return padSurface.getPadLight(padIndex);
             }
 
@@ -1930,10 +1930,10 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 .orElse(null);
     }
 
-    private RgbLigthState getPitchPoolPadLight(final int padIndex) {
+    private RgbLightState getPitchPoolPadLight(final int padIndex) {
         final int pitch = pitchPoolPitch(padIndex);
         if (pitch < 0) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final boolean enabled = pitchPool.pitches().contains(pitch);
         final boolean root = phraseContext().scale().isRootMidiNote(phraseContext().rootNote(), pitch);
@@ -2572,7 +2572,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     @Override
-    public void updateRecurrencLength(final int length) {
+    public void updateRecurrenceLength(final int length) {
     }
 
     @Override
@@ -2632,7 +2632,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
 
         @Override
-        public RgbLigthState clipRowPadLight(final int padIndex) {
+        public RgbLightState clipRowPadLight(final int padIndex) {
             return clipHandler.getPadLight(padIndex);
         }
 
@@ -2647,7 +2647,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
 
         @Override
-        public RgbLigthState pitchPoolPadLight(final int poolPadIndex) {
+        public RgbLightState pitchPoolPadLight(final int poolPadIndex) {
             return getPitchPoolPadLight(poolPadIndex);
         }
 
@@ -2699,7 +2699,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         }
 
         @Override
-        public RgbLigthState selectedClipColor() {
+        public RgbLightState selectedClipColor() {
             return selectedClipColor;
         }
 

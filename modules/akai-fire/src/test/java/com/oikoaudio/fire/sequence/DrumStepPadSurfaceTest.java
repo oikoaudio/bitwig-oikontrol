@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -148,12 +148,12 @@ class DrumStepPadSurfaceTest {
     @Test
     void rendersRecurrencePadLightForHeldTarget() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
-        final RgbLigthState light = surface.recurrencePadLight(0,
+        final RgbLightState light = surface.recurrencePadLight(0,
                 List.of(note(5, NoteStep.State.NoteOn, 4, 0b0001)),
                 base,
-                RgbLigthState.OFF);
+                RgbLightState.OFF);
 
         assertSame(base.getBrightend(), light);
     }
@@ -162,26 +162,26 @@ class DrumStepPadSurfaceTest {
     void rendersStepPadsOutsideAvailableStepsAsOff() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        assertSame(RgbLigthState.OFF, surface.stepPadLight(12, 8, null, 0,
-                false, null, 0, RgbLigthState.PURPLE, 110));
+        assertSame(RgbLightState.OFF, surface.stepPadLight(12, 8, null, 0,
+                false, null, 0, RgbLightState.PURPLE, 110));
     }
 
     @Test
     void rendersEmptyStepPadsWithSharedEmptyPolicy() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        assertSame(RgbLigthState.WHITE, surface.stepPadLight(4, 16, null, 4,
-                false, null, 0, RgbLigthState.PURPLE, 110));
-        assertSame(RgbLigthState.GRAY_2, surface.stepPadLight(5, 16, null, 4,
-                false, null, 0, RgbLigthState.PURPLE, 110));
+        assertSame(RgbLightState.WHITE, surface.stepPadLight(4, 16, null, 4,
+                false, null, 0, RgbLightState.PURPLE, 110));
+        assertSame(RgbLightState.GRAY_2, surface.stepPadLight(5, 16, null, 4,
+                false, null, 0, RgbLightState.PURPLE, 110));
     }
 
     @Test
     void rendersAccentedOccupiedStepPadsBright() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
-        final RgbLigthState light = surface.stepPadLight(5, 16,
+        final RgbLightState light = surface.stepPadLight(5, 16,
                 note(5, NoteStep.State.NoteOn, 8, 0b11111111, 1.0),
                 0, false, null, 0, base, 110);
 

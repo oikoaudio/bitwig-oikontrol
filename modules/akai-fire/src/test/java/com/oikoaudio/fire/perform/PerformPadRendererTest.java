@@ -1,17 +1,17 @@
 package com.oikoaudio.fire.perform;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PerformPadRendererTest {
-    private static final RgbLigthState COLOR = new RgbLigthState(10, 90, 30, true);
+    private static final RgbLightState COLOR = new RgbLightState(10, 90, 30, true);
 
     @Test
     void launcherSlotsCoverMissingEmptyQueuedPlayingAndRecordingStates() {
-        assertEquals(RgbLigthState.OFF, PerformPadRenderer.slot(PerformPadRenderer.SlotSnapshot.missing(), 0));
-        assertEquals(RgbLigthState.GRAY_2,
+        assertEquals(RgbLightState.OFF, PerformPadRenderer.slot(PerformPadRenderer.SlotSnapshot.missing(), 0));
+        assertEquals(RgbLightState.GRAY_2,
                 PerformPadRenderer.slot(new PerformPadRenderer.SlotSnapshot(true, false, true,
                         false, false, false, false, false, COLOR), 0));
         assertEquals(COLOR.getBrightest(),
@@ -30,7 +30,7 @@ class PerformPadRendererTest {
 
     @Test
     void sceneLaunchCoversUnavailablePendingSelectedRecordingAndPlayingStates() {
-        assertEquals(RgbLigthState.OFF,
+        assertEquals(RgbLightState.OFF,
                 PerformPadRenderer.scene(new PerformPadRenderer.SceneSnapshot(false, COLOR,
                         false, false, false, false), 0));
         assertEquals(COLOR.getBrightest(),
@@ -49,7 +49,7 @@ class PerformPadRendererTest {
 
     @Test
     void mixRowsCoverSelectionQueueSoloMuteArmAndMissingTracks() {
-        assertEquals(RgbLigthState.OFF,
+        assertEquals(RgbLightState.OFF,
                 PerformPadRenderer.trackAction(PerformPadRenderer.TrackSnapshot.missing(
                         PerformPadRenderer.TrackAction.SELECT), 0));
         assertEquals(COLOR.getBrightest(), PerformPadRenderer.trackAction(
@@ -71,24 +71,24 @@ class PerformPadRendererTest {
 
     @Test
     void deviceLayerAndBirdsEyePagesUsePureSnapshots() {
-        assertEquals(RgbLigthState.OFF, PerformPadRenderer.mixDevice(
+        assertEquals(RgbLightState.OFF, PerformPadRenderer.mixDevice(
                 new PerformPadRenderer.MixDeviceSnapshot(false, COLOR, true, true)));
         assertEquals(COLOR.getSoftDimmed(), PerformPadRenderer.mixDevice(
                 new PerformPadRenderer.MixDeviceSnapshot(true, COLOR, false, true)));
-        assertEquals(RgbLigthState.OFF, PerformPadRenderer.deviceLayer(
+        assertEquals(RgbLightState.OFF, PerformPadRenderer.deviceLayer(
                 new PerformPadRenderer.DeviceLayerSnapshot(PerformPadRenderer.TrackAction.SELECT,
                         false, COLOR, false, false, false)));
         assertEquals(COLOR.getSoftDimmed(), PerformPadRenderer.deviceLayer(
                 new PerformPadRenderer.DeviceLayerSnapshot(PerformPadRenderer.TrackAction.SELECT,
                         true, COLOR, false, false, false)));
-        assertEquals(new RgbLigthState(0, 36, 84, true), PerformPadRenderer.birdsEye(true, false));
-        assertEquals(new RgbLigthState(0, 108, 127, true), PerformPadRenderer.birdsEye(true, true));
+        assertEquals(new RgbLightState(0, 36, 84, true), PerformPadRenderer.birdsEye(true, false));
+        assertEquals(new RgbLightState(0, 108, 127, true), PerformPadRenderer.birdsEye(true, true));
     }
 
     @Test
     void settingsLogoHasExplicitPadBounds() {
-        assertEquals(new RgbLigthState(127, 20, 0, true), PerformPadRenderer.settingsLogo(0));
-        assertEquals(RgbLigthState.OFF, PerformPadRenderer.settingsLogo(-1));
-        assertEquals(RgbLigthState.OFF, PerformPadRenderer.settingsLogo(64));
+        assertEquals(new RgbLightState(127, 20, 0, true), PerformPadRenderer.settingsLogo(0));
+        assertEquals(RgbLightState.OFF, PerformPadRenderer.settingsLogo(-1));
+        assertEquals(RgbLightState.OFF, PerformPadRenderer.settingsLogo(64));
     }
 }

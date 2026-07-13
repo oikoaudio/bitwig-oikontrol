@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +22,7 @@ class ChordStepControllerTest {
                 () -> true,
                 () -> events.add("resync"),
                 failure -> events.add("failure:" + failure.title()));
-        clipController.refresh(SelectedClipSlotState.fromValues(2, true, RgbLigthState.GRAY_2));
+        clipController.refresh(SelectedClipSlotState.fromValues(2, true, RgbLightState.GRAY_2));
         final ChordStepController mode = new ChordStepController(
                 new ChordStepEditControls((title, detail) -> events.add(title + ":" + detail), () -> events.add("clear")),
                 clipController,
@@ -30,7 +30,7 @@ class ChordStepControllerTest {
                         (task, delayTicks) -> events.add("schedule:" + delayTicks),
                         null,
                         () -> 0,
-                        () -> RgbLigthState.GRAY_1,
+                        () -> RgbLightState.GRAY_1,
                         clipController,
                         () -> events.add("clear-cache"),
                         () -> {},

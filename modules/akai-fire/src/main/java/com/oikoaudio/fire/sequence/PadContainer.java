@@ -4,7 +4,7 @@ import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.display.ParameterDisplayBinding;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extensions.framework.Layer;
@@ -16,22 +16,22 @@ class PadContainer {
 
     private int lastKnobValue = 0;
 
-    private static final RgbLigthState TR_RED = new RgbLigthState(70, 0, 0, true);
-    private static final RgbLigthState TR_ORANGE = new RgbLigthState(90, 15, 0, true);
-    private static final RgbLigthState TR_YELLOW = new RgbLigthState(110, 55, 0, true);
-    private static final RgbLigthState TR_WHITE = new RgbLigthState(80, 80, 80, true);
+    private static final RgbLightState TR_RED = new RgbLightState(70, 0, 0, true);
+    private static final RgbLightState TR_ORANGE = new RgbLightState(90, 15, 0, true);
+    private static final RgbLightState TR_YELLOW = new RgbLightState(110, 55, 0, true);
+    private static final RgbLightState TR_WHITE = new RgbLightState(80, 80, 80, true);
 
-    private static final RgbLigthState[] fixedPadColorTable = {TR_RED, TR_RED, TR_RED, TR_RED, //
+    private static final RgbLightState[] fixedPadColorTable = {TR_RED, TR_RED, TR_RED, TR_RED, //
             TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_YELLOW, TR_YELLOW, TR_YELLOW, TR_YELLOW, //
             TR_WHITE, TR_WHITE, TR_WHITE, TR_WHITE};
 
     private final DrumPadHandler padHandler;
 
-    private RgbLigthState padColor;
-    private RgbLigthState bitwigPadColor = RgbLigthState.OFF;
+    private RgbLightState padColor;
+    private RgbLightState bitwigPadColor = RgbLightState.OFF;
 
-    private final RgbLigthState muteColor = ColorLookup.getColor(DawColor.LIGHT_BROWN);
-    private final RgbLigthState soloColor = ColorLookup.getColor(DawColor.BLUISH_GREEN);
+    private final RgbLightState muteColor = ColorLookup.getColor(DawColor.LIGHT_BROWN);
+    private final RgbLightState soloColor = ColorLookup.getColor(DawColor.BLUISH_GREEN);
 
     final DrumPad pad;
     final int index;
@@ -150,25 +150,25 @@ class PadContainer {
         layer.addBinding(macro8Binding);
     }
 
-    public RgbLigthState getPadColor() {
+    public RgbLightState getPadColor() {
         return padColor;
     }
 
-    public RgbLigthState getBitwigPadColor() {
+    public RgbLightState getBitwigPadColor() {
         return bitwigPadColor;
     }
 
-    RgbLigthState effectivePadColor() {
+    RgbLightState effectivePadColor() {
         return bitwigPadColor != null ? bitwigPadColor : padHandler.trackColor();
     }
 
-    private RgbLigthState explicitPadColorOrNull() {
+    private RgbLightState explicitPadColorOrNull() {
         final Color color = pad.color().get();
         if (color == null || color.getAlpha255() == 0) {
             return null;
         }
-        final RgbLigthState light = ColorLookup.getColor(color);
-        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
+        final RgbLightState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLightState.OFF) ? null : light;
     }
 
     public int getIndex() {
@@ -183,11 +183,11 @@ class PadContainer {
         }
     }
 
-    public RgbLigthState mutingColors() {
+    public RgbLightState mutingColors() {
         if (!exists) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = effectivePadColor();
+        final RgbLightState base = effectivePadColor();
         if (pad.mute().get()) {
 //            return playing.returnTrueFalse(muteColor.getDimmed(), muteColor.getVeryDimmed());
             return playing.returnTrueFalse(base.getDimmed(), base.getVeryDimmed());
@@ -196,11 +196,11 @@ class PadContainer {
         return playing.returnTrueFalse(base.getBrightest(), base);
     }
 
-    public RgbLigthState soloingColors() {
+    public RgbLightState soloingColors() {
         if (!exists) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = effectivePadColor();
+        final RgbLightState base = effectivePadColor();
         if (pad.solo().get()) {
 //            return playing.returnTrueFalse(soloColor.getBrightest(), soloColor);
             return playing.returnTrueFalse(base.getBrightest(), base);
@@ -213,11 +213,11 @@ class PadContainer {
         return pad.name().get();
     }
 
-    public RgbLigthState getColor() {
+    public RgbLightState getColor() {
         if (!exists) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = effectivePadColor();
+        final RgbLightState base = effectivePadColor();
         if (selected) {
             return playing.returnTrueFalse(base.getBrightest(), base.getBrightend());
         }

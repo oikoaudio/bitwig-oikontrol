@@ -5,7 +5,7 @@ import java.util.Objects;
 import com.bitwig.extension.controller.api.HardwareLightVisualState;
 import com.bitwig.extension.controller.api.InternalHardwareLightState;
 
-public class RgbLigthState extends InternalHardwareLightState {
+public class RgbLightState extends InternalHardwareLightState {
 
 	private static final int ULTRA_DIM_FACTOR = 15;
 	private static final int DIM_FACTOR = 4;
@@ -13,43 +13,43 @@ public class RgbLigthState extends InternalHardwareLightState {
 	private static final int SOFT_DIM_DENOMINATOR = 5;
 	private static final int BRIGHT_FACTOR = 20;
 	private static final int MAX_BRIGHT_FACTOR = 40;
-	public static final RgbLigthState OFF = new RgbLigthState(0, 0, 0, true);
-	public static final RgbLigthState PURPLE = new RgbLigthState(80, 0, 80, true);
-	public static final RgbLigthState WHITE = new RgbLigthState(100, 100, 100, true);
-	public static final RgbLigthState GRAY_1 = new RgbLigthState(10, 10, 10, true);
-	public static final RgbLigthState GRAY_2 = new RgbLigthState(40, 40, 40, true);
+	public static final RgbLightState OFF = new RgbLightState(0, 0, 0, true);
+	public static final RgbLightState PURPLE = new RgbLightState(80, 0, 80, true);
+	public static final RgbLightState WHITE = new RgbLightState(100, 100, 100, true);
+	public static final RgbLightState GRAY_1 = new RgbLightState(10, 10, 10, true);
+	public static final RgbLightState GRAY_2 = new RgbLightState(40, 40, 40, true);
 
 	private final byte red;
 	private final byte green;
 	private final byte blue;
 
-	private RgbLigthState veryDimmed;
-	private RgbLigthState dimmed;
-	private RgbLigthState softDimmed;
-	private RgbLigthState brightend;
-	private RgbLigthState brightest;
+	private RgbLightState veryDimmed;
+	private RgbLightState dimmed;
+	private RgbLightState softDimmed;
+	private RgbLightState brightend;
+	private RgbLightState brightest;
 
-	public RgbLigthState(final int red, final int green, final int blue, final boolean variants) {
+	public RgbLightState(final int red, final int green, final int blue, final boolean variants) {
 		this((byte) red, (byte) green, (byte) blue, variants);
 	}
 
-	public RgbLigthState(final byte red, final byte green, final byte blue) {
+	public RgbLightState(final byte red, final byte green, final byte blue) {
 		this(red, green, blue, true);
 	}
 
-	private RgbLigthState(final byte red, final byte green, final byte blue, final boolean variants) {
+	private RgbLightState(final byte red, final byte green, final byte blue, final boolean variants) {
 		super();
 		this.red = red;
 		this.green = green;
 		this.blue = blue;
 		if (variants) {
-			softDimmed = new RgbLigthState(scaleSoftDim(red), scaleSoftDim(green), scaleSoftDim(blue), false);
-			dimmed = new RgbLigthState(red / DIM_FACTOR, green / DIM_FACTOR, blue / DIM_FACTOR, false);
-			veryDimmed = new RgbLigthState(red / ULTRA_DIM_FACTOR, green / ULTRA_DIM_FACTOR, blue / ULTRA_DIM_FACTOR,
+			softDimmed = new RgbLightState(scaleSoftDim(red), scaleSoftDim(green), scaleSoftDim(blue), false);
+			dimmed = new RgbLightState(red / DIM_FACTOR, green / DIM_FACTOR, blue / DIM_FACTOR, false);
+			veryDimmed = new RgbLightState(red / ULTRA_DIM_FACTOR, green / ULTRA_DIM_FACTOR, blue / ULTRA_DIM_FACTOR,
 					false);
-			brightend = new RgbLigthState(Math.min(red + BRIGHT_FACTOR, 127), Math.min(green + BRIGHT_FACTOR, 127),
+			brightend = new RgbLightState(Math.min(red + BRIGHT_FACTOR, 127), Math.min(green + BRIGHT_FACTOR, 127),
 					Math.min(blue + BRIGHT_FACTOR, 127), false);
-			brightest = new RgbLigthState(Math.min(red + MAX_BRIGHT_FACTOR, 127),
+			brightest = new RgbLightState(Math.min(red + MAX_BRIGHT_FACTOR, 127),
 					Math.min(green + MAX_BRIGHT_FACTOR, 127), Math.min(blue + MAX_BRIGHT_FACTOR, 127), false);
 		}
 	}
@@ -59,23 +59,23 @@ public class RgbLigthState extends InternalHardwareLightState {
 		return null;
 	}
 
-	public RgbLigthState getVeryDimmed() {
+	public RgbLightState getVeryDimmed() {
 		return veryDimmed != null ? veryDimmed : this;
 	}
 
-	public RgbLigthState getDimmed() {
+	public RgbLightState getDimmed() {
 		return dimmed != null ? dimmed : this;
 	}
 
-	public RgbLigthState getSoftDimmed() {
+	public RgbLightState getSoftDimmed() {
 		return softDimmed != null ? softDimmed : this;
 	}
 
-	public RgbLigthState getBrightend() {
+	public RgbLightState getBrightend() {
 		return brightend != null ? brightend : this;
 	}
 
-	public RgbLigthState getBrightest() {
+	public RgbLightState getBrightest() {
 		return brightest != null ? brightest : this;
 	}
 
@@ -95,7 +95,7 @@ public class RgbLigthState extends InternalHardwareLightState {
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		final RgbLigthState other = (RgbLigthState) obj;
+		final RgbLightState other = (RgbLightState) obj;
 		return blue == other.blue && green == other.green && red == other.red;
 	}
 
