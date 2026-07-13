@@ -4,6 +4,11 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Refactored Akai Fire Chord Step around direct responsibility owners, workflow-level regression scenarios,
+  concrete hardware/main-encoder boundaries, and explicit acyclic encoder-layer initialization across Drum XOX,
+  Melodic Step, Chord Step, and Nested Rhythm; controller mappings and musical behavior are unchanged.
+- Fixed main-encoder role switching after active Note Repeat and prevented Nested Rhythm startup from querying an
+  encoder layout through a partially initialized mode.
 - Akai Fire live Note now shows played pad notes/chords on the OLED, with chord detection adapted from Wim van den Borre's BitX.
 - Akai Fire live Note now maps `MUTE_4` to Hold, latching only the pad notes/chords already down when Hold turns on; held pads blink until pressed again or Hold is turned off.
 - Launch Control XL factory modes now use an eight-track factory bank again and explicitly own Bitwig's controller feedback box, so the red box matches the eight faders/knob columns; Track Left/Right pages by eight tracks and selects the first strip after paging while still honoring the `Show deactivated tracks` preference.
