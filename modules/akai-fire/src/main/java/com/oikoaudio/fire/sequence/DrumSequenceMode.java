@@ -19,6 +19,7 @@ import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.utils.PatternButtons;
 import com.oikoaudio.fire.values.StepViewPosition;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqClipRowHost {
@@ -34,6 +35,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
+    private static final int OBSERVED_FINE_STEP_CAPACITY = 16 * 8 * 2 * 2;
     private static final int METER_REFRESH_TICKS = 1;
 
     private final OledDisplay oled;
@@ -45,6 +47,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final Layer soloLayer;
     private final StepSequencerEncoderLayer encoderLayer;
     private final EuclidState euclidState = new EuclidState();
+    private final NoteVariationAmounts noteVariationAmounts;
+    private final ObservedNoteVariationAdapter noteVariationAdapter =
+            new ObservedNoteVariationAdapter(OBSERVED_FINE_STEP_CAPACITY);
+    private final Set<NoteStepAccess> activeVariationTouches = EnumSet.noneOf(NoteStepAccess.class);
 
     private final CursorTrack cursorTrack;
     private final ClipLauncherSlotBank clipSlotBank;
@@ -115,6 +121,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         super(driver.getLayers(), "DRUM_SEQUENCE_LAYER");
         this.driver = driver;
         this.noteRepeatHandler = noteRepeatHandler;
+        noteVariationAmounts = driver.getNoteVariationAmounts();
         host = driver.getHost();
         oled = driver.getOled();
         app = host.createApplication();
@@ -132,9 +139,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         cursorTrack.isPinned().markInterested();
         clipSlotBank = cursorTrack.clipLauncherSlotBank();
         cursorClip = cursorTrack.createLauncherCursorClip("SQClip", "SQClip", 32, 1);
-        bigCursorClip = host.createLauncherCursorClip(16 * 8 * 2 * 2, 128);
+        bigCursorClip = host.createLauncherCursorClip(OBSERVED_FINE_STEP_CAPACITY, 128);
         bigCursorClip.setStepSize(FINE_STEP_SIZE);
         bigCursorClip.addStepDataObserver(this::observingNotes);
+        bigCursorClip.addNoteStepObserver(noteVariationAdapter::handleObservedNote);
         bigCursorClip.scrollToKey(0);
 
         cursorClip.addNoteStepObserver(this::handleNoteStep);
@@ -1981,6 +1989,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 final var action =
                         (java.util.function.IntConsumer)
                                 inc -> {
+                                    if (handleNoteVariationTurn(accessor, inc)) {
+                                        return;
+                                    }
                                     adjuster.adjust(handler, inc);
                                 };
                 if (accessor.accelerationProfile()
@@ -1995,14 +2006,18 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 }
                 encoder.bindTouched(
                         layer,
-                        touched ->
-                                handleUser1Touch(
-                                        handler,
-                                        touched,
-                                        slotIndex,
-                                        accessor,
-                                        showDefault,
-                                        resetDefault));
+                        touched -> {
+                            if (handleNoteVariationTouch(accessor, touched)) {
+                                return;
+                            }
+                            handleUser1Touch(
+                                    handler,
+                                    touched,
+                                    slotIndex,
+                                    accessor,
+                                    showDefault,
+                                    resetDefault);
+                        });
             }
         };
     }
@@ -2010,6 +2025,84 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     @Override
     public EncoderBankLayout getEncoderBankLayout() {
         return encoderBankLayout;
+    }
+
+    @Override
+    public boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
+        if (!driver.isGlobalShiftHeld() || !driver.isGlobalAltHeld() || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final Optional<NoteVariationParameter> parameter = NoteVariationParameter.from(access);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        final double variationAmount = noteVariationAmounts.adjust(parameter.get(), amount * 0.05);
+        oled.valueInfo(
+                parameter.get().displayName() + " Rand",
+                "%d%%".formatted(Math.round(variationAmount * 100.0)));
+        return true;
+    }
+
+    @Override
+    public boolean handleNoteVariationTouch(final NoteStepAccess access, final boolean touched) {
+        if (!touched && activeVariationTouches.remove(access)) {
+            oled.clearScreenDelayed();
+            return true;
+        }
+        if (!touched
+                || !driver.isGlobalShiftHeld()
+                || !driver.isGlobalAltHeld()
+                || driver.isKnobModeHeld()) {
+            return false;
+        }
+        final Optional<NoteVariationParameter> parameter = NoteVariationParameter.from(access);
+        if (parameter.isEmpty()) {
+            return false;
+        }
+        activeVariationTouches.add(access);
+        applyNoteVariation(parameter.get());
+        return true;
+    }
+
+    private void applyNoteVariation(final NoteVariationParameter parameter) {
+        if (!ensureSelectedClip()) {
+            return;
+        }
+        final ObservedNoteVariationAdapter.Result result =
+                noteVariationAdapter.apply(
+                        parameter,
+                        noteVariationDefault(parameter),
+                        noteVariationAmounts.amount(parameter),
+                        ThreadLocalRandom.current().nextLong(),
+                        loopFineSteps());
+        switch (result.status()) {
+            case APPLIED -> oled.valueInfo("Randomized", result.noteCount() + " notes");
+            case RESET ->
+                    oled.valueInfo(
+                            "Reset " + parameter.displayName(), result.noteCount() + " notes");
+            case EMPTY -> oled.valueInfo("No notes", "Active loop");
+            case TOO_LARGE -> oled.valueInfo("Clip too large", "No changes");
+        }
+    }
+
+    private double noteVariationDefault(final NoteVariationParameter parameter) {
+        return switch (parameter) {
+            case VELOCITY -> defaultVelocity / 127.0;
+            case PRESSURE -> defaultPressure;
+            case TIMBRE -> defaultTimbre;
+            case PITCH, PAN -> 0.0;
+            case GAIN -> 0.5;
+            case CHANCE -> 1.0;
+            case VELOCITY_SPREAD -> 0.0;
+        };
+    }
+
+    private int loopFineSteps() {
+        return fineStepsForLoopLength(cursorClip.getLoopLength().get());
+    }
+
+    static int fineStepsForLoopLength(final double loopLength) {
+        return Math.max(0, (int) Math.ceil(loopLength / FINE_STEP_SIZE - 1.0e-9));
     }
 
     private void handleUser2Touch(
