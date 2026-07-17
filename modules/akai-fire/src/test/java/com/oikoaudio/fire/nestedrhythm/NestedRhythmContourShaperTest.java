@@ -1,10 +1,10 @@
 package com.oikoaudio.fire.nestedrhythm;
 
-import com.oikoaudio.fire.sequence.RecurrencePattern;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.oikoaudio.fire.sequence.RecurrencePattern;
+import org.junit.jupiter.api.Test;
 
 class NestedRhythmContourShaperTest {
 
@@ -22,10 +22,12 @@ class NestedRhythmContourShaperTest {
 
     @Test
     void fullPlayChanceKeepsBaselineForAllRoles() {
-        final double anchor = NestedRhythmContourShaper.shapeChance(
-                1, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 0.8, 1.0, 0);
-        final double interior = NestedRhythmContourShaper.shapeChance(
-                1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 1.0, 0);
+        final double anchor =
+                NestedRhythmContourShaper.shapeChance(
+                        1, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 0.8, 1.0, 0);
+        final double interior =
+                NestedRhythmContourShaper.shapeChance(
+                        1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 1.0, 0);
 
         assertEquals(0.8, anchor);
         assertEquals(0.8, interior);
@@ -33,36 +35,44 @@ class NestedRhythmContourShaperTest {
 
     @Test
     void loweredPlayChanceAttenuatesInteriorHitsMoreThanAnchors() {
-        final double anchor = NestedRhythmContourShaper.shapeChance(
-                1, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 0.8, 0.0, 0);
-        final double interior = NestedRhythmContourShaper.shapeChance(
-                1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
+        final double anchor =
+                NestedRhythmContourShaper.shapeChance(
+                        1, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 0.8, 0.0, 0);
+        final double interior =
+                NestedRhythmContourShaper.shapeChance(
+                        1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
 
         assertTrue(interior < anchor);
     }
 
     @Test
     void loweredPlayChancePreservesContourPriorityWithinRole() {
-        final double strong = NestedRhythmContourShaper.shapeChance(
-                0, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
-        final double weak = NestedRhythmContourShaper.shapeChance(
-                1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
+        final double strong =
+                NestedRhythmContourShaper.shapeChance(
+                        0, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
+        final double weak =
+                NestedRhythmContourShaper.shapeChance(
+                        1, NestedRhythmPattern.Role.RATCHET_INTERIOR, 0.8, 0.0, 0);
 
         assertTrue(strong > weak);
     }
 
     @Test
     void recurrenceDefaultsCanBeDisabled() {
-        assertEquals(RecurrencePattern.of(0, 0),
-                NestedRhythmContourShaper.generatedRecurrence(0, NestedRhythmPattern.Role.TUPLET_INTERIOR, 0.0));
+        assertEquals(
+                RecurrencePattern.of(0, 0),
+                NestedRhythmContourShaper.generatedRecurrence(
+                        0, NestedRhythmPattern.Role.TUPLET_INTERIOR, 0.0));
     }
 
     @Test
     void recurrenceDefaultsPreferDropoutsForWeakerRoles() {
-        final RecurrencePattern anchor = NestedRhythmContourShaper.generatedRecurrence(
-                0, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 1.0);
-        final RecurrencePattern interior = NestedRhythmContourShaper.generatedRecurrence(
-                0, NestedRhythmPattern.Role.RATCHET_INTERIOR, 1.0);
+        final RecurrencePattern anchor =
+                NestedRhythmContourShaper.generatedRecurrence(
+                        0, NestedRhythmPattern.Role.PRIMARY_ANCHOR, 1.0);
+        final RecurrencePattern interior =
+                NestedRhythmContourShaper.generatedRecurrence(
+                        0, NestedRhythmPattern.Role.RATCHET_INTERIOR, 1.0);
 
         assertTrue(interior.length() >= anchor.length());
         assertTrue(Integer.bitCount(interior.mask()) <= Integer.bitCount(anchor.mask()));

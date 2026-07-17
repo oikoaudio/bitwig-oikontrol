@@ -82,8 +82,10 @@ public final class TopLevelModeState {
     }
 
     public boolean shouldIgnoreTopLevelStepPress(final boolean shiftHeld, final boolean altHeld) {
-        return (activeMode == Mode.DRUM || activeMode == Mode.NOTE_PLAY
-                || activeMode == Mode.CHORD_STEP || activeMode == Mode.PERFORM)
+        return (activeMode == Mode.DRUM
+                        || activeMode == Mode.NOTE_PLAY
+                        || activeMode == Mode.CHORD_STEP
+                        || activeMode == Mode.PERFORM)
                 && (shiftHeld || altHeld);
     }
 
@@ -92,15 +94,14 @@ public final class TopLevelModeState {
     }
 
     public void enterMelodicStepMode() {
-        previousNonStepMode = isStepFamily(activeMode)
-                ? Mode.NOTE_PLAY
-                : activeMode;
+        previousNonStepMode = isStepFamily(activeMode) ? Mode.NOTE_PLAY : activeMode;
         rememberedStepMode = Mode.MELODIC_STEP;
         activeMode = Mode.MELODIC_STEP;
     }
 
     public Mode exitMelodicStepMode() {
-        activeMode = previousNonStepMode == Mode.MELODIC_STEP ? Mode.NOTE_PLAY : previousNonStepMode;
+        activeMode =
+                previousNonStepMode == Mode.MELODIC_STEP ? Mode.NOTE_PLAY : previousNonStepMode;
         return activeMode;
     }
 

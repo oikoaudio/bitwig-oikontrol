@@ -1,9 +1,9 @@
 package com.oikoaudio.fire.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TrackSelectIndicatorLightsTest {
     @Test

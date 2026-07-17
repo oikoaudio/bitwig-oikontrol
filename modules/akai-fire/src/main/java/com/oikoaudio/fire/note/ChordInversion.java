@@ -3,12 +3,11 @@ package com.oikoaudio.fire.note;
 import java.util.Arrays;
 
 /**
- * Pure chord inversion helper for chord-step editing.
- * Rotates the lowest note up an octave or the highest note down an octave while preserving sorted order.
+ * Pure chord inversion helper for chord-step editing. Rotates the lowest note up an octave or the
+ * highest note down an octave while preserving sorted order.
  */
 public final class ChordInversion {
-    private ChordInversion() {
-    }
+    private ChordInversion() {}
 
     public static int[] rotate(final int[] notes, final int direction) {
         final int[] sorted = Arrays.stream(notes).sorted().toArray();

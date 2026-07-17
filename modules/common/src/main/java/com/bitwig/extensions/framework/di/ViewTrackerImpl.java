@@ -19,7 +19,8 @@ public class ViewTrackerImpl implements ViewTracker {
     }
 
     @Override
-    public TrackerRegistration registerViewPositionListener(final String origin, final ViewPositionListener listener) {
+    public TrackerRegistration registerViewPositionListener(
+            final String origin, final ViewPositionListener listener) {
         listeners.remove(origin);
         listeners.add(origin);
         listenerMap.put(origin, listener);
@@ -28,5 +29,4 @@ public class ViewTrackerImpl implements ViewTracker {
             listenerMap.remove(origin);
         };
     }
-
 }

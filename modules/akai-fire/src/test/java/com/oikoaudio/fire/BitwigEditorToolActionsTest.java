@@ -1,15 +1,15 @@
 package com.oikoaudio.fire;
 
-import com.bitwig.extension.controller.api.Action;
-import com.bitwig.extension.controller.api.Application;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.Action;
+import com.bitwig.extension.controller.api.Application;
+import org.junit.jupiter.api.Test;
 
 class BitwigEditorToolActionsTest {
     @Test
@@ -27,7 +27,9 @@ class BitwigEditorToolActionsTest {
         final Action action = mock(Action.class);
         when(application.getAction("move_time_selection_to_first_item")).thenReturn(action);
 
-        assertSame(action, BitwigEditorToolActions.resolve(application, "Move Time Selection to First Item"));
+        assertSame(
+                action,
+                BitwigEditorToolActions.resolve(application, "Move Time Selection to First Item"));
     }
 
     @Test

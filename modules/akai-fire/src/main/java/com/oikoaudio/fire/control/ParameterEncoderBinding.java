@@ -2,12 +2,10 @@ package com.oikoaudio.fire.control;
 
 import com.bitwig.extension.controller.api.Parameter;
 import com.bitwig.extensions.framework.Layer;
-
 import java.util.function.BooleanSupplier;
 
 public final class ParameterEncoderBinding {
-    private ParameterEncoderBinding() {
-    }
+    private ParameterEncoderBinding() {}
 
     public static void markInterested(final Parameter parameter) {
         parameter.exists().markInterested();
@@ -18,97 +16,146 @@ public final class ParameterEncoderBinding {
         parameter.getOrigin().markInterested();
     }
 
-    public static void bind(final TouchEncoder encoder,
-                            final Layer layer,
-                            final int encoderIndex,
-                            final Parameter parameter,
-                            final String fallbackLabel,
-                            final BooleanSupplier fineSupplier,
-                            final ResetPolicy resetPolicy,
-                            final ValueDisplay display,
-                            final Runnable clearDisplay) {
-        bind(encoder, layer, encoderIndex, parameter, fallbackLabel, fineSupplier, resetPolicy,
-                ExplicitResetControl.none(), display, clearDisplay);
+    public static void bind(
+            final TouchEncoder encoder,
+            final Layer layer,
+            final int encoderIndex,
+            final Parameter parameter,
+            final String fallbackLabel,
+            final BooleanSupplier fineSupplier,
+            final ResetPolicy resetPolicy,
+            final ValueDisplay display,
+            final Runnable clearDisplay) {
+        bind(
+                encoder,
+                layer,
+                encoderIndex,
+                parameter,
+                fallbackLabel,
+                fineSupplier,
+                resetPolicy,
+                ExplicitResetControl.none(),
+                display,
+                clearDisplay);
     }
 
-    public static void bind(final TouchEncoder encoder,
-                            final Layer layer,
-                            final int encoderIndex,
-                            final Parameter parameter,
-                            final String fallbackLabel,
-                            final BooleanSupplier fineSupplier,
-                            final ResetPolicy resetPolicy,
-                            final ExplicitResetControl explicitReset,
-                            final ValueDisplay display,
-                            final Runnable clearDisplay) {
-        bind(encoder, layer, encoderIndex, parameter, fallbackLabel, fineSupplier, resetPolicy, explicitReset,
-                EncoderValueProfile.LARGE_RANGE, display, clearDisplay);
+    public static void bind(
+            final TouchEncoder encoder,
+            final Layer layer,
+            final int encoderIndex,
+            final Parameter parameter,
+            final String fallbackLabel,
+            final BooleanSupplier fineSupplier,
+            final ResetPolicy resetPolicy,
+            final ExplicitResetControl explicitReset,
+            final ValueDisplay display,
+            final Runnable clearDisplay) {
+        bind(
+                encoder,
+                layer,
+                encoderIndex,
+                parameter,
+                fallbackLabel,
+                fineSupplier,
+                resetPolicy,
+                explicitReset,
+                EncoderValueProfile.LARGE_RANGE,
+                display,
+                clearDisplay);
     }
 
-    public static void bind(final TouchEncoder encoder,
-                            final Layer layer,
-                            final int encoderIndex,
-                            final Parameter parameter,
-                            final String fallbackLabel,
-                            final BooleanSupplier fineSupplier,
-                            final ResetPolicy resetPolicy,
-                            final ExplicitResetControl explicitReset,
-                            final EncoderValueProfile profile,
-                            final ValueDisplay display,
-                            final Runnable clearDisplay) {
+    public static void bind(
+            final TouchEncoder encoder,
+            final Layer layer,
+            final int encoderIndex,
+            final Parameter parameter,
+            final String fallbackLabel,
+            final BooleanSupplier fineSupplier,
+            final ResetPolicy resetPolicy,
+            final ExplicitResetControl explicitReset,
+            final EncoderValueProfile profile,
+            final ValueDisplay display,
+            final Runnable clearDisplay) {
         markInterested(parameter);
-        encoder.bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, inc -> {
-            if (!isMapped(parameter)) {
-                return;
-            }
-            adjustParameter(parameter, fineSupplier.getAsBoolean(), inc, profile);
-            showValue(parameter, fallbackLabel, display);
-        });
-        encoder.bindTouched(layer, touched -> {
-            if (touched) {
-                handleTouchStart(parameter, fallbackLabel, resetPolicy, explicitReset, display);
-            } else {
-                clearDisplay.run();
-            }
-        });
+        encoder.bindContinuousEncoder(
+                layer,
+                fineSupplier,
+                ContinuousEncoderScaler.Profile.STRONG,
+                inc -> {
+                    if (!isMapped(parameter)) {
+                        return;
+                    }
+                    adjustParameter(parameter, fineSupplier.getAsBoolean(), inc, profile);
+                    showValue(parameter, fallbackLabel, display);
+                });
+        encoder.bindTouched(
+                layer,
+                touched -> {
+                    if (touched) {
+                        handleTouchStart(
+                                parameter, fallbackLabel, resetPolicy, explicitReset, display);
+                    } else {
+                        clearDisplay.run();
+                    }
+                });
     }
 
-    public static void bind(final TouchEncoder encoder,
-                            final Layer layer,
-                            final int encoderIndex,
-                            final Parameter parameter,
-                            final String fallbackLabel,
-                            final BooleanSupplier fineSupplier,
-                            final ResetPolicy resetPolicy,
-                            final ExplicitResetControl explicitReset,
-                            final EncoderValueProfile profile,
-                            final boolean biPolar,
-                            final ValueBarDisplay display,
-                            final Runnable clearDisplay) {
+    public static void bind(
+            final TouchEncoder encoder,
+            final Layer layer,
+            final int encoderIndex,
+            final Parameter parameter,
+            final String fallbackLabel,
+            final BooleanSupplier fineSupplier,
+            final ResetPolicy resetPolicy,
+            final ExplicitResetControl explicitReset,
+            final EncoderValueProfile profile,
+            final boolean biPolar,
+            final ValueBarDisplay display,
+            final Runnable clearDisplay) {
         markInterested(parameter);
-        encoder.bindContinuousEncoder(layer, fineSupplier, ContinuousEncoderScaler.Profile.STRONG, inc -> {
-            if (!isMapped(parameter)) {
-                return;
-            }
-            adjustParameter(parameter, fineSupplier.getAsBoolean(), inc, profile);
-            showValueWithBar(parameter, fallbackLabel, display, biPolar);
-        });
-        encoder.bindTouched(layer, touched -> {
-            if (touched) {
-                handleTouchStartWithBar(parameter, fallbackLabel, resetPolicy, explicitReset, display, biPolar);
-            } else {
-                clearDisplay.run();
-            }
-        });
+        encoder.bindContinuousEncoder(
+                layer,
+                fineSupplier,
+                ContinuousEncoderScaler.Profile.STRONG,
+                inc -> {
+                    if (!isMapped(parameter)) {
+                        return;
+                    }
+                    adjustParameter(parameter, fineSupplier.getAsBoolean(), inc, profile);
+                    showValueWithBar(parameter, fallbackLabel, display, biPolar);
+                });
+        encoder.bindTouched(
+                layer,
+                touched -> {
+                    if (touched) {
+                        handleTouchStartWithBar(
+                                parameter,
+                                fallbackLabel,
+                                resetPolicy,
+                                explicitReset,
+                                display,
+                                biPolar);
+                    } else {
+                        clearDisplay.run();
+                    }
+                });
     }
 
-    public static void showValue(final Parameter parameter, final String fallbackLabel, final ValueDisplay display) {
+    public static void showValue(
+            final Parameter parameter, final String fallbackLabel, final ValueDisplay display) {
         display.show(labelFor(parameter, fallbackLabel), parameter.displayedValue().get());
     }
 
-    public static void showValueWithBar(final Parameter parameter, final String fallbackLabel,
-                                        final ValueBarDisplay display, final boolean biPolar) {
-        display.show(labelFor(parameter, fallbackLabel), parameter.displayedValue().get(), parameter.value().get(),
+    public static void showValueWithBar(
+            final Parameter parameter,
+            final String fallbackLabel,
+            final ValueBarDisplay display,
+            final boolean biPolar) {
+        display.show(
+                labelFor(parameter, fallbackLabel),
+                parameter.displayedValue().get(),
+                parameter.value().get(),
                 biPolar);
     }
 
@@ -116,12 +163,16 @@ public final class ParameterEncoderBinding {
         return parameter != null && parameter.exists().get();
     }
 
-    public static void adjustParameter(final Parameter parameter, final boolean fine, final int inc) {
+    public static void adjustParameter(
+            final Parameter parameter, final boolean fine, final int inc) {
         adjustParameter(parameter, fine, inc, EncoderValueProfile.LARGE_RANGE);
     }
 
-    public static void adjustParameter(final Parameter parameter, final boolean fine, final int inc,
-                                       final EncoderValueProfile profile) {
+    public static void adjustParameter(
+            final Parameter parameter,
+            final boolean fine,
+            final int inc,
+            final EncoderValueProfile profile) {
         profile.adjustParameter(parameter, fine, inc);
     }
 
@@ -130,13 +181,18 @@ public final class ParameterEncoderBinding {
         return name == null || name.isBlank() ? fallbackLabel : name;
     }
 
-    private static void handleTouchStart(final Parameter parameter,
-                                         final String fallbackLabel,
-                                         final ResetPolicy resetPolicy,
-                                         final ExplicitResetControl explicitReset,
-                                         final ValueDisplay display) {
-        if (handleExplicitResetTouch(true, explicitReset, isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
-                fallbackLabel, isMapped(parameter) ? "No reset" : "Unmapped",
+    private static void handleTouchStart(
+            final Parameter parameter,
+            final String fallbackLabel,
+            final ResetPolicy resetPolicy,
+            final ExplicitResetControl explicitReset,
+            final ValueDisplay display) {
+        if (handleExplicitResetTouch(
+                true,
+                explicitReset,
+                isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
+                fallbackLabel,
+                isMapped(parameter) ? "No reset" : "Unmapped",
                 () -> resetPolicy.reset(parameter),
                 () -> showValue(parameter, fallbackLabel, display),
                 display)) {
@@ -149,14 +205,19 @@ public final class ParameterEncoderBinding {
         showValue(parameter, fallbackLabel, display);
     }
 
-    private static void handleTouchStartWithBar(final Parameter parameter,
-                                                final String fallbackLabel,
-                                                final ResetPolicy resetPolicy,
-                                                final ExplicitResetControl explicitReset,
-                                                final ValueBarDisplay display,
-                                                final boolean biPolar) {
-        if (handleExplicitResetTouch(true, explicitReset, isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
-                fallbackLabel, isMapped(parameter) ? "No reset" : "Unmapped",
+    private static void handleTouchStartWithBar(
+            final Parameter parameter,
+            final String fallbackLabel,
+            final ResetPolicy resetPolicy,
+            final ExplicitResetControl explicitReset,
+            final ValueBarDisplay display,
+            final boolean biPolar) {
+        if (handleExplicitResetTouch(
+                true,
+                explicitReset,
+                isMapped(parameter) && resetPolicy != ResetPolicy.NONE,
+                fallbackLabel,
+                isMapped(parameter) ? "No reset" : "Unmapped",
                 () -> resetPolicy.reset(parameter),
                 () -> showValueWithBar(parameter, fallbackLabel, display, biPolar),
                 (title, value) -> display.show(title, value, 0.0, false))) {
@@ -169,14 +230,15 @@ public final class ParameterEncoderBinding {
         showValueWithBar(parameter, fallbackLabel, display, biPolar);
     }
 
-    public static boolean handleExplicitResetTouch(final boolean touched,
-                                                   final ExplicitResetControl explicitReset,
-                                                   final boolean resettable,
-                                                   final String fallbackLabel,
-                                                   final String unavailableDetail,
-                                                   final Runnable resetAction,
-                                                   final Runnable showAction,
-                                                   final ValueDisplay display) {
+    public static boolean handleExplicitResetTouch(
+            final boolean touched,
+            final ExplicitResetControl explicitReset,
+            final boolean resettable,
+            final String fallbackLabel,
+            final String unavailableDetail,
+            final Runnable resetAction,
+            final Runnable showAction,
+            final ValueDisplay display) {
         if (!touched || !explicitReset.isHeld()) {
             return false;
         }
@@ -193,8 +255,7 @@ public final class ParameterEncoderBinding {
     public enum ResetPolicy {
         NONE {
             @Override
-            public void reset(final Parameter parameter) {
-            }
+            public void reset(final Parameter parameter) {}
         },
         PARAMETER_DEFAULT {
             @Override
@@ -219,8 +280,7 @@ public final class ParameterEncoderBinding {
                 }
 
                 @Override
-                public void consume() {
-                }
+                public void consume() {}
             };
         }
     }

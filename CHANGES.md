@@ -4,6 +4,39 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Note Repeat divisions are now ordered monotonically from fastest to slowest, interleaving triplet and straight rates while retaining `1/16` as the default.
+- In live Note, Harmonic, and Drum Pads input, hold `MUTE_3` and turn `SELECT` to adjust the remembered Note Repeat division without toggling repeat; an unmodified `MUTE_3` tap still toggles it.
+- Live Note and Harmonic pads now use per-note ownership, so overlapping pads play their combined note union and shared notes remain sounding until the last owning pad is released, including with Hold mode.
+- Harmonic input Mixer encoder 4 now selects Drop 2, Close, or Open voicings and safely retunes held pads; Pitch Gliss remains on Channel encoder 3.
+- Melo Gen now uses `SHIFT + Channel encoder 3` as a shared-scale shortcut, matching Poly Step's `SHIFT` scale and `ALT` root modifier grammar on its pitch-context encoder.
+- Rolling generator density now grows monotonically from four characteristic family hits per 16 steps at `0.00` to every step at `1.00`, while keeping the seeded family stable across density changes.
+- Acid generator density now spans the full displayed range, growing deterministically from a sparse metric backbone at `0.00` to the complete seeded rhythm skeleton at `1.00`.
+- Fugue now enters source-only clips with derived lines 2-4 off, protects pre-existing channel 2-4 notes from controller regeneration, and requires `PATTERN DOWN` to explicitly replace and claim those derived channels.
+- Added Baked Note Variation across Drum XOX, Poly Step, Melodic Step, Fugue, and Nested Rhythm: `SHIFT + ALT` adjusts and applies stable clip-wide per-note variation, zero amount resets to mode defaults, and a latched `ALT + KNOB MODE` User 1 page exposes Note Gain and Note Pan in compatible step modes.
+- Restored Melodic Step density generation and made ALT density thinning/filling follow the shared metric-indispensability ranking instead of clip scan order.
+- Shortened Poly Step's paged chord-family OLED labels so the complete page fraction remains visible in the large
+  value font.
+- Fixed Poly Step pad LEDs temporarily blanking during parameter edits while its fine-grid observation cache was
+  being repopulated.
+- Poly Step now assigns each finely nudged note or chord to exactly one nearest step pad, transfers that ownership
+  at the midpoint, and preserves long-note duration without lighting or clearing neighboring sustain steps.
+- Poly Step chord-set pads now support simultaneous multi-pad grips, combining and deduplicating the selected
+  chords' pitches for audition, step insertion, held-step assignment, and source-first pitch replacement.
+- Poly Step User 1 and User 2 encoders now edit session-local insertion defaults when no note is selected; touching
+  shows the current default, and `KNOB MODE + touch` restores its original value. New notes receive those velocity,
+  duration, probability, expression, velocity-spread, pitch-expression, and repeat defaults.
+- Poly Step Channel encoder 3 now shows the selected pitch/chord set and page prominently on touch and turn,
+  instead of rendering the current chord in the OLED center and relegating the set name to the encoder header.
+- Renamed the user-facing Chord Step workflow to Poly Step and added a source-first replacement gesture: hold one
+  or more source pitches/chords, then tap an occupied step to replace only its pitches while preserving timing,
+  duration, velocity, probability, expression, repeat, recurrence, occurrence, and other note conditions.
+- Fixed Drum XOX pad-pattern copy so destination steps preserve source velocity, duration, probability, and the
+  existing copied note-expression parameters instead of receiving fixed velocity and zero probability.
+- Refactored Akai Fire Chord Step around direct responsibility owners, workflow-level regression scenarios,
+  concrete hardware/main-encoder boundaries, and explicit acyclic encoder-layer initialization across Drum XOX,
+  Melodic Step, Chord Step, and Nested Rhythm; controller mappings and musical behavior are unchanged.
+- Fixed main-encoder role switching after active Note Repeat and prevented Nested Rhythm startup from querying an
+  encoder layout through a partially initialized mode.
 - Akai Fire live Note now shows played pad notes/chords on the OLED, with chord detection adapted from Wim van den Borre's BitX.
 - Akai Fire live Note now maps `MUTE_4` to Hold, latching only the pad notes/chords already down when Hold turns on; held pads blink until pressed again or Hold is turned off.
 - Launch Control XL factory modes now use an eight-track factory bank again and explicitly own Bitwig's controller feedback box, so the red box matches the eight faders/knob columns; Track Left/Right pages by eight tracks and selects the first strip after paging while still honoring the `Show deactivated tracks` preference.

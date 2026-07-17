@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class MelodicPatternAnalyzer {
-    private MelodicPatternAnalyzer() {
-    }
+    private MelodicPatternAnalyzer() {}
 
     public static Analysis analyze(final MelodicPattern pattern) {
         final List<Integer> anchors = new ArrayList<>();
@@ -26,6 +25,5 @@ public final class MelodicPatternAnalyzer {
         return new Analysis(activeSteps, anchors);
     }
 
-    public record Analysis(List<Integer> activeSteps, List<Integer> anchorSteps) {
-    }
+    public record Analysis(List<Integer> activeSteps, List<Integer> anchorSteps) {}
 }

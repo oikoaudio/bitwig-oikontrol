@@ -1,9 +1,9 @@
 package com.oikoaudio.fire;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.oikoaudio.fire.lights.BiColorLightState;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RemotePageNavigationTest {
 
@@ -24,15 +24,20 @@ class RemotePageNavigationTest {
 
     @Test
     void remotePageNavigationLightsShowAvailableDirection() {
-        assertEquals(BiColorLightState.OFF,
+        assertEquals(
+                BiColorLightState.OFF,
                 AkaiFireOikontrolExtension.remotePageNavigationLightState(0, 1, 1));
-        assertEquals(BiColorLightState.OFF,
+        assertEquals(
+                BiColorLightState.OFF,
                 AkaiFireOikontrolExtension.remotePageNavigationLightState(0, 4, -1));
-        assertEquals(BiColorLightState.AMBER_HALF,
+        assertEquals(
+                BiColorLightState.AMBER_HALF,
                 AkaiFireOikontrolExtension.remotePageNavigationLightState(0, 4, 1));
-        assertEquals(BiColorLightState.AMBER_HALF,
+        assertEquals(
+                BiColorLightState.AMBER_HALF,
                 AkaiFireOikontrolExtension.remotePageNavigationLightState(3, 4, -1));
-        assertEquals(BiColorLightState.OFF,
+        assertEquals(
+                BiColorLightState.OFF,
                 AkaiFireOikontrolExtension.remotePageNavigationLightState(3, 4, 1));
     }
 }

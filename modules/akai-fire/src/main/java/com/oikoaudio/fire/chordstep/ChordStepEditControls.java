@@ -6,7 +6,7 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 /**
  * Owns the chord-step edit button state used on the mute buttons while chord-step mode is active.
  */
-public final class ChordStepEditControls {
+final class ChordStepEditControls {
     private final BooleanValueObject selectHeld = new BooleanValueObject();
     private final BooleanValueObject fixedLengthHeld = new BooleanValueObject();
     private final BooleanValueObject copyHeld = new BooleanValueObject();

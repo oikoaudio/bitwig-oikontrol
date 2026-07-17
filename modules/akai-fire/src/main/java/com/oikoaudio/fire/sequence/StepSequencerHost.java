@@ -1,11 +1,10 @@
 package com.oikoaudio.fire.sequence;
 
-import java.util.List;
-
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.NoteOccurrence;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
+import java.util.List;
 
 public interface StepSequencerHost {
     boolean isSelectHeld();
@@ -36,7 +35,7 @@ public interface StepSequencerHost {
 
     void enterRecurrenceEdit(List<NoteStep> notes);
 
-    void updateRecurrencLength(int length);
+    void updateRecurrenceLength(int length);
 
     void registerModifiedSteps(List<NoteStep> notes);
 
@@ -66,6 +65,17 @@ public interface StepSequencerHost {
         return getEncoderBankLayout().bank(mode).footerLegend();
     }
 
-    default void handleEncoderModeChanged(final EncoderMode mode) {
+    default void handleEncoderModeChanged(final EncoderMode mode) {}
+
+    default boolean supportsSecondaryNoteExpressionPage() {
+        return false;
+    }
+
+    default boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
+        return false;
+    }
+
+    default boolean handleNoteVariationTouch(final NoteStepAccess access, final boolean touched) {
+        return false;
     }
 }

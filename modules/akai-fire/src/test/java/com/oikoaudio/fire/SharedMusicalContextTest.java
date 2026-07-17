@@ -1,17 +1,18 @@
 package com.oikoaudio.fire;
 
-import com.bitwig.extensions.framework.MusicalScaleLibrary;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import org.junit.jupiter.api.Test;
 
 class SharedMusicalContextTest {
 
     @Test
     void normalizesRootAndOctave() {
-        final SharedMusicalContext context = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
+        final SharedMusicalContext context =
+                new SharedMusicalContext(MusicalScaleLibrary.getInstance());
 
         context.setRootNote(-1);
         context.setOctave(99);
@@ -23,7 +24,8 @@ class SharedMusicalContextTest {
 
     @Test
     void adjustsScaleIndexWithinBounds() {
-        final SharedMusicalContext context = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
+        final SharedMusicalContext context =
+                new SharedMusicalContext(MusicalScaleLibrary.getInstance());
         context.setScaleIndex(1);
 
         assertTrue(context.adjustScaleIndex(1, -1));
@@ -36,7 +38,8 @@ class SharedMusicalContextTest {
 
     @Test
     void normalizesRemovedChromaticScaleToMajor() {
-        final SharedMusicalContext context = new SharedMusicalContext(MusicalScaleLibrary.getInstance());
+        final SharedMusicalContext context =
+                new SharedMusicalContext(MusicalScaleLibrary.getInstance());
 
         context.setScaleIndex(-1);
 

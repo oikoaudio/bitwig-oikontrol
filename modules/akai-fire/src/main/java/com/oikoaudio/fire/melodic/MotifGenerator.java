@@ -7,19 +7,19 @@ import java.util.Random;
 
 public final class MotifGenerator implements MelodicGenerator {
     private static final int[][] RHYTHM_CELLS = {
-            {0, 2, 3, 5},
-            {0, 3, 4, 6},
-            {1, 2, 4, 6},
-            {0, 2, 5, 6},
-            {1, 3, 5, 6}
+        {0, 2, 3, 5},
+        {0, 3, 4, 6},
+        {1, 2, 4, 6},
+        {0, 2, 5, 6},
+        {1, 3, 5, 6}
     };
 
     private static final int[][] MOTION_CELLS = {
-            {1, -1, 2},
-            {1, 1, -1},
-            {2, -1, -1},
-            {-1, 2, -1},
-            {1, -2, 1}
+        {1, -1, 2},
+        {1, 1, -1},
+        {2, -1, -1},
+        {-1, 2, -1},
+        {1, -2, 1}
     };
 
     private static final int[] START_DEGREES = {0, 2, 4};
@@ -36,15 +36,19 @@ public final class MotifGenerator implements MelodicGenerator {
     private int subtypeIndex = -1;
 
     @Override
-    public MelodicPattern generate(final MelodicPhraseContext context, final GenerateParameters parameters) {
-        final int loopSteps = Math.max(1, Math.min(MelodicPattern.MAX_STEPS, parameters.loopSteps()));
+    public MelodicPattern generate(
+            final MelodicPhraseContext context, final GenerateParameters parameters) {
+        final int loopSteps =
+                Math.max(1, Math.min(MelodicPattern.MAX_STEPS, parameters.loopSteps()));
         final Random random = new Random(parameters.seed());
         final int sectionLength = phraseSectionLength(loopSteps);
-        final int[] baseRhythm = projectPositions(RHYTHM_CELLS[random.nextInt(RHYTHM_CELLS.length)], sectionLength);
+        final int[] baseRhythm =
+                projectPositions(RHYTHM_CELLS[random.nextInt(RHYTHM_CELLS.length)], sectionLength);
         final int[] baseCell = buildBaseCell(baseRhythm.length, parameters.tension(), random);
-        final MotifFamily family = subtypeIndex < 0
-                ? MotifFamily.values()[random.nextInt(MotifFamily.values().length)]
-                : MotifFamily.values()[subtypeIndex];
+        final MotifFamily family =
+                subtypeIndex < 0
+                        ? MotifFamily.values()[random.nextInt(MotifFamily.values().length)]
+                        : MotifFamily.values()[subtypeIndex];
         lastFamilyLabel = familyLabel(family);
 
         final boolean[] active = new boolean[loopSteps];
@@ -59,11 +63,31 @@ public final class MotifGenerator implements MelodicGenerator {
                 break;
             }
             final int available = Math.min(sectionLength, loopSteps - start);
-            final int[] positions = varyRhythm(baseRhythm, available, section, sectionCount,
-                    family, parameters.density(), random);
-            final int[] cellDegrees = varyDegrees(baseCell, section, sectionCount, family, parameters.tension(), random);
-            writeSection(active, degrees, octaves, start, available, positions, cellDegrees,
-                    section, sectionCount, family, parameters.octaveActivity(), random);
+            final int[] positions =
+                    varyRhythm(
+                            baseRhythm,
+                            available,
+                            section,
+                            sectionCount,
+                            family,
+                            parameters.density(),
+                            random);
+            final int[] cellDegrees =
+                    varyDegrees(
+                            baseCell, section, sectionCount, family, parameters.tension(), random);
+            writeSection(
+                    active,
+                    degrees,
+                    octaves,
+                    start,
+                    available,
+                    positions,
+                    cellDegrees,
+                    section,
+                    sectionCount,
+                    family,
+                    parameters.octaveActivity(),
+                    random);
         }
 
         enforcePhraseCadence(active, degrees, loopSteps);
@@ -76,13 +100,24 @@ public final class MotifGenerator implements MelodicGenerator {
                 continue;
             }
             final int pitch = context.pitchForDegree(octaves[i], degrees[i]);
-            final boolean sectionStart = i % sectionLength == firstActiveOffset(active, i, sectionLength);
+            final boolean sectionStart =
+                    i % sectionLength == firstActiveOffset(active, i, sectionLength);
             final boolean cadence = i == lastActiveIndex(active, loopSteps);
             final boolean accent = cadence || sectionStart;
-            final boolean slide = shouldSlide(active, degrees, i, loopSteps, parameters.tension(), parameters.legato(), random);
-            final double gate = gateFor(accent, cadence, slide, parameters.density(), parameters.legato());
+            final boolean slide =
+                    shouldSlide(
+                            active,
+                            degrees,
+                            i,
+                            loopSteps,
+                            parameters.tension(),
+                            parameters.legato(),
+                            random);
+            final double gate =
+                    gateFor(accent, cadence, slide, parameters.density(), parameters.legato());
             final int velocity = accent ? 112 + random.nextInt(8) : 86 + random.nextInt(18);
-            steps.add(new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
+            steps.add(
+                    new MelodicPattern.Step(i, true, false, pitch, velocity, gate, accent, slide));
         }
         return new MelodicPattern(steps, loopSteps);
     }
@@ -145,8 +180,13 @@ public final class MotifGenerator implements MelodicGenerator {
         return cell;
     }
 
-    private int[] varyDegrees(final int[] baseCell, final int section, final int sectionCount,
-                              final MotifFamily family, final double tension, final Random random) {
+    private int[] varyDegrees(
+            final int[] baseCell,
+            final int section,
+            final int sectionCount,
+            final MotifFamily family,
+            final double tension,
+            final Random random) {
         final int[] variant = Arrays.copyOf(baseCell, baseCell.length);
         if (section == 0) {
             return variant;
@@ -155,7 +195,9 @@ public final class MotifGenerator implements MelodicGenerator {
             case REPEAT_THEN_TAIL -> {
                 variant[variant.length - 1] = cadenceDegree(random);
                 if (variant.length > 2) {
-                    variant[variant.length - 2] = clampDegree(variant[variant.length - 2] + (random.nextBoolean() ? 1 : -1));
+                    variant[variant.length - 2] =
+                            clampDegree(
+                                    variant[variant.length - 2] + (random.nextBoolean() ? 1 : -1));
                 }
             }
             case SEQUENCE_REPLY -> {
@@ -169,7 +211,8 @@ public final class MotifGenerator implements MelodicGenerator {
                 if (variant.length > 2) {
                     variant[variant.length - 2] = variant[Math.max(0, variant.length - 3)];
                 }
-                variant[variant.length - 1] = clampDegree(variant[variant.length - 1] + (tension >= 0.5 ? 2 : 1));
+                variant[variant.length - 1] =
+                        clampDegree(variant[variant.length - 1] + (tension >= 0.5 ? 2 : 1));
                 if (section == sectionCount - 1) {
                     variant[variant.length - 1] = cadenceDegree(random);
                 }
@@ -177,7 +220,8 @@ public final class MotifGenerator implements MelodicGenerator {
             case HOOK_RETURN -> {
                 for (int i = Math.max(2, variant.length / 2); i < variant.length; i++) {
                     final int mirrored = Math.max(0, variant.length - 1 - i);
-                    variant[i] = clampDegree(variant[mirrored] + (i == variant.length - 1 ? -1 : 1));
+                    variant[i] =
+                            clampDegree(variant[mirrored] + (i == variant.length - 1 ? -1 : 1));
                 }
                 if (section == sectionCount - 1) {
                     variant[variant.length - 1] = cadenceDegree(random);
@@ -190,13 +234,21 @@ public final class MotifGenerator implements MelodicGenerator {
         return variant;
     }
 
-    private int[] varyRhythm(final int[] baseRhythm, final int available, final int section, final int sectionCount,
-                             final MotifFamily family, final double density, final Random random) {
+    private int[] varyRhythm(
+            final int[] baseRhythm,
+            final int available,
+            final int section,
+            final int sectionCount,
+            final MotifFamily family,
+            final double density,
+            final Random random) {
         int[] positions = fitPositions(baseRhythm, available);
         if (section > 0) {
             switch (family) {
                 case REPEAT_THEN_TAIL -> positions = moveLastHitLater(positions, available);
-                case SEQUENCE_REPLY -> positions = nudgeMiddleHit(positions, available, random.nextBoolean() ? 1 : -1);
+                case SEQUENCE_REPLY ->
+                        positions =
+                                nudgeMiddleHit(positions, available, random.nextBoolean() ? 1 : -1);
                 case TRUNCATE_EXTEND -> positions = swapInteriorForTail(positions, available);
                 case HOOK_RETURN -> positions = returnWithPickup(positions, available);
             }
@@ -207,15 +259,25 @@ public final class MotifGenerator implements MelodicGenerator {
             positions = maybeAddTailHit(positions, available);
         }
         if (section == sectionCount - 1) {
-            positions[positions.length - 1] = Math.max(positions[positions.length - 1], available - 1);
+            positions[positions.length - 1] =
+                    Math.max(positions[positions.length - 1], available - 1);
         }
         return uniqueSortedPositions(positions, available);
     }
 
-    private void writeSection(final boolean[] active, final int[] degrees, final int[] octaves,
-                              final int start, final int available, final int[] positions, final int[] cellDegrees,
-                              final int section, final int sectionCount, final MotifFamily family,
-                              final double octaveActivity, final Random random) {
+    private void writeSection(
+            final boolean[] active,
+            final int[] degrees,
+            final int[] octaves,
+            final int start,
+            final int available,
+            final int[] positions,
+            final int[] cellDegrees,
+            final int section,
+            final int sectionCount,
+            final MotifFamily family,
+            final double octaveActivity,
+            final Random random) {
         final int noteCount = Math.min(positions.length, cellDegrees.length);
         for (int i = 0; i < noteCount; i++) {
             final int localStep = positions[i];
@@ -225,12 +287,19 @@ public final class MotifGenerator implements MelodicGenerator {
             final int absoluteStep = start + localStep;
             active[absoluteStep] = true;
             degrees[absoluteStep] = cellDegrees[i];
-            octaves[absoluteStep] = octaveFor(section, sectionCount, family, i, noteCount, octaveActivity, random);
+            octaves[absoluteStep] =
+                    octaveFor(section, sectionCount, family, i, noteCount, octaveActivity, random);
         }
     }
 
-    private int octaveFor(final int section, final int sectionCount, final MotifFamily family, final int noteIndex,
-                          final int noteCount, final double octaveActivity, final Random random) {
+    private int octaveFor(
+            final int section,
+            final int sectionCount,
+            final MotifFamily family,
+            final int noteIndex,
+            final int noteCount,
+            final double octaveActivity,
+            final Random random) {
         if (section == sectionCount - 1
                 && family == MotifFamily.SEQUENCE_REPLY
                 && noteIndex == Math.max(1, noteCount - 2)
@@ -246,7 +315,8 @@ public final class MotifGenerator implements MelodicGenerator {
         return 0;
     }
 
-    private void enforcePhraseCadence(final boolean[] active, final int[] degrees, final int loopSteps) {
+    private void enforcePhraseCadence(
+            final boolean[] active, final int[] degrees, final int loopSteps) {
         final int lastActive = lastActiveIndex(active, loopSteps);
         if (lastActive < 0) {
             active[0] = true;
@@ -256,7 +326,8 @@ public final class MotifGenerator implements MelodicGenerator {
         degrees[lastActive] = cadenceDegree(new Random(loopSteps * 31L + lastActive));
     }
 
-    private void ensureMotifIdentity(final boolean[] active, final int[] degrees, final int loopSteps, final Random random) {
+    private void ensureMotifIdentity(
+            final boolean[] active, final int[] degrees, final int loopSteps, final Random random) {
         if (distinctActiveDegreeCount(active, degrees, loopSteps) < 3) {
             for (int i = loopSteps / 2; i < loopSteps; i++) {
                 if (!active[i]) {
@@ -286,7 +357,8 @@ public final class MotifGenerator implements MelodicGenerator {
         }
     }
 
-    private boolean hasRepeatedCell(final boolean[] active, final int[] degrees, final int half, final int loopSteps) {
+    private boolean hasRepeatedCell(
+            final boolean[] active, final int[] degrees, final int half, final int loopSteps) {
         final int[] first = collectDegrees(active, degrees, 0, half);
         final int[] second = collectDegrees(active, degrees, half, loopSteps);
         if (first.length < 2 || second.length < 2) {
@@ -302,8 +374,11 @@ public final class MotifGenerator implements MelodicGenerator {
         return matches >= 2;
     }
 
-    private int[] collectDegrees(final boolean[] active, final int[] degrees, final int startInclusive,
-                                 final int endExclusive) {
+    private int[] collectDegrees(
+            final boolean[] active,
+            final int[] degrees,
+            final int startInclusive,
+            final int endExclusive) {
         final List<Integer> out = new ArrayList<>();
         for (int i = startInclusive; i < endExclusive; i++) {
             if (active[i]) {
@@ -320,8 +395,10 @@ public final class MotifGenerator implements MelodicGenerator {
     private int[] projectPositions(final int[] template, final int sectionLength) {
         final int[] projected = new int[template.length];
         for (int i = 0; i < template.length; i++) {
-            projected[i] = Math.min(sectionLength - 1,
-                    (int) Math.round(template[i] * ((sectionLength - 1) / 7.0)));
+            projected[i] =
+                    Math.min(
+                            sectionLength - 1,
+                            (int) Math.round(template[i] * ((sectionLength - 1) / 7.0)));
         }
         return uniqueSortedPositions(projected, sectionLength);
     }
@@ -401,8 +478,14 @@ public final class MotifGenerator implements MelodicGenerator {
                 .toArray();
     }
 
-    private boolean shouldSlide(final boolean[] active, final int[] degrees, final int step, final int loopSteps,
-                                final double tension, final double legato, final Random random) {
+    private boolean shouldSlide(
+            final boolean[] active,
+            final int[] degrees,
+            final int step,
+            final int loopSteps,
+            final double tension,
+            final double legato,
+            final Random random) {
         if (step >= loopSteps - 1 || !active[step + 1]) {
             return false;
         }
@@ -410,8 +493,12 @@ public final class MotifGenerator implements MelodicGenerator {
         return interval == 1 && random.nextDouble() < 0.04 + tension * 0.06 + legato * 0.18;
     }
 
-    private double gateFor(final boolean accent, final boolean cadence, final boolean slide,
-                           final double density, final double legato) {
+    private double gateFor(
+            final boolean accent,
+            final boolean cadence,
+            final boolean slide,
+            final double density,
+            final double legato) {
         if (slide) {
             return 0.96 + legato * 0.20;
         }
@@ -444,7 +531,8 @@ public final class MotifGenerator implements MelodicGenerator {
         return -1;
     }
 
-    private int distinctActiveDegreeCount(final boolean[] active, final int[] degrees, final int loopSteps) {
+    private int distinctActiveDegreeCount(
+            final boolean[] active, final int[] degrees, final int loopSteps) {
         final List<Integer> distinct = new ArrayList<>();
         for (int i = 0; i < loopSteps; i++) {
             if (!active[i] || distinct.contains(degrees[i])) {

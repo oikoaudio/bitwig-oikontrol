@@ -2,16 +2,13 @@ package com.bitwig.extensions.debug;
 
 import com.bitwig.extension.controller.api.ControllerHost;
 
-/**
- * Minimal stub to keep rhbitwig logging calls compiling.
- */
+/** Minimal stub to keep rhbitwig logging calls compiling. */
 public final class RemoteConsole {
     public static final RemoteConsole out = new RemoteConsole();
 
     private ControllerHost host;
 
-    private RemoteConsole() {
-    }
+    private RemoteConsole() {}
 
     public void registerHost(final ControllerHost host) {
         this.host = host;

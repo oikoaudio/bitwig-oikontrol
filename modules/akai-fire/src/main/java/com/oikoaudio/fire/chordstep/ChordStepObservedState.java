@@ -1,28 +1,43 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
-
+import com.oikoaudio.fire.sequence.FineStepOwnership;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.IntPredicate;
+import java.util.function.IntSupplier;
 import java.util.function.IntUnaryOperator;
 
 /**
- * Tracks observed chord-step occupancy, visible notes, and fine-step note starts for the note/chord sequencer.
+ * Tracks observed chord-step occupancy, visible notes, and fine-step note starts for the note/chord
+ * sequencer.
  */
-public final class ChordStepObservedState {
+final class ChordStepObservedState {
+    private static final int DEFAULT_LOOP_STEPS = 2048;
+
     private final Map<Integer, Set<Integer>> clipNotesByStep = new HashMap<>();
     private final Map<Integer, Map<Integer, Set<Integer>>> fineOccupancyByStep = new HashMap<>();
     private final Map<Integer, Map<Integer, Integer>> fineNoteStartsByStep = new HashMap<>();
+    private final IntSupplier loopSteps;
 
-    public void handleObservedStepData(final int fineStep, final int midiNote, final int state,
-                                       final int fineStepsPerStep) {
+    ChordStepObservedState() {
+        this(() -> DEFAULT_LOOP_STEPS);
+    }
+
+    ChordStepObservedState(final IntSupplier loopSteps) {
+        this.loopSteps = loopSteps;
+    }
+
+    public void handleObservedStepData(
+            final int fineStep, final int midiNote, final int state, final int fineStepsPerStep) {
         final int coarseStep = Math.floorDiv(fineStep, fineStepsPerStep);
+        final int ownerStep = ownerStep(fineStep, fineStepsPerStep);
         final Map<Integer, Set<Integer>> notesAtStep =
                 fineOccupancyByStep.computeIfAbsent(coarseStep, ignored -> new HashMap<>());
-        final Set<Integer> occupiedFineSteps = notesAtStep.computeIfAbsent(midiNote, ignored -> new HashSet<>());
+        final Set<Integer> occupiedFineSteps =
+                notesAtStep.computeIfAbsent(midiNote, ignored -> new HashSet<>());
         if (state == NoteStep.State.Empty.ordinal()) {
             occupiedFineSteps.remove(fineStep);
             if (occupiedFineSteps.isEmpty()) {
@@ -34,11 +49,11 @@ public final class ChordStepObservedState {
             } else {
                 clipNotesByStep.put(coarseStep, new HashSet<>(notesAtStep.keySet()));
             }
-            final Map<Integer, Integer> noteStarts = fineNoteStartsByStep.get(coarseStep);
+            final Map<Integer, Integer> noteStarts = fineNoteStartsByStep.get(ownerStep);
             if (noteStarts != null && Integer.valueOf(fineStep).equals(noteStarts.get(midiNote))) {
                 noteStarts.remove(midiNote);
                 if (noteStarts.isEmpty()) {
-                    fineNoteStartsByStep.remove(coarseStep);
+                    fineNoteStartsByStep.remove(ownerStep);
                 }
             }
             return;
@@ -47,12 +62,14 @@ public final class ChordStepObservedState {
         occupiedFineSteps.add(fineStep);
         clipNotesByStep.computeIfAbsent(coarseStep, ignored -> new HashSet<>()).add(midiNote);
         if (state == NoteStep.State.NoteOn.ordinal()) {
-            fineNoteStartsByStep.computeIfAbsent(coarseStep, ignored -> new HashMap<>()).put(midiNote, fineStep);
+            fineNoteStartsByStep
+                    .computeIfAbsent(ownerStep, ignored -> new HashMap<>())
+                    .put(midiNote, fineStep);
         }
     }
 
-    public Set<Integer> visibleOccupiedSteps(final IntPredicate isVisibleGlobalStep,
-                                             final IntUnaryOperator globalToLocalStep) {
+    public Set<Integer> visibleOccupiedSteps(
+            final IntPredicate isVisibleGlobalStep, final IntUnaryOperator globalToLocalStep) {
         final Set<Integer> occupiedSteps = new HashSet<>();
         clipNotesByStep.keySet().stream()
                 .filter(isVisibleGlobalStep::test)
@@ -61,8 +78,8 @@ public final class ChordStepObservedState {
         return occupiedSteps;
     }
 
-    public Set<Integer> visibleStartedSteps(final IntPredicate isVisibleGlobalStep,
-                                            final IntUnaryOperator globalToLocalStep) {
+    public Set<Integer> visibleStartedSteps(
+            final IntPredicate isVisibleGlobalStep, final IntUnaryOperator globalToLocalStep) {
         final Set<Integer> startedSteps = new HashSet<>();
         fineNoteStartsByStep.keySet().stream()
                 .filter(isVisibleGlobalStep::test)
@@ -83,7 +100,8 @@ public final class ChordStepObservedState {
         return fallbackFineStart;
     }
 
-    public boolean isFineStepOccupied(final int fineStep, final int midiNote, final int fineStepsPerStep) {
+    public boolean isFineStepOccupied(
+            final int fineStep, final int midiNote, final int fineStepsPerStep) {
         final int coarseStep = Math.floorDiv(fineStep, fineStepsPerStep);
         return fineOccupancyByStep
                 .getOrDefault(coarseStep, Map.of())
@@ -91,10 +109,15 @@ public final class ChordStepObservedState {
                 .contains(fineStep);
     }
 
-    public void moveFineStart(final int oldFineStart, final int newFineStart, final int midiNote,
-                              final double duration, final int fineStepsPerStep, final double fineStepLength) {
-        final int oldGlobalStep = Math.floorDiv(oldFineStart, fineStepsPerStep);
-        final int newGlobalStep = Math.floorDiv(newFineStart, fineStepsPerStep);
+    public void moveFineStart(
+            final int oldFineStart,
+            final int newFineStart,
+            final int midiNote,
+            final double duration,
+            final int fineStepsPerStep,
+            final double fineStepLength) {
+        final int oldGlobalStep = ownerStep(oldFineStart, fineStepsPerStep);
+        final int newGlobalStep = ownerStep(newFineStart, fineStepsPerStep);
         final int occupiedFineSteps = Math.max(1, (int) Math.round(duration / fineStepLength));
         for (int offset = 0; offset < occupiedFineSteps; offset++) {
             final int oldFineStep = oldFineStart + offset;
@@ -132,7 +155,9 @@ public final class ChordStepObservedState {
                     .add(newFineStep);
             clipNotesByStep.computeIfAbsent(newStep, ignored -> new HashSet<>()).add(midiNote);
         }
-        fineNoteStartsByStep.computeIfAbsent(newGlobalStep, ignored -> new HashMap<>()).put(midiNote, newFineStart);
+        fineNoteStartsByStep
+                .computeIfAbsent(newGlobalStep, ignored -> new HashMap<>())
+                .put(midiNote, newFineStart);
     }
 
     public void invalidateStep(final int globalStep) {
@@ -159,11 +184,48 @@ public final class ChordStepObservedState {
         return fineNoteStartsByStep.containsKey(globalStep);
     }
 
+    public boolean hasObservedStartInCoarseStep(
+            final int globalCoarseStep, final int midiNote, final int fineStepsPerStep) {
+        final int loopStepCount = Math.max(1, loopSteps.getAsInt());
+        final int normalizedCoarseStep = Math.floorMod(globalCoarseStep, loopStepCount);
+        final int followingOwnerStep = Math.floorMod(normalizedCoarseStep + 1, loopStepCount);
+        return hasStartInPhysicalStep(
+                        normalizedCoarseStep,
+                        normalizedCoarseStep,
+                        midiNote,
+                        fineStepsPerStep,
+                        loopStepCount)
+                || hasStartInPhysicalStep(
+                        followingOwnerStep,
+                        normalizedCoarseStep,
+                        midiNote,
+                        fineStepsPerStep,
+                        loopStepCount);
+    }
+
     public Set<Integer> notesAtStep(final int globalStep) {
-        final Set<Integer> notes = clipNotesByStep.get(globalStep);
-        if (notes == null || notes.isEmpty()) {
+        final Map<Integer, Integer> starts = fineNoteStartsByStep.get(globalStep);
+        if (starts == null || starts.isEmpty()) {
             return Set.of();
         }
-        return new HashSet<>(notes);
+        return new HashSet<>(starts.keySet());
+    }
+
+    private int ownerStep(final int fineStep, final int fineStepsPerStep) {
+        return FineStepOwnership.ownerOf(
+                fineStep, fineStepsPerStep, Math.max(1, loopSteps.getAsInt()));
+    }
+
+    private boolean hasStartInPhysicalStep(
+            final int ownerStep,
+            final int physicalStep,
+            final int midiNote,
+            final int fineStepsPerStep,
+            final int loopStepCount) {
+        final Integer fineStart =
+                fineNoteStartsByStep.getOrDefault(ownerStep, Map.of()).get(midiNote);
+        return fineStart != null
+                && Math.floorMod(Math.floorDiv(fineStart, fineStepsPerStep), loopStepCount)
+                        == physicalStep;
     }
 }

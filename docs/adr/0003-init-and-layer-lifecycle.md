@@ -3,7 +3,11 @@
 ## Context
 
 - The Launch Control XL sends a template-change sysex immediately after Bitwig loads the extension. If we try to bind hardware before controls or the binding manager exist, all matchers stay null and every control appears dead.
-- We now have clear roles: the orchestrator (`LaunchControlXlControllerExtension`), adapters (e.g., `HardwareBindingManager`, `HostNotifications`), and mode controllers (`DrumLayerController`, `RhArpLayerController`), plus pure helpers for rendering/logic (`DrumLedRenderer`, `DrumUiState`, `AccentModeLogic`, `PadNoteMapper`).
+- We now have clear roles: the orchestrator (`LaunchControlXlControllerExtension`), adapters (e.g.,
+  `HardwareBindingManager`, `HostNotifications`), mode controllers (`FactoryLayerController`,
+  `DrumLayerController`, `RhArpLayerController`), and pure helpers/snapshots for rendering and logic
+  (`FactoryLedRenderer`, `FactoryUiSnapshot`, `DrumLedRenderer`, `DrumUiState`, `AccentModeLogic`,
+  `PadNoteMapper`).
 - Future changes (new modes, different user-template slots, relaxed note filters) need to respect this lifecycle so bindings and LEDs remain intact.
 
 ## Init Order (what happens, in order)
@@ -12,7 +16,9 @@
 2. Initialize mode state (factory mode sysex send) and set up cursor track/device, track banks, send banks, and remote controls (project, per-track, per-pad).
 3. Build hardware surface objects (knobs, sliders, buttons) and assign note/CC numbers.
 4. **Construct `HardwareBindingManager` after hardware exists**, mark `mHardwareReady = true`, and call `attachHardwareMatchers()`. If a template sysex arrived earlier, `mPendingAttach` ensures we re-run attach now.
-5. Create layers (main, mode layers, track control layers, device layer, drum layer), then activate main layer and initial mode.
+5. Construct `FactoryLayerController` after hardware and the binding manager exist but before any layer callbacks
+   capture it. Create the main, factory mode, track control, device, Drum, and Device Pages layers, then activate
+   the main layer and initial mode.
 
 ## Template Handling and Layer Activation
 
@@ -24,14 +30,19 @@
 
 ## Who Does What (map for future changes)
 
-- **Orchestrator (`LaunchControlXlControllerExtension`)**: decides active layer based on templates, manages mode/state flags, routes incoming MIDI/sysex to drum/arp controllers, paints LEDs for factory modes.
+- **Orchestrator (`LaunchControlXlControllerExtension`)**: decides the active surface from template changes,
+  constructs hardware/layers and controller adapters, routes incoming MIDI/sysex, samples one factory snapshot per
+  flush, applies rendered frames, and sends the resulting MIDI.
 - **Adapters**:
   - `HardwareBindingManager`: owns matcher wiring/clearing for factory vs. drum maps (CCs/notes for knobs, sliders, transport, Device/Mute/Solo/Record).
   - `HostNotifications`: wraps logging and popups.
 - **Mode controllers**:
+  - `FactoryLayerController`: owns factory interaction state and semantic policy for track/send/remote/device
+    controls, paging, exclusive arm, and factory mode selection.
   - `DrumLayerController`: handles drum layer engagement, pad selection/audition, mute/solo modes, pad parameter control, and delegates LED colours to `DrumLedRenderer`.
   - `RhArpLayerController`: owns arp parameter control and button modes for User Template 8.
-- **Pure helpers**: `DrumLedRenderer`, `DrumUiState`, `AccentModeLogic`, `PadNoteMapper` (safe to reuse/test in isolation).
+- **Pure helpers and snapshots**: `FactoryLedRenderer`, `FactoryUiSnapshot`, `DrumLedRenderer`, `DrumUiState`,
+  `AccentModeLogic`, `PadNoteMapper` (safe to test in isolation).
 - **Discovery/selection**: `DeviceLocator` finds drum/arp devices on tracks; `TemplateChangeMessageParser` parses template sysex IDs.
 
 ## Guidance for common changes

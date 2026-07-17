@@ -49,7 +49,8 @@ public record RecurrencePattern(int length, int mask) {
         }
         final int span = effectiveSpan();
         final int shownMask = effectiveMask(span);
-        return "%d:%s".formatted(span, Integer.toBinaryString((1 << span) | shownMask).substring(1));
+        return "%d:%s"
+                .formatted(span, Integer.toBinaryString((1 << span) | shownMask).substring(1));
     }
 
     public RecurrencePattern toggledAt(final int padIndex) {
@@ -74,9 +75,10 @@ public record RecurrencePattern(int length, int mask) {
             return of(0, 0);
         }
         final int currentMask = effectiveMask(currentSpan);
-        final int resizedMask = newSpan < currentSpan
-                ? currentMask & ((1 << newSpan) - 1)
-                : currentMask | (((1 << (newSpan - currentSpan)) - 1) << currentSpan);
+        final int resizedMask =
+                newSpan < currentSpan
+                        ? currentMask & ((1 << newSpan) - 1)
+                        : currentMask | (((1 << (newSpan - currentSpan)) - 1) << currentSpan);
         final int normalizedMask = resizedMask == ((1 << newSpan) - 1) ? 0 : resizedMask;
         return of(newSpan, normalizedMask);
     }

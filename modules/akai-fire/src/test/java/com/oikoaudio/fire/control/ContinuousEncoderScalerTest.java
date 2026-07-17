@@ -1,15 +1,15 @@
 package com.oikoaudio.fire.control;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class ContinuousEncoderScalerTest {
     @Test
     void strongProfileScalesSameDirectionMediumAndFastStreaks() {
         final TestClock clock = new TestClock();
-        final ContinuousEncoderScaler scaler = new ContinuousEncoderScaler(ContinuousEncoderScaler.Profile.STRONG,
-                clock::now);
+        final ContinuousEncoderScaler scaler =
+                new ContinuousEncoderScaler(ContinuousEncoderScaler.Profile.STRONG, clock::now);
 
         assertEquals(1, scaler.scale(1, false));
         clock.advanceNanos(80_000_000L);
@@ -21,8 +21,8 @@ class ContinuousEncoderScalerTest {
     @Test
     void fineModeDisablesAccelerationAndResetsStreak() {
         final TestClock clock = new TestClock();
-        final ContinuousEncoderScaler scaler = new ContinuousEncoderScaler(ContinuousEncoderScaler.Profile.STRONG,
-                clock::now);
+        final ContinuousEncoderScaler scaler =
+                new ContinuousEncoderScaler(ContinuousEncoderScaler.Profile.STRONG, clock::now);
 
         assertEquals(1, scaler.scale(1, false));
         clock.advanceNanos(40_000_000L);
@@ -34,8 +34,8 @@ class ContinuousEncoderScalerTest {
     @Test
     void directionChangeResetsAccelerationStreak() {
         final TestClock clock = new TestClock();
-        final ContinuousEncoderScaler scaler = new ContinuousEncoderScaler(ContinuousEncoderScaler.Profile.STRONG,
-                clock::now);
+        final ContinuousEncoderScaler scaler =
+                new ContinuousEncoderScaler(ContinuousEncoderScaler.Profile.STRONG, clock::now);
 
         assertEquals(1, scaler.scale(1, false));
         clock.advanceNanos(40_000_000L);
@@ -54,4 +54,3 @@ class ContinuousEncoderScalerTest {
         }
     }
 }
-

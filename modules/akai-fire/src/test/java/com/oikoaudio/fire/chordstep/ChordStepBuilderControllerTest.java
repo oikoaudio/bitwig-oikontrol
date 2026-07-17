@@ -1,17 +1,16 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extensions.framework.MusicalScaleLibrary;
-import com.oikoaudio.fire.FireControlPreferences;
-import com.oikoaudio.fire.SharedMusicalContext;
-import com.oikoaudio.fire.music.SharedPitchContextController;
-import org.junit.jupiter.api.Test;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import com.oikoaudio.fire.FireControlPreferences;
+import com.oikoaudio.fire.SharedMusicalContext;
+import com.oikoaudio.fire.music.SharedPitchContextController;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
 
 class ChordStepBuilderControllerTest {
     @Test
@@ -115,9 +114,13 @@ class ChordStepBuilderControllerTest {
 
         private Fixture() {
             final MusicalScaleLibrary library = MusicalScaleLibrary.getInstance();
-            pitchContext = new SharedPitchContextController(new SharedMusicalContext(library), library);
-            pitchContext.initializeFromPreferences(FireControlPreferences.DEFAULT_SCALE_MAJOR, 0, 3);
-            builder = new ChordStepBuilderController(selection, pitchContext, firstVisibleNote::get, 16);
+            pitchContext =
+                    new SharedPitchContextController(new SharedMusicalContext(library), library);
+            pitchContext.initializeFromPreferences(
+                    FireControlPreferences.DEFAULT_SCALE_MAJOR, 0, 3);
+            builder =
+                    new ChordStepBuilderController(
+                            selection, pitchContext, firstVisibleNote::get, 16);
         }
     }
 }

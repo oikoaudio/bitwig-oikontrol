@@ -1,14 +1,13 @@
 package com.oikoaudio.fire.display;
 
-import com.personal.chords.ChordDetector;
-
+import com.oikoaudio.fire.music.ChordDetector;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Renders note/chord names on the Fire OLED using a local detector adapted from
- * BitX by Wim van den Borre.
+ * Renders note/chord names on the Fire OLED using a local detector adapted from BitX by Wim van den
+ * Borre.
  */
 public final class NoteChordOledView {
     private static final long TRANSIENT_DISPLAY_QUIET_PERIOD_MS = 900L;
@@ -40,7 +39,8 @@ public final class NoteChordOledView {
         return show(midiNotes, footerLegend, "");
     }
 
-    public boolean show(final List<Integer> midiNotes, final String footerLegend, final String statusLine) {
+    public boolean show(
+            final List<Integer> midiNotes, final String footerLegend, final String statusLine) {
         if (oled.hasRecentTransientMessage(TRANSIENT_DISPLAY_QUIET_PERIOD_MS)) {
             reset();
             return false;
@@ -55,9 +55,10 @@ public final class NoteChordOledView {
         final String chord = displayChord(result.chordName(), result.midiNoteNames().size());
         final String status = normalize(statusLine);
         final String normalizedLegend = normalize(footerLegend);
-        final EncoderLegendPosition legendPosition = oled.footerLegendPosition() == null
-                ? EncoderLegendPosition.BOTTOM
-                : oled.footerLegendPosition();
+        final EncoderLegendPosition legendPosition =
+                oled.footerLegendPosition() == null
+                        ? EncoderLegendPosition.BOTTOM
+                        : oled.footerLegendPosition();
 
         if (layoutRevision == oled.layoutRevision()
                 && Objects.equals(lastNotes, notes)
@@ -91,7 +92,8 @@ public final class NoteChordOledView {
         layoutRevision = Long.MIN_VALUE;
     }
 
-    private void paintNoteChord(final String notes, final String chord, final String status, final int topRow) {
+    private void paintNoteChord(
+            final String notes, final String chord, final String status, final int topRow) {
         if (!status.isBlank()) {
             oled.sendString(0, OledDisplay.TextJustification.CENTER, topRow, status);
             oled.sendString(0, OledDisplay.TextJustification.CENTER, topRow + 1, notes);

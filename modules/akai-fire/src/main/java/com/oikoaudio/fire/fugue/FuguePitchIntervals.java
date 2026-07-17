@@ -5,8 +5,7 @@ public final class FuguePitchIntervals {
     private static final int MAX_DEGREES = 24;
     private static final int OCTAVE_DEGREES = 7;
 
-    private FuguePitchIntervals() {
-    }
+    private FuguePitchIntervals() {}
 
     public static int nextDegreeInterval(final int current, final int amount) {
         return clamp(current + amount);

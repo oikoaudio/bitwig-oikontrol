@@ -1,13 +1,12 @@
 package com.oikoaudio.fire.nestedrhythm;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+
+import com.oikoaudio.fire.lights.RgbLightState;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class NestedRhythmPadSurfaceTest {
 
@@ -36,7 +35,8 @@ class NestedRhythmPadSurfaceTest {
         final NestedRhythmEditablePulse disabled = pulse(0, 0, 120);
         disabled.enabled = false;
         final NestedRhythmEditablePulse active = pulse(1, 100, 120);
-        final NestedRhythmPadSurface surface = surface(new ArrayList<>(List.of(disabled, active)), 1680);
+        final NestedRhythmPadSurface surface =
+                surface(new ArrayList<>(List.of(disabled, active)), 1680);
 
         surface.handlePlayingStep(50);
         assertEquals(-1, surface.playingPulseIndex());
@@ -49,18 +49,20 @@ class NestedRhythmPadSurfaceTest {
     void shiftedClipStartColumnOverlaysEmptyStructurePads() {
         final NestedRhythmPadSurface surface = surface(new ArrayList<>(), 1680, 0);
 
-        assertEquals(new RgbLigthState(30, 0, 127, true),
+        assertEquals(
+                new RgbLightState(30, 0, 127, true),
                 surface.getPadLight(NestedRhythmPadSurface.STRUCTURE_PAD_OFFSET));
     }
 
-    private static NestedRhythmPadSurface surface(final List<NestedRhythmEditablePulse> pulses,
-                                                 final int totalFineStepCount) {
+    private static NestedRhythmPadSurface surface(
+            final List<NestedRhythmEditablePulse> pulses, final int totalFineStepCount) {
         return surface(pulses, totalFineStepCount, -1);
     }
 
-    private static NestedRhythmPadSurface surface(final List<NestedRhythmEditablePulse> pulses,
-                                                 final int totalFineStepCount,
-                                                 final int shiftedClipStartColumn) {
+    private static NestedRhythmPadSurface surface(
+            final List<NestedRhythmEditablePulse> pulses,
+            final int totalFineStepCount,
+            final int shiftedClipStartColumn) {
         return new NestedRhythmPadSurface(
                 pulses,
                 null,
@@ -69,20 +71,22 @@ class NestedRhythmPadSurfaceTest {
                 () -> false,
                 () -> totalFineStepCount,
                 () -> shiftedClipStartColumn,
-                ignored -> { },
-                ignored -> RgbLigthState.OFF,
-                () -> new RgbLigthState(0, 90, 34, true),
-                (label, value) -> { });
+                ignored -> {},
+                ignored -> RgbLightState.OFF,
+                () -> new RgbLightState(0, 90, 34, true),
+                (label, value) -> {});
     }
 
-    private static NestedRhythmEditablePulse pulse(final int order, final int fineStart, final int velocity) {
-        return new NestedRhythmEditablePulse(new NestedRhythmPattern.PulseEvent(
-                order,
-                fineStart,
-                120,
-                60,
-                velocity,
-                NestedRhythmPattern.Role.PRIMARY_ANCHOR,
-                1.0));
+    private static NestedRhythmEditablePulse pulse(
+            final int order, final int fineStart, final int velocity) {
+        return new NestedRhythmEditablePulse(
+                new NestedRhythmPattern.PulseEvent(
+                        order,
+                        fineStart,
+                        120,
+                        60,
+                        velocity,
+                        NestedRhythmPattern.Role.PRIMARY_ANCHOR,
+                        1.0));
     }
 }

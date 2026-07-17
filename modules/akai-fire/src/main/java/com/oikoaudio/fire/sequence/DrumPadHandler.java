@@ -1,27 +1,24 @@
 package com.oikoaudio.fire.sequence;
 
+import com.bitwig.extension.api.Color;
+import com.bitwig.extension.controller.api.*;
+import com.bitwig.extensions.framework.Layer;
+import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.ViewCursorControl;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.DisplayTarget;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
-import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.OledDisplay.TextJustification;
+import com.oikoaudio.fire.display.OledMeterRenderer;
 import com.oikoaudio.fire.display.PeakRmsOledView;
 import com.oikoaudio.fire.display.VuMeterFormatter;
 import com.oikoaudio.fire.display.VuMeterPeakHold;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteAction.Type;
-import com.oikoaudio.fire.utils.PatternButtons;
-import com.bitwig.extension.api.Color;
-import com.bitwig.extension.controller.api.*;
-import com.bitwig.extensions.framework.Layer;
-import com.bitwig.extensions.framework.values.BooleanValueObject;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -41,14 +38,14 @@ public class DrumPadHandler {
     private final PinnableCursorClip cursorClip;
     private final NoteInput noteInput;
     private final DrumPadBank padBank;
-    private RgbLigthState trackColor = RgbLigthState.PURPLE;
+    private RgbLightState trackColor = RgbLightState.PURPLE;
 
     private final NoteRepeatHandler noteRepeatHandler;
 
     private final List<PadContainer> pads = new ArrayList<>();
     private final Set<Integer> padsHeld = new HashSet<>();
 
-    RgbLigthState currentPadColor = RgbLigthState.PURPLE;
+    RgbLightState currentPadColor = RgbLightState.PURPLE;
 
     PadContainer selectedPad;
     int selectedPadIndex = -1;
@@ -74,8 +71,13 @@ public class DrumPadHandler {
     private int selectedPadRmsMax = 0;
     private final PeakRmsOledView selectedPadMeterView;
 
-    public DrumPadHandler(final AkaiFireOikontrolExtension driver, final DrumSequenceMode parent, final Layer mainLayer,
-                      final Layer muteLayer, final Layer soloLayer, final NoteRepeatHandler noteRepeatHandler) {
+    public DrumPadHandler(
+            final AkaiFireOikontrolExtension driver,
+            final DrumSequenceMode parent,
+            final Layer mainLayer,
+            final Layer muteLayer,
+            final Layer soloLayer,
+            final NoteRepeatHandler noteRepeatHandler) {
         this.driver = driver;
         this.parent = parent;
         this.selectedPadMeterView = new PeakRmsOledView(parent.getOled());
@@ -86,7 +88,9 @@ public class DrumPadHandler {
         }
         final ViewCursorControl control = driver.getViewControl();
         control.getCursorTrack().color().markInterested();
-        control.getCursorTrack().color().addValueObserver((r, g, b) -> trackColor = ColorLookup.getColor(r, g, b));
+        control.getCursorTrack()
+                .color()
+                .addValueObserver((r, g, b) -> trackColor = ColorLookup.getColor(r, g, b));
         trackColor = ColorLookup.getColor(control.getCursorTrack().color().get());
 
         padBank = control.getDrumPadBank();
@@ -104,37 +108,55 @@ public class DrumPadHandler {
             final DrumPad drumPad = control.getDrumPadBank().getItemAt(i);
             final PadContainer pad = new PadContainer(this, i, drumPad, playing[i]);
             final int padIndex = i;
-            drumPad.addVuMeterObserver(VuMeterFormatter.RANGE, -1, true, value -> handlePeakMeterChanged(padIndex, value));
-            drumPad.addVuMeterObserver(VuMeterFormatter.RANGE, -1, false, value -> handleRmsMeterChanged(padIndex, value));
+            drumPad.addVuMeterObserver(
+                    VuMeterFormatter.RANGE,
+                    -1,
+                    true,
+                    value -> handlePeakMeterChanged(padIndex, value));
+            drumPad.addVuMeterObserver(
+                    VuMeterFormatter.RANGE,
+                    -1,
+                    false,
+                    value -> handleRmsMeterChanged(padIndex, value));
 
             bindMain(button, mainLayer, pad);
-            button.bind(muteLayer, () -> {
-                pad.pad.mute().toggle();
-                parent.notifyMuteAction();
-            });
+            button.bind(
+                    muteLayer,
+                    () -> {
+                        pad.pad.mute().toggle();
+                        parent.notifyMuteAction();
+                    });
             button.bindLight(muteLayer, pad::mutingColors);
-            button.bind(soloLayer, () -> {
-                pad.pad.solo().toggle();
-                parent.notifySoloAction();
-            });
+            button.bind(
+                    soloLayer,
+                    () -> {
+                        pad.pad.solo().toggle();
+                        parent.notifySoloAction();
+                    });
             button.bindLight(soloLayer, pad::soloingColors);
         }
 
         this.noteRepeatHandler = noteRepeatHandler;
         noteRepeatHandler.getNoteRepeatActive().addValueObserver(this::handleNoteRepeatChanged);
 
-        notePlayingActive.addValueObserver(active -> {
-            if (active) {
-                applyScale();
-            } else if (!notePlayingEnabled()) {
-                disableNotePlaying();
-            }
-        });
+        notePlayingActive.addValueObserver(
+                active -> {
+                    if (active) {
+                        applyScale();
+                    } else if (!notePlayingEnabled()) {
+                        disableNotePlaying();
+                    }
+                });
         initButtons(mainLayer, driver);
-        padDisplayInfo = new DisplayInfo() //
-                .addLine("Selected Pad", 1, 0, TextJustification.CENTER) //
-                .addLine(() -> selectedPad != null ? selectedPad.getName() : "", 2, 3, TextJustification.CENTER) //
-                .create();
+        padDisplayInfo =
+                new DisplayInfo() //
+                        .addLine("Selected Pad", 1, 0, TextJustification.CENTER) //
+                        .addLine(
+                                () -> selectedPad != null ? selectedPad.getName() : "",
+                                2,
+                                3,
+                                TextJustification.CENTER) //
+                        .create();
     }
 
     private void bindMain(final RgbButton button, final Layer mainLayer, final PadContainer pad) {
@@ -157,12 +179,11 @@ public class DrumPadHandler {
         }
     }
 
-    RgbLigthState trackColor() {
+    RgbLightState trackColor() {
         return trackColor;
     }
 
-    private void initButtons(final Layer mainLayer, final AkaiFireOikontrolExtension driver) {
-    }
+    private void initButtons(final Layer mainLayer, final AkaiFireOikontrolExtension driver) {}
 
     private void handlePadSelection(final PadContainer pad, final boolean pressed) {
         if (pressed) {
@@ -179,7 +200,8 @@ public class DrumPadHandler {
                 if (pad.index == selectedPadIndex) {
                     cursorClip.clearStepsAtY(0, 0);
                 } else {
-                    parent.registerPendingAction(new NoteAction(selectedPadIndex, pad.index, Type.CLEAR));
+                    parent.registerPendingAction(
+                            new NoteAction(selectedPadIndex, pad.index, Type.CLEAR));
                     pad.pad.selectInEditor();
                 }
             } else {
@@ -229,15 +251,13 @@ public class DrumPadHandler {
         return colors[colorIndex];
     }
 
-    void executeCopy(final List<NoteStep> notes, final boolean copyParams) {
+    void executeCopy(final List<DrumNoteStepValues> notes, final boolean copyParams) {
         cursorClip.clearStepsAtY(0, 0);
-        for (final NoteStep noteStep : notes) {
-            // TODO: this is an API bug
-            cursorClip.setStep(noteStep.x(), 0, 100, 0.25);
-//            cursorClip.setStep(noteStep.x(), 0, (int) (noteStep.velocity() * 127), noteStep.duration());
+        for (final DrumNoteStepValues noteStep : notes) {
             if (copyParams) {
                 parent.registerExpectedNoteChange(noteStep.x(), noteStep);
             }
+            noteStep.insertInto(cursorClip);
         }
     }
 
@@ -249,15 +269,16 @@ public class DrumPadHandler {
     }
 
     /**
-     * The Pad has to be another pad then the currently selected pad. Copies notes
-     * to that destination.
+     * The Pad has to be another pad then the currently selected pad. Copies notes to that
+     * destination.
      *
      * @param pad destination pad of copy.
      */
     private void doNotesPadCopy(final PadContainer pad) {
         if (pad.index != selectedPadIndex) {
             final List<NoteStep> notes = parent.getOnNotes();
-            parent.registerPendingAction(new NoteAction(selectedPadIndex, pad.index, Type.COPY_PAD, notes));
+            parent.registerPendingAction(
+                    new NoteAction(selectedPadIndex, pad.index, Type.COPY_PAD, notes));
             cursorClip.scrollToKey(drumScrollOffset + pad.index);
             pad.pad.selectInEditor();
             parent.getOled().valueInfo("Copy Pad", "Select target");
@@ -312,7 +333,7 @@ public class DrumPadHandler {
         return !padsHeld.isEmpty();
     }
 
-    public RgbLigthState getCurrentPadColor() {
+    public RgbLightState getCurrentPadColor() {
         return currentPadColor;
     }
 
@@ -320,9 +341,7 @@ public class DrumPadHandler {
         return selectedPadIndex;
     }
 
-    /**
-     * Returns the MIDI key for the currently selected pad, or -1 if none.
-     */
+    /** Returns the MIDI key for the currently selected pad, or -1 if none. */
     public int getSelectedPadMidi() {
         if (selectedPadIndex < 0) {
             return -1;
@@ -338,11 +357,14 @@ public class DrumPadHandler {
             notesToPadsTable[i] = -1;
         }
         noteInput.setKeyTranslationTable(notesToDrumTable);
-        drumPadBank.scrollPosition().addValueObserver(offset -> {
-            drumScrollOffset = offset;
-            focusOnSelectedPad();
-            applyScale();
-        });
+        drumPadBank
+                .scrollPosition()
+                .addValueObserver(
+                        offset -> {
+                            drumScrollOffset = offset;
+                            focusOnSelectedPad();
+                            applyScale();
+                        });
         for (int i = 0; i < 16; i++) {
             playing[i] = new BooleanValueObject();
             playing[i].set(false);
@@ -473,7 +495,9 @@ public class DrumPadHandler {
         int remoteParamIndex = typeIndex - offset;
 
         // Make sure the computed index is within the valid range.
-        if (remotePage != null && remoteParamIndex >= 0 && remoteParamIndex < remotePage.getParameterCount()) {
+        if (remotePage != null
+                && remoteParamIndex >= 0
+                && remoteParamIndex < remotePage.getParameterCount()) {
             Parameter parameter = remotePage.getParameter(remoteParamIndex);
             if (parameter != null) {
                 // Mark the parameter name as interested so we can read its current value.
@@ -484,8 +508,6 @@ public class DrumPadHandler {
         displayTarget.setTypeIndex(typeIndex, realParamName);
         displayTarget.activate();
     }
-
-
 
     public void deactivateView() {
         displayTarget.deactivate();
@@ -528,7 +550,8 @@ public class DrumPadHandler {
             showMixerValue("Mixer", "Select Pad");
             return;
         }
-        showMixerValue(selectedPad.mixerName(typeIndex, fallbackLabel),
+        showMixerValue(
+                selectedPad.mixerName(typeIndex, fallbackLabel),
                 selectedPad.mixerDisplayedValue(typeIndex),
                 selectedPad.mixerRawValue(typeIndex),
                 typeIndex == 1);
@@ -537,9 +560,15 @@ public class DrumPadHandler {
     public void showDrumPadMeterDisplay(final String footerLegend) {
         resetSelectedPadMeterText();
         padPeakHoldMeters.decay();
-        parent.getOled().sendImageWithFooter(OledMeterRenderer.verticalMetersWithFooter(
-                padRmsMeters, padPeakHoldValues(), padMutedValues(), VISIBLE_PAD_COUNT,
-                parent.getOled().footerLegendPosition()), footerLegend);
+        parent.getOled()
+                .sendImageWithFooter(
+                        OledMeterRenderer.verticalMetersWithFooter(
+                                padRmsMeters,
+                                padPeakHoldValues(),
+                                padMutedValues(),
+                                VISIBLE_PAD_COUNT,
+                                parent.getOled().footerLegendPosition()),
+                        footerLegend);
     }
 
     public void showSelectedPadContextDisplay(final String footerLegend) {
@@ -577,7 +606,11 @@ public class DrumPadHandler {
         selectMeterPad(selectedPadIndex, false);
         final int currentPeak = padPeakMeters[selectedMeterPadIndex];
         final int currentRms = padRmsMeters[selectedMeterPadIndex];
-        selectedPadMeterView.show(selectedPadPeakMax, selectedPadRmsMax, currentPeak, currentRms,
+        selectedPadMeterView.show(
+                selectedPadPeakMax,
+                selectedPadRmsMax,
+                currentPeak,
+                currentRms,
                 EncoderFooterLegend.MIXER);
     }
 
@@ -589,8 +622,11 @@ public class DrumPadHandler {
         selectedPadMeterView.showValueInfo(title, value);
     }
 
-    public void showMixerValue(final String title, final String value, final double normalizedValue,
-                               final boolean biPolar) {
+    public void showMixerValue(
+            final String title,
+            final String value,
+            final double normalizedValue,
+            final boolean biPolar) {
         selectedPadMeterView.showValueInfo(title, value, normalizedValue, biPolar);
     }
 
@@ -642,9 +678,7 @@ public class DrumPadHandler {
         if (selectedPad != null) {
             selectedPad.updateDisplay(index);
         }
-
     }
-
 
     public NoteRepeatHandler getNoteRepeaterHandler() {
         return noteRepeatHandler;

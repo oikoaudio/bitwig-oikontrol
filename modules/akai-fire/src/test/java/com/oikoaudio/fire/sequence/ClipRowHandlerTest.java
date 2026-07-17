@@ -1,21 +1,21 @@
 package com.oikoaudio.fire.sequence;
 
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.bitwig.extension.api.Color;
+import com.bitwig.extension.controller.api.BooleanValue;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.bitwig.extension.controller.api.BooleanValue;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.SettableColorValue;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
 import org.junit.jupiter.api.Test;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 class ClipRowHandlerTest {
     @Test
@@ -102,7 +102,6 @@ class ClipRowHandlerTest {
         }
 
         @Override
-        public void notifyPopup(final String title, final String value) {
-        }
+        public void notifyPopup(final String title, final String value) {}
     }
 }

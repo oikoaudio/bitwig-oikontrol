@@ -1,17 +1,14 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.oikoaudio.fire.music.SharedPitchContextController;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.IntSupplier;
 
-/**
- * Owns chord-builder source-pad note mapping and builder-note selection gestures.
- */
-public final class ChordStepBuilderController {
+/** Owns chord-builder source-pad note mapping and builder-note selection gestures. */
+final class ChordStepBuilderController {
     public enum PadRole {
         ROOT,
         IN_SCALE,
@@ -28,10 +25,11 @@ public final class ChordStepBuilderController {
     private boolean inKey = false;
     private boolean latchEnabled = false;
 
-    public ChordStepBuilderController(final ChordStepChordSelection selection,
-                                      final SharedPitchContextController pitchContext,
-                                      final IntSupplier firstVisibleMidiNote,
-                                      final int sourcePadCount) {
+    public ChordStepBuilderController(
+            final ChordStepChordSelection selection,
+            final SharedPitchContextController pitchContext,
+            final IntSupplier firstVisibleMidiNote,
+            final int sourcePadCount) {
         this.selection = selection;
         this.pitchContext = pitchContext;
         this.firstVisibleMidiNote = firstVisibleMidiNote;
@@ -138,9 +136,10 @@ public final class ChordStepBuilderController {
             return PadRole.UNAVAILABLE;
         }
         final int firstVisibleNote = firstVisibleMidiNote.getAsInt();
-        final int builderRoot = firstVisibleNote >= 0
-                ? Math.floorMod(firstVisibleNote, 12)
-                : Math.floorMod(pitchContext.getRootNote(), 12);
+        final int builderRoot =
+                firstVisibleNote >= 0
+                        ? Math.floorMod(firstVisibleNote, 12)
+                        : Math.floorMod(pitchContext.getRootNote(), 12);
         if (pitchContext.isRootMidiNote(builderRoot, midiNote)) {
             return PadRole.ROOT;
         }

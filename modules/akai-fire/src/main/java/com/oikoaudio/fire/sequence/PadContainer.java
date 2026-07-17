@@ -1,37 +1,37 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.control.EncoderValueProfile;
-import com.oikoaudio.fire.control.MixerEncoderProfile;
-import com.oikoaudio.fire.display.ParameterDisplayBinding;
-import com.oikoaudio.fire.lights.RgbLigthState;
 import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.*;
 import com.bitwig.extensions.framework.Layer;
 import com.bitwig.extensions.framework.values.BooleanValueObject;
+import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.EncoderValueProfile;
+import com.oikoaudio.fire.display.ParameterDisplayBinding;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.values.DawColor;
 
 class PadContainer {
 
-
     private int lastKnobValue = 0;
 
-    private static final RgbLigthState TR_RED = new RgbLigthState(70, 0, 0, true);
-    private static final RgbLigthState TR_ORANGE = new RgbLigthState(90, 15, 0, true);
-    private static final RgbLigthState TR_YELLOW = new RgbLigthState(110, 55, 0, true);
-    private static final RgbLigthState TR_WHITE = new RgbLigthState(80, 80, 80, true);
+    private static final RgbLightState TR_RED = new RgbLightState(70, 0, 0, true);
+    private static final RgbLightState TR_ORANGE = new RgbLightState(90, 15, 0, true);
+    private static final RgbLightState TR_YELLOW = new RgbLightState(110, 55, 0, true);
+    private static final RgbLightState TR_WHITE = new RgbLightState(80, 80, 80, true);
 
-    private static final RgbLigthState[] fixedPadColorTable = {TR_RED, TR_RED, TR_RED, TR_RED, //
-            TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_YELLOW, TR_YELLOW, TR_YELLOW, TR_YELLOW, //
-            TR_WHITE, TR_WHITE, TR_WHITE, TR_WHITE};
+    private static final RgbLightState[] fixedPadColorTable = {
+        TR_RED, TR_RED, TR_RED, TR_RED, //
+        TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_ORANGE, TR_YELLOW, TR_YELLOW, TR_YELLOW, TR_YELLOW, //
+        TR_WHITE, TR_WHITE, TR_WHITE, TR_WHITE
+    };
 
     private final DrumPadHandler padHandler;
 
-    private RgbLigthState padColor;
-    private RgbLigthState bitwigPadColor = RgbLigthState.OFF;
+    private RgbLightState padColor;
+    private RgbLightState bitwigPadColor = RgbLightState.OFF;
 
-    private final RgbLigthState muteColor = ColorLookup.getColor(DawColor.LIGHT_BROWN);
-    private final RgbLigthState soloColor = ColorLookup.getColor(DawColor.BLUISH_GREEN);
+    private final RgbLightState muteColor = ColorLookup.getColor(DawColor.LIGHT_BROWN);
+    private final RgbLightState soloColor = ColorLookup.getColor(DawColor.BLUISH_GREEN);
 
     final DrumPad pad;
     final int index;
@@ -57,13 +57,15 @@ class PadContainer {
     private final ParameterDisplayBinding macro7Binding;
     private final ParameterDisplayBinding macro8Binding;
 
+    //    private static final String[] NOTE_NAMES = {
+    //            "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G"
+    //    };
 
-//    private static final String[] NOTE_NAMES = {
-//            "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G"
-//    };
-
-    public PadContainer(final DrumPadHandler padHandler, final int index, final DrumPad pad,
-                        final BooleanValueObject playing) {
+    public PadContainer(
+            final DrumPadHandler padHandler,
+            final int index,
+            final DrumPad pad,
+            final BooleanValueObject playing) {
         super();
         this.padHandler = padHandler;
         this.index = index;
@@ -75,8 +77,11 @@ class PadContainer {
             final Send sendItem = pad.sendBank().getItemAt(i);
             sendParameters[i] = sendItem;
             sendItem.getOrigin().markInterested();
-            // sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem, padHandler.getDiplayTarget(), false, null);
-            sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem, padHandler.getDisplayTarget(), false);
+            // sendBindings[i] = new ParameterDisplayBinding(i + 2, index, sendItem,
+            // padHandler.getDiplayTarget(), false, null);
+            sendBindings[i] =
+                    new ParameterDisplayBinding(
+                            i + 2, index, sendItem, padHandler.getDisplayTarget(), false);
         }
 
         pad.mute().markInterested();
@@ -87,18 +92,24 @@ class PadContainer {
         pad.exists().addValueObserver(exists -> this.exists = exists);
         padColor = fixedPadColorTable[index];
         pad.color().markInterested();
-        pad.color().addValueObserver((r, g, b) -> {
-            bitwigPadColor = explicitPadColorOrNull();
-            if (selected) {
-                this.padHandler.currentPadColor = effectivePadColor();
-            }
-        });
+        pad.color()
+                .addValueObserver(
+                        (r, g, b) -> {
+                            bitwigPadColor = explicitPadColorOrNull();
+                            if (selected) {
+                                this.padHandler.currentPadColor = effectivePadColor();
+                            }
+                        });
         bitwigPadColor = explicitPadColorOrNull();
         volumeParameter = pad.volume();
         panParameter = pad.pan();
         panParameter.getOrigin().markInterested();
-        volumeBinding = new ParameterDisplayBinding(0, index, volumeParameter, padHandler.getDisplayTarget(), false);
-        panBinding = new ParameterDisplayBinding(1, index, panParameter, padHandler.getDisplayTarget(), true);
+        volumeBinding =
+                new ParameterDisplayBinding(
+                        0, index, volumeParameter, padHandler.getDisplayTarget(), false);
+        panBinding =
+                new ParameterDisplayBinding(
+                        1, index, panParameter, padHandler.getDisplayTarget(), true);
 
         remoteControls = pad.createDeviceBank(1).getDevice(0).createCursorRemoteControlsPage(8);
         remoteControls.selectedPageIndex().markInterested();
@@ -106,27 +117,68 @@ class PadContainer {
         remoteControls.pageCount().markInterested();
         remoteControls.pageNames().markInterested();
 
-
-        macro1Binding = new ParameterDisplayBinding(10, index, remoteControls.getParameter(0), padHandler.getDisplayTarget(), false);
-        macro2Binding = new ParameterDisplayBinding(11, index, remoteControls.getParameter(1), padHandler.getDisplayTarget(), false);
-        macro3Binding = new ParameterDisplayBinding(12, index, remoteControls.getParameter(2), padHandler.getDisplayTarget(), false);
-        macro4Binding = new ParameterDisplayBinding(13, index, remoteControls.getParameter(3), padHandler.getDisplayTarget(), false);
-        macro5Binding = new ParameterDisplayBinding(14, index, remoteControls.getParameter(4), padHandler.getDisplayTarget(), false);
-        macro6Binding = new ParameterDisplayBinding(15, index, remoteControls.getParameter(5), padHandler.getDisplayTarget(), false);
-        macro7Binding = new ParameterDisplayBinding(16, index, remoteControls.getParameter(6), padHandler.getDisplayTarget(), false);
-        macro8Binding = new ParameterDisplayBinding(17, index, remoteControls.getParameter(7), padHandler.getDisplayTarget(), false);
-
+        macro1Binding =
+                new ParameterDisplayBinding(
+                        10,
+                        index,
+                        remoteControls.getParameter(0),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro2Binding =
+                new ParameterDisplayBinding(
+                        11,
+                        index,
+                        remoteControls.getParameter(1),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro3Binding =
+                new ParameterDisplayBinding(
+                        12,
+                        index,
+                        remoteControls.getParameter(2),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro4Binding =
+                new ParameterDisplayBinding(
+                        13,
+                        index,
+                        remoteControls.getParameter(3),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro5Binding =
+                new ParameterDisplayBinding(
+                        14,
+                        index,
+                        remoteControls.getParameter(4),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro6Binding =
+                new ParameterDisplayBinding(
+                        15,
+                        index,
+                        remoteControls.getParameter(5),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro7Binding =
+                new ParameterDisplayBinding(
+                        16,
+                        index,
+                        remoteControls.getParameter(6),
+                        padHandler.getDisplayTarget(),
+                        false);
+        macro8Binding =
+                new ParameterDisplayBinding(
+                        17,
+                        index,
+                        remoteControls.getParameter(7),
+                        padHandler.getDisplayTarget(),
+                        false);
 
         for (int i = 0; i < remoteControls.getParameterCount(); i++) {
             remoteControls.getParameter(i).value().markInterested();
             remoteControls.getParameter(i).name().markInterested();
         }
-
-
-
-
     }
-
 
     public void bindParameters(final Layer layer) {
         layer.addBinding(volumeBinding);
@@ -150,25 +202,25 @@ class PadContainer {
         layer.addBinding(macro8Binding);
     }
 
-    public RgbLigthState getPadColor() {
+    public RgbLightState getPadColor() {
         return padColor;
     }
 
-    public RgbLigthState getBitwigPadColor() {
+    public RgbLightState getBitwigPadColor() {
         return bitwigPadColor;
     }
 
-    RgbLigthState effectivePadColor() {
+    RgbLightState effectivePadColor() {
         return bitwigPadColor != null ? bitwigPadColor : padHandler.trackColor();
     }
 
-    private RgbLigthState explicitPadColorOrNull() {
+    private RgbLightState explicitPadColorOrNull() {
         final Color color = pad.color().get();
         if (color == null || color.getAlpha255() == 0) {
             return null;
         }
-        final RgbLigthState light = ColorLookup.getColor(color);
-        return light == null || light.equals(RgbLigthState.OFF) ? null : light;
+        final RgbLightState light = ColorLookup.getColor(color);
+        return light == null || light.equals(RgbLightState.OFF) ? null : light;
     }
 
     public int getIndex() {
@@ -183,29 +235,30 @@ class PadContainer {
         }
     }
 
-    public RgbLigthState mutingColors() {
+    public RgbLightState mutingColors() {
         if (!exists) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = effectivePadColor();
+        final RgbLightState base = effectivePadColor();
         if (pad.mute().get()) {
-//            return playing.returnTrueFalse(muteColor.getDimmed(), muteColor.getVeryDimmed());
+            //            return playing.returnTrueFalse(muteColor.getDimmed(),
+            // muteColor.getVeryDimmed());
             return playing.returnTrueFalse(base.getDimmed(), base.getVeryDimmed());
         }
-//        return playing.returnTrueFalse(muteColor.getBrightest(), muteColor);
+        //        return playing.returnTrueFalse(muteColor.getBrightest(), muteColor);
         return playing.returnTrueFalse(base.getBrightest(), base);
     }
 
-    public RgbLigthState soloingColors() {
+    public RgbLightState soloingColors() {
         if (!exists) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = effectivePadColor();
+        final RgbLightState base = effectivePadColor();
         if (pad.solo().get()) {
-//            return playing.returnTrueFalse(soloColor.getBrightest(), soloColor);
+            //            return playing.returnTrueFalse(soloColor.getBrightest(), soloColor);
             return playing.returnTrueFalse(base.getBrightest(), base);
         }
-//        return playing.returnTrueFalse(soloColor.getDimmed(), soloColor.getVeryDimmed());
+        //        return playing.returnTrueFalse(soloColor.getDimmed(), soloColor.getVeryDimmed());
         return playing.returnTrueFalse(base.getDimmed(), base.getVeryDimmed());
     }
 
@@ -213,11 +266,11 @@ class PadContainer {
         return pad.name().get();
     }
 
-    public RgbLigthState getColor() {
+    public RgbLightState getColor() {
         if (!exists) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        final RgbLigthState base = effectivePadColor();
+        final RgbLightState base = effectivePadColor();
         if (selected) {
             return playing.returnTrueFalse(base.getBrightest(), base.getBrightend());
         }
@@ -228,19 +281,19 @@ class PadContainer {
         pad.selectInEditor();
     }
 
-    public void modifyValue(final int typeIndex, final int inc, final boolean shiftHeld, final boolean altHeld) {
+    public void modifyValue(
+            final int typeIndex, final int inc, final boolean shiftHeld, final boolean altHeld) {
         double amount;
 
         if (altHeld) {
-           if (remoteControls.getParameter(0).name().get().contains("Tune")) {
-               amount = EncoderValueProfile.SEMITONE_PARAMETER.delta(false, inc);
-           } else if (remoteControls.getParameter(0).name().get().contains("Pitch")) {
-               amount = EncoderValueProfile.PITCH_PARAMETER.delta(false, inc);
-           } else {
-               amount = EncoderValueProfile.LARGE_RANGE.delta(false, inc);
-           }
-        }
-        else {
+            if (remoteControls.getParameter(0).name().get().contains("Tune")) {
+                amount = EncoderValueProfile.SEMITONE_PARAMETER.delta(false, inc);
+            } else if (remoteControls.getParameter(0).name().get().contains("Pitch")) {
+                amount = EncoderValueProfile.PITCH_PARAMETER.delta(false, inc);
+            } else {
+                amount = EncoderValueProfile.LARGE_RANGE.delta(false, inc);
+            }
+        } else {
             amount = EncoderValueProfile.LARGE_RANGE.delta(shiftHeld, inc);
         }
         switch (typeIndex) {
@@ -290,9 +343,8 @@ class PadContainer {
         if (parameter == null) {
             return false;
         }
-        final EncoderValueProfile profile = typeIndex == 1
-                ? EncoderValueProfile.PAN
-                : EncoderValueProfile.LARGE_RANGE;
+        final EncoderValueProfile profile =
+                typeIndex == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
         profile.adjustParameter(parameter, fine, inc);
         return true;
     }
@@ -377,10 +429,10 @@ class PadContainer {
                 break;
         }
     }
-//    public String getNoteDisplay(int knobValue) {
-//        int noteIndex = (knobValue + 12) % 12; // Shift so 0 maps to G#
-//
-//        return NOTE_NAMES[noteIndex];
-//    }
+    //    public String getNoteDisplay(int knobValue) {
+    //        int noteIndex = (knobValue + 12) % 12; // Shift so 0 maps to G#
+    //
+    //        return NOTE_NAMES[noteIndex];
+    //    }
 
 }

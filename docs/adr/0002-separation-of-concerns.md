@@ -16,11 +16,13 @@ Refactor the existing codebase as follows:
 - **Settings:** `DrumSettings` encapsulates drum preferences (audition on select, accent momentary) so controllers receive explicit configuration instead of reaching into Host prefs. Future `ArpSettings` can mirror this.
 - **Pure render/logic helpers:** (`DrumLedRenderer`, `DrumUiState`, `PadNoteMapper`, `AccentModeLogic`) compute colours, note offsets, and accent behaviour without host dependencies; covered by unit tests.
 - **State snapshots:** Controllers hold only minimal live state (selected pad, mode flags) needed to react to input; rendering receives immutable snapshots (`DrumUiState`) so view logic remains pure.
-- Keep layer activation and template handling in `LaunchControlXlControllerExtension`, but push mode-specific behaviour into dedicated controllers (drum/arp) modelled after the arp package structure.
+- Keep layer construction, activation, and template handling in `LaunchControlXlControllerExtension`, but push
+  mode-specific interaction policy into dedicated factory/drum/arp controllers modelled after the arp package
+  structure.
 
 ## Status
 
-Accepted — refactor in progress and partially implemented (binding manager, drum settings, pure helpers, LED rendering).
+Accepted — implemented for factory, Drum, and Arp controller boundaries.
 
 ## Consequences
 
@@ -28,5 +30,8 @@ Accepted — refactor in progress and partially implemented (binding manager, dr
 - **Clear ownership:** Hardware wiring, settings, and UI rendering live in dedicated classes; the main extension focuses on template switches and layer activation.
 - **Easier evolution:** Additional settings (e.g., future arp/drum options) can join `DrumSettings`/future `ArpSettings` without touching orchestration code; new LED schemes drop into renderers.
 - **Adapter reuse:** Pure helpers are hardware-agnostic; another controller could reuse them by providing its own binding manager and note/CC maps while keeping the orchestrator/controller shape. Full hardware support would still live in a separate extension module, but the domain/rendering pieces can be shared.
-- **Migration effort:** Some factory-only logic still lives in the main class; follow-up refactors should extract remaining binding/paint concerns similarly to keep symmetry with the arp module.
+- **Factory boundary:** `FactoryLayerController` owns factory interaction state and policy. `FactoryUiSnapshot` and
+  `FactoryLedRenderer` own immutable render input and colour decisions. The extension still constructs hardware
+  layers, adapts the controller port to Bitwig, samples snapshots, applies frames, and sends MIDI; these are its
+  intended composition-root and hardware-edge responsibilities.
 - **Related Akai Fire work:** ADR 0005 records the later Akai Fire mode-level responsibility vocabulary that emerged from the Nested Rhythm, Melodic Step, and Chord Step refactors.

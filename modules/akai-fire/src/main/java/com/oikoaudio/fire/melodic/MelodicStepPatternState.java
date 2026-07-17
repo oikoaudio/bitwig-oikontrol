@@ -43,7 +43,8 @@ final class MelodicStepPatternState {
         basePattern = mergeObservedWithLatent(observed, basePattern, true);
     }
 
-    MelodicPattern.Step ensureStep(final int stepIndex, final Supplier<MelodicPattern.Step> defaultStepSupplier) {
+    MelodicPattern.Step ensureStep(
+            final int stepIndex, final Supplier<MelodicPattern.Step> defaultStepSupplier) {
         final MelodicPattern.Step current = currentPattern.step(stepIndex);
         if (current.active()) {
             return current;
@@ -53,8 +54,8 @@ final class MelodicStepPatternState {
         return created;
     }
 
-    MelodicPattern.Step restoreGeneratedStepOrDefault(final int stepIndex,
-                                                      final Supplier<MelodicPattern.Step> defaultStepSupplier) {
+    MelodicPattern.Step restoreGeneratedStepOrDefault(
+            final int stepIndex, final Supplier<MelodicPattern.Step> defaultStepSupplier) {
         final MelodicPattern.Step base = basePattern.step(stepIndex);
         if (base.active() && base.pitch() != null) {
             return base.withIndex(stepIndex);
@@ -72,9 +73,10 @@ final class MelodicStepPatternState {
         return count;
     }
 
-    private MelodicPattern mergeObservedWithLatent(final MelodicPattern observed,
-                                                  final MelodicPattern latentSource,
-                                                  final boolean preserveLatentActivity) {
+    private MelodicPattern mergeObservedWithLatent(
+            final MelodicPattern observed,
+            final MelodicPattern latentSource,
+            final boolean preserveLatentActivity) {
         final List<MelodicPattern.Step> steps = new ArrayList<>(MelodicPattern.MAX_STEPS);
         for (int i = 0; i < MelodicPattern.MAX_STEPS; i++) {
             final MelodicPattern.Step observedStep = observed.step(i);
@@ -84,7 +86,10 @@ final class MelodicStepPatternState {
             }
             final MelodicPattern.Step latentStep = latentSource.step(i);
             if (latentStep.pitch() != null) {
-                steps.add(latentStep.withIndex(i).withActive(preserveLatentActivity && latentStep.active()));
+                steps.add(
+                        latentStep
+                                .withIndex(i)
+                                .withActive(preserveLatentActivity && latentStep.active()));
             } else {
                 steps.add(observedStep);
             }

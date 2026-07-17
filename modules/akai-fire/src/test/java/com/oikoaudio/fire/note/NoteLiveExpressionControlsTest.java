@@ -1,20 +1,20 @@
 package com.oikoaudio.fire.note;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class NoteLiveExpressionControlsTest {
 
     @Test
     void adjustPressureSendsChannelAftertouch() {
         final List<String> events = new ArrayList<>();
-        final NoteLiveExpressionControls controls = new NoteLiveExpressionControls(new TestMidi(events));
+        final NoteLiveExpressionControls controls =
+                new NoteLiveExpressionControls(new TestMidi(events));
 
         assertTrue(controls.adjustPressure(7));
         assertEquals(7, controls.pressure());
@@ -24,7 +24,8 @@ class NoteLiveExpressionControlsTest {
     @Test
     void adjustTimbreModulationAndBreathClampToMidiRange() {
         final List<String> events = new ArrayList<>();
-        final NoteLiveExpressionControls controls = new NoteLiveExpressionControls(new TestMidi(events));
+        final NoteLiveExpressionControls controls =
+                new NoteLiveExpressionControls(new TestMidi(events));
 
         assertTrue(controls.adjustTimbre(200));
         assertTrue(controls.adjustModulation(200));
@@ -39,7 +40,8 @@ class NoteLiveExpressionControlsTest {
     @Test
     void adjustPitchExpressionSendsPitchBend() {
         final List<String> events = new ArrayList<>();
-        final NoteLiveExpressionControls controls = new NoteLiveExpressionControls(new TestMidi(events));
+        final NoteLiveExpressionControls controls =
+                new NoteLiveExpressionControls(new TestMidi(events));
 
         assertTrue(controls.adjustPitchExpression(10));
         assertEquals(74, controls.pitchExpression());
@@ -49,7 +51,8 @@ class NoteLiveExpressionControlsTest {
     @Test
     void resetMethodsRestoreDefaults() {
         final List<String> events = new ArrayList<>();
-        final NoteLiveExpressionControls controls = new NoteLiveExpressionControls(new TestMidi(events));
+        final NoteLiveExpressionControls controls =
+                new NoteLiveExpressionControls(new TestMidi(events));
         controls.adjustPressure(10);
         controls.adjustTimbre(5);
         controls.adjustModulation(9);
@@ -63,12 +66,14 @@ class NoteLiveExpressionControlsTest {
         controls.resetBreath();
         controls.resetPitchExpression();
 
-        assertEquals(List.of(
-                "pressure:0",
-                "timbre:0",
-                "mod:0",
-                "breath:0",
-                "bend:" + NoteLiveExpressionControls.pitchBendValueFor(64)), events);
+        assertEquals(
+                List.of(
+                        "pressure:0",
+                        "timbre:0",
+                        "mod:0",
+                        "breath:0",
+                        "bend:" + NoteLiveExpressionControls.pitchBendValueFor(64)),
+                events);
     }
 
     @Test
@@ -79,7 +84,8 @@ class NoteLiveExpressionControlsTest {
         assertFalse(controls.adjustPressure(0));
     }
 
-    private record TestMidi(List<String> events) implements NoteLiveExpressionControls.MidiExpressionOut {
+    private record TestMidi(List<String> events)
+            implements NoteLiveExpressionControls.MidiExpressionOut {
         @Override
         public void channelAftertouch(final int value) {
             events.add("pressure:" + value);

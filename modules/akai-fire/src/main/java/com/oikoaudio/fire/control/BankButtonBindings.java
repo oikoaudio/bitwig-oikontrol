@@ -4,15 +4,19 @@ import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.lights.BiColorLightState;
 
 public final class BankButtonBindings {
-    private BankButtonBindings() {
-    }
+    private BankButtonBindings() {}
 
-    public static void bind(final Layer layer, final BiColorButton leftButton, final BiColorButton rightButton,
-                            final Host host) {
-        leftButton.bindPressed(layer, pressed -> host.handleBankButton(pressed, -1),
+    public static void bind(
+            final Layer layer,
+            final BiColorButton leftButton,
+            final BiColorButton rightButton,
+            final Host host) {
+        leftButton.bindPressed(
+                layer,
+                pressed -> host.handleBankButton(pressed, -1),
                 () -> host.bankLightState(-1));
-        rightButton.bindPressed(layer, pressed -> host.handleBankButton(pressed, 1),
-                () -> host.bankLightState(1));
+        rightButton.bindPressed(
+                layer, pressed -> host.handleBankButton(pressed, 1), () -> host.bankLightState(1));
     }
 
     public interface Host {

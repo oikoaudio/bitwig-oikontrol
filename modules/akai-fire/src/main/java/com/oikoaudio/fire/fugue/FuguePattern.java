@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.fugue;
 
 import com.oikoaudio.fire.melodic.MelodicPattern;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,7 +13,8 @@ public final class FuguePattern {
 
     public FuguePattern(final List<MelodicPattern.Step> steps, final int loopSteps) {
         if (steps.size() != MAX_STEPS) {
-            throw new IllegalArgumentException("FuguePattern requires exactly %d steps".formatted(MAX_STEPS));
+            throw new IllegalArgumentException(
+                    "FuguePattern requires exactly %d steps".formatted(MAX_STEPS));
         }
         final List<List<MelodicPattern.Step>> wrapped = new ArrayList<>(MAX_STEPS);
         for (final MelodicPattern.Step step : steps) {
@@ -24,9 +24,13 @@ public final class FuguePattern {
         this.loopSteps = Math.max(1, Math.min(MAX_STEPS, loopSteps));
     }
 
-    public FuguePattern(final List<List<MelodicPattern.Step>> steps, final int loopSteps, final boolean polyphonic) {
+    public FuguePattern(
+            final List<List<MelodicPattern.Step>> steps,
+            final int loopSteps,
+            final boolean polyphonic) {
         if (steps.size() != MAX_STEPS) {
-            throw new IllegalArgumentException("FuguePattern requires exactly %d steps".formatted(MAX_STEPS));
+            throw new IllegalArgumentException(
+                    "FuguePattern requires exactly %d steps".formatted(MAX_STEPS));
         }
         final List<List<MelodicPattern.Step>> copy = new ArrayList<>(MAX_STEPS);
         for (final List<MelodicPattern.Step> step : steps) {
@@ -58,8 +62,8 @@ public final class FuguePattern {
     }
 
     static List<MelodicPattern.Step> emptySteps() {
-        final List<MelodicPattern.Step> steps = new ArrayList<>(Collections.nCopies(MAX_STEPS,
-                MelodicPattern.Step.rest(0)));
+        final List<MelodicPattern.Step> steps =
+                new ArrayList<>(Collections.nCopies(MAX_STEPS, MelodicPattern.Step.rest(0)));
         for (int i = 0; i < MAX_STEPS; i++) {
             steps.set(i, MelodicPattern.Step.rest(i));
         }

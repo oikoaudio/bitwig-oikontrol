@@ -5,9 +5,7 @@ import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 
-/**
- * Facade for Note mode's live-side button and encoder-page control surface.
- */
+/** Facade for Note mode's live-side button and encoder-page control surface. */
 final class NoteLiveControlSurface {
     private final NoteLivePerformanceControls performanceControls;
     private final NoteLiveEncoderModeControls encoderModeControls;
@@ -17,13 +15,14 @@ final class NoteLiveControlSurface {
     private final Runnable clearDisplay;
     private final ParameterEncoderBinding.ExplicitResetControl explicitResetControl;
 
-    NoteLiveControlSurface(final NoteLivePerformanceControls performanceControls,
-                           final NoteLiveEncoderModeControls encoderModeControls,
-                           final EncoderTouchDisplayHandler touchDisplayHandler,
-                           final ValueDisplay valueDisplay,
-                           final DetailDisplay detailDisplay,
-                           final Runnable clearDisplay,
-                           final ParameterEncoderBinding.ExplicitResetControl explicitResetControl) {
+    NoteLiveControlSurface(
+            final NoteLivePerformanceControls performanceControls,
+            final NoteLiveEncoderModeControls encoderModeControls,
+            final EncoderTouchDisplayHandler touchDisplayHandler,
+            final ValueDisplay valueDisplay,
+            final DetailDisplay detailDisplay,
+            final Runnable clearDisplay,
+            final ParameterEncoderBinding.ExplicitResetControl explicitResetControl) {
         this.performanceControls = performanceControls;
         this.encoderModeControls = encoderModeControls;
         this.touchDisplayHandler = touchDisplayHandler;
@@ -33,13 +32,20 @@ final class NoteLiveControlSurface {
         this.explicitResetControl = explicitResetControl;
     }
 
-    NoteLiveControlSurface(final NoteLivePerformanceControls performanceControls,
-                           final NoteLiveEncoderModeControls encoderModeControls,
-                           final EncoderTouchDisplayHandler touchDisplayHandler,
-                           final ValueDisplay valueDisplay,
-                           final DetailDisplay detailDisplay,
-                           final Runnable clearDisplay) {
-        this(performanceControls, encoderModeControls, touchDisplayHandler, valueDisplay, detailDisplay, clearDisplay,
+    NoteLiveControlSurface(
+            final NoteLivePerformanceControls performanceControls,
+            final NoteLiveEncoderModeControls encoderModeControls,
+            final EncoderTouchDisplayHandler touchDisplayHandler,
+            final ValueDisplay valueDisplay,
+            final DetailDisplay detailDisplay,
+            final Runnable clearDisplay) {
+        this(
+                performanceControls,
+                encoderModeControls,
+                touchDisplayHandler,
+                valueDisplay,
+                detailDisplay,
+                clearDisplay,
                 ParameterEncoderBinding.ExplicitResetControl.none());
     }
 
@@ -70,6 +76,10 @@ final class NoteLiveControlSurface {
 
     void handleMute3(final boolean pressed) {
         performanceControls.handleMute3(pressed);
+    }
+
+    boolean consumeMute3EncoderTurn() {
+        return performanceControls.consumeMute3EncoderTurn();
     }
 
     void handleMute4(final boolean pressed) {
@@ -116,18 +126,30 @@ final class NoteLiveControlSurface {
         }
     }
 
-    void handleResettableTouch(final int encoderIndex, final boolean touched,
-                               final Runnable showInfo, final Runnable resetAction) {
+    void handleResettableTouch(
+            final int encoderIndex,
+            final boolean touched,
+            final Runnable showInfo,
+            final Runnable resetAction) {
         handleResettableTouch(encoderIndex, touched, true, "No reset", showInfo, resetAction);
     }
 
-    void handleResettableTouch(final int encoderIndex, final boolean touched,
-                               final boolean resettable,
-                               final String unavailableDetail,
-                               final Runnable showInfo,
-                               final Runnable resetAction) {
-        if (ParameterEncoderBinding.handleExplicitResetTouch(touched, explicitResetControl, resettable,
-                "Reset", unavailableDetail, resetAction, showInfo, valueDisplay::show)) {
+    void handleResettableTouch(
+            final int encoderIndex,
+            final boolean touched,
+            final boolean resettable,
+            final String unavailableDetail,
+            final Runnable showInfo,
+            final Runnable resetAction) {
+        if (ParameterEncoderBinding.handleExplicitResetTouch(
+                touched,
+                explicitResetControl,
+                resettable,
+                "Reset",
+                unavailableDetail,
+                resetAction,
+                showInfo,
+                valueDisplay::show)) {
             return;
         }
         touchDisplayHandler.handleTouch(touched, showInfo);

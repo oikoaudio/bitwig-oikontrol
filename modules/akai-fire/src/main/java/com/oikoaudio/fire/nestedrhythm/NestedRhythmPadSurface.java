@@ -1,12 +1,11 @@
 package com.oikoaudio.fire.nestedrhythm;
 
 import com.oikoaudio.fire.display.OledDisplay;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.ClipRowHandler;
 import com.oikoaudio.fire.sequence.RecurrencePadInteraction;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
-
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
@@ -30,8 +29,8 @@ final class NestedRhythmPadSurface {
     private final IntSupplier totalFineStepCount;
     private final IntSupplier shiftedClipStartColumn;
     private final IntConsumer setLastStep;
-    private final IntFunction<RgbLigthState> lastStepPadLight;
-    private final Supplier<RgbLigthState> clipBaseColor;
+    private final IntFunction<RgbLightState> lastStepPadLight;
+    private final Supplier<RgbLightState> clipBaseColor;
     private final BiConsumer<String, String> applyEditablePattern;
     private final RecurrencePadInteraction recurrencePads = new RecurrencePadInteraction(true);
     private int selectedPulseIndex = -1;
@@ -40,17 +39,18 @@ final class NestedRhythmPadSurface {
     private boolean heldPulseConsumed = false;
     private int playingFineStep = -1;
 
-    NestedRhythmPadSurface(final List<NestedRhythmEditablePulse> pulses,
-                           final ClipRowHandler clipHandler,
-                           final OledDisplay oled,
-                           final BooleanSupplier fixedLengthHeld,
-                           final BooleanSupplier shiftHeld,
-                           final IntSupplier totalFineStepCount,
-                           final IntSupplier shiftedClipStartColumn,
-                           final IntConsumer setLastStep,
-                           final IntFunction<RgbLigthState> lastStepPadLight,
-                           final Supplier<RgbLigthState> clipBaseColor,
-                           final BiConsumer<String, String> applyEditablePattern) {
+    NestedRhythmPadSurface(
+            final List<NestedRhythmEditablePulse> pulses,
+            final ClipRowHandler clipHandler,
+            final OledDisplay oled,
+            final BooleanSupplier fixedLengthHeld,
+            final BooleanSupplier shiftHeld,
+            final IntSupplier totalFineStepCount,
+            final IntSupplier shiftedClipStartColumn,
+            final IntConsumer setLastStep,
+            final IntFunction<RgbLightState> lastStepPadLight,
+            final Supplier<RgbLightState> clipBaseColor,
+            final BiConsumer<String, String> applyEditablePattern) {
         this.pulses = pulses;
         this.clipHandler = clipHandler;
         this.oled = oled;
@@ -91,7 +91,7 @@ final class NestedRhythmPadSurface {
         handleHitPadPress(padIndex - VELOCITY_PAD_OFFSET, pressed);
     }
 
-    RgbLigthState getPadLight(final int padIndex) {
+    RgbLightState getPadLight(final int padIndex) {
         if (padIndex < CLIP_ROW_PAD_COUNT && recurrencePads.shouldShowRow(hasHeldPulse())) {
             return recurrencePadLight(padIndex);
         }
@@ -131,16 +131,22 @@ final class NestedRhythmPadSurface {
                 : -1;
     }
 
-    void afterPatternRegenerated(final int previousSelectionFineStart,
-                                 final NestedRhythmEditablePattern editablePattern) {
-        selectedPulseIndex = editablePattern.findSelectedPulseIndex(previousSelectionFineStart, selectedPulseIndex);
+    void afterPatternRegenerated(
+            final int previousSelectionFineStart,
+            final NestedRhythmEditablePattern editablePattern) {
+        selectedPulseIndex =
+                editablePattern.findSelectedPulseIndex(
+                        previousSelectionFineStart, selectedPulseIndex);
         heldPulseIndex = -1;
     }
 
     int structureBinFor(final int fineStart) {
         final double normalized = fineStart / (double) Math.max(1, totalFineStepCount.getAsInt());
-        return Math.max(0, Math.min(STRUCTURE_PAD_COUNT - 1,
-                (int) Math.floor(normalized * STRUCTURE_PAD_COUNT)));
+        return Math.max(
+                0,
+                Math.min(
+                        STRUCTURE_PAD_COUNT - 1,
+                        (int) Math.floor(normalized * STRUCTURE_PAD_COUNT)));
     }
 
     NestedRhythmEditablePulse strongestPulseInBin(final int bin) {
@@ -162,7 +168,8 @@ final class NestedRhythmPadSurface {
         }
         for (int index = 0; index < pulses.size(); index++) {
             final NestedRhythmEditablePulse pulse = pulses.get(index);
-            if (pulse.enabled && pulse.containsFineStep(playingFineStep, totalFineStepCount.getAsInt())) {
+            if (pulse.enabled
+                    && pulse.containsFineStep(playingFineStep, totalFineStepCount.getAsInt())) {
                 return index;
             }
         }
@@ -171,8 +178,11 @@ final class NestedRhythmPadSurface {
 
     private void handleHitPadPress(final int hitIndex, final boolean pressed) {
         if (!pressed) {
-            if (hitIndex == pressedHitIndex && !heldPulseConsumed && !shiftHeld.getAsBoolean()
-                    && hitIndex >= 0 && hitIndex < pulses.size()) {
+            if (hitIndex == pressedHitIndex
+                    && !heldPulseConsumed
+                    && !shiftHeld.getAsBoolean()
+                    && hitIndex >= 0
+                    && hitIndex < pulses.size()) {
                 final NestedRhythmEditablePulse pulse = pulses.get(hitIndex);
                 pulse.enabled = !pulse.enabled;
                 applyEditablePattern.accept("Hit", pulse.enabled ? "On" : "Off");
@@ -225,18 +235,27 @@ final class NestedRhythmPadSurface {
         }
         final NestedRhythmEditablePulse pulse = pulses.get(heldPulseIndex);
         final RecurrencePattern recurrence = pulse.effectiveRecurrence();
-        oled.valueInfo("Hit %d".formatted(heldPulseIndex + 1),
-                "%s Vel %d Rec %s".formatted(pulse.roleLabel(), pulse.effectiveVelocity(), recurrence.summary()));
+        oled.valueInfo(
+                "Hit %d".formatted(heldPulseIndex + 1),
+                "%s Vel %d Rec %s"
+                        .formatted(
+                                pulse.roleLabel(),
+                                pulse.effectiveVelocity(),
+                                recurrence.summary()));
     }
 
     private void handleRecurrencePadPress(final int padIndex, final boolean pressed) {
         if (padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
             return;
         }
-        final RecurrencePattern recurrence = hasHeldPulse()
-                ? pulses.get(activePulseIndex()).effectiveRecurrence()
-                : RecurrencePattern.of(0, 0);
-        recurrencePads.handlePadPress(padIndex, pressed, hasHeldPulse(),
+        final RecurrencePattern recurrence =
+                hasHeldPulse()
+                        ? pulses.get(activePulseIndex()).effectiveRecurrence()
+                        : RecurrencePattern.of(0, 0);
+        recurrencePads.handlePadPress(
+                padIndex,
+                pressed,
+                hasHeldPulse(),
                 recurrence,
                 this::markHeldPulseConsumed,
                 this::toggleHeldPulseRecurrencePad,
@@ -261,46 +280,53 @@ final class NestedRhythmPadSurface {
         applyEditablePattern.accept("Recurrence", updated.summary());
     }
 
-    private RgbLigthState recurrencePadLight(final int padIndex) {
+    private RgbLightState recurrencePadLight(final int padIndex) {
         if (!hasHeldPulse()) {
             return clipHandler.getPadLight(padIndex);
         }
         if (padIndex >= RecurrencePattern.EDITOR_DEFAULT_SPAN) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final NestedRhythmEditablePulse pulse = pulses.get(activePulseIndex());
         return recurrencePads.padLight(padIndex, pulse.effectiveRecurrence(), clipBaseColor.get());
     }
 
-    private RgbLigthState structurePadLight(final int bin) {
+    private RgbLightState structurePadLight(final int bin) {
         final NestedRhythmEditablePulse pulse = strongestPulseInBin(bin);
         final int playingBin = playingFineStep < 0 ? -1 : structureBinFor(playingFineStep);
-        final RgbLigthState base;
+        final RgbLightState base;
         if (pulse == null) {
             base = StepPadLightHelper.renderEmptyStep(bin, playingBin);
         } else {
-            base = pulse.enabled
-                    ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor.get())
-                    : disabledPulseColor();
+            base =
+                    pulse.enabled
+                            ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor.get())
+                            : disabledPulseColor();
         }
-        final RgbLigthState withPlayhead = playingBin == bin ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
+        final RgbLightState withPlayhead =
+                playingBin == bin ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
         return StepPadLightHelper.renderClipStartColumnOverlay(
-                Math.floorMod(bin, CLIP_ROW_PAD_COUNT), shiftedClipStartColumn.getAsInt(), withPlayhead);
+                Math.floorMod(bin, CLIP_ROW_PAD_COUNT),
+                shiftedClipStartColumn.getAsInt(),
+                withPlayhead);
     }
 
-    private RgbLigthState velocityPadLight(final int hitIndex) {
+    private RgbLightState velocityPadLight(final int hitIndex) {
         if (hitIndex >= pulses.size()) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final int playingHitIndex = playingPulseIndex();
         final NestedRhythmEditablePulse pulse = pulses.get(hitIndex);
-        final RgbLigthState base = pulse.enabled
-                ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor.get())
-                : disabledPulseColor();
-        return playingHitIndex == hitIndex ? StepPadLightHelper.renderPlayheadHighlight(base) : base;
+        final RgbLightState base =
+                pulse.enabled
+                        ? colorForVelocity(pulse.effectiveVelocity(), clipBaseColor.get())
+                        : disabledPulseColor();
+        return playingHitIndex == hitIndex
+                ? StepPadLightHelper.renderPlayheadHighlight(base)
+                : base;
     }
 
-    private RgbLigthState colorForVelocity(final int velocity, final RgbLigthState base) {
+    private RgbLightState colorForVelocity(final int velocity, final RgbLightState base) {
         if (velocity >= 112) {
             return base.getBrightest();
         }
@@ -313,7 +339,7 @@ final class NestedRhythmPadSurface {
         return base.getDimmed();
     }
 
-    private RgbLigthState disabledPulseColor() {
+    private RgbLightState disabledPulseColor() {
         return clipBaseColor.get().getVeryDimmed();
     }
 }

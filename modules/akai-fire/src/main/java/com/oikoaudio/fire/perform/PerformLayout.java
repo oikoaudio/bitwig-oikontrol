@@ -19,7 +19,10 @@ final class PerformLayout {
     }
 
     PerformLayout toggle() {
-        return new PerformLayout(orientation == Orientation.VERTICAL ? Orientation.HORIZONTAL : Orientation.VERTICAL);
+        return new PerformLayout(
+                orientation == Orientation.VERTICAL
+                        ? Orientation.HORIZONTAL
+                        : Orientation.VERTICAL);
     }
 
     String label() {

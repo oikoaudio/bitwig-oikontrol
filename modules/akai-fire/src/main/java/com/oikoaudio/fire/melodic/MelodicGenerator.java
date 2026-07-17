@@ -11,14 +11,20 @@ public interface MelodicGenerator {
         return false;
     }
 
-    default void cycleSubtype(final int direction) {
-    }
+    default void cycleSubtype(final int direction) {}
 
     default String currentSubtypeLabel() {
         return "Any";
     }
 
-    record GenerateParameters(int loopSteps, double density, double tension, double octaveActivity,
-                              double legato, int pulses, int rotation, double timeVariance, long seed) {
-    }
+    record GenerateParameters(
+            int loopSteps,
+            double density,
+            double tension,
+            double octaveActivity,
+            double legato,
+            int pulses,
+            int rotation,
+            double timeVariance,
+            long seed) {}
 }

@@ -12,121 +12,140 @@ import com.bitwig.extension.controller.api.TrackBank;
 import com.oikoaudio.fire.values.SpecialDevices;
 
 public class ViewCursorControl {
-	private static final int TRACK_RESTORE_WIDTH = 128;
-	private final CursorTrack cursorTrack;
-	private final DeviceBank deviceBank;
-	private final PinnableCursorDevice primaryDevice;
-	private final PinnableCursorDevice selectedDevice;
-	private final PinnableCursorClip selectedClip;
-	private final DeviceBank drumBank;
-	private final DrumPadBank drumPadBank;
-	private final TrackBank trackBank;
-	private int selectedTrackIndex = -1;
-	private int selectedClipSlotIndex = -1;
-	// private final Device drumDevice;
+    private static final int TRACK_RESTORE_WIDTH = 128;
+    private final CursorTrack cursorTrack;
+    private final DeviceBank deviceBank;
+    private final PinnableCursorDevice primaryDevice;
+    private final PinnableCursorDevice selectedDevice;
+    private final PinnableCursorClip selectedClip;
+    private final DeviceBank drumBank;
+    private final DrumPadBank drumPadBank;
+    private final TrackBank trackBank;
+    private int selectedTrackIndex = -1;
+    private int selectedClipSlotIndex = -1;
 
-	public ViewCursorControl(final ControllerHost host, final int sends) {
-		super();
+    // private final Device drumDevice;
 
-		this.trackBank = host.createMainTrackBank(TRACK_RESTORE_WIDTH, 8, sends);
-		for (int index = 0; index < TRACK_RESTORE_WIDTH; index++) {
-			this.trackBank.getItemAt(index).exists().markInterested();
-			this.trackBank.getItemAt(index).isActivated().markInterested();
-			this.trackBank.getItemAt(index).name().markInterested();
-			final int trackIndex = index;
-			this.trackBank.getItemAt(index).addIsSelectedInMixerObserver(selected -> {
-				if (selected) {
-					selectedTrackIndex = trackIndex;
-				}
-			});
-			this.trackBank.getItemAt(index).addIsSelectedInEditorObserver(selected -> {
-				if (selected) {
-					selectedTrackIndex = trackIndex;
-				}
-			});
-		}
-		this.cursorTrack = host.createCursorTrack("View Control", "view Control", 8, sends, true);
-		cursorTrack.isPinned().markInterested();
-		cursorTrack.position().markInterested();
-		cursorTrack.name().markInterested();
-		for (int index = 0; index < cursorTrack.clipLauncherSlotBank().getSizeOfBank(); index++) {
-			final int slotIndex = index;
-			cursorTrack.clipLauncherSlotBank().getItemAt(index).exists().markInterested();
-			cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().markInterested();
-			cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().addValueObserver(selected -> {
-				if (selected) {
-					selectedClipSlotIndex = slotIndex;
-				}
-			});
-		}
+    public ViewCursorControl(final ControllerHost host, final int sends) {
+        super();
 
-		deviceBank = cursorTrack.createDeviceBank(8);
-		primaryDevice = cursorTrack.createCursorDevice("drumdetection", "Pad Device", 8,
-				CursorDeviceFollowMode.FIRST_INSTRUMENT);
-		primaryDevice.hasDrumPads().markInterested();
-		primaryDevice.exists().markInterested();
-		primaryDevice.isPinned().markInterested();
-		primaryDevice.isWindowOpen().markInterested();
-		selectedDevice = cursorTrack.createCursorDevice("selecteddevice", "Selected Device", 8,
-				CursorDeviceFollowMode.FOLLOW_SELECTION);
-		selectedDevice.exists().markInterested();
-		selectedDevice.isPinned().markInterested();
-		selectedDevice.isWindowOpen().markInterested();
-		selectedClip = cursorTrack.createLauncherCursorClip("VIEW_SELECTED_CLIP", "Selected Clip", 64, 128);
-		selectedClip.exists().markInterested();
-		selectedClip.isPinned().markInterested();
-		final DeviceMatcher drumMatcher = host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
-		drumBank = cursorTrack.createDeviceBank(1);
-		drumBank.setDeviceMatcher(drumMatcher);
-		// drumDevice = drumBank.getItemAt(0);
-		drumPadBank = primaryDevice.createDrumPadBank(16);
-	}
+        this.trackBank = host.createMainTrackBank(TRACK_RESTORE_WIDTH, 8, sends);
+        for (int index = 0; index < TRACK_RESTORE_WIDTH; index++) {
+            this.trackBank.getItemAt(index).exists().markInterested();
+            this.trackBank.getItemAt(index).isActivated().markInterested();
+            this.trackBank.getItemAt(index).name().markInterested();
+            final int trackIndex = index;
+            this.trackBank
+                    .getItemAt(index)
+                    .addIsSelectedInMixerObserver(
+                            selected -> {
+                                if (selected) {
+                                    selectedTrackIndex = trackIndex;
+                                }
+                            });
+            this.trackBank
+                    .getItemAt(index)
+                    .addIsSelectedInEditorObserver(
+                            selected -> {
+                                if (selected) {
+                                    selectedTrackIndex = trackIndex;
+                                }
+                            });
+        }
+        this.cursorTrack = host.createCursorTrack("View Control", "view Control", 8, sends, true);
+        cursorTrack.isPinned().markInterested();
+        cursorTrack.position().markInterested();
+        cursorTrack.name().markInterested();
+        for (int index = 0; index < cursorTrack.clipLauncherSlotBank().getSizeOfBank(); index++) {
+            final int slotIndex = index;
+            cursorTrack.clipLauncherSlotBank().getItemAt(index).exists().markInterested();
+            cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().markInterested();
+            cursorTrack
+                    .clipLauncherSlotBank()
+                    .getItemAt(index)
+                    .isSelected()
+                    .addValueObserver(
+                            selected -> {
+                                if (selected) {
+                                    selectedClipSlotIndex = slotIndex;
+                                }
+                            });
+        }
 
-	public TrackBank getTrackBank() {
-		return trackBank;
-	}
+        deviceBank = cursorTrack.createDeviceBank(8);
+        primaryDevice =
+                cursorTrack.createCursorDevice(
+                        "drumdetection", "Pad Device", 8, CursorDeviceFollowMode.FIRST_INSTRUMENT);
+        primaryDevice.hasDrumPads().markInterested();
+        primaryDevice.exists().markInterested();
+        primaryDevice.isPinned().markInterested();
+        primaryDevice.isWindowOpen().markInterested();
+        selectedDevice =
+                cursorTrack.createCursorDevice(
+                        "selecteddevice",
+                        "Selected Device",
+                        8,
+                        CursorDeviceFollowMode.FOLLOW_SELECTION);
+        selectedDevice.exists().markInterested();
+        selectedDevice.isPinned().markInterested();
+        selectedDevice.isWindowOpen().markInterested();
+        selectedClip =
+                cursorTrack.createLauncherCursorClip(
+                        "VIEW_SELECTED_CLIP", "Selected Clip", 64, 128);
+        selectedClip.exists().markInterested();
+        selectedClip.isPinned().markInterested();
+        final DeviceMatcher drumMatcher =
+                host.createBitwigDeviceMatcher(SpecialDevices.DRUM.getUuid());
+        drumBank = cursorTrack.createDeviceBank(1);
+        drumBank.setDeviceMatcher(drumMatcher);
+        // drumDevice = drumBank.getItemAt(0);
+        drumPadBank = primaryDevice.createDrumPadBank(16);
+    }
 
-	public CursorTrack getCursorTrack() {
-		return cursorTrack;
-	}
+    public TrackBank getTrackBank() {
+        return trackBank;
+    }
 
-	public int getSelectedClipSlotIndex() {
-		for (int index = 0; index < cursorTrack.clipLauncherSlotBank().getSizeOfBank(); index++) {
-			if (cursorTrack.clipLauncherSlotBank().getItemAt(index).exists().get()
-					&& cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().get()) {
-				selectedClipSlotIndex = index;
-				return index;
-			}
-		}
-		return selectedClipSlotIndex;
-	}
+    public CursorTrack getCursorTrack() {
+        return cursorTrack;
+    }
 
-	public int getSelectedTrackIndex() {
-		return selectedTrackIndex >= 0 ? selectedTrackIndex : cursorTrack.position().get();
-	}
+    public int getSelectedClipSlotIndex() {
+        for (int index = 0; index < cursorTrack.clipLauncherSlotBank().getSizeOfBank(); index++) {
+            if (cursorTrack.clipLauncherSlotBank().getItemAt(index).exists().get()
+                    && cursorTrack.clipLauncherSlotBank().getItemAt(index).isSelected().get()) {
+                selectedClipSlotIndex = index;
+                return index;
+            }
+        }
+        return selectedClipSlotIndex;
+    }
 
-	public DeviceBank getDeviceBank() {
-		return deviceBank;
-	}
+    public int getSelectedTrackIndex() {
+        return selectedTrackIndex >= 0 ? selectedTrackIndex : cursorTrack.position().get();
+    }
 
-	public PinnableCursorDevice getPrimaryDevice() {
-		return primaryDevice;
-	}
+    public DeviceBank getDeviceBank() {
+        return deviceBank;
+    }
 
-	public PinnableCursorDevice getSelectedDevice() {
-		return selectedDevice;
-	}
+    public PinnableCursorDevice getPrimaryDevice() {
+        return primaryDevice;
+    }
 
-	public PinnableCursorClip getSelectedClip() {
-		return selectedClip;
-	}
+    public PinnableCursorDevice getSelectedDevice() {
+        return selectedDevice;
+    }
 
-	public DeviceBank getDrumBank() {
-		return drumBank;
-	}
+    public PinnableCursorClip getSelectedClip() {
+        return selectedClip;
+    }
 
-	public DrumPadBank getDrumPadBank() {
-		return drumPadBank;
-	}
+    public DeviceBank getDrumBank() {
+        return drumBank;
+    }
 
+    public DrumPadBank getDrumPadBank() {
+        return drumPadBank;
+    }
 }

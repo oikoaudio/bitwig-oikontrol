@@ -2,13 +2,13 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
-public final class ChordStepPadController {
+final class ChordStepPadController {
     public interface Host {
         void handleClipRowPad(int padIndex, boolean pressed);
 
@@ -16,7 +16,7 @@ public final class ChordStepPadController {
 
         boolean hasChordSlot(int sourcePadIndex);
 
-        void selectChordSlot(int sourcePadIndex);
+        void selectChordSlots(Set<Integer> sourcePadIndexes, int primarySourcePadIndex);
 
         boolean isStepAuditionEnabled();
 
@@ -34,6 +34,8 @@ public final class ChordStepPadController {
 
         boolean assignSelectedChordToSteps(Set<Integer> stepIndexes, int velocity);
 
+        boolean replaceSelectedChordAtStep(int stepIndex);
+
         void showCurrentChord();
 
         boolean handleBuilderSourcePad(int sourcePadIndex, boolean pressed);
@@ -42,7 +44,8 @@ public final class ChordStepPadController {
 
         List<NoteStep> heldNotes();
 
-        void applyChordStepRecurrence(List<NoteStep> targets, UnaryOperator<RecurrencePattern> updater);
+        void applyChordStepRecurrence(
+                List<NoteStep> targets, UnaryOperator<RecurrencePattern> updater);
 
         boolean ensureSelectedNoteClipSlot();
 
@@ -88,13 +91,15 @@ public final class ChordStepPadController {
     private final int chordSourcePadOffset;
     private final int stepPadOffset;
     private final Host host;
+    private final Set<Integer> heldSourcePads = new HashSet<>();
     private final ChordStepPadSurface.StepPadCallbacks stepPadCallbacks = new StepPadCallbacks();
 
-    public ChordStepPadController(final ChordStepPadSurface padSurface,
-                                  final int clipRowPadCount,
-                                  final int chordSourcePadOffset,
-                                  final int stepPadOffset,
-                                  final Host host) {
+    public ChordStepPadController(
+            final ChordStepPadSurface padSurface,
+            final int clipRowPadCount,
+            final int chordSourcePadOffset,
+            final int stepPadOffset,
+            final Host host) {
         this.padSurface = padSurface;
         this.clipRowPadCount = clipRowPadCount;
         this.chordSourcePadOffset = chordSourcePadOffset;
@@ -111,7 +116,12 @@ public final class ChordStepPadController {
             handleSourcePadPress(padIndex - chordSourcePadOffset, pressed, velocity);
             return;
         }
-        padSurface.handleStepPadPress(padIndex - stepPadOffset, pressed, velocity, stepPadCallbacks);
+        padSurface.handleStepPadPress(
+                padIndex - stepPadOffset, pressed, velocity, stepPadCallbacks);
+    }
+
+    public void clearHeldSourcePads() {
+        heldSourcePads.clear();
     }
 
     private void handleClipRowPadPress(final int padIndex, final boolean pressed) {
@@ -121,16 +131,19 @@ public final class ChordStepPadController {
         host.handleClipRowPad(padIndex, pressed);
     }
 
-    private void handleSourcePadPress(final int sourcePadIndex, final boolean pressed, final int velocity) {
+    private void handleSourcePadPress(
+            final int sourcePadIndex, final boolean pressed, final int velocity) {
         if (host.isBuilderFamily()) {
+            trackSourcePad(sourcePadIndex, pressed);
             handleBuilderSourcePadPress(sourcePadIndex, pressed);
             return;
         }
         if (!host.hasChordSlot(sourcePadIndex)) {
             return;
         }
+        trackSourcePad(sourcePadIndex, pressed);
         if (pressed) {
-            host.selectChordSlot(sourcePadIndex);
+            host.selectChordSlots(Set.copyOf(heldSourcePads), sourcePadIndex);
             final boolean hasHeldSteps = padSurface.hasHeldSteps();
             final boolean auditionEnabled = host.isStepAuditionEnabled();
             final boolean transportStopped = !host.isTransportPlaying();
@@ -142,8 +155,16 @@ public final class ChordStepPadController {
             } else if (!auditionEnabled) {
                 host.showCurrentChord();
             }
-        } else {
+        } else if (heldSourcePads.isEmpty()) {
             host.stopAuditionNotes();
+        }
+    }
+
+    private void trackSourcePad(final int sourcePadIndex, final boolean pressed) {
+        if (pressed) {
+            heldSourcePads.add(sourcePadIndex);
+        } else {
+            heldSourcePads.remove(sourcePadIndex);
         }
     }
 
@@ -167,10 +188,18 @@ public final class ChordStepPadController {
         if (targets.isEmpty()) {
             return true;
         }
-        return padSurface.handleRecurrencePadPress(padIndex, pressed, targets,
+        return padSurface.handleRecurrencePadPress(
+                padIndex,
+                pressed,
+                targets,
                 () -> padSurface.markModifiedSteps(padSurface.heldStepSnapshot()),
-                pad -> host.applyChordStepRecurrence(targets, recurrencePattern -> recurrencePattern.toggledAt(pad)),
-                span -> host.applyChordStepRecurrence(targets, recurrencePattern -> recurrencePattern.applySpanGesture(span)));
+                pad ->
+                        host.applyChordStepRecurrence(
+                                targets, recurrencePattern -> recurrencePattern.toggledAt(pad)),
+                span ->
+                        host.applyChordStepRecurrence(
+                                targets,
+                                recurrencePattern -> recurrencePattern.applySpanGesture(span)));
     }
 
     private final class StepPadCallbacks implements ChordStepPadSurface.StepPadCallbacks {
@@ -210,6 +239,11 @@ public final class ChordStepPadController {
         }
 
         @Override
+        public boolean hasHeldSourcePads() {
+            return !heldSourcePads.isEmpty();
+        }
+
+        @Override
         public void handleSelectStep(final int stepIndex) {
             host.selectStep(stepIndex);
         }
@@ -235,7 +269,8 @@ public final class ChordStepPadController {
         }
 
         @Override
-        public boolean canExtendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+        public boolean canExtendHeldChordRange(
+                final int anchorStepIndex, final int targetStepIndex) {
             return host.canExtendHeldChordRange(anchorStepIndex, targetStepIndex);
         }
 
@@ -262,6 +297,11 @@ public final class ChordStepPadController {
         @Override
         public boolean assignSelectedChordToStep(final int stepIndex, final int velocity) {
             return host.assignSelectedChordToSteps(Collections.singleton(stepIndex), velocity);
+        }
+
+        @Override
+        public boolean replaceSelectedChordAtStep(final int stepIndex) {
+            return host.replaceSelectedChordAtStep(stepIndex);
         }
 
         @Override

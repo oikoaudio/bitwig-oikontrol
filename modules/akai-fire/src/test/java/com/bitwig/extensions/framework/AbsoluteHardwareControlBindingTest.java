@@ -1,13 +1,13 @@
 package com.bitwig.extensions.framework;
 
-import com.bitwig.extension.controller.api.AbsoluteHardwarControlBindable;
-import com.bitwig.extension.controller.api.AbsoluteHardwareControl;
-import org.junit.jupiter.api.Test;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.AbsoluteHardwarControlBindable;
+import com.bitwig.extension.controller.api.AbsoluteHardwareControl;
+import org.junit.jupiter.api.Test;
 
 class AbsoluteHardwareControlBindingTest {
 
@@ -19,7 +19,8 @@ class AbsoluteHardwareControlBindingTest {
                 mock(com.bitwig.extension.controller.api.AbsoluteHardwareControlBinding.class);
         when(source.addBindingWithRange(target, 0.25, 0.75)).thenReturn(hardwareBinding);
 
-        final AbsoluteHardwareControlBinding binding = new AbsoluteHardwareControlBinding(source, target);
+        final AbsoluteHardwareControlBinding binding =
+                new AbsoluteHardwareControlBinding(source, target);
         binding.setRange(0.25, 0.75);
 
         binding.setIsActive(true);
@@ -36,7 +37,8 @@ class AbsoluteHardwareControlBindingTest {
                 mock(com.bitwig.extension.controller.api.AbsoluteHardwareControlBinding.class);
         when(source.addBindingWithRange(target, 0.0, 1.0)).thenReturn(hardwareBinding);
 
-        final AbsoluteHardwareControlBinding binding = new AbsoluteHardwareControlBinding(source, target);
+        final AbsoluteHardwareControlBinding binding =
+                new AbsoluteHardwareControlBinding(source, target);
         binding.setIsActive(true);
         binding.setMin(0.2);
         binding.setMax(0.8);
@@ -55,7 +57,8 @@ class AbsoluteHardwareControlBindingTest {
                 mock(com.bitwig.extension.controller.api.AbsoluteHardwareControlBinding.class);
         when(source.addBindingWithRange(target, 0.0, 1.0)).thenReturn(hardwareBinding);
 
-        final AbsoluteHardwareControlBinding binding = new AbsoluteHardwareControlBinding(source, target);
+        final AbsoluteHardwareControlBinding binding =
+                new AbsoluteHardwareControlBinding(source, target);
         binding.setIsActive(true);
         binding.setIsActive(false);
 

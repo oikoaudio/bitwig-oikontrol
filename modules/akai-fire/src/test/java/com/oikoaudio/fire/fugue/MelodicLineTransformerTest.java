@@ -1,22 +1,21 @@
 package com.oikoaudio.fire.fugue;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 import com.oikoaudio.fire.melodic.MelodicPattern;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class MelodicLineTransformerTest {
 
     @Test
     void initKeepsSourcePlacementAndPitch() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                FugueLineSettings.init(), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(source(), FugueLineSettings.init(), major(), 0);
 
         assertStep(transformed, 0, 60);
         assertStep(transformed, 4, 62);
@@ -25,8 +24,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void reverseMirrorsInsideLoop() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                new FugueLineSettings(FugueDirection.REVERSE, FugueSpeed.NORMAL, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        source(),
+                        new FugueLineSettings(FugueDirection.REVERSE, FugueSpeed.NORMAL, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 15, 60);
         assertStep(transformed, 11, 62);
@@ -35,8 +38,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void startOffsetMovesLineWithoutChangingSource() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 2, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        source(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 2, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 2, 60);
         assertStep(transformed, 6, 62);
@@ -45,8 +52,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void speedUpCompressesStepPositions() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        source(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 60);
         assertStep(transformed, 2, 62);
@@ -55,8 +66,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void speedUpRepeatsCompressedPhraseAcrossFullLoop() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        source(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 8, 60);
         assertStep(transformed, 10, 62);
@@ -65,8 +80,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void speedUpUsesRepeatedPhraseUnitRatherThanCompressingWholeExpandedLoop() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(repeatedSource(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_4, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        repeatedSource(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_4, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 60);
         assertStep(transformed, 1, 62);
@@ -81,8 +100,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void pingPongKeepsSecondHalfInsideSecondHalf() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(longSource(),
-                new FugueLineSettings(FugueDirection.PING_PONG, FugueSpeed.NORMAL, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        longSource(),
+                        new FugueLineSettings(FugueDirection.PING_PONG, FugueSpeed.NORMAL, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 60);
         assertStep(transformed, 16, 62);
@@ -92,8 +115,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void speedUpCanCreateThirtySecondNotesFromSixteenthSourceSteps() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(sixteenthRunSource(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        sixteenthRunSource(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_2, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 60);
         assertStep(transformed, 1, 62);
@@ -102,8 +129,9 @@ class MelodicLineTransformerTest {
 
     @Test
     void transformPreservesPolyphonicSourceSteps() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(polyphonicSource(),
-                FugueLineSettings.init(), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        polyphonicSource(), FugueLineSettings.init(), major(), 0);
 
         assertEquals(2, transformed.notesAt(0).size());
         assertEquals(60, transformed.notesAt(0).get(0).pitch());
@@ -112,10 +140,18 @@ class MelodicLineTransformerTest {
 
     @Test
     void speedScalingCanCreateShortAndLongGates() {
-        final FuguePattern fast = MelodicLineTransformer.transform(oneStepSourceWithGate(1.0),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_8, 0, 0), major(), 0);
-        final FuguePattern slow = MelodicLineTransformer.transform(oneStepSourceWithGate(1.0),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 0, 0), major(), 0);
+        final FuguePattern fast =
+                MelodicLineTransformer.transform(
+                        oneStepSourceWithGate(1.0),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.TIMES_8, 0, 0),
+                        major(),
+                        0);
+        final FuguePattern slow =
+                MelodicLineTransformer.transform(
+                        oneStepSourceWithGate(1.0),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 0, 0),
+                        major(),
+                        0);
 
         assertEquals(0.125, fast.step(0).gate());
         assertEquals(8.0, slow.step(0).gate());
@@ -123,13 +159,19 @@ class MelodicLineTransformerTest {
 
     @Test
     void slowTempoExpandsPositionsWithoutWrappingOntoEarlierBeats() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(sixteenthRunSource(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 0, 0), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        sixteenthRunSource(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.DIVIDE_8, 0, 0),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 60);
         assertStep(transformed, 16, 62);
-        assertEquals(1, transformed.notesAt(0).stream().filter(step -> step.pitch() != null).count());
-        assertEquals(1, transformed.notesAt(16).stream().filter(step -> step.pitch() != null).count());
+        assertEquals(
+                1, transformed.notesAt(0).stream().filter(step -> step.pitch() != null).count());
+        assertEquals(
+                1, transformed.notesAt(16).stream().filter(step -> step.pitch() != null).count());
         assertTrue(transformed.step(1).pitch() == null);
     }
 
@@ -147,8 +189,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void pitchOffsetMovesByScaleDegreesByDefault() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 6), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        source(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 6),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 71);
         assertStep(transformed, 4, 72);
@@ -158,8 +204,13 @@ class MelodicLineTransformerTest {
 
     @Test
     void semitoneOffsetStaysExactEvenForChromaticSourceNotes() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(chromaticSource(),
-                FugueLineSettings.semitone(FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 12), major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        chromaticSource(),
+                        FugueLineSettings.semitone(
+                                FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 12),
+                        major(),
+                        0);
 
         assertStep(transformed, 0, 73);
         assertStep(transformed, 4, 75);
@@ -167,8 +218,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void chromaticScaleMakesDegreeOffsetBehaveLikeSemitones() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(chromaticSource(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 12), chromatic(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        chromaticSource(),
+                        new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 12),
+                        chromatic(),
+                        0);
 
         assertStep(transformed, 0, 73);
         assertStep(transformed, 4, 75);
@@ -187,9 +242,13 @@ class MelodicLineTransformerTest {
 
     @Test
     void lineExpressionSettingsModifyGeneratedNotes() {
-        final FuguePattern transformed = MelodicLineTransformer.transform(source(),
-                new FugueLineSettings(FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 0, 0, -16, 50, 150),
-                major(), 0);
+        final FuguePattern transformed =
+                MelodicLineTransformer.transform(
+                        source(),
+                        new FugueLineSettings(
+                                FugueDirection.FORWARD, FugueSpeed.NORMAL, 0, 0, 0, -16, 50, 150),
+                        major(),
+                        0);
 
         final MelodicPattern.Step step = transformed.step(0);
         assertEquals(80, step.velocity());
@@ -199,10 +258,12 @@ class MelodicLineTransformerTest {
 
     @Test
     void presetExampleStaysDeterministic() {
-        final FuguePattern a = MelodicLineTransformer.transform(source(),
-                FuguePreset.REVERSE_DOUBLE.settings(), major(), 0);
-        final FuguePattern b = MelodicLineTransformer.transform(source(),
-                FuguePreset.REVERSE_DOUBLE.settings(), major(), 0);
+        final FuguePattern a =
+                MelodicLineTransformer.transform(
+                        source(), FuguePreset.REVERSE_DOUBLE.settings(), major(), 0);
+        final FuguePattern b =
+                MelodicLineTransformer.transform(
+                        source(), FuguePreset.REVERSE_DOUBLE.settings(), major(), 0);
 
         assertEquals(activeMask(a), activeMask(b));
         assertEquals(pitchMask(a), pitchMask(b));
@@ -284,7 +345,8 @@ class MelodicLineTransformerTest {
         return new MelodicPattern.Step(index, true, false, pitch, 96, 0.8, false, false);
     }
 
-    private static MelodicPattern.Step noteWithGate(final int index, final int pitch, final double gate) {
+    private static MelodicPattern.Step noteWithGate(
+            final int index, final int pitch, final double gate) {
         return new MelodicPattern.Step(index, true, false, pitch, 96, gate, false, false);
     }
 
@@ -296,7 +358,8 @@ class MelodicLineTransformerTest {
         return MusicalScaleLibrary.getInstance().getMusicalScale("Chromatic");
     }
 
-    private static void assertStep(final FuguePattern pattern, final int stepIndex, final int pitch) {
+    private static void assertStep(
+            final FuguePattern pattern, final int stepIndex, final int pitch) {
         assertTrue(pattern.step(stepIndex).active(), "Expected active step " + stepIndex);
         assertEquals(pitch, pattern.step(stepIndex).pitch());
     }

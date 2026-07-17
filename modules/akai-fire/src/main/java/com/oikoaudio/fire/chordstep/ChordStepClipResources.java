@@ -7,23 +7,21 @@ import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.oikoaudio.fire.values.StepViewPosition;
-
 import java.util.function.IntConsumer;
 
-/**
- * Owns the Bitwig clip/cursor resources used by chord-step sequencing.
- */
-public final class ChordStepClipResources {
+/** Owns the Bitwig clip/cursor resources used by chord-step sequencing. */
+final class ChordStepClipResources {
     private final PinnableCursorClip noteClip;
     private final Clip observedClip;
     private final StepViewPosition position;
     private final ClipLauncherSlotBank clipSlotBank;
 
-    public ChordStepClipResources(final ControllerHost host,
-                                  final CursorTrack cursorTrack,
-                                  final int stepCount,
-                                  final int observedFineStepCapacity,
-                                  final double fineStepLength) {
+    public ChordStepClipResources(
+            final ControllerHost host,
+            final CursorTrack cursorTrack,
+            final int stepCount,
+            final int observedFineStepCapacity,
+            final double fineStepLength) {
         noteClip = cursorTrack.createLauncherCursorClip("NOTE_STEP", "NOTE_STEP", stepCount, 128);
         observedClip = host.createLauncherCursorClip(observedFineStepCapacity, 128);
         position = new StepViewPosition(noteClip, stepCount, "CHORD");
@@ -35,13 +33,16 @@ public final class ChordStepClipResources {
         noteClip.getPlayStart().markInterested();
     }
 
-    public void observe(final StepDataHandler stepDataHandler,
-                        final NoteStepHandler noteStepHandler,
-                        final StepDataHandler observedStepDataHandler,
-                        final IntConsumer playingStepHandler) {
+    public void observe(
+            final StepDataHandler stepDataHandler,
+            final NoteStepHandler noteStepHandler,
+            final StepDataHandler observedStepDataHandler,
+            final NoteStepHandler observedNoteStepHandler,
+            final IntConsumer playingStepHandler) {
         noteClip.addStepDataObserver(stepDataHandler::handle);
         noteClip.addNoteStepObserver(noteStepHandler::handle);
         observedClip.addStepDataObserver(observedStepDataHandler::handle);
+        observedClip.addNoteStepObserver(observedNoteStepHandler::handle);
         noteClip.playingStep().addValueObserver(playingStepHandler::accept);
     }
 

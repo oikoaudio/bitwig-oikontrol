@@ -1,11 +1,10 @@
 package com.oikoaudio.fire.utils;
 
+import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.bitwig.extensions.framework.Layer;
-
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -29,32 +28,46 @@ public class PatternButtons {
         downButton.markPressedInteressed();
 
         // Bind the buttons to delegate to our stored callbacks:
-        upButton.bindPressed(layer, pressed -> {
-            if (pressed) {
-                if (driver.handleKnobModePatternRemotePage(-1)) {
-                    return;
-                }
-                upCallback.accept(true);
-            }
-        }, () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(-1) : upLightSupplier.get());
+        upButton.bindPressed(
+                layer,
+                pressed -> {
+                    if (pressed) {
+                        if (driver.handleKnobModePatternRemotePage(-1)) {
+                            return;
+                        }
+                        upCallback.accept(true);
+                    }
+                },
+                () ->
+                        driver.isKnobModeHeld()
+                                ? driver.knobModeRemotePageLightState(-1)
+                                : upLightSupplier.get());
 
-        downButton.bindPressed(layer, pressed -> {
-            if (pressed) {
-                if (driver.handleKnobModePatternRemotePage(1)) {
-                    return;
-                }
-                downCallback.accept(true);
-            }
-        }, () -> driver.isKnobModeHeld() ? driver.knobModeRemotePageLightState(1) : downLightSupplier.get());
+        downButton.bindPressed(
+                layer,
+                pressed -> {
+                    if (pressed) {
+                        if (driver.handleKnobModePatternRemotePage(1)) {
+                            return;
+                        }
+                        downCallback.accept(true);
+                    }
+                },
+                () ->
+                        driver.isKnobModeHeld()
+                                ? driver.knobModeRemotePageLightState(1)
+                                : downLightSupplier.get());
     }
 
     // Methods to register callbacks:
-    public void setUpCallback(Consumer<Boolean> callback, Supplier<BiColorLightState> lightSupplier) {
+    public void setUpCallback(
+            Consumer<Boolean> callback, Supplier<BiColorLightState> lightSupplier) {
         this.upCallback = callback;
         this.upLightSupplier = lightSupplier;
     }
 
-    public void setDownCallback(Consumer<Boolean> callback, Supplier<BiColorLightState> lightSupplier) {
+    public void setDownCallback(
+            Consumer<Boolean> callback, Supplier<BiColorLightState> lightSupplier) {
         this.downCallback = callback;
         this.downLightSupplier = lightSupplier;
     }
@@ -66,5 +79,4 @@ public class PatternButtons {
     public BiColorButton getDownButton() {
         return downButton;
     }
-
 }

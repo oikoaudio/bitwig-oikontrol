@@ -1,8 +1,8 @@
 package com.oikoaudio.fire.control;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class EncoderValueProfileTest {
     @Test
@@ -25,10 +25,14 @@ class EncoderValueProfileTest {
 
     @Test
     void semitoneAndPitchProfilesStaySymmetricInFineMode() {
-        assertEquals(EncoderValueProfile.SEMITONE_PARAMETER.delta(false, 1),
-                EncoderValueProfile.SEMITONE_PARAMETER.delta(true, 1), 0.0000001);
-        assertEquals(EncoderValueProfile.PITCH_PARAMETER.delta(false, 1),
-                EncoderValueProfile.PITCH_PARAMETER.delta(true, 1), 0.0000001);
+        assertEquals(
+                EncoderValueProfile.SEMITONE_PARAMETER.delta(false, 1),
+                EncoderValueProfile.SEMITONE_PARAMETER.delta(true, 1),
+                0.0000001);
+        assertEquals(
+                EncoderValueProfile.PITCH_PARAMETER.delta(false, 1),
+                EncoderValueProfile.PITCH_PARAMETER.delta(true, 1),
+                0.0000001);
     }
 
     @Test

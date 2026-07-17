@@ -1,12 +1,5 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -14,6 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import com.oikoaudio.fire.lights.RgbLightState;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class ChordStepPadSurfaceTest {
     @Test
@@ -23,11 +22,14 @@ class ChordStepPadSurfaceTest {
         final List<Integer> toggles = new ArrayList<>();
         final List<Integer> spans = new ArrayList<>();
 
-        assertTrue(surface.handleRecurrencePadPress(3, true,
-                List.of(note(5, 8, 0b11111111)),
-                () -> consumed.add("yes"),
-                toggles::add,
-                spans::add));
+        assertTrue(
+                surface.handleRecurrencePadPress(
+                        3,
+                        true,
+                        List.of(note(5, 8, 0b11111111)),
+                        () -> consumed.add("yes"),
+                        toggles::add,
+                        spans::add));
 
         assertEquals(List.of("yes"), consumed);
         assertEquals(List.of(3), toggles);
@@ -37,12 +39,10 @@ class ChordStepPadSurfaceTest {
     @Test
     void rendersRecurrencePadLightForTarget() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
-        final RgbLigthState light = surface.recurrencePadLight(0,
-                List.of(note(5, 4, 0b0001)),
-                base,
-                RgbLigthState.OFF);
+        final RgbLightState light =
+                surface.recurrencePadLight(0, List.of(note(5, 4, 0b0001)), base, RgbLightState.OFF);
 
         assertSame(base.getBrightend(), light);
     }
@@ -51,39 +51,67 @@ class ChordStepPadSurfaceTest {
     void fallsBackWhenRecurrenceHasNoTarget() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
-        assertSame(RgbLigthState.GRAY_1, surface.recurrencePadLight(0, List.of(),
-                RgbLigthState.PURPLE,
-                RgbLigthState.GRAY_1));
+        assertSame(
+                RgbLightState.GRAY_1,
+                surface.recurrencePadLight(
+                        0, List.of(), RgbLightState.PURPLE, RgbLightState.GRAY_1));
     }
 
     @Test
     void rendersHeldStepAsBrightestHeldColor() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
-        final RgbLigthState held = new RgbLigthState(120, 88, 0, true);
+        final RgbLightState held = new RgbLightState(120, 88, 0, true);
         surface.addHeldStep(5);
 
-        assertSame(held.getBrightest(), surface.stepPadLight(5, 16,
-                true, false, false, 0,
-                RgbLigthState.PURPLE, RgbLigthState.GRAY_1, held));
+        assertSame(
+                held.getBrightest(),
+                surface.stepPadLight(
+                        5,
+                        16,
+                        true,
+                        false,
+                        false,
+                        0,
+                        RgbLightState.PURPLE,
+                        RgbLightState.GRAY_1,
+                        held));
     }
 
     @Test
     void rendersOccupiedAccentedStepBright() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
-        final RgbLigthState occupied = RgbLigthState.PURPLE;
+        final RgbLightState occupied = RgbLightState.PURPLE;
 
-        assertSame(occupied.getBrightend(), surface.stepPadLight(5, 16,
-                true, true, false, 0,
-                occupied, RgbLigthState.GRAY_1, new RgbLigthState(120, 88, 0, true)));
+        assertSame(
+                occupied.getBrightend(),
+                surface.stepPadLight(
+                        5,
+                        16,
+                        true,
+                        true,
+                        false,
+                        0,
+                        occupied,
+                        RgbLightState.GRAY_1,
+                        new RgbLightState(120, 88, 0, true)));
     }
 
     @Test
     void rendersOutsideLoopAsOff() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
-        assertSame(RgbLigthState.OFF, surface.stepPadLight(17, 16,
-                true, true, false, 0,
-                RgbLigthState.PURPLE, RgbLigthState.GRAY_1, new RgbLigthState(120, 88, 0, true)));
+        assertSame(
+                RgbLightState.OFF,
+                surface.stepPadLight(
+                        17,
+                        16,
+                        true,
+                        true,
+                        false,
+                        0,
+                        RgbLightState.PURPLE,
+                        RgbLightState.GRAY_1,
+                        new RgbLightState(120, 88, 0, true)));
     }
 
     @Test
@@ -157,15 +185,20 @@ class ChordStepPadSurfaceTest {
     void resolvesModifierPressActionInControllerPriorityOrder() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
-        assertEquals(ChordStepPadSurface.ModifierPressAction.SELECT,
+        assertEquals(
+                ChordStepPadSurface.ModifierPressAction.SELECT,
                 surface.modifierPressAction(true, true, true, true));
-        assertEquals(ChordStepPadSurface.ModifierPressAction.FIXED_LENGTH,
+        assertEquals(
+                ChordStepPadSurface.ModifierPressAction.FIXED_LENGTH,
                 surface.modifierPressAction(false, true, true, true));
-        assertEquals(ChordStepPadSurface.ModifierPressAction.COPY,
+        assertEquals(
+                ChordStepPadSurface.ModifierPressAction.COPY,
                 surface.modifierPressAction(false, false, true, true));
-        assertEquals(ChordStepPadSurface.ModifierPressAction.DELETE,
+        assertEquals(
+                ChordStepPadSurface.ModifierPressAction.DELETE,
                 surface.modifierPressAction(false, false, false, true));
-        assertEquals(ChordStepPadSurface.ModifierPressAction.NONE,
+        assertEquals(
+                ChordStepPadSurface.ModifierPressAction.NONE,
                 surface.modifierPressAction(false, false, false, false));
     }
 
@@ -178,8 +211,10 @@ class ChordStepPadSurfaceTest {
         surface.addHeldStep(2);
         surface.setHeldStepAnchor(2);
 
-        assertEquals(ChordStepPadSurface.RangePressAction.EXTEND, surface.rangePressAction(5, true));
-        assertEquals(ChordStepPadSurface.RangePressAction.BLOCK, surface.rangePressAction(5, false));
+        assertEquals(
+                ChordStepPadSurface.RangePressAction.EXTEND, surface.rangePressAction(5, true));
+        assertEquals(
+                ChordStepPadSurface.RangePressAction.BLOCK, surface.rangePressAction(5, false));
         assertEquals(ChordStepPadSurface.RangePressAction.NONE, surface.rangePressAction(2, true));
     }
 
@@ -200,15 +235,27 @@ class ChordStepPadSurfaceTest {
     void resolvesNormalStepPressActionAndTracksHeldStep() {
         final ChordStepPadSurface surface = new ChordStepPadSurface();
 
-        assertEquals(ChordStepPadSurface.StepPressAction.ADD_STEP,
+        assertEquals(
+                ChordStepPadSurface.StepPressAction.ADD_STEP,
                 surface.stepPressAction(2, false, false));
         assertTrue(surface.hasHeldStep(2));
         assertEquals(2, surface.heldStepAnchor());
 
-        assertEquals(ChordStepPadSurface.StepPressAction.LOAD_BUILDER,
+        assertEquals(
+                ChordStepPadSurface.StepPressAction.LOAD_BUILDER,
                 surface.stepPressAction(3, true, true));
-        assertEquals(ChordStepPadSurface.StepPressAction.HOLD_EXISTING,
+        assertEquals(
+                ChordStepPadSurface.StepPressAction.HOLD_EXISTING,
                 surface.stepPressAction(4, true, false));
+    }
+
+    @Test
+    void heldSourcePadsReplaceAnExistingStepInsteadOfLoadingItIntoTheBuilder() {
+        final ChordStepPadSurface surface = new ChordStepPadSurface();
+
+        assertEquals(
+                ChordStepPadSurface.StepPressAction.REPLACE_STEP,
+                surface.stepPressAction(6, true, true, true));
     }
 
     @Test
@@ -217,17 +264,22 @@ class ChordStepPadSurfaceTest {
 
         surface.addHeldStep(2);
         surface.markAddedStep(2);
-        assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(2, true));
+        assertEquals(
+                ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(2, true));
 
         surface.addHeldStep(3);
         surface.markModifiedStep(3);
-        assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(3, true));
+        assertEquals(
+                ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(3, true));
 
         surface.addHeldStep(4);
-        assertEquals(ChordStepPadSurface.StepReleaseAction.CLEAR_STEP, surface.stepReleaseAction(4, true));
+        assertEquals(
+                ChordStepPadSurface.StepReleaseAction.CLEAR_STEP,
+                surface.stepReleaseAction(4, true));
 
         surface.addHeldStep(5);
-        assertEquals(ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(5, false));
+        assertEquals(
+                ChordStepPadSurface.StepReleaseAction.NONE, surface.stepReleaseAction(5, false));
     }
 
     @Test
@@ -288,7 +340,8 @@ class ChordStepPadSurfaceTest {
         assertTrue(surface.consumeModifiedStep(5));
     }
 
-    private static NoteStep note(final int x, final int recurrenceLength, final int recurrenceMask) {
+    private static NoteStep note(
+            final int x, final int recurrenceLength, final int recurrenceMask) {
         final NoteStep note = mock(NoteStep.class);
         when(note.x()).thenReturn(x);
         when(note.recurrenceLength()).thenReturn(recurrenceLength);
@@ -303,6 +356,7 @@ class ChordStepPadSurfaceTest {
         private boolean fixedLengthHeld;
         private boolean copyHeld;
         private boolean deleteHeld;
+        private boolean sourcePadsHeld;
         private boolean builderFamily;
         private boolean hasStepStartNote;
         private boolean canExtend = true;
@@ -322,8 +376,7 @@ class ChordStepPadSurfaceTest {
         }
 
         @Override
-        public void toggleAccentForStep(final int stepIndex) {
-        }
+        public void toggleAccentForStep(final int stepIndex) {}
 
         @Override
         public boolean isSelectHeld() {
@@ -346,17 +399,20 @@ class ChordStepPadSurfaceTest {
         }
 
         @Override
+        public boolean hasHeldSourcePads() {
+            return sourcePadsHeld;
+        }
+
+        @Override
         public void handleSelectStep(final int stepIndex) {
             selectedSteps.add(stepIndex);
         }
 
         @Override
-        public void setLastStep(final int stepIndex) {
-        }
+        public void setLastStep(final int stepIndex) {}
 
         @Override
-        public void pasteCurrentChordToStep(final int stepIndex) {
-        }
+        public void pasteCurrentChordToStep(final int stepIndex) {}
 
         @Override
         public void clearChordStep(final int stepIndex) {
@@ -369,7 +425,8 @@ class ChordStepPadSurfaceTest {
         }
 
         @Override
-        public boolean canExtendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+        public boolean canExtendHeldChordRange(
+                final int anchorStepIndex, final int targetStepIndex) {
             return canExtend;
         }
 
@@ -380,12 +437,10 @@ class ChordStepPadSurfaceTest {
         }
 
         @Override
-        public void showExtendedStepInfo(final int anchorStepIndex, final int targetStepIndex) {
-        }
+        public void showExtendedStepInfo(final int anchorStepIndex, final int targetStepIndex) {}
 
         @Override
-        public void showBlockedStepInfo() {
-        }
+        public void showBlockedStepInfo() {}
 
         @Override
         public boolean hasStepStartNote(final int stepIndex) {
@@ -399,15 +454,18 @@ class ChordStepPadSurfaceTest {
         }
 
         @Override
-        public void loadBuilderFromStep(final int stepIndex) {
+        public boolean replaceSelectedChordAtStep(final int stepIndex) {
+            assignedSteps.add(stepIndex);
+            return true;
         }
 
         @Override
-        public void showHeldStepInfo(final int stepIndex) {
-        }
+        public void loadBuilderFromStep(final int stepIndex) {}
 
         @Override
-        public void removeHeldBankFineStart(final int stepIndex) {
-        }
+        public void showHeldStepInfo(final int stepIndex) {}
+
+        @Override
+        public void removeHeldBankFineStart(final int stepIndex) {}
     }
 }

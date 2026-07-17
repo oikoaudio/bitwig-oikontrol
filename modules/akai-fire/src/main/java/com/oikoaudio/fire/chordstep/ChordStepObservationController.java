@@ -1,21 +1,18 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.NoteClipCursorRefresher;
-import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SelectedClipSlotObserver;
-
+import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-/**
- * Owns the selected-clip observation lifecycle used by chord-step mode.
- */
-public final class ChordStepObservationController {
+/** Owns the selected-clip observation lifecycle used by chord-step mode. */
+final class ChordStepObservationController {
     private final ClipLauncherSlotBank noteClipSlotBank;
     private final IntSupplier selectedClipSlotIndex;
-    private final Supplier<RgbLigthState> defaultColorSupplier;
+    private final Supplier<RgbLightState> defaultColorSupplier;
     private final ChordStepClipController clipController;
     private final Runnable clearObservedCaches;
     private final Runnable scrollNoteClipToKeyStart;
@@ -24,53 +21,75 @@ public final class ChordStepObservationController {
     private final Runnable scrollObservedClipToStepStart;
     private final CursorRefresh cursorRefresh;
     private final StateScanner stateScanner;
-    private final ChordStepObservationRefresher refresher;
+    private final TaskScheduler scheduler;
+    private boolean resyncQueued;
 
-    public ChordStepObservationController(final ChordStepObservationRefresher.TaskScheduler scheduler,
-                                          final ClipLauncherSlotBank noteClipSlotBank,
-                                          final IntSupplier selectedClipSlotIndex,
-                                          final Supplier<RgbLigthState> defaultColorSupplier,
-                                          final ChordStepClipController clipController,
-                                          final Runnable clearObservedCaches,
-                                          final Runnable scrollNoteClipToKeyStart,
-                                          final Runnable scrollObservedClipToKeyStart,
-                                          final Runnable scrollNoteClipToCurrentStep,
-                                          final Runnable scrollObservedClipToStepStart) {
-        this(scheduler, noteClipSlotBank, selectedClipSlotIndex, defaultColorSupplier, clipController,
-                clearObservedCaches, scrollNoteClipToKeyStart, scrollObservedClipToKeyStart,
-                scrollNoteClipToCurrentStep, scrollObservedClipToStepStart, NoteClipCursorRefresher::refresh,
+    public ChordStepObservationController(
+            final TaskScheduler scheduler,
+            final ClipLauncherSlotBank noteClipSlotBank,
+            final IntSupplier selectedClipSlotIndex,
+            final Supplier<RgbLightState> defaultColorSupplier,
+            final ChordStepClipController clipController,
+            final Runnable clearObservedCaches,
+            final Runnable scrollNoteClipToKeyStart,
+            final Runnable scrollObservedClipToKeyStart,
+            final Runnable scrollNoteClipToCurrentStep,
+            final Runnable scrollObservedClipToStepStart) {
+        this(
+                scheduler,
+                noteClipSlotBank,
+                selectedClipSlotIndex,
+                defaultColorSupplier,
+                clipController,
+                clearObservedCaches,
+                scrollNoteClipToKeyStart,
+                scrollObservedClipToKeyStart,
+                scrollNoteClipToCurrentStep,
+                scrollObservedClipToStepStart,
+                NoteClipCursorRefresher::refresh,
                 SelectedClipSlotState::scan);
     }
 
-    public ChordStepObservationController(final ChordStepObservationRefresher.TaskScheduler scheduler,
-                                          final ClipLauncherSlotBank noteClipSlotBank,
-                                          final IntSupplier selectedClipSlotIndex,
-                                          final Supplier<RgbLigthState> defaultColorSupplier,
-                                          final ChordStepClipController clipController,
-                                          final Runnable clearObservedCaches,
-                                          final Runnable scrollNoteClipToKeyStart,
-                                          final Runnable scrollObservedClipToKeyStart,
-                                          final Runnable scrollNoteClipToCurrentStep,
-                                          final Runnable scrollObservedClipToStepStart,
-                                          final CursorRefresh cursorRefresh) {
-        this(scheduler, noteClipSlotBank, selectedClipSlotIndex, defaultColorSupplier, clipController,
-                clearObservedCaches, scrollNoteClipToKeyStart, scrollObservedClipToKeyStart,
-                scrollNoteClipToCurrentStep, scrollObservedClipToStepStart, cursorRefresh,
+    public ChordStepObservationController(
+            final TaskScheduler scheduler,
+            final ClipLauncherSlotBank noteClipSlotBank,
+            final IntSupplier selectedClipSlotIndex,
+            final Supplier<RgbLightState> defaultColorSupplier,
+            final ChordStepClipController clipController,
+            final Runnable clearObservedCaches,
+            final Runnable scrollNoteClipToKeyStart,
+            final Runnable scrollObservedClipToKeyStart,
+            final Runnable scrollNoteClipToCurrentStep,
+            final Runnable scrollObservedClipToStepStart,
+            final CursorRefresh cursorRefresh) {
+        this(
+                scheduler,
+                noteClipSlotBank,
+                selectedClipSlotIndex,
+                defaultColorSupplier,
+                clipController,
+                clearObservedCaches,
+                scrollNoteClipToKeyStart,
+                scrollObservedClipToKeyStart,
+                scrollNoteClipToCurrentStep,
+                scrollObservedClipToStepStart,
+                cursorRefresh,
                 SelectedClipSlotState::scan);
     }
 
-    public ChordStepObservationController(final ChordStepObservationRefresher.TaskScheduler scheduler,
-                                          final ClipLauncherSlotBank noteClipSlotBank,
-                                          final IntSupplier selectedClipSlotIndex,
-                                          final Supplier<RgbLigthState> defaultColorSupplier,
-                                          final ChordStepClipController clipController,
-                                          final Runnable clearObservedCaches,
-                                          final Runnable scrollNoteClipToKeyStart,
-                                          final Runnable scrollObservedClipToKeyStart,
-                                          final Runnable scrollNoteClipToCurrentStep,
-                                          final Runnable scrollObservedClipToStepStart,
-                                          final CursorRefresh cursorRefresh,
-                                          final StateScanner stateScanner) {
+    public ChordStepObservationController(
+            final TaskScheduler scheduler,
+            final ClipLauncherSlotBank noteClipSlotBank,
+            final IntSupplier selectedClipSlotIndex,
+            final Supplier<RgbLightState> defaultColorSupplier,
+            final ChordStepClipController clipController,
+            final Runnable clearObservedCaches,
+            final Runnable scrollNoteClipToKeyStart,
+            final Runnable scrollObservedClipToKeyStart,
+            final Runnable scrollNoteClipToCurrentStep,
+            final Runnable scrollObservedClipToStepStart,
+            final CursorRefresh cursorRefresh,
+            final StateScanner stateScanner) {
         this.noteClipSlotBank = noteClipSlotBank;
         this.selectedClipSlotIndex = selectedClipSlotIndex;
         this.defaultColorSupplier = defaultColorSupplier;
@@ -82,11 +101,12 @@ public final class ChordStepObservationController {
         this.scrollObservedClipToStepStart = scrollObservedClipToStepStart;
         this.cursorRefresh = cursorRefresh;
         this.stateScanner = stateScanner;
-        this.refresher = new ChordStepObservationRefresher(scheduler, this::refreshSelectedClipState, this::refreshPass);
+        this.scheduler = scheduler;
     }
 
     public void observeSelectedClip() {
-        SelectedClipSlotObserver.observe(noteClipSlotBank, true, true, this::refreshSelectedClipState);
+        SelectedClipSlotObserver.observe(
+                noteClipSlotBank, true, true, this::refreshSelectedClipState);
     }
 
     public void refreshSelectedClipState() {
@@ -94,11 +114,24 @@ public final class ChordStepObservationController {
     }
 
     public void queueResync() {
-        refresher.queueResync();
+        if (resyncQueued) {
+            return;
+        }
+        resyncQueued = true;
+        scheduler.schedule(
+                () -> {
+                    resyncQueued = false;
+                    refresh();
+                },
+                0);
     }
 
     public void refresh() {
-        refresher.refresh();
+        refreshSelectedClipState();
+        refreshPass();
+        scheduler.schedule(this::refreshPass, 1);
+        scheduler.schedule(this::refreshPass, 6);
+        scheduler.schedule(this::refreshPass, 18);
     }
 
     public void refreshPass() {
@@ -115,23 +148,29 @@ public final class ChordStepObservationController {
     }
 
     public boolean isResyncQueued() {
-        return refresher.isResyncQueued();
+        return resyncQueued;
+    }
+
+    @FunctionalInterface
+    public interface TaskScheduler {
+        void schedule(Runnable task, int delayTicks);
     }
 
     @FunctionalInterface
     public interface CursorRefresh {
-        void refresh(ClipLauncherSlotBank slotBank,
-                     int selectedClipSlotIndex,
-                     Runnable refreshSelectedClipState,
-                     IntSupplier slotIndexSupplier,
-                     Runnable scrollNoteClipToKeyStart,
-                     Runnable scrollObservedClipToKeyStart,
-                     Runnable scrollNoteClipToCurrentStep,
-                     Runnable scrollObservedClipToStepStart);
+        void refresh(
+                ClipLauncherSlotBank slotBank,
+                int selectedClipSlotIndex,
+                Runnable refreshSelectedClipState,
+                IntSupplier slotIndexSupplier,
+                Runnable scrollNoteClipToKeyStart,
+                Runnable scrollObservedClipToKeyStart,
+                Runnable scrollNoteClipToCurrentStep,
+                Runnable scrollObservedClipToStepStart);
     }
 
     @FunctionalInterface
     public interface StateScanner {
-        SelectedClipSlotState scan(ClipLauncherSlotBank slotBank, RgbLigthState defaultColor);
+        SelectedClipSlotState scan(ClipLauncherSlotBank slotBank, RgbLightState defaultColor);
     }
 }

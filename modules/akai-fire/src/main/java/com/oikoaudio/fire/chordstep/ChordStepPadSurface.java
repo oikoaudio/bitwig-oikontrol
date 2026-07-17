@@ -1,17 +1,16 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
+import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
-
-import java.util.List;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.IntConsumer;
 
-public final class ChordStepPadSurface {
+final class ChordStepPadSurface {
     enum ModifierPressAction {
         NONE,
         SELECT,
@@ -29,6 +28,7 @@ public final class ChordStepPadSurface {
     enum StepPressAction {
         HOLD_EXISTING,
         ADD_STEP,
+        REPLACE_STEP,
         LOAD_BUILDER
     }
 
@@ -52,6 +52,8 @@ public final class ChordStepPadSurface {
 
         boolean isDeleteHeld();
 
+        boolean hasHeldSourcePads();
+
         void handleSelectStep(int stepIndex);
 
         void setLastStep(int stepIndex);
@@ -73,6 +75,8 @@ public final class ChordStepPadSurface {
         boolean hasStepStartNote(int stepIndex);
 
         boolean assignSelectedChordToStep(int stepIndex, int velocity);
+
+        boolean replaceSelectedChordAtStep(int stepIndex);
 
         void loadBuilderFromStep(int stepIndex);
 
@@ -155,10 +159,11 @@ public final class ChordStepPadSurface {
         return addedStepPads.contains(stepIndex);
     }
 
-    public void handleStepPadPress(final int stepIndex,
-                                   final boolean pressed,
-                                   final int velocity,
-                                   final StepPadCallbacks callbacks) {
+    public void handleStepPadPress(
+            final int stepIndex,
+            final boolean pressed,
+            final int velocity,
+            final StepPadCallbacks callbacks) {
         if (pressed && !callbacks.ensureSelectedNoteClipSlot()) {
             return;
         }
@@ -178,26 +183,33 @@ public final class ChordStepPadSurface {
         }
     }
 
-    private void handleStepPadPressed(final int stepIndex,
-                                      final int velocity,
-                                      final StepPadCallbacks callbacks) {
-        final ModifierPressAction modifierAction = modifierPressAction(
-                callbacks.isSelectHeld(), callbacks.isFixedLengthHeld(), callbacks.isCopyHeld(),
-                callbacks.isDeleteHeld());
+    private void handleStepPadPressed(
+            final int stepIndex, final int velocity, final StepPadCallbacks callbacks) {
+        final ModifierPressAction modifierAction =
+                modifierPressAction(
+                        callbacks.isSelectHeld(),
+                        callbacks.isFixedLengthHeld(),
+                        callbacks.isCopyHeld(),
+                        callbacks.isDeleteHeld());
         if (handleModifierPressAction(stepIndex, modifierAction, callbacks)) {
             return;
         }
         final Integer anchor = heldStepAnchor;
-        final boolean canExtendFromAnchor = anchor != null
-                && anchor != stepIndex
-                && hasHeldStep(anchor)
-                && callbacks.canExtendHeldChordRange(anchor, stepIndex);
+        final boolean canExtendFromAnchor =
+                anchor != null
+                        && anchor != stepIndex
+                        && hasHeldStep(anchor)
+                        && callbacks.canExtendHeldChordRange(anchor, stepIndex);
         final RangePressAction rangeAction = rangePressAction(stepIndex, canExtendFromAnchor);
         if (handleRangePressAction(stepIndex, anchor, rangeAction, callbacks)) {
             return;
         }
-        final StepPressAction stepAction = stepPressAction(stepIndex, callbacks.hasStepStartNote(stepIndex),
-                callbacks.isBuilderFamily());
+        final StepPressAction stepAction =
+                stepPressAction(
+                        stepIndex,
+                        callbacks.hasStepStartNote(stepIndex),
+                        callbacks.isBuilderFamily(),
+                        callbacks.hasHeldSourcePads());
         if (!handleNormalPressAction(stepIndex, velocity, stepAction, callbacks)) {
             return;
         }
@@ -205,16 +217,18 @@ public final class ChordStepPadSurface {
     }
 
     private void handleStepPadReleased(final int stepIndex, final StepPadCallbacks callbacks) {
-        final StepReleaseAction releaseAction = stepReleaseAction(stepIndex, callbacks.hasStepStartNote(stepIndex));
+        final StepReleaseAction releaseAction =
+                stepReleaseAction(stepIndex, callbacks.hasStepStartNote(stepIndex));
         callbacks.removeHeldBankFineStart(stepIndex);
         if (releaseAction == StepReleaseAction.CLEAR_STEP) {
             callbacks.clearChordStep(stepIndex);
         }
     }
 
-    private boolean handleModifierPressAction(final int stepIndex,
-                                              final ModifierPressAction action,
-                                              final StepPadCallbacks callbacks) {
+    private boolean handleModifierPressAction(
+            final int stepIndex,
+            final ModifierPressAction action,
+            final StepPadCallbacks callbacks) {
         switch (action) {
             case NONE -> {
                 return false;
@@ -228,10 +242,11 @@ public final class ChordStepPadSurface {
         return true;
     }
 
-    private boolean handleRangePressAction(final int stepIndex,
-                                           final Integer anchor,
-                                           final RangePressAction action,
-                                           final StepPadCallbacks callbacks) {
+    private boolean handleRangePressAction(
+            final int stepIndex,
+            final Integer anchor,
+            final RangePressAction action,
+            final StepPadCallbacks callbacks) {
         switch (action) {
             case NONE -> {
                 return false;
@@ -252,10 +267,11 @@ public final class ChordStepPadSurface {
         return false;
     }
 
-    private boolean handleNormalPressAction(final int stepIndex,
-                                            final int velocity,
-                                            final StepPressAction action,
-                                            final StepPadCallbacks callbacks) {
+    private boolean handleNormalPressAction(
+            final int stepIndex,
+            final int velocity,
+            final StepPressAction action,
+            final StepPadCallbacks callbacks) {
         switch (action) {
             case HOLD_EXISTING -> {
                 return true;
@@ -269,6 +285,14 @@ public final class ChordStepPadSurface {
                 markAddedStep(stepIndex);
                 return true;
             }
+            case REPLACE_STEP -> {
+                if (!callbacks.replaceSelectedChordAtStep(stepIndex)) {
+                    cancelStepPress(stepIndex);
+                    return false;
+                }
+                markModifiedStep(stepIndex);
+                return true;
+            }
             case LOAD_BUILDER -> {
                 callbacks.loadBuilderFromStep(stepIndex);
                 return true;
@@ -278,7 +302,9 @@ public final class ChordStepPadSurface {
     }
 
     RangePressAction rangePressAction(final int stepIndex, final boolean canExtendFromAnchor) {
-        if (heldStepAnchor == null || heldStepAnchor == stepIndex || !heldStepPads.contains(heldStepAnchor)) {
+        if (heldStepAnchor == null
+                || heldStepAnchor == stepIndex
+                || !heldStepPads.contains(heldStepAnchor)) {
             return RangePressAction.NONE;
         }
         return canExtendFromAnchor ? RangePressAction.EXTEND : RangePressAction.BLOCK;
@@ -292,9 +318,16 @@ public final class ChordStepPadSurface {
         }
     }
 
-    StepPressAction stepPressAction(final int stepIndex,
-                                    final boolean hasStepStartNote,
-                                    final boolean builderFamily) {
+    StepPressAction stepPressAction(
+            final int stepIndex, final boolean hasStepStartNote, final boolean builderFamily) {
+        return stepPressAction(stepIndex, hasStepStartNote, builderFamily, false);
+    }
+
+    StepPressAction stepPressAction(
+            final int stepIndex,
+            final boolean hasStepStartNote,
+            final boolean builderFamily,
+            final boolean sourcePadsHeld) {
         beginRecurrenceHoldIfNeeded();
         addHeldStep(stepIndex);
         if (heldStepAnchor == null) {
@@ -302,6 +335,9 @@ public final class ChordStepPadSurface {
         }
         if (!hasStepStartNote) {
             return StepPressAction.ADD_STEP;
+        }
+        if (sourcePadsHeld) {
+            return StepPressAction.REPLACE_STEP;
         }
         if (builderFamily) {
             return StepPressAction.LOAD_BUILDER;
@@ -326,10 +362,11 @@ public final class ChordStepPadSurface {
         return hasStepStartNote ? StepReleaseAction.CLEAR_STEP : StepReleaseAction.NONE;
     }
 
-    ModifierPressAction modifierPressAction(final boolean selectHeld,
-                                            final boolean fixedLengthHeld,
-                                            final boolean copyHeld,
-                                            final boolean deleteHeld) {
+    ModifierPressAction modifierPressAction(
+            final boolean selectHeld,
+            final boolean fixedLengthHeld,
+            final boolean copyHeld,
+            final boolean deleteHeld) {
         if (selectHeld) {
             return ModifierPressAction.SELECT;
         }
@@ -373,38 +410,42 @@ public final class ChordStepPadSurface {
         return recurrenceRow.shouldShow(hasHeldSteps());
     }
 
-    public boolean handleRecurrencePadPress(final int padIndex,
-                                            final boolean pressed,
-                                            final List<NoteStep> targets,
-                                            final Runnable markConsumed,
-                                            final IntConsumer togglePad,
-                                            final IntConsumer applySpan) {
+    public boolean handleRecurrencePadPress(
+            final int padIndex,
+            final boolean pressed,
+            final List<NoteStep> targets,
+            final Runnable markConsumed,
+            final IntConsumer togglePad,
+            final IntConsumer applySpan) {
         if (targets.isEmpty()) {
             return true;
         }
-        return recurrenceRow.handlePadPress(padIndex, pressed, targets, markConsumed, togglePad, applySpan);
+        return recurrenceRow.handlePadPress(
+                padIndex, pressed, targets, markConsumed, togglePad, applySpan);
     }
 
-    public RgbLigthState recurrencePadLight(final int padIndex,
-                                            final List<NoteStep> targets,
-                                            final RgbLigthState color,
-                                            final RgbLigthState fallback) {
+    public RgbLightState recurrencePadLight(
+            final int padIndex,
+            final List<NoteStep> targets,
+            final RgbLightState color,
+            final RgbLightState fallback) {
         return recurrenceRow.padLight(padIndex, targets, color, fallback);
     }
 
-    public RgbLigthState stepPadLight(final int stepIndex,
-                                      final int availableSteps,
-                                      final boolean occupied,
-                                      final boolean accented,
-                                      final boolean sustained,
-                                      final int playingStep,
-                                      final RgbLigthState occupiedStepColor,
-                                      final RgbLigthState sustainedStepColor,
-                                      final RgbLigthState heldStepColor) {
+    public RgbLightState stepPadLight(
+            final int stepIndex,
+            final int availableSteps,
+            final boolean occupied,
+            final boolean accented,
+            final boolean sustained,
+            final int playingStep,
+            final RgbLightState occupiedStepColor,
+            final RgbLightState sustainedStepColor,
+            final RgbLightState heldStepColor) {
         if (!StepPadLightHelper.isStepWithinVisibleLoop(stepIndex, availableSteps)) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
-        if (hasHeldStep(stepIndex)) {
+        if (hasHeldStep(stepIndex) && occupied) {
             return heldStepColor.getBrightest();
         }
         if (occupied) {

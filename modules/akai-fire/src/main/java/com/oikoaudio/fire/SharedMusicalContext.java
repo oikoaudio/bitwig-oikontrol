@@ -4,8 +4,8 @@ import com.bitwig.extensions.framework.MusicalScale;
 import com.bitwig.extensions.framework.MusicalScaleLibrary;
 
 /**
- * Global musical context shared across controller modes.
- * Overview is the canonical full editor; other modes can expose focused shortcuts against the same state.
+ * Global musical context shared across controller modes. Overview is the canonical full editor;
+ * other modes can expose focused shortcuts against the same state.
  */
 public final class SharedMusicalContext {
     private final MusicalScaleLibrary scaleLibrary;
@@ -49,7 +49,8 @@ public final class SharedMusicalContext {
         final int lastSelectable = lastSelectableScaleIndex();
         final int clamped = Math.max(firstSelectable, Math.min(lastSelectable, scaleIndex));
         if (!isSelectableScale(clamped)) {
-            this.scaleIndex = findNearestSelectableScale(clamped, scaleIndex >= this.scaleIndex ? 1 : -1);
+            this.scaleIndex =
+                    findNearestSelectableScale(clamped, scaleIndex >= this.scaleIndex ? 1 : -1);
             return;
         }
         this.scaleIndex = clamped;
@@ -68,14 +69,16 @@ public final class SharedMusicalContext {
         }
         final int lastSelectable = lastSelectableScaleIndex();
         int nextScaleIndex = scaleIndex + amount;
-        while (nextScaleIndex >= minimumScaleIndex && nextScaleIndex < scaleLibrary.getMusicalScalesCount()) {
+        while (nextScaleIndex >= minimumScaleIndex
+                && nextScaleIndex < scaleLibrary.getMusicalScalesCount()) {
             if (isSelectableScale(nextScaleIndex)) {
                 setScaleIndex(nextScaleIndex);
                 return true;
             }
             nextScaleIndex += amount;
         }
-        final int clamped = amount > 0 ? lastSelectable : Math.max(firstSelectable, minimumScaleIndex);
+        final int clamped =
+                amount > 0 ? lastSelectable : Math.max(firstSelectable, minimumScaleIndex);
         if (clamped != scaleIndex && isSelectableScale(clamped)) {
             setScaleIndex(clamped);
             return true;
@@ -106,7 +109,8 @@ public final class SharedMusicalContext {
         if (scaleLibrary == null || scaleLibrary.getMusicalScalesCount() <= 0) {
             return "Scale";
         }
-        final int safeIndex = Math.max(0, Math.min(scaleLibrary.getMusicalScalesCount() - 1, scaleIndex));
+        final int safeIndex =
+                Math.max(0, Math.min(scaleLibrary.getMusicalScalesCount() - 1, scaleIndex));
         final MusicalScale scale = scaleAt(safeIndex);
         return scale != null ? scale.getName() : "Scale";
     }
@@ -141,7 +145,9 @@ public final class SharedMusicalContext {
 
     private int findNearestSelectableScale(final int startIndex, final int direction) {
         final int normalizedDirection = direction >= 0 ? 1 : -1;
-        for (int i = startIndex; i >= 0 && i < scaleLibrary.getMusicalScalesCount(); i += normalizedDirection) {
+        for (int i = startIndex;
+                i >= 0 && i < scaleLibrary.getMusicalScalesCount();
+                i += normalizedDirection) {
             if (isSelectableScale(i)) {
                 return i;
             }

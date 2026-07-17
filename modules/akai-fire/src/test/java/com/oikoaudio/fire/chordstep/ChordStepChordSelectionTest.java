@@ -1,17 +1,18 @@
 package com.oikoaudio.fire.chordstep;
 
-import com.bitwig.extensions.framework.MusicalScale;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.bitwig.extensions.framework.MusicalScale;
+import java.util.List;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+
 class ChordStepChordSelectionTest {
-    private static final MusicalScale MAJOR = new MusicalScale("Major", new int[] {0, 2, 4, 5, 7, 9, 11});
+    private static final MusicalScale MAJOR =
+            new MusicalScale("Major", new int[] {0, 2, 4, 5, 7, 9, 11});
 
     @Test
     void startsInBuilderFamilyWithEmptyChord() {
@@ -36,6 +37,28 @@ class ChordStepChordSelectionTest {
         assertEquals(2, selection.selectedSlot());
         assertEquals("Audible", selection.familyLabel());
         assertEquals("Minor", selection.chordName());
+        assertEquals("Audibl 1/2", selection.familyDisplayLabel());
+    }
+
+    @Test
+    void keepsEveryPagedFamilyLabelWithinTheLargeOledValueWidth() {
+        final ChordStepChordSelection selection = new ChordStepChordSelection();
+        final List<String> expectedLabels =
+                List.of(
+                        "Audibl 1/2",
+                        "Barker 1/4",
+                        "SusMot 1/4",
+                        "Quartl 1/4",
+                        "Clustr 1/4",
+                        "MinDrf 1/4",
+                        "DorLft 1/4",
+                        "RtDrn 1/4");
+
+        for (final String expected : expectedLabels) {
+            assertTrue(selection.adjustFamily(1));
+            assertEquals(expected, selection.familyDisplayLabel());
+            assertTrue(selection.familyDisplayLabel().length() <= 10);
+        }
     }
 
     @Test
@@ -57,5 +80,28 @@ class ChordStepChordSelectionTest {
         assertEquals(1, selection.octaveOffset());
         assertEquals("InKey", selection.interpretationDisplayName());
         assertEquals("F1 InKey KC O+1", selection.interpretationSuffix(0));
+    }
+
+    @Test
+    void rendersTheUnionOfSimultaneouslySelectedPresetSlots() {
+        final ChordStepChordSelection selection = new ChordStepChordSelection();
+        selection.adjustFamily(1);
+        selection.selectSlot(0);
+        final int[] first = selection.renderSelectedChord(MAJOR, 0);
+        selection.selectSlot(2);
+        final int[] second = selection.renderSelectedChord(MAJOR, 0);
+
+        selection.selectSlots(Set.of(0, 2), 2);
+
+        final int[] expected =
+                java.util.stream.IntStream.concat(
+                                java.util.Arrays.stream(first), java.util.Arrays.stream(second))
+                        .distinct()
+                        .sorted()
+                        .toArray();
+        assertArrayEquals(expected, selection.renderSelectedChord(MAJOR, 0));
+        assertTrue(selection.isSlotSelected(0));
+        assertTrue(selection.isSlotSelected(2));
+        assertEquals("2 Chords", selection.chordName());
     }
 }

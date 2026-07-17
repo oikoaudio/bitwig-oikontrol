@@ -1,21 +1,20 @@
 package com.bitwig.extensions.framework;
 
-import com.bitwig.extension.api.PlatformType;
-import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
-import com.bitwig.extension.controller.ControllerExtension;
-import com.bitwig.extension.controller.ControllerExtensionDefinition;
-import com.bitwig.extension.controller.api.ControllerHost;
-import com.bitwig.extension.controller.api.HardwareActionBindable;
-import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+
+import com.bitwig.extension.api.PlatformType;
+import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
+import com.bitwig.extension.controller.ControllerExtension;
+import com.bitwig.extension.controller.ControllerExtensionDefinition;
+import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.HardwareActionBindable;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 
 class LayerActivationTest {
 
@@ -60,19 +59,18 @@ class LayerActivationTest {
 
     private static ControllerExtension testControllerExtension() {
         final ControllerHost host = mock(ControllerHost.class);
-        doReturn(mock(HardwareActionBindable.class)).when(host).createAction(any(Runnable.class), any());
+        doReturn(mock(HardwareActionBindable.class))
+                .when(host)
+                .createAction(any(Runnable.class), any());
         return new ControllerExtension(testDefinition(), host) {
             @Override
-            public void init() {
-            }
+            public void init() {}
 
             @Override
-            public void exit() {
-            }
+            public void exit() {}
 
             @Override
-            public void flush() {
-            }
+            public void flush() {}
         };
     }
 
@@ -124,9 +122,8 @@ class LayerActivationTest {
             }
 
             @Override
-            public void listAutoDetectionMidiPortNames(final AutoDetectionMidiPortNamesList list,
-                                                       final PlatformType platformType) {
-            }
+            public void listAutoDetectionMidiPortNames(
+                    final AutoDetectionMidiPortNamesList list, final PlatformType platformType) {}
 
             @Override
             public ControllerExtension createInstance(final ControllerHost host) {

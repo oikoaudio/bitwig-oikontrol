@@ -3,25 +3,23 @@ package com.oikoaudio.fire.note;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
-
 import java.util.EnumMap;
 import java.util.function.Function;
 
-/**
- * Owns the live encoder-page selection and layer activation used by Note mode's live surface.
- */
+/** Owns the live encoder-page selection and layer activation used by Note mode's live surface. */
 final class NoteLiveEncoderModeControls {
     private final EnumMap<EncoderMode, LayerHandle> layers = new EnumMap<>(EncoderMode.class);
     private final StepSizeApplier stepSizeApplier;
     private final Function<EncoderMode, String> modeInfoSupplier;
     private EncoderMode mode = EncoderMode.CHANNEL;
 
-    NoteLiveEncoderModeControls(final LayerHandle channelLayer,
-                                final LayerHandle mixerLayer,
-                                final LayerHandle user1Layer,
-                                final LayerHandle user2Layer,
-                                final StepSizeApplier stepSizeApplier,
-                                final Function<EncoderMode, String> modeInfoSupplier) {
+    NoteLiveEncoderModeControls(
+            final LayerHandle channelLayer,
+            final LayerHandle mixerLayer,
+            final LayerHandle user1Layer,
+            final LayerHandle user2Layer,
+            final StepSizeApplier stepSizeApplier,
+            final Function<EncoderMode, String> modeInfoSupplier) {
         layers.put(EncoderMode.CHANNEL, channelLayer);
         layers.put(EncoderMode.MIXER, mixerLayer);
         layers.put(EncoderMode.USER_1, user1Layer);
@@ -36,12 +34,13 @@ final class NoteLiveEncoderModeControls {
     }
 
     void advanceMode() {
-        mode = switch (mode) {
-            case CHANNEL -> EncoderMode.MIXER;
-            case MIXER -> EncoderMode.USER_1;
-            case USER_1 -> EncoderMode.USER_2;
-            case USER_2 -> EncoderMode.CHANNEL;
-        };
+        mode =
+                switch (mode) {
+                    case CHANNEL -> EncoderMode.MIXER;
+                    case MIXER -> EncoderMode.USER_1;
+                    case USER_1 -> EncoderMode.USER_2;
+                    case USER_2 -> EncoderMode.CHANNEL;
+                };
         activateCurrent();
     }
 

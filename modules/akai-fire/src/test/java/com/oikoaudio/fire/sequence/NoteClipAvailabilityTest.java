@@ -1,15 +1,16 @@
 package com.oikoaudio.fire.sequence;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+
+import org.junit.jupiter.api.Test;
 
 class NoteClipAvailabilityTest {
 
     @Test
     void selectedClipSlotFailsOnAudioTrack() {
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(false, true);
+        final NoteClipAvailability.Failure failure =
+                NoteClipAvailability.requireSelectedClipSlot(false, true);
 
         assertEquals("Audio Track", failure.title());
         assertEquals("Use note track", failure.oledDetail());
@@ -18,7 +19,8 @@ class NoteClipAvailabilityTest {
 
     @Test
     void selectedClipSlotFailsWhenNoClipIsSelected() {
-        final NoteClipAvailability.Failure failure = NoteClipAvailability.requireSelectedClipSlot(true, false);
+        final NoteClipAvailability.Failure failure =
+                NoteClipAvailability.requireSelectedClipSlot(true, false);
 
         assertEquals("No Clip", failure.title());
         assertEquals("Select clip", failure.oledDetail());

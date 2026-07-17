@@ -1,11 +1,11 @@
 package com.oikoaudio.fire.sequence;
 
-import com.oikoaudio.fire.lights.RgbLigthState;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.oikoaudio.fire.lights.RgbLightState;
+import org.junit.jupiter.api.Test;
 
 class StepPadLightHelperTest {
 
@@ -31,17 +31,23 @@ class StepPadLightHelperTest {
 
     @Test
     void mapsShiftedClipStartToNearestColumnOnVisibleStepPage() {
-        assertEquals(3, StepPadLightHelper.nearestVisibleColumnForShiftedClipStart(
-                8.75, 16.0, 0.25, 32, 32, 16));
-        assertEquals(-1, StepPadLightHelper.nearestVisibleColumnForShiftedClipStart(
-                2.0, 16.0, 0.25, 32, 32, 16));
+        assertEquals(
+                3,
+                StepPadLightHelper.nearestVisibleColumnForShiftedClipStart(
+                        8.75, 16.0, 0.25, 32, 32, 16));
+        assertEquals(
+                -1,
+                StepPadLightHelper.nearestVisibleColumnForShiftedClipStart(
+                        2.0, 16.0, 0.25, 32, 32, 16));
     }
 
     @Test
     void overlaysClipStartHueOnlyOnMatchingColumn() {
-        assertEquals(new RgbLigthState(30, 0, 127, true),
-                StepPadLightHelper.renderClipStartColumnOverlay(3, 3, RgbLigthState.GRAY_1));
-        assertEquals(RgbLigthState.GRAY_1,
-                StepPadLightHelper.renderClipStartColumnOverlay(2, 3, RgbLigthState.GRAY_1));
+        assertEquals(
+                new RgbLightState(30, 0, 127, true),
+                StepPadLightHelper.renderClipStartColumnOverlay(3, 3, RgbLightState.GRAY_1));
+        assertEquals(
+                RgbLightState.GRAY_1,
+                StepPadLightHelper.renderClipStartColumnOverlay(2, 3, RgbLightState.GRAY_1));
     }
 }

@@ -3,8 +3,8 @@ package com.oikoaudio.fire.note;
 /**
  * Fire matrix layout for playing the currently visible Bitwig Drum Machine pad window.
  *
- * Pads run left-to-right from the bottom row, so the bottom-left Fire pad triggers the
- * first visible Drum Machine pad and the top-right triggers the 64th visible pad.
+ * <p>Pads run left-to-right from the bottom row, so the bottom-left Fire pad triggers the first
+ * visible Drum Machine pad and the top-right triggers the 64th visible pad.
  */
 final class DrumMachinePadLayout implements LiveNoteLayout {
     static final int PAD_WINDOW_SIZE = NoteGridLayout.PAD_COUNT;
@@ -26,7 +26,6 @@ final class DrumMachinePadLayout implements LiveNoteLayout {
         String displayName() {
             return displayName;
         }
-
     }
 
     private final int firstVisibleMidiNote;
@@ -38,12 +37,20 @@ final class DrumMachinePadLayout implements LiveNoteLayout {
         this(firstVisibleMidiNote, Layout.GRID64, 0);
     }
 
-    DrumMachinePadLayout(final int firstVisibleMidiNote, final Layout layout, final int selectedPadOffset) {
-        this(firstVisibleMidiNote, layout, selectedPadOffset, Math.min(PAD_WINDOW_SIZE - 1, selectedPadOffset + 1));
+    DrumMachinePadLayout(
+            final int firstVisibleMidiNote, final Layout layout, final int selectedPadOffset) {
+        this(
+                firstVisibleMidiNote,
+                layout,
+                selectedPadOffset,
+                Math.min(PAD_WINDOW_SIZE - 1, selectedPadOffset + 1));
     }
 
-    DrumMachinePadLayout(final int firstVisibleMidiNote, final Layout layout, final int primaryPadOffset,
-                         final int secondaryPadOffset) {
+    DrumMachinePadLayout(
+            final int firstVisibleMidiNote,
+            final Layout layout,
+            final int primaryPadOffset,
+            final int secondaryPadOffset) {
         this.firstVisibleMidiNote = firstVisibleMidiNote;
         this.layout = layout;
         this.primaryPadOffset = clampOffset(primaryPadOffset);
@@ -53,7 +60,7 @@ final class DrumMachinePadLayout implements LiveNoteLayout {
     @Override
     public int[] notesForPad(final int padIndex) {
         final int midiNote = noteForPad(padIndex);
-        return midiNote < 0 ? new int[0] : new int[]{midiNote};
+        return midiNote < 0 ? new int[0] : new int[] {midiNote};
     }
 
     int noteForPad(final int padIndex) {
@@ -82,7 +89,8 @@ final class DrumMachinePadLayout implements LiveNoteLayout {
             return -1;
         }
         final int column = padIndex % NoteGridLayout.PAD_COLUMNS;
-        final int rowFromBottom = NoteGridLayout.PAD_ROWS - 1 - (padIndex / NoteGridLayout.PAD_COLUMNS);
+        final int rowFromBottom =
+                NoteGridLayout.PAD_ROWS - 1 - (padIndex / NoteGridLayout.PAD_COLUMNS);
         return column + rowFromBottom * SELECTOR_COLUMNS;
     }
 
@@ -123,7 +131,9 @@ final class DrumMachinePadLayout implements LiveNoteLayout {
 
     @Override
     public NoteGridLayout.PadRole roleForPad(final int padIndex) {
-        return noteForPad(padIndex) < 0 ? NoteGridLayout.PadRole.UNAVAILABLE : NoteGridLayout.PadRole.IN_SCALE;
+        return noteForPad(padIndex) < 0
+                ? NoteGridLayout.PadRole.UNAVAILABLE
+                : NoteGridLayout.PadRole.IN_SCALE;
     }
 
     private static int padWindowIndexForPad(final int padIndex) {
@@ -131,7 +141,8 @@ final class DrumMachinePadLayout implements LiveNoteLayout {
             return -1;
         }
         final int column = padIndex % NoteGridLayout.PAD_COLUMNS;
-        final int rowFromBottom = NoteGridLayout.PAD_ROWS - 1 - (padIndex / NoteGridLayout.PAD_COLUMNS);
+        final int rowFromBottom =
+                NoteGridLayout.PAD_ROWS - 1 - (padIndex / NoteGridLayout.PAD_COLUMNS);
         return column + rowFromBottom * NoteGridLayout.PAD_COLUMNS;
     }
 

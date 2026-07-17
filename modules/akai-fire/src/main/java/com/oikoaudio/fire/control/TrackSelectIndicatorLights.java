@@ -5,13 +5,12 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 /**
  * Visual palette for the four TRACK_SELECT status indicators beside the mute buttons.
  *
- * The Akai Fire uses the same numeric states differently across LED banks. On these indicators,
+ * <p>The Akai Fire uses the same numeric states differently across LED banks. On these indicators,
  * the states named AMBER in BiColorLightState are the green-looking states observed on hardware,
  * while the states named GREEN are the red-looking states.
  */
 public final class TrackSelectIndicatorLights {
-    private TrackSelectIndicatorLights() {
-    }
+    private TrackSelectIndicatorLights() {}
 
     public static BiColorLightState green(final boolean active) {
         return active ? BiColorLightState.AMBER_FULL : BiColorLightState.AMBER_HALF;

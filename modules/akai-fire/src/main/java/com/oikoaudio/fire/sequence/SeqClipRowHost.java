@@ -12,8 +12,7 @@ public interface SeqClipRowHost {
         return getDriver().getDefaultClipLengthBeats();
     }
 
-    default void onClipCreated(final int index) {
-    }
+    default void onClipCreated(final int index) {}
 
     OledDisplay getOled();
 

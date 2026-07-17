@@ -1,13 +1,13 @@
 package com.oikoaudio.fire.sequence;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
 import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
 import com.oikoaudio.fire.testutil.BitwigApiValueStubs.ColorValueStub;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
 
 class SelectedClipSlotObserverTest {
 
@@ -21,7 +21,7 @@ class SelectedClipSlotObserverTest {
 
         stubSlot(bank, slot, exists, hasContent, isSelected, null, null, null);
 
-        SelectedClipSlotObserver.observe(bank, false, false, () -> { });
+        SelectedClipSlotObserver.observe(bank, false, false, () -> {});
 
         assertEquals(1, exists.markInterestedCalls());
         assertEquals(1, hasContent.markInterestedCalls());
@@ -44,7 +44,7 @@ class SelectedClipSlotObserverTest {
 
         stubSlot(bank, slot, exists, hasContent, isSelected, color, isPlaying, isRecording);
 
-        SelectedClipSlotObserver.observe(bank, true, true, () -> { });
+        SelectedClipSlotObserver.observe(bank, true, true, () -> {});
 
         assertEquals(1, color.markInterestedCalls());
         assertEquals(1, color.addObserverCalls());
@@ -54,14 +54,15 @@ class SelectedClipSlotObserverTest {
         assertEquals(1, isRecording.addObserverCalls());
     }
 
-    private static void stubSlot(final ClipLauncherSlotBank bank,
-                                 final ClipLauncherSlot slot,
-                                 final BooleanValueStub exists,
-                                 final BooleanValueStub hasContent,
-                                 final BooleanValueStub isSelected,
-                                 final ColorValueStub color,
-                                 final BooleanValueStub isPlaying,
-                                 final BooleanValueStub isRecording) {
+    private static void stubSlot(
+            final ClipLauncherSlotBank bank,
+            final ClipLauncherSlot slot,
+            final BooleanValueStub exists,
+            final BooleanValueStub hasContent,
+            final BooleanValueStub isSelected,
+            final ColorValueStub color,
+            final BooleanValueStub isPlaying,
+            final BooleanValueStub isRecording) {
         org.mockito.Mockito.when(bank.getSizeOfBank()).thenReturn(1);
         org.mockito.Mockito.when(bank.getItemAt(0)).thenReturn(slot);
         org.mockito.Mockito.when(slot.exists()).thenReturn(exists.value());

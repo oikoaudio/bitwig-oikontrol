@@ -12,45 +12,61 @@ public final class OledMeterRenderer {
     private static final int FOOTER_HEIGHT = 8;
     private static final int MIN_BAR_WIDTH = 2;
 
-    private OledMeterRenderer() {
-    }
+    private OledMeterRenderer() {}
 
     public static int[] verticalMeters(final int[] values, final int count) {
         return verticalMeters(values, null, null, count);
     }
 
-    public static int[] verticalMeters(final int[] values, final int[] peakMarkers, final int count) {
+    public static int[] verticalMeters(
+            final int[] values, final int[] peakMarkers, final int count) {
         return verticalMeters(values, peakMarkers, null, count);
     }
 
-    public static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
-                                       final int count) {
+    public static int[] verticalMeters(
+            final int[] values, final int[] peakMarkers, final boolean[] muted, final int count) {
         return verticalMeters(values, peakMarkers, muted, count, HEIGHT);
     }
 
-    public static int[] verticalMetersWithFooter(final int[] values, final int[] peakMarkers, final boolean[] muted,
-                                                 final int count) {
-        return verticalMetersWithFooter(values, peakMarkers, muted, count, EncoderLegendPosition.BOTTOM);
+    public static int[] verticalMetersWithFooter(
+            final int[] values, final int[] peakMarkers, final boolean[] muted, final int count) {
+        return verticalMetersWithFooter(
+                values, peakMarkers, muted, count, EncoderLegendPosition.BOTTOM);
     }
 
-    public static int[] verticalMetersWithFooter(final int[] values, final int[] peakMarkers, final boolean[] muted,
-                                                 final int count, final EncoderLegendPosition footerPosition) {
-        final EncoderLegendPosition normalizedPosition = footerPosition == null
-                ? EncoderLegendPosition.BOTTOM
-                : footerPosition;
+    public static int[] verticalMetersWithFooter(
+            final int[] values,
+            final int[] peakMarkers,
+            final boolean[] muted,
+            final int count,
+            final EncoderLegendPosition footerPosition) {
+        final EncoderLegendPosition normalizedPosition =
+                footerPosition == null ? EncoderLegendPosition.BOTTOM : footerPosition;
         if (normalizedPosition == EncoderLegendPosition.TOP) {
-            return verticalMeters(values, peakMarkers, muted, count, FOOTER_HEIGHT + TOP_MARGIN, HEIGHT - 1);
+            return verticalMeters(
+                    values, peakMarkers, muted, count, FOOTER_HEIGHT + TOP_MARGIN, HEIGHT - 1);
         }
-        return verticalMeters(values, peakMarkers, muted, count, TOP_MARGIN, HEIGHT - FOOTER_HEIGHT - 1);
+        return verticalMeters(
+                values, peakMarkers, muted, count, TOP_MARGIN, HEIGHT - FOOTER_HEIGHT - 1);
     }
 
-    private static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
-                                        final int count, final int drawingHeight) {
-        return verticalMeters(values, peakMarkers, muted, count, TOP_MARGIN, Math.min(HEIGHT, drawingHeight) - 1);
+    private static int[] verticalMeters(
+            final int[] values,
+            final int[] peakMarkers,
+            final boolean[] muted,
+            final int count,
+            final int drawingHeight) {
+        return verticalMeters(
+                values, peakMarkers, muted, count, TOP_MARGIN, Math.min(HEIGHT, drawingHeight) - 1);
     }
 
-    private static int[] verticalMeters(final int[] values, final int[] peakMarkers, final boolean[] muted,
-                                        final int count, final int topLimit, final int bottomLimit) {
+    private static int[] verticalMeters(
+            final int[] values,
+            final int[] peakMarkers,
+            final boolean[] muted,
+            final int count,
+            final int topLimit,
+            final int bottomLimit) {
         final int visibleCount = Math.max(0, Math.min(count, values.length));
         final int[] image = new int[IMAGE_BYTES];
         if (visibleCount == 0) {
@@ -76,7 +92,8 @@ public final class OledMeterRenderer {
                 fillRect(image, left, Math.max(boundedTop, top), right, bottom);
             }
             if (!mutedLane && peakMarkers != null && index < peakMarkers.length) {
-                final int markerHeight = VuMeterFormatter.meterHeight(peakMarkers[index], maxHeight);
+                final int markerHeight =
+                        VuMeterFormatter.meterHeight(peakMarkers[index], maxHeight);
                 if (markerHeight > 0) {
                     final int markerY = Math.max(boundedTop, bottom - markerHeight + 1);
                     drawHorizontalLine(image, left, right, markerY);
@@ -114,7 +131,8 @@ public final class OledMeterRenderer {
         return new int[IMAGE_BYTES];
     }
 
-    static void fillRect(final int[] image, final int left, final int top, final int right, final int bottom) {
+    static void fillRect(
+            final int[] image, final int left, final int top, final int right, final int bottom) {
         for (int y = Math.max(0, top); y <= Math.min(HEIGHT - 1, bottom); y++) {
             for (int x = Math.max(0, left); x <= Math.min(WIDTH - 1, right); x++) {
                 setPixel(image, x, y);
@@ -122,14 +140,20 @@ public final class OledMeterRenderer {
         }
     }
 
-    static void drawHorizontalLine(final int[] image, final int left, final int right, final int y) {
+    static void drawHorizontalLine(
+            final int[] image, final int left, final int right, final int y) {
         for (int x = Math.max(0, left); x <= Math.min(WIDTH - 1, right); x++) {
             setPixel(image, x, y);
         }
     }
 
-    static void drawRect(final int[] image, final int left, final int top, final int right, final int bottom,
-                         final boolean filled) {
+    static void drawRect(
+            final int[] image,
+            final int left,
+            final int top,
+            final int right,
+            final int bottom,
+            final boolean filled) {
         if (filled) {
             fillRect(image, left, top, right, bottom);
             return;

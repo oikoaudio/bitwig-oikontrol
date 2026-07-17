@@ -256,12 +256,12 @@
         <tbody>
           <tr><td><code>DRUM</code></td><td>Drum workflows</td><td><code>Drum XOX</code>; press again for <code>Nested Rhythm</code>, then <code>Drum Pads</code></td></tr>
           <tr><td><code>NOTE</code></td><td>Live note input</td><td>16x4 melodic / harmonic note surface</td></tr>
-          <tr><td><code>STEP</code></td><td>Step sequencing</td><td>Enter <code>Chord Step</code>; from there press again for <code>Melo Gen</code>, then <code>Fugue</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Step sequencing</td><td>Enter <code>Poly Step</code>; from there press again for <code>Melo Gen</code>, then <code>Fugue</code></td></tr>
           <tr><td><code>PERFORM</code></td><td>Clip launching</td><td>16x4 clip grid and track actions</td></tr>
       </tbody>
       </table>
       <p><code>DRUM</code>, <code>STEP</code>, and <code>PERFORM</code> remember the last page used under that button. The first entry uses the defaults above, or the configured <code>Startup Mode</code> on controller startup; after that, leaving and returning restores the last page in that family.</p>
-      <p>Shared pitch context is global across <code>NOTE</code>, <code>Melo Gen</code>, <code>Chord Step</code>, and the settings overlay. <code>Root Key</code>, <code>Scale</code>, and <code>Octave</code> changes in one of those places update the others.</p>
+      <p>Shared pitch context is global across <code>NOTE</code>, <code>Melo Gen</code>, <code>Poly Step</code>, and the settings overlay. <code>Root Key</code>, <code>Scale</code>, and <code>Octave</code> changes in one of those places update the others.</p>
       <p>Pad colors in <code>DRUM</code> and <code>PERFORM</code> follow Bitwig track, drum-lane, and clip colors. <code>Pad Brightness</code> and <code>Pad Saturation</code> control how strongly those project colors translate to the Fire LEDs.</p>
       <h3>Shared controls</h3>
       <table class="control-map">
@@ -303,9 +303,31 @@
           <tr><td><code>Pins</code></td><td>Pin track</td><td>Pin device</td><td>Pin clip</td><td>--</td></tr>
       </tbody>
       </table>
-      <p>On the <code>Pins</code> page, turn an encoder right for <code>On</code> and left for <code>Off</code>; the pin controls stop at those two states and do not wrap. The <code>Input</code> velocity settings are shared by live <code>NOTE</code>, <code>Drum Pads</code>, and <code>Chord Step</code> input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle <code>Show deactivated tracks</code>; the same persistent option is available in the controller preferences and defaults to off.</p>
+      <p>On the <code>Pins</code> page, turn an encoder right for <code>On</code> and left for <code>Off</code>; the pin controls stop at those two states and do not wrap. The <code>Input</code> velocity settings are shared by live <code>NOTE</code>, <code>Drum Pads</code>, and <code>Poly Step</code> input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle <code>Show deactivated tracks</code>; the same persistent option is available in the controller preferences and defaults to off.</p>
       <p>The <code>Screen Message Hold</code> hardware preference controls how long transient OLED messages stay visible before persistent screens return: <code>Short</code> is 750 ms, <code>Normal</code> is 1.5 s, and <code>Long</code> is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The <code>Idle Perf &amp; Drum OLED</code> hardware preference defaults to <code>Context</code>; set it to <code>Meters</code> to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data. The <code>Note OLED Notes/Chords</code> hardware preference defaults to <code>Pads</code>: live Note pads show notes/chords on the OLED, while selected-track DAW playback notes do not take over the idle display. Set it to <code>Pads + DAW</code> if you also want playing clip notes/chords to appear during playback.</p>
-      <p>Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Chord Step, Nested Rhythm, and Fugue. The <code>Encoder Legend Position</code> hardware preference defaults to <code>Bottom</code>; set it to <code>Top</code> if the top row is easier to read in your controller setup.</p>
+      <p>Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Poly Step, Nested Rhythm, and Fugue. The <code>Encoder Legend Position</code> hardware preference defaults to <code>Bottom</code>; set it to <code>Top</code> if the top row is easier to read in your controller setup.</p>
+      <h3>Baked Note Variation</h3>
+      <p>Sequencer and generator modes can write stable, clip-wide variation into continuous per-note values. This is <strong>Baked Note Variation</strong>: values are written once into the notes and do not change again merely because the clip loops.</p>
+      <p>On an eligible note-parameter encoder:</p>
+      <ul>
+        <li><code>SHIFT + ALT + turn</code> sets that parameter's session-local variation amount from 0% to 100%.</li>
+        <li><code>SHIFT + ALT + touch</code> writes a fresh variation to every note-on event in the active clip loop, across all pitches and MIDI channels.</li>
+        <li>Turn the amount down to 0%, then use <code>SHIFT + ALT + touch</code>, to reset every targeted note to the mode's insertion baseline or expression centre.</li>
+        <li><code>KNOB MODE + touch</code> still resets the ordinary encoder target and takes priority over variation.</li>
+      </ul>
+      <p>The first variation policy, <code>Scatter</code>, favors values near the current default and gives notes at the same onset the same value, so chords and layered unisons move together. Pitch expression stays within 12 semitones of its default. Held steps, selected notes, the visible page, and the selected drum pad do not narrow the operation. If the controller cannot observe the complete loop it reports <code>Clip too large</code> and changes nothing.</p>
+      <table>
+        <thead><tr><th>Mode</th><th>Eligible mapped values</th></tr></thead>
+        <tbody>
+          <tr><td>Drum XOX</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance, Velocity spread, Note Gain, Note Pan</td></tr>
+          <tr><td>Poly Step</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance, Velocity spread, Note Gain, Note Pan</td></tr>
+          <tr><td>Melo Gen</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance, Velocity spread, Note Gain, Note Pan</td></tr>
+          <tr><td>Nested Rhythm</td><td>Velocity, Pressure, Timbre, Pitch expression, Chance</td></tr>
+          <tr><td>Fugue</td><td>Velocity and Chance</td></tr>
+      </tbody>
+      </table>
+      <p>In Drum XOX, Poly Step, and Melo Gen, go to <code>User 1</code> and press <code>ALT + KNOB MODE</code> to latch the secondary expression page. Its legend is <code>Velo / Gain / Pan / PExp</code>; press <code>ALT + KNOB MODE</code> again to return to <code>Velo / Pres / Timb / PExp</code>. Note Gain and Note Pan use ordinary edit/default/reset behavior on that latched page, so their <code>SHIFT + ALT</code> variation gesture needs no extra held button.</p>
+      <p>Applying variation again produces a new stable result. A later deliberate generator action in Melo Gen, Fugue, or Nested Rhythm may rewrite those values. Variation amounts are shared by parameter across compatible modes for the current extension session, but are not stored in controller preferences or project metadata.</p>
       <h3>Main SELECT encoder</h3>
       <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
       <p>Global <code>SELECT</code> turn chords:</p>
@@ -353,7 +375,7 @@
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Poly Step</code></td></tr>
           <tr><td><code>SHIFT + STEP</code></td><td>Latch accent mode</td></tr>
           <tr><td>Hold step pad(s) + <code>STEP</code></td><td>Toggle accent on the held steps</td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
@@ -400,7 +422,7 @@
         <tbody>
           <tr><td><code>DRUM</code> while in <code>XOX Drum mode</code></td><td>Enter <code>Nested Rhythm mode</code></td></tr>
           <tr><td><code>DRUM</code> while in <code>Nested Rhythm</code></td><td>Enter <code>Drum Pads</code></td></tr>
-          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Poly Step</code></td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>
           <tr><td><code>PATTERN UP</code> or <code>ALT + MUTE_4</code></td><td>Reset hit edits for the selected clip</td></tr>
           <tr><td><code>PATTERN DOWN</code></td><td>Generate current nested rhythm into the selected clip</td></tr>
@@ -431,8 +453,8 @@
           <tr><td>Pad matrix</td><td>16x4 note grid</td></tr>
           <tr><td>Pad LEDs</td><td>Root, in-scale, and out-of-scale feedback</td></tr>
           <tr><td><code>NOTE</code></td><td>Toggle between melodic note input and harmonic note input</td></tr>
-          <tr><td><code>ALT + NOTE</code></td><td>Toggle the current layout variant: chromatic / in-key in melodic and Chord Step builder input, bass columns / full field in harmonic input</td></tr>
-          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code>; press again for <code>Melo Gen</code></td></tr>
+          <tr><td><code>ALT + NOTE</code></td><td>Toggle the current layout variant: chromatic / in-key in melodic and Poly Step builder input, bass columns / full field in harmonic input</td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Poly Step</code>; press again for <code>Melo Gen</code></td></tr>
           <tr><td><code>SHIFT + STEP</code></td><td>Toggle Bitwig Step Input helper for the selected clip</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Shared octave down / up</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Undo / redo Bitwig project history</td></tr>
@@ -440,7 +462,8 @@
           <tr><td><code>ALT + PATTERN DOWN/UP</code></td><td>Lower / higher shared root key</td></tr>
           <tr><td><code>MUTE_1</code></td><td>Sustain</td></tr>
           <tr><td><code>MUTE_2</code></td><td>Sostenuto</td></tr>
-          <tr><td><code>MUTE_3</code></td><td>Note Repeat toggle</td></tr>
+          <tr><td>Tap <code>MUTE_3</code></td><td>Toggle Note Repeat</td></tr>
+          <tr><td>Hold <code>MUTE_3</code> + turn <code>SELECT</code></td><td>Choose the repeat division without changing whether Note Repeat is on or off</td></tr>
           <tr><td><code>MUTE_4</code></td><td>Hold only the pad notes already down when Hold turns on; held-note pads blink and release when pressed again or Hold turns off</td></tr>
           <tr><td><code>KNOB MODE</code></td><td>Cycle live-note encoder pages</td></tr>
       </tbody>
@@ -454,6 +477,7 @@
           <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected device remote 1</td><td>Device remote 2</td><td>Device remote 3</td><td>Device remote 4</td></tr>
       </tbody>
       </table>
+      <p>Note Repeat divisions run from fastest to slowest as <code>1/32T</code>, <code>1/32</code>, <code>1/16T</code>, <code>1/16</code>, <code>1/8T</code>, <code>1/8</code>, <code>1/4T</code>, and <code>1/4</code>; the default is <code>1/16</code>.</p>
       <p>When live <code>NOTE</code> is idle, the OLED returns to useful selected-track context after transient encoder values. Playing Fire pads show the current note or detected chord on the OLED and hold that display briefly across short gaps so repeated notes do not flash the screen. On the <code>Mixer</code> page during playback or meter ring-out, it shows selected-track maximum Peak/RMS and current Peak/RMS with the compact encoder legend. On <code>Channel</code>, <code>User 1</code>, and <code>User 2</code>, it falls back to the selected track name with the current encoder-page legend. Device remote labels use mapped parameter names when Bitwig exposes them, otherwise the legend falls back to <code>D1</code>-style labels.</p>
       <p><code>SHIFT + STEP</code> opens the selected launcher clip in Bitwig's Detail Editor, selects Bitwig's Step Input tool, and tries to move the editor position to the first item. The OLED shows <code>Step Input</code>, an estimated one-based <code>Step N/M</code> position, and the current encoder footer. Fire pad note/chord gestures advance the estimate once per released note-entry gesture. While the helper is active, <code>BANK RIGHT</code> sends Bitwig's right-arrow command for rest/advance or held-note extension, and <code>BANK LEFT</code> sends left-arrow for back. Press <code>SHIFT + STEP</code> again to return Bitwig to the Pointer tool.</p>
       <h4>Harmonic input</h4>
@@ -464,12 +488,12 @@
       <table>
         <thead><tr><th>Harmonic <code>Mixer</code> page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr><td><code>Mixer</code></td><td>Notes per pad: 1, 2, or 3</td><td>Octave span: 1-3</td><td>Bass Grid on / off</td><td>Pitch Gliss</td></tr>
+          <tr><td><code>Mixer</code></td><td>Notes per pad: 1, 2, or 3</td><td>Octave span: 1-3</td><td>Bass Grid on / off</td><td>Voicing: Drop 2, Close, or Open</td></tr>
       </tbody>
       </table>
-      <p>Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, and the bass grid enabled. <code>Notes per pad</code> controls how many notes each harmonic pad produces before octave expansion. <code>Octave span</code> adds octave copies above those notes. Bass-grid pads always stay single-note, even when notes-per-pad is set higher. <code>Pitch Gliss</code> shifts the harmonic field through the same pitch-gliss offset used on the <code>Channel</code> page.</p>
+      <p>Harmonic input starts with 3 notes per harmonic pad, a 1-octave span, the <code>Drop 2</code> voicing, and the bass grid enabled. <code>Notes per pad</code> controls how many notes each harmonic pad produces before octave expansion. <code>Voicing</code> changes the register of that initial group, then <code>Octave span</code> adds octave copies above it. <code>Close</code> packs the notes above the pad's harmonic root; <code>Open</code> widens that close shape; and <code>Drop 2</code> preserves the original lattice voicing. Bass-grid pads always stay single-note, even when notes-per-pad or voicing changes. Hold several pads to play the union of their notes; overlapping notes sound once and remain active until the last pad containing them is released. <code>Pitch Gliss</code> remains available on Channel encoder 3.</p>
       <h3>Melo Gen mode</h3>
-      <p>Press <code>STEP</code> from <code>Chord Step</code> to enter <code>Melo Gen</code>; press <code>STEP</code> again to enter <code>Fugue</code>.</p>
+      <p>Press <code>STEP</code> from <code>Poly Step</code> to enter <code>Melo Gen</code>; press <code>STEP</code> again to enter <code>Fugue</code>.</p>
       <p><code>Melo Gen</code> is a generative and editable mono phrase sequencer for basslines, motifs, and melodic hooks. It edits a 2-bar / 32-step window and keeps generated phrases constrained to the current pitch pool.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
@@ -509,7 +533,7 @@
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr class="encoder-primary"><td><code>Channel</code></td><td>Engine / <code>ALT</code>: subtype</td><td>Density / <code>ALT</code>: thin-fill current phrase</td><td>Pitch-pool octave / <code>ALT</code>: shared root</td><td>Mutation type / <code>ALT</code>: strength</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Engine / <code>ALT</code>: subtype</td><td>Density / <code>ALT</code>: thin-fill current phrase</td><td>Pitch-pool octave / <code>ALT</code>: shared root / <code>SHIFT</code>: shared scale</td><td>Mutation type / <code>ALT</code>: strength</td></tr>
           <tr class="encoder-mode"><td><code>Mixer</code></td><td>Length / <code>ALT</code>: channel shape</td><td>Swivel / Mirror x2 / <code>ALT</code>: tension</td><td>Reverse / <code>ALT</code>: legato</td><td>Invert down / up / <code>ALT</code>: recurrence info</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Velocity</td><td>Pressure</td><td>Timbre</td><td>Pitch</td></tr>
           <tr class="encoder-expression"><td><code>User 2</code></td><td>Note length</td><td>Chance</td><td>Velocity spread</td><td>Repeats</td></tr>
@@ -517,9 +541,9 @@
       </table>
       <p>Current generator modes are <code>Acid</code>, <code>Motif</code>, <code>Call/Resp</code>, <code>Rolling</code>, and <code>Octave</code>. If you manually edit the pitch pool, it becomes user-owned and is not auto-replaced on mode switch.</p>
       <p>For recurrence editing, hold one or more active melodic steps. Row 1 becomes an 8-pad recurrence editor; tap pads to toggle recurrence hits, or hold the first pad as a span anchor and tap another pad to set the recurrence span.</p>
-      <h3>Chord Step mode</h3>
-      <p>Press <code>STEP</code> from normal performance modes to enter <code>Chord Step</code>. Press <code>STEP</code> again to enter <code>Melo Gen</code>. Press <code>NOTE</code> to return to live note input.</p>
-      <p><code>Chord Step</code> is the chord-oriented note-step workflow. The builder starts blank in chromatic view and uses the same shared root and scale as live <code>NOTE</code>.</p>
+      <h3>Poly Step mode</h3>
+      <p>Press <code>STEP</code> from normal performance modes to enter <code>Poly Step</code>. Press <code>STEP</code> again to enter <code>Melo Gen</code>. Press <code>NOTE</code> to return to live note input.</p>
+      <p><code>Poly Step</code> is the polyphonic note-step workflow for single notes or chords. The builder starts blank in chromatic view and uses the same shared root and scale as live <code>NOTE</code>.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
@@ -533,6 +557,7 @@
         <tbody>
           <tr><td>Tap empty step</td><td>Place selected chord</td></tr>
           <tr><td>Tap lit step</td><td>Remove chord</td></tr>
+          <tr><td>Hold source pitch/chord pad(s) + tap lit step</td><td>Replace its pitches while preserving timing, duration, velocity, probability, expression, and conditions</td></tr>
           <tr><td>Hold step pad(s) + chord pad</td><td>Rewrite held steps with that chord</td></tr>
           <tr><td>Tap chord pad with no held step</td><td>Audition chord, if enabled</td></tr>
           <tr><td><code>STEP</code></td><td>Enter <code>Melo Gen</code></td></tr>
@@ -548,6 +573,7 @@
           <tr><td>Hold step(s) + <code>BANK LEFT/RIGHT</code></td><td>Experimental micro-timing nudge for held chord material</td></tr>
       </tbody>
       </table>
+      <p>Each note or chord is owned by the step pad nearest to its note-on position. Fine nudge keeps that ownership until the note-on crosses the midpoint to the neighboring step, then transfers it as one event. A long note still lights, selects, and clears only from its owning pad; its duration may extend across later steps without making those pads occupied.</p>
       <table class="control-map">
         <thead><tr><th>Left-side button</th><th>Action</th></tr></thead>
         <tbody>
@@ -560,26 +586,27 @@
       <table class="encoder-map">
         <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
         <tbody>
-          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root / <code>SHIFT</code>: shared scale</td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Chord family / <code>ALT</code>: family page</td><td>Interpretation / <code>ALT</code>: invert chord / <code>SHIFT</code>: builder layout</td></tr>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Chord octave / <code>ALT</code>: shared root / <code>SHIFT</code>: shared scale</td><td>Global velocity sensitivity / <code>SHIFT</code>: velocity center</td><td>Pitch/chord set / <code>ALT</code>: set page</td><td>Interpretation / <code>ALT</code>: invert chord / <code>SHIFT</code>: builder layout</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Track volume</td><td>Track pan</td><td>Send 1</td><td>Send 2</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Note velocity</td><td>Pressure</td><td>Timbre</td><td>Pitch</td></tr>
           <tr class="encoder-expression"><td><code>User 2</code></td><td>Note length</td><td>Chance</td><td>Velocity spread</td><td>Repeats</td></tr>
       </tbody>
       </table>
-      <p>Chord banks are static libraries of chord formulas and voicing variants. Changing shared <code>Root Key</code> or <code>Scale</code> does not switch bank, page, or slot; it only changes how the selected slot is rendered. <code>As Is</code> transposes the stored chord shape from the current root. <code>In Scale</code> rebuilds that slot from the current shared scale and root.</p>
-      <p>Coarse nudge is intentionally disabled in <code>Chord Step</code>; micro-timing is currently temperamental and should be treated as experimental.</p>
+      <p>On the <code>User 1</code> and <code>User 2</code> pages, an encoder edits held or selected notes when they are available. With no note target, it instead changes the session-local default for the next note or chord inserted in <code>Poly Step</code>; touching the encoder shows that default. Hold <code>KNOB MODE</code> and touch the encoder to restore its original default. These defaults cover velocity, pressure, timbre, pitch expression, note length, chance, velocity spread, and repeats.</p>
+      <p>Chord banks are static libraries of chord formulas and voicing variants. Press several chord-set pads together to combine their rendered pitches into one grip; the combined grip remains selected after release and can be auditioned, written to empty steps, or used for source-first pitch replacement just like a multi-pad Builder grip. Changing shared <code>Root Key</code> or <code>Scale</code> does not switch bank, page, or slot; it only changes how the selected slot or combined grip is rendered. <code>As Is</code> transposes the stored chord shapes from the current root. <code>In Scale</code> rebuilds them from the current shared scale and root.</p>
+      <p>Coarse nudge is intentionally disabled in <code>Poly Step</code>; micro-timing should still be smoke-tested after changes to clip observation or note editing.</p>
       <h3>Fugue mode</h3>
       <p>Press <code>STEP</code> from <code>Melo Gen</code> to enter <code>Fugue</code>. <code>Fugue</code> treats MIDI channel 1 as the source line and generates related lines on channels 2-4.</p>
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td><code>KNOB MODE</code></td><td>Cycle active line: channel 1 source, then derived lines 2-4</td></tr>
-          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Enable / mute the corresponding line</td></tr>
+          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Enable / turn off the corresponding line; turning off a derived line clears its MIDI channel</td></tr>
           <tr><td><code>PATTERN UP</code></td><td>Cycle preset for the active derived line</td></tr>
           <tr><td><code>PATTERN DOWN</code></td><td>Reread channel 1 from the clip and rebuild derived lines</td></tr>
           <tr><td><code>BANK LEFT/RIGHT</code></td><td>Adjust active line start; on channel 1, adjust clip length</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Halve / double clip length</td></tr>
-          <tr><td><code>STEP</code></td><td>Enter <code>Chord Step</code></td></tr>
+          <tr><td><code>STEP</code></td><td>Enter <code>Poly Step</code></td></tr>
           <tr><td>Encoder turn on a derived-line page</td><td>Immediately rebuild that line with the new parameter</td></tr>
           <tr><td>Channel 1 pads and encoders</td><td>Edit the source/template line</td></tr>
       </tbody>
@@ -592,7 +619,8 @@
           <tr><td>Held channel 1 pad</td><td>Velocity</td><td>Chance</td><td>Gate</td><td>Pitch</td></tr>
       </tbody>
       </table>
-      <p>When a sequencer clip start is shifted in <code>Chord Step</code>, <code>Nested Rhythm</code>, or <code>Fugue</code>, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.</p>
+      <p>When a sequencer clip start is shifted in <code>Poly Step</code>, <code>Nested Rhythm</code>, or <code>Fugue</code>, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.</p>
+      <p>For a source-only clip, Fugue starts with derived lines 2-4 off. Enable a line to generate it from channel 1; turn it off to clear that generated MIDI channel. If channels 2-4 already contain notes when you enter Fugue, those notes are protected and the OLED prompts for <code>PATTERN DOWN</code>. Pressing <code>PATTERN DOWN</code> explicitly replaces all three derived channels and enables them for subsequent Fugue editing.</p>
       <p>If you change channel 1 notes or expression directly in Bitwig, press <code>PATTERN DOWN</code> to update the generated lines from the current DAW clip state. Fugue deliberately avoids live regeneration during Bitwig note-editor drags, so you can audition an alternate source line in isolation and avoid rewriting derived notes while the DAW is still editing the source event.</p>
       <p>For immediate derived-line feedback, change source expression from the controller instead. Controller-owned edits update the clip and regenerate from the controller's current source state.</p>
       <h3>Launcher mode (<code>PERFORM</code>)</h3>
@@ -640,8 +668,8 @@
       <p>In <code>SHIFT + PERFORM</code>, remote encoder pages idle to the selected track name with the compact encoder legend when <code>Idle Perf &amp; Drum OLED</code> is <code>Context</code>. Set <code>Idle Perf &amp; Drum OLED</code> to <code>Meters</code> to restore visible-track meters with that same legend. The legend uses mapped remote parameter names where available, and scoped fallback labels such as <code>G1</code>, <code>T1</code>, or <code>D1</code> when Bitwig reports only generic remote slots.</p>
       <h3>Generative mode background</h3>
       <p>The control tables above describe where the functions are. This section describes what the generative modes are trying to do musically.</p>
-      <h4>Chord Step background</h4>
-      <p><code>Chord Step</code> starts as an open chord builder. The default <code>Builder</code> family lets you choose the notes of a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad can behave like melodic step input and several selected source pads can behave like chord step input. With builder latch off, tapping a source pad replaces the current builder notes, while pressing several source pads together captures that grip as the current chord after release. Hold steps while changing the builder grip to rewrite those steps immediately. Use <code>SHIFT + PATTERN DOWN</code> for latch off and <code>SHIFT + PATTERN UP</code> for latch on. With builder latch on, source-pad taps add or remove notes from the builder until you change, invert, reset, or reload it. Use <code>SHIFT + encoder 4</code> on the <code>Channel</code> page, or <code>ALT + NOTE</code>, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.</p>
+      <h4>Poly Step background</h4>
+      <p><code>Poly Step</code> starts as an open pitch builder. The default <code>Builder</code> family lets you choose one note or a chord directly from the pad rows. It starts blank in chromatic view, so one selected source pad behaves like melodic step input and several selected source pads form a chord. With builder latch off, tapping a source pad replaces the current builder notes, while pressing several source pads together captures that grip as the current chord after release. Hold steps while changing the builder grip to rewrite those steps immediately. Conversely, hold source pads first and tap an occupied step to replace only its pitches while preserving its other note parameters; deactivate the step first when you want a completely fresh note. Use <code>SHIFT + PATTERN DOWN</code> for latch off and <code>SHIFT + PATTERN UP</code> for latch on. With builder latch on, source-pad taps add or remove notes from the builder until you change, invert, reset, or reload it. Use <code>SHIFT + encoder 4</code> on the <code>Channel</code> page, or <code>ALT + NOTE</code>, to switch the builder row between chromatic notes and in-key notes from the shared root and scale.</p>
       <p>The preset banks are the more opinionated side of the mode. They use interval sets designed to move harmonic content without forcing a song key or a functional progression. Many of the voicings are deliberately open, so they tolerate inversion, transposition, and scale remapping better than tightly closed block chords. Changing shared <code>Root Key</code> or <code>Scale</code> does not move to a different preset slot; it changes how the selected slot is rendered.</p>
       <p>The preset slots are also ordered to keep neighboring chords in a similar sounding range. The voicing generator favors stable outer contours, especially the bass and top note, so stepping through a bank tends to change the internal color without making the whole part jump wildly around the keyboard.</p>
       <p><code>Raw</code> interpretation keeps the chord shape as semitone intervals from the current root. This is useful when you want the exact color of the stored formula: dominant, diminished, quartal, cluster, sus, or drone shapes. <code>InKey</code> interpretation casts the formula through the current Bitwig scale, so the same slot becomes a scale-aware color shape. This is good for modal writing, parallel harmonic color, and material that will later pass through Bitwig scale-aware devices.</p>
@@ -666,14 +694,14 @@
       <table>
         <thead><tr><th>Engine</th><th>Tendency</th></tr></thead>
         <tbody>
-          <tr><td><code>Acid</code></td><td>Dense root-oriented bass hooks with accents, slides, octave leads, and short answer figures</td></tr>
+          <tr><td><code>Acid</code></td><td>Root-oriented bass hooks with accents, slides, octave leads, and short answer figures</td></tr>
           <tr><td><code>Call/Resp</code></td><td>A first-half call followed by a transformed reply: down, up, inverted-around-root, or cadential</td></tr>
           <tr><td><code>Rolling</code></td><td>Repeating bass cells for driving low-end movement; useful for pocket, root drive, and late-lift patterns</td></tr>
           <tr><td><code>Octave</code></td><td>Simple pulse material built around root / octave jumps; direct, forceful, and easy to steer</td></tr>
           <tr><td><code>Motif</code></td><td>Small repeated phrase cells with tails, sequence replies, truncation/extension, and hook returns</td></tr>
       </tbody>
       </table>
-      <p><code>Density</code> mainly changes how much of the phrase is populated. <code>Tension</code> allows wider or more colorful scale-degree movement. <code>Legato</code> encourages longer gates and slides where the engine supports them. Octave activity changes how willing the phrase is to jump registers. After generation, <code>ALT + PATTERN DOWN</code>, transform encoders, held-step editing, and pitch-pool edits are the intended way to keep an idea but bend it toward the part you need.</p>
+      <p><code>Density</code> mainly changes how much of the phrase is populated. Acid spans from a three-hit metric backbone per 16 steps at <code>0.00</code> to its complete seeded rhythm skeleton at <code>1.00</code>, restoring stronger positions first. Rolling similarly grows from four characteristic family hits per 16 steps to an active note on every step, without changing the selected family as density moves. <code>Tension</code> allows wider or more colorful scale-degree movement. <code>Legato</code> encourages longer gates and slides where the engine supports them. Octave activity changes how willing the phrase is to jump registers. After generation, <code>ALT + PATTERN DOWN</code>, transform encoders, held-step editing, and pitch-pool edits are the intended way to keep an idea but bend it toward the part you need.</p>
       <h4>Nested Rhythm background</h4>
       <p><code>Nested Rhythm</code> is a rhythm-structure generator. It builds nested metric divisions, ranks candidate pulses, then thins, clusters, ratchets, and shapes expression from that structure. The result is useful for tuplets, asymmetric subdivisions, layered percussion, and rhythms that would be slow to draw by hand on a fixed 16th grid.</p>
       <p>The mode intentionally separates generated structure from local edits. <code>PATTERN DOWN</code> claims or rewrites the selected clip from the current generator state, while held-hit edits let you change recurrence and expression without abandoning the generated pattern. For more theory behind this mode, see <code>docs/nested-rhythm-musical-grounding.md</code>.</p>

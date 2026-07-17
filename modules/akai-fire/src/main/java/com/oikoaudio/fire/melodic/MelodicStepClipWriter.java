@@ -1,14 +1,14 @@
 package com.oikoaudio.fire.melodic;
 
 import com.bitwig.extension.controller.api.PinnableCursorClip;
-
 import java.util.HashMap;
 import java.util.Map;
 
 final class MelodicStepClipWriter {
     private final Map<Integer, MelodicPattern.Step> pendingWrittenSteps = new HashMap<>();
 
-    void writeToClip(final PinnableCursorClip clip, final MelodicPattern pattern, final double stepLength) {
+    void writeToClip(
+            final PinnableCursorClip clip, final MelodicPattern pattern, final double stepLength) {
         rememberPendingWrites(pattern);
         MelodicClipAdapter.writeToClip(clip, pattern, stepLength);
     }

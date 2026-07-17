@@ -2,10 +2,8 @@ package com.oikoaudio.fire.chordstep;
 
 import java.util.Set;
 
-/**
- * Owns chord-step behavior for the physical BANK buttons.
- */
-public final class ChordStepBankButtonControls {
+/** Owns chord-step behavior for the physical BANK buttons. */
+final class ChordStepBankButtonControls {
     private final Host host;
     private boolean leftHeld = false;
     private boolean rightHeld = false;
@@ -15,7 +13,8 @@ public final class ChordStepBankButtonControls {
         this.host = host;
     }
 
-    public void handlePressed(final boolean pressed, final int amount, final boolean lengthAdjustEnabled) {
+    public void handlePressed(
+            final boolean pressed, final int amount, final boolean lengthAdjustEnabled) {
         if (lengthAdjustEnabled && host.isAltHeld()) {
             if (pressed) {
                 host.setPendingLengthAdjust(true);

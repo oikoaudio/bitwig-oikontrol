@@ -1,18 +1,17 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.NoteStep;
+import com.oikoaudio.fire.lights.RgbLightState;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class DrumStepPadSurfaceTest {
     @Test
@@ -46,9 +45,9 @@ class DrumStepPadSurfaceTest {
     void releaseRequestsClearForUnmodifiedExistingNote() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        final DrumStepPadSurface.StepReleaseAction action = surface.handleStepRelease(5,
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111),
-                false, false, false);
+        final DrumStepPadSurface.StepReleaseAction action =
+                surface.handleStepRelease(
+                        5, note(5, NoteStep.State.NoteOn, 8, 0b11111111), false, false, false);
 
         assertEquals(DrumStepPadSurface.StepReleaseAction.CLEAR_STEP, action);
     }
@@ -58,14 +57,15 @@ class DrumStepPadSurfaceTest {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
         surface.markModified(5);
 
-        final DrumStepPadSurface.StepReleaseAction action = surface.handleStepRelease(5,
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111),
-                false, false, false);
+        final DrumStepPadSurface.StepReleaseAction action =
+                surface.handleStepRelease(
+                        5, note(5, NoteStep.State.NoteOn, 8, 0b11111111), false, false, false);
 
         assertEquals(DrumStepPadSurface.StepReleaseAction.NONE, action);
-        assertEquals(DrumStepPadSurface.StepReleaseAction.CLEAR_STEP, surface.handleStepRelease(5,
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111),
-                false, false, false));
+        assertEquals(
+                DrumStepPadSurface.StepReleaseAction.CLEAR_STEP,
+                surface.handleStepRelease(
+                        5, note(5, NoteStep.State.NoteOn, 8, 0b11111111), false, false, false));
     }
 
     @Test
@@ -73,9 +73,9 @@ class DrumStepPadSurfaceTest {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
         surface.markGestureConsumed(5);
 
-        final DrumStepPadSurface.StepReleaseAction action = surface.handleStepRelease(5,
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111),
-                false, false, false);
+        final DrumStepPadSurface.StepReleaseAction action =
+                surface.handleStepRelease(
+                        5, note(5, NoteStep.State.NoteOn, 8, 0b11111111), false, false, false);
 
         assertEquals(DrumStepPadSurface.StepReleaseAction.NONE, action);
     }
@@ -84,8 +84,8 @@ class DrumStepPadSurfaceTest {
     void pressRequestsAddStepForEmptyStep() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        final DrumStepPadSurface.StepPressAction action = surface.handleStepPress(5, null,
-                false, false, false);
+        final DrumStepPadSurface.StepPressAction action =
+                surface.handleStepPress(5, null, false, false, false);
 
         assertEquals(DrumStepPadSurface.StepPressAction.ADD_STEP, action);
         assertTrue(surface.isAnyStepHeld());
@@ -96,21 +96,24 @@ class DrumStepPadSurfaceTest {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
         surface.markAdded(5);
 
-        assertTrue(surface.shouldApplyDefaultsToObservedStep(
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111)));
-        assertFalse(surface.shouldApplyDefaultsToObservedStep(
-                note(6, NoteStep.State.NoteOn, 8, 0b11111111)));
-        assertFalse(surface.shouldApplyDefaultsToObservedStep(
-                note(5, NoteStep.State.Empty, 8, 0b11111111)));
+        assertTrue(
+                surface.shouldApplyDefaultsToObservedStep(
+                        note(5, NoteStep.State.NoteOn, 8, 0b11111111)));
+        assertFalse(
+                surface.shouldApplyDefaultsToObservedStep(
+                        note(6, NoteStep.State.NoteOn, 8, 0b11111111)));
+        assertFalse(
+                surface.shouldApplyDefaultsToObservedStep(
+                        note(5, NoteStep.State.Empty, 8, 0b11111111)));
     }
 
     @Test
     void pressRequestsNoActionForExistingStep() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        final DrumStepPadSurface.StepPressAction action = surface.handleStepPress(5,
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111),
-                false, false, false);
+        final DrumStepPadSurface.StepPressAction action =
+                surface.handleStepPress(
+                        5, note(5, NoteStep.State.NoteOn, 8, 0b11111111), false, false, false);
 
         assertEquals(DrumStepPadSurface.StepPressAction.NONE, action);
     }
@@ -119,11 +122,14 @@ class DrumStepPadSurfaceTest {
     void pressPrioritizesModifierGesturesBeforeAddStep() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        assertEquals(DrumStepPadSurface.StepPressAction.FIXED_LENGTH,
+        assertEquals(
+                DrumStepPadSurface.StepPressAction.FIXED_LENGTH,
                 surface.handleStepPress(5, null, true, true, true));
-        assertEquals(DrumStepPadSurface.StepPressAction.COPY,
+        assertEquals(
+                DrumStepPadSurface.StepPressAction.COPY,
                 surface.handleStepPress(6, null, false, true, true));
-        assertEquals(DrumStepPadSurface.StepPressAction.ACCENT,
+        assertEquals(
+                DrumStepPadSurface.StepPressAction.ACCENT,
                 surface.handleStepPress(7, null, false, false, true));
     }
 
@@ -134,11 +140,14 @@ class DrumStepPadSurfaceTest {
         final List<Integer> spans = new ArrayList<>();
         final List<String> consumed = new ArrayList<>();
 
-        assertTrue(surface.handleRecurrencePadPress(3, true,
-                List.of(note(5, NoteStep.State.NoteOn, 8, 0b11111111)),
-                () -> consumed.add("yes"),
-                toggles::add,
-                spans::add));
+        assertTrue(
+                surface.handleRecurrencePadPress(
+                        3,
+                        true,
+                        List.of(note(5, NoteStep.State.NoteOn, 8, 0b11111111)),
+                        () -> consumed.add("yes"),
+                        toggles::add,
+                        spans::add));
 
         assertEquals(List.of("yes"), consumed);
         assertEquals(List.of(3), toggles);
@@ -148,12 +157,14 @@ class DrumStepPadSurfaceTest {
     @Test
     void rendersRecurrencePadLightForHeldTarget() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
-        final RgbLigthState light = surface.recurrencePadLight(0,
-                List.of(note(5, NoteStep.State.NoteOn, 4, 0b0001)),
-                base,
-                RgbLigthState.OFF);
+        final RgbLightState light =
+                surface.recurrencePadLight(
+                        0,
+                        List.of(note(5, NoteStep.State.NoteOn, 4, 0b0001)),
+                        base,
+                        RgbLightState.OFF);
 
         assertSame(base.getBrightend(), light);
     }
@@ -162,44 +173,57 @@ class DrumStepPadSurfaceTest {
     void rendersStepPadsOutsideAvailableStepsAsOff() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        assertSame(RgbLigthState.OFF, surface.stepPadLight(12, 8, null, 0,
-                false, null, 0, RgbLigthState.PURPLE, 110));
+        assertSame(
+                RgbLightState.OFF,
+                surface.stepPadLight(12, 8, null, 0, false, null, 0, RgbLightState.PURPLE, 110));
     }
 
     @Test
     void rendersEmptyStepPadsWithSharedEmptyPolicy() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
 
-        assertSame(RgbLigthState.WHITE, surface.stepPadLight(4, 16, null, 4,
-                false, null, 0, RgbLigthState.PURPLE, 110));
-        assertSame(RgbLigthState.GRAY_2, surface.stepPadLight(5, 16, null, 4,
-                false, null, 0, RgbLigthState.PURPLE, 110));
+        assertSame(
+                RgbLightState.WHITE,
+                surface.stepPadLight(4, 16, null, 4, false, null, 0, RgbLightState.PURPLE, 110));
+        assertSame(
+                RgbLightState.GRAY_2,
+                surface.stepPadLight(5, 16, null, 4, false, null, 0, RgbLightState.PURPLE, 110));
     }
 
     @Test
     void rendersAccentedOccupiedStepPadsBright() {
         final DrumStepPadSurface surface = new DrumStepPadSurface();
-        final RgbLigthState base = RgbLigthState.PURPLE;
+        final RgbLightState base = RgbLightState.PURPLE;
 
-        final RgbLigthState light = surface.stepPadLight(5, 16,
-                note(5, NoteStep.State.NoteOn, 8, 0b11111111, 1.0),
-                0, false, null, 0, base, 110);
+        final RgbLightState light =
+                surface.stepPadLight(
+                        5,
+                        16,
+                        note(5, NoteStep.State.NoteOn, 8, 0b11111111, 1.0),
+                        0,
+                        false,
+                        null,
+                        0,
+                        base,
+                        110);
 
         assertSame(base.getBrightend(), light);
     }
 
-    private static NoteStep note(final int x,
-                                 final NoteStep.State state,
-                                 final int recurrenceLength,
-                                 final int recurrenceMask) {
+    private static NoteStep note(
+            final int x,
+            final NoteStep.State state,
+            final int recurrenceLength,
+            final int recurrenceMask) {
         return note(x, state, recurrenceLength, recurrenceMask, 0.5);
     }
 
-    private static NoteStep note(final int x,
-                                 final NoteStep.State state,
-                                 final int recurrenceLength,
-                                 final int recurrenceMask,
-                                 final double velocity) {
+    private static NoteStep note(
+            final int x,
+            final NoteStep.State state,
+            final int recurrenceLength,
+            final int recurrenceMask,
+            final double velocity) {
         final NoteStep note = mock(NoteStep.class);
         when(note.x()).thenReturn(x);
         when(note.state()).thenReturn(state);

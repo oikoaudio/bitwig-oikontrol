@@ -36,35 +36,45 @@ final class NestedRhythmEditablePulse {
     }
 
     double effectivePressure(final NestedRhythmExpressionSettings settings) {
-        return clampUnit(NestedRhythmContourShaper.shapeUnitExpression(
-                order, settings.pressureCenter(), settings.pressureSpread(), settings.pressureRotation())
-                + pressureOffset);
+        return clampUnit(
+                NestedRhythmContourShaper.shapeUnitExpression(
+                                order,
+                                settings.pressureCenter(),
+                                settings.pressureSpread(),
+                                settings.pressureRotation())
+                        + pressureOffset);
     }
 
     double effectiveTimbre(final NestedRhythmExpressionSettings settings) {
-        return clampSignedUnit(NestedRhythmContourShaper.shapeSignedExpression(
-                order, settings.timbreCenter(), settings.timbreSpread(), settings.timbreRotation())
-                + timbreOffset);
+        return clampSignedUnit(
+                NestedRhythmContourShaper.shapeSignedExpression(
+                                order,
+                                settings.timbreCenter(),
+                                settings.timbreSpread(),
+                                settings.timbreRotation())
+                        + timbreOffset);
     }
 
     double effectivePitchExpression(final NestedRhythmExpressionSettings settings) {
-        return clampPitchExpression(NestedRhythmContourShaper.shapePitchExpression(
-                order,
-                settings.pitchExpressionCenter(),
-                settings.pitchExpressionSpread(),
-                settings.pitchExpressionRotation())
-                + pitchExpressionOffset);
+        return clampPitchExpression(
+                NestedRhythmContourShaper.shapePitchExpression(
+                                order,
+                                settings.pitchExpressionCenter(),
+                                settings.pitchExpressionSpread(),
+                                settings.pitchExpressionRotation())
+                        + pitchExpressionOffset);
     }
 
     double effectiveChance(final NestedRhythmExpressionSettings settings) {
-        return clampUnit(NestedRhythmContourShaper.shapeChance(
-                order,
-                role,
-                indispensability,
-                settings.chanceBaseline(),
-                settings.chancePlayProbability(),
-                settings.chanceRotation())
-                + chanceOffset);
+        return clampUnit(
+                NestedRhythmContourShaper.shapeChance(
+                                order,
+                                role,
+                                indispensability,
+                                settings.chanceBaseline(),
+                                settings.chancePlayProbability(),
+                                settings.chanceRotation())
+                        + chanceOffset);
     }
 
     RecurrencePattern effectiveRecurrence() {
@@ -72,8 +82,9 @@ final class NestedRhythmEditablePulse {
     }
 
     void applyGeneratedRecurrence(final NestedRhythmExpressionSettings settings) {
-        final RecurrencePattern recurrence = NestedRhythmContourShaper.generatedRecurrence(
-                order, role, indispensability, settings.recurrenceDepth());
+        final RecurrencePattern recurrence =
+                NestedRhythmContourShaper.generatedRecurrence(
+                        order, role, indispensability, settings.recurrenceDepth());
         recurrenceLength = recurrence.length();
         recurrenceMask = recurrence.mask();
     }

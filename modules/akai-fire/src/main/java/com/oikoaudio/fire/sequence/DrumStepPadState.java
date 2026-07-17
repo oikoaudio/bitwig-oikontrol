@@ -1,7 +1,6 @@
 package com.oikoaudio.fire.sequence;
 
 import com.bitwig.extension.controller.api.NoteStep;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Stream;

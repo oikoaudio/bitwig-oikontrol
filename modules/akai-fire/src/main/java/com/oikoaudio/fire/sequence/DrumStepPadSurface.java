@@ -1,8 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.bitwig.extension.controller.api.NoteStep;
-import com.oikoaudio.fire.lights.RgbLigthState;
-
+import com.oikoaudio.fire.lights.RgbLightState;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,11 +43,12 @@ final class DrumStepPadSurface {
         releaseStep(stepIndex);
     }
 
-    StepReleaseAction handleStepRelease(final int stepIndex,
-                                        final NoteStep note,
-                                        final boolean copyHeld,
-                                        final boolean fixedLengthHeld,
-                                        final boolean accentGesture) {
+    StepReleaseAction handleStepRelease(
+            final int stepIndex,
+            final NoteStep note,
+            final boolean copyHeld,
+            final boolean fixedLengthHeld,
+            final boolean accentGesture) {
         releaseStep(stepIndex);
         if (copyHeld || fixedLengthHeld) {
             state.removeAdded(stepIndex);
@@ -77,11 +77,12 @@ final class DrumStepPadSurface {
         return StepReleaseAction.NONE;
     }
 
-    StepPressAction handleStepPress(final int stepIndex,
-                                    final NoteStep note,
-                                    final boolean fixedLengthHeld,
-                                    final boolean copyHeld,
-                                    final boolean accentGesture) {
+    StepPressAction handleStepPress(
+            final int stepIndex,
+            final NoteStep note,
+            final boolean fixedLengthHeld,
+            final boolean copyHeld,
+            final boolean accentGesture) {
         pressStep(stepIndex);
         if (fixedLengthHeld) {
             return StepPressAction.FIXED_LENGTH;
@@ -92,7 +93,9 @@ final class DrumStepPadSurface {
         if (accentGesture) {
             return StepPressAction.ACCENT;
         }
-        if (note == null || note.state() == NoteStep.State.Empty || note.state() == NoteStep.State.NoteSustain) {
+        if (note == null
+                || note.state() == NoteStep.State.Empty
+                || note.state() == NoteStep.State.NoteSustain) {
             return StepPressAction.ADD_STEP;
         }
         return StepPressAction.NONE;
@@ -110,36 +113,40 @@ final class DrumStepPadSurface {
         return recurrenceRow.shouldShow(isAnyStepHeld());
     }
 
-    boolean handleRecurrencePadPress(final int padIndex,
-                                     final boolean pressed,
-                                     final List<NoteStep> targets,
-                                     final Runnable markConsumed,
-                                     final java.util.function.IntConsumer togglePad,
-                                     final java.util.function.IntConsumer applySpan) {
+    boolean handleRecurrencePadPress(
+            final int padIndex,
+            final boolean pressed,
+            final List<NoteStep> targets,
+            final Runnable markConsumed,
+            final java.util.function.IntConsumer togglePad,
+            final java.util.function.IntConsumer applySpan) {
         if (targets.isEmpty()) {
             return true;
         }
-        return recurrenceRow.handlePadPress(padIndex, pressed, targets, markConsumed, togglePad, applySpan);
+        return recurrenceRow.handlePadPress(
+                padIndex, pressed, targets, markConsumed, togglePad, applySpan);
     }
 
-    RgbLigthState recurrencePadLight(final int padIndex,
-                                     final List<NoteStep> targets,
-                                     final RgbLigthState color,
-                                     final RgbLigthState fallback) {
+    RgbLightState recurrencePadLight(
+            final int padIndex,
+            final List<NoteStep> targets,
+            final RgbLightState color,
+            final RgbLightState fallback) {
         return recurrenceRow.padLight(padIndex, targets, color, fallback);
     }
 
-    RgbLigthState stepPadLight(final int stepIndex,
-                               final int availableSteps,
-                               final NoteStep noteStep,
-                               final int playingStep,
-                               final boolean lengthDisplay,
-                               final NoteStep copyNote,
-                               final int blinkState,
-                               final RgbLigthState currentPadColor,
-                               final int accentedVelocity) {
+    RgbLightState stepPadLight(
+            final int stepIndex,
+            final int availableSteps,
+            final NoteStep noteStep,
+            final int playingStep,
+            final boolean lengthDisplay,
+            final NoteStep copyNote,
+            final int blinkState,
+            final RgbLightState currentPadColor,
+            final int accentedVelocity) {
         if (stepIndex >= availableSteps) {
-            return RgbLigthState.OFF;
+            return RgbLightState.OFF;
         }
         final NoteStep.State state = noteStep == null ? NoteStep.State.Empty : noteStep.state();
 
@@ -157,26 +164,29 @@ final class DrumStepPadSurface {
         }
         if (copyNote != null && copyNote.x() == stepIndex) {
             if (blinkState % 4 < 2) {
-                return RgbLigthState.GRAY_1;
+                return RgbLightState.GRAY_1;
             }
             return currentPadColor;
         }
-        return occupiedStepLight(noteStep, stepIndex == playingStep, currentPadColor, accentedVelocity);
+        return occupiedStepLight(
+                noteStep, stepIndex == playingStep, currentPadColor, accentedVelocity);
     }
 
-    private static RgbLigthState occupiedStepLight(final NoteStep noteStep,
-                                                  final boolean playing,
-                                                  final RgbLigthState currentPadColor,
-                                                  final int accentedVelocity) {
+    private static RgbLightState occupiedStepLight(
+            final NoteStep noteStep,
+            final boolean playing,
+            final RgbLightState currentPadColor,
+            final int accentedVelocity) {
         if (noteStep == null) {
             return StepPadLightHelper.renderOccupiedStep(currentPadColor, false, playing);
         }
 
         final int velocity = (int) Math.round(noteStep.velocity() * 127);
-        return StepPadLightHelper.renderOccupiedStep(currentPadColor, velocity >= accentedVelocity, playing);
+        return StepPadLightHelper.renderOccupiedStep(
+                currentPadColor, velocity >= accentedVelocity, playing);
     }
 
-    private static RgbLigthState emptyStepLight(final int stepIndex, final int playingStep) {
+    private static RgbLightState emptyStepLight(final int stepIndex, final int playingStep) {
         return StepPadLightHelper.renderEmptyStep(stepIndex, playingStep);
     }
 

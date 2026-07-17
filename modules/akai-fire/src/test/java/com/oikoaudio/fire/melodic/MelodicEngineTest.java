@@ -1,17 +1,16 @@
 package com.oikoaudio.fire.melodic;
 
-import com.bitwig.extensions.framework.MusicalScaleLibrary;
-import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 class MelodicEngineTest {
 
@@ -26,6 +25,58 @@ class MelodicEngineTest {
 
         assertArrayEquals(activeMask(a), activeMask(b));
         assertArrayEquals(pitchMask(a), pitchMask(b));
+    }
+
+    @Test
+    void acidDensityChangesPopulationWhilePreservingTheSeededSkeleton() {
+        final MelodicPhraseContext context = context();
+        final AcidGenerator generator = new AcidGenerator();
+        final MelodicPattern sparse =
+                generator.generate(
+                        context,
+                        new MelodicGenerator.GenerateParameters(
+                                16, 0.35, 0.62, 1.0, 0.36, 5, 0, 0.0, 17L));
+        final MelodicPattern dense =
+                generator.generate(
+                        context,
+                        new MelodicGenerator.GenerateParameters(
+                                16, 0.9, 0.62, 1.0, 0.36, 5, 0, 0.0, 17L));
+
+        assertTrue(activeCount(sparse) < activeCount(dense));
+        for (int step = 0; step < sparse.loopSteps(); step++) {
+            if (sparse.step(step).active()) {
+                assertTrue(dense.step(step).active());
+            }
+        }
+    }
+
+    @Test
+    void acidDensitySpansSparseMetricBackboneToFullSkeleton() {
+        final MelodicPhraseContext context = context();
+        final double[] densities = {0.0, 0.25, 0.5, 0.75, 1.0};
+        final MelodicPattern[] patterns = new MelodicPattern[densities.length];
+        for (int index = 0; index < densities.length; index++) {
+            patterns[index] =
+                    new AcidGenerator()
+                            .generate(
+                                    context,
+                                    new MelodicGenerator.GenerateParameters(
+                                            16, densities[index], 0.62, 1.0, 0.36, 5, 0, 0.0, 17L));
+        }
+
+        assertEquals(3, activeCount(patterns[0]));
+        assertTrue(patterns[0].step(0).active());
+        assertTrue(patterns[0].step(8).active());
+        assertTrue(patterns[0].step(15).active());
+        for (int index = 1; index < patterns.length; index++) {
+            assertTrue(activeCount(patterns[index - 1]) < activeCount(patterns[index]));
+            for (int step = 0; step < patterns[index].loopSteps(); step++) {
+                if (patterns[index - 1].step(step).active()) {
+                    assertTrue(patterns[index].step(step).active());
+                }
+            }
+        }
+        assertTrue(activeCount(patterns[patterns.length - 1]) >= 12);
     }
 
     @Test
@@ -48,8 +99,15 @@ class MelodicEngineTest {
                 new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 0.2, 5, 0, 0.0, 9L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
-        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
-                MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
+        final MelodicPattern mutated =
+                new MelodicMutator()
+                        .mutate(
+                                original,
+                                context,
+                                MelodicMutator.Mode.PRESERVE_RHYTHM,
+                                0.8,
+                                0.6,
+                                77L);
 
         assertArrayEquals(activeMask(original), activeMask(mutated));
     }
@@ -62,10 +120,10 @@ class MelodicEngineTest {
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
         final MelodicMutator mutator = new MelodicMutator();
 
-        final MelodicPattern simplified = mutator.mutate(original, context,
-                MelodicMutator.Mode.SIMPLIFY, 0.9, 0.1, 4L);
-        final MelodicPattern densified = mutator.mutate(original, context,
-                MelodicMutator.Mode.DENSIFY, 0.9, 0.1, 4L);
+        final MelodicPattern simplified =
+                mutator.mutate(original, context, MelodicMutator.Mode.SIMPLIFY, 0.9, 0.1, 4L);
+        final MelodicPattern densified =
+                mutator.mutate(original, context, MelodicMutator.Mode.DENSIFY, 0.9, 0.1, 4L);
 
         assertTrue(activeCount(simplified) <= activeCount(original));
         assertTrue(activeCount(densified) >= activeCount(original));
@@ -78,15 +136,25 @@ class MelodicEngineTest {
                 new MelodicGenerator.GenerateParameters(16, 0.55, 0.35, 0.2, 0.2, 5, 0, 0.0, 9L);
         final MelodicPattern original = new MotifGenerator().generate(context, parameters);
 
-        final MelodicPattern mutated = new MelodicMutator().mutate(original, context,
-                MelodicMutator.Mode.PRESERVE_RHYTHM, 0.8, 0.6, 77L);
+        final MelodicPattern mutated =
+                new MelodicMutator()
+                        .mutate(
+                                original,
+                                context,
+                                MelodicMutator.Mode.PRESERVE_RHYTHM,
+                                0.8,
+                                0.6,
+                                77L);
 
-        assertNotEquals(java.util.Arrays.toString(pitchMask(original)), java.util.Arrays.toString(pitchMask(mutated)));
+        assertNotEquals(
+                java.util.Arrays.toString(pitchMask(original)),
+                java.util.Arrays.toString(pitchMask(mutated)));
     }
 
     @Test
     void clipAdapterAlwaysBuildsExactlyThirtyTwoSteps() {
-        final Map<Integer, Map<Integer, com.bitwig.extension.controller.api.NoteStep>> map = new HashMap<>();
+        final Map<Integer, Map<Integer, com.bitwig.extension.controller.api.NoteStep>> map =
+                new HashMap<>();
         final MelodicPattern pattern = MelodicClipAdapter.fromNoteSteps(map, 16, 0.25);
         assertEquals(32, pattern.steps().size());
     }
@@ -104,6 +172,54 @@ class MelodicEngineTest {
             if (pattern.step(i).active()) {
                 assertTrue(pattern.step(i).gate() >= 0.95);
             }
+        }
+    }
+
+    @Test
+    void rollingDensitySpansStableFourHitFamilyBackboneToEveryStep() {
+        final MelodicPhraseContext context = context();
+        final double[] densities = {0.0, 0.25, 0.5, 0.75, 1.0};
+        final MelodicPattern[] patterns = new MelodicPattern[densities.length];
+        final String[] families = new String[densities.length];
+        for (int index = 0; index < densities.length; index++) {
+            final RollingBassGenerator generator = new RollingBassGenerator();
+            patterns[index] =
+                    generator.generate(
+                            context,
+                            new MelodicGenerator.GenerateParameters(
+                                    16, densities[index], 0.25, 0.15, 0.2, 6, 0, 0.0, 31L));
+            families[index] = generator.lastFamilyLabel();
+        }
+
+        assertEquals(4, activeCount(patterns[0]));
+        for (int index = 1; index < patterns.length; index++) {
+            assertEquals(families[0], families[index]);
+            assertTrue(activeCount(patterns[index - 1]) < activeCount(patterns[index]));
+            for (int step = 0; step < patterns[index].loopSteps(); step++) {
+                if (patterns[index - 1].step(step).active()) {
+                    assertTrue(patterns[index].step(step).active());
+                }
+            }
+        }
+        assertEquals(16, activeCount(patterns[patterns.length - 1]));
+    }
+
+    @Test
+    void rollingAnyFamilySelectionDoesNotDependOnDensity() {
+        final MelodicPhraseContext context = context();
+        for (long seed = 0; seed < 32; seed++) {
+            final RollingBassGenerator sparse = new RollingBassGenerator();
+            final RollingBassGenerator dense = new RollingBassGenerator();
+            sparse.generate(
+                    context,
+                    new MelodicGenerator.GenerateParameters(
+                            16, 0.0, 0.25, 0.15, 0.2, 6, 0, 0.0, seed));
+            dense.generate(
+                    context,
+                    new MelodicGenerator.GenerateParameters(
+                            16, 1.0, 0.25, 0.15, 0.2, 6, 0, 0.0, seed));
+
+            assertEquals(sparse.lastFamilyLabel(), dense.lastFamilyLabel());
         }
     }
 
@@ -174,10 +290,10 @@ class MelodicEngineTest {
     @Test
     void generatorsWithFamiliesExposeAnyAndNamedSubtypeCycling() {
         final MelodicGenerator[] generators = {
-                new AcidGenerator(),
-                new MotifGenerator(),
-                new CallResponseGenerator(),
-                new RollingBassGenerator()
+            new AcidGenerator(),
+            new MotifGenerator(),
+            new CallResponseGenerator(),
+            new RollingBassGenerator()
         };
 
         for (final MelodicGenerator generator : generators) {
@@ -192,9 +308,7 @@ class MelodicEngineTest {
 
     private MelodicPhraseContext context() {
         return new MelodicPhraseContext(
-                MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"),
-                0,
-                36);
+                MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0, 36);
     }
 
     private boolean[] activeMask(final MelodicPattern pattern) {

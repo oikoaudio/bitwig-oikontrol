@@ -1,7 +1,7 @@
 package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.Clip;
-
+import com.oikoaudio.fire.sequence.FineStepOwnership;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -17,10 +17,10 @@ import java.util.function.IntUnaryOperator;
 /**
  * Owns held-step fine-nudge clip rewrites and the short in-flight suppression window after writes.
  */
-public final class ChordStepFineNudgeWriter {
+final class ChordStepFineNudgeWriter {
     private final Clip observedClip;
     private final ChordStepEventIndex eventIndex;
-    private final ChordStepFineNudgeState<ChordStepEventIndex.Event> state;
+    private final ChordStepFineNudgeSession<ChordStepEventIndex.Event> session;
     private final Consumer<Set<Integer>> markModifiedSteps;
     private final IntSupplier loopFineSteps;
     private final IntPredicate visibleGlobalStep;
@@ -32,19 +32,20 @@ public final class ChordStepFineNudgeWriter {
     private boolean moveInFlight = false;
     private int moveGeneration = 0;
 
-    public ChordStepFineNudgeWriter(final Clip observedClip,
-                                    final ChordStepEventIndex eventIndex,
-                                    final ChordStepFineNudgeState<ChordStepEventIndex.Event> state,
-                                    final Consumer<Set<Integer>> markModifiedSteps,
-                                    final IntSupplier loopFineSteps,
-                                    final IntPredicate visibleGlobalStep,
-                                    final IntUnaryOperator globalToLocalStep,
-                                    final BiConsumer<Runnable, Integer> scheduleTask,
-                                    final Runnable refreshObservation,
-                                    final int fineStepsPerStep) {
+    public ChordStepFineNudgeWriter(
+            final Clip observedClip,
+            final ChordStepEventIndex eventIndex,
+            final ChordStepFineNudgeSession<ChordStepEventIndex.Event> session,
+            final Consumer<Set<Integer>> markModifiedSteps,
+            final IntSupplier loopFineSteps,
+            final IntPredicate visibleGlobalStep,
+            final IntUnaryOperator globalToLocalStep,
+            final BiConsumer<Runnable, Integer> scheduleTask,
+            final Runnable refreshObservation,
+            final int fineStepsPerStep) {
         this.observedClip = observedClip;
         this.eventIndex = eventIndex;
-        this.state = state;
+        this.session = session;
         this.markModifiedSteps = markModifiedSteps;
         this.loopFineSteps = loopFineSteps;
         this.visibleGlobalStep = visibleGlobalStep;
@@ -54,40 +55,51 @@ public final class ChordStepFineNudgeWriter {
         this.fineStepsPerStep = fineStepsPerStep;
     }
 
-    public boolean nudgeHeldNotes(final int amount,
-                                  final Set<Integer> targetSteps,
-                                  final Map<Integer, ChordStepEventIndex.Event> chordEventSnapshot) {
+    public boolean nudgeHeldNotes(
+            final int amount,
+            final Set<Integer> targetSteps,
+            final Map<Integer, ChordStepEventIndex.Event> chordEventSnapshot) {
         if (targetSteps.isEmpty() || chordEventSnapshot.isEmpty()) {
             return false;
         }
         markModifiedSteps.accept(targetSteps);
-        final List<ChordStepEventIndex.Event> eventsToNudge = targetSteps.stream()
-                .map(chordEventSnapshot::get)
-                .filter(java.util.Objects::nonNull)
-                .sorted(amount > 0
-                        ? Comparator.comparingInt(ChordStepEventIndex.Event::anchorFineStart).reversed()
-                        : Comparator.comparingInt(ChordStepEventIndex.Event::anchorFineStart))
-                .toList();
+        final List<ChordStepEventIndex.Event> eventsToNudge =
+                targetSteps.stream()
+                        .map(chordEventSnapshot::get)
+                        .filter(java.util.Objects::nonNull)
+                        .sorted(
+                                amount > 0
+                                        ? Comparator.comparingInt(
+                                                        ChordStepEventIndex.Event::anchorFineStart)
+                                                .reversed()
+                                        : Comparator.comparingInt(
+                                                ChordStepEventIndex.Event::anchorFineStart))
+                        .toList();
         if (eventsToNudge.isEmpty()) {
             return false;
         }
-        state.beginHeldNudge(targetSteps);
+        session.prepareHeldMove(targetSteps);
         final int loopFineStepCount = loopFineSteps.getAsInt();
         final List<ChordStepEventIndex.EventNoteMove> noteMoves = new ArrayList<>();
         final Map<Integer, ChordStepEventIndex.Event> movedEvents = new HashMap<>();
         for (final ChordStepEventIndex.Event event : eventsToNudge) {
-            final int targetAnchorFineStart = Math.floorMod(event.anchorFineStart() + amount, loopFineStepCount);
-            noteMoves.addAll(eventIndex.createNoteMovesForEvent(event, targetAnchorFineStart, loopFineStepCount));
-            movedEvents.put(event.localStep(), eventIndex.moveEvent(event, targetAnchorFineStart, loopFineStepCount));
+            final int targetAnchorFineStart =
+                    Math.floorMod(event.anchorFineStart() + amount, loopFineStepCount);
+            noteMoves.addAll(
+                    eventIndex.createNoteMovesForEvent(
+                            event, targetAnchorFineStart, loopFineStepCount));
+            movedEvents.put(
+                    event.localStep(),
+                    eventIndex.moveEvent(event, targetAnchorFineStart, loopFineStepCount));
         }
         if (noteMoves.isEmpty()) {
             return false;
         }
         rewriteEventMoves(noteMoves);
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
-            state.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
+            session.putHeldFineStart(move.localStep(), move.midiNote(), move.targetFineStart());
         }
-        movedEvents.forEach(state::putHeldEvent);
+        movedEvents.forEach(session::putHeldEvent);
         return true;
     }
 
@@ -95,11 +107,23 @@ public final class ChordStepFineNudgeWriter {
         return moveInFlight;
     }
 
+    public void cancelPendingMove() {
+        moveGeneration++;
+        moveInFlight = false;
+    }
+
     private void rewriteEventMoves(final List<ChordStepEventIndex.EventNoteMove> noteMoves) {
+        final int loopFineStepCount = loopFineSteps.getAsInt();
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
-            final int targetGlobalStep = Math.floorDiv(move.targetFineStart(), fineStepsPerStep);
+            final int targetGlobalStep =
+                    FineStepOwnership.ownerOf(
+                            move.targetFineStart(),
+                            fineStepsPerStep,
+                            Math.max(1, loopFineStepCount / fineStepsPerStep));
             if (move.visibleStep() != null && visibleGlobalStep.test(targetGlobalStep)) {
-                eventIndex.addPendingMoveSnapshot(globalToLocalStep.applyAsInt(targetGlobalStep), move.midiNote(),
+                eventIndex.addPendingNoteSnapshot(
+                        globalToLocalStep.applyAsInt(targetGlobalStep),
+                        move.midiNote(),
                         move.visibleStep());
             }
         }
@@ -107,8 +131,13 @@ public final class ChordStepFineNudgeWriter {
             observedClip.clearStep(move.sourceFineStart(), move.midiNote());
         }
         for (final ChordStepEventIndex.EventNoteMove move : noteMoves) {
-            observedClip.setStep(move.targetFineStart(), move.midiNote(), move.velocity(), move.duration());
-            eventIndex.moveFineStart(move.sourceFineStart(), move.targetFineStart(), move.midiNote(), move.duration());
+            observedClip.setStep(
+                    move.targetFineStart(), move.midiNote(), move.velocity(), move.duration());
+            eventIndex.moveFineStart(
+                    move.sourceFineStart(),
+                    move.targetFineStart(),
+                    move.midiNote(),
+                    move.duration());
         }
         beginMoveInFlight();
         refreshObservation.run();
@@ -117,10 +146,12 @@ public final class ChordStepFineNudgeWriter {
     private void beginMoveInFlight() {
         moveInFlight = true;
         final int generation = ++moveGeneration;
-        scheduleTask.accept(() -> {
-            if (moveGeneration == generation) {
-                moveInFlight = false;
-            }
-        }, 24);
+        scheduleTask.accept(
+                () -> {
+                    if (moveGeneration == generation) {
+                        moveInFlight = false;
+                    }
+                },
+                24);
     }
 }

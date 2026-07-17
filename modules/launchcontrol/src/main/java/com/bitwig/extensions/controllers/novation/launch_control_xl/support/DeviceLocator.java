@@ -2,185 +2,152 @@ package com.bitwig.extensions.controllers.novation.launch_control_xl.support;
 
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.Device;
+import com.bitwig.extension.controller.api.DeviceBank;
+import com.bitwig.extension.controller.api.DeviceMatcher;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
-
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
-/**
- * Keeps track of devices on tracks and provides cached lookup/focus results.
- */
-public final class DeviceLocator
-{
-   public enum Role
-   {
-      DRUM,
-      ARP
-   }
+/** Keeps track of devices on tracks and provides cached lookup/focus results. */
+public final class DeviceLocator {
+    public enum Role {
+        DRUM("8ea97e45-0255-40fd-bc7e-94419741e9d1"),
+        ARP("4d407a2b-c91b-4e4c-9a89-c53c19fe6251");
 
-   public static final class FocusResult
-   {
-      private final int trackIndex;
-      private final Track track;
-      private final Device device;
+        private final UUID deviceId;
 
-      FocusResult(final int trackIndex, final Track track, final Device device)
-      {
-         this.trackIndex = trackIndex;
-         this.track = track;
-         this.device = device;
-      }
+        Role(final String deviceId) {
+            this.deviceId = UUID.fromString(deviceId);
+        }
+    }
 
-      public int trackIndex()
-      {
-         return this.trackIndex;
-      }
+    public static final class FocusResult {
+        private final int trackIndex;
+        private final Track track;
+        private final Device device;
 
-      public Track track()
-      {
-         return this.track;
-      }
+        FocusResult(final int trackIndex, final Track track, final Device device) {
+            this.trackIndex = trackIndex;
+            this.track = track;
+            this.device = device;
+        }
 
-      public Device device()
-      {
-         return this.device;
-      }
-   }
+        public int trackIndex() {
+            return this.trackIndex;
+        }
 
-   private static final class RoleState
-   {
-      private final String nameMatch;
-      private final Device[] devices;
-      private int cachedIndex = -1;
+        public Track track() {
+            return this.track;
+        }
 
-      RoleState(final String nameMatch, final Device[] devices)
-      {
-         this.nameMatch = nameMatch;
-         this.devices = devices;
-      }
+        public Device device() {
+            return this.device;
+        }
+    }
 
-      void clearCache()
-      {
-         this.cachedIndex = -1;
-      }
-   }
+    private static final class RoleState {
+        private final Device[] devices;
+        private int cachedIndex = -1;
 
-   private final TrackBank trackBank;
-   private final Map<Role, RoleState> states = new EnumMap<> (Role.class);
+        RoleState(final Device[] devices) {
+            this.devices = devices;
+        }
 
-   public DeviceLocator (final ControllerHost host, final int width)
-   {
-     this.trackBank = host.createMainTrackBank (width, 0, 0);
-     for (int i = 0; i < width; i++)
-        this.trackBank.getItemAt (i).exists ().markInterested ();
+        void clearCache() {
+            this.cachedIndex = -1;
+        }
+    }
 
-     this.states.put (Role.DRUM, this.createRoleState ("drum machine", width));
-     this.states.put (Role.ARP, this.createRoleState ("arpeggiator", width));
-   }
+    private final TrackBank trackBank;
+    private final Map<Role, RoleState> states = new EnumMap<>(Role.class);
 
-   private RoleState createRoleState (final String match, final int width)
-   {
-      final Device[] devices = new Device[width];
-      for (int i = 0; i < width; i++)
-      {
-         final Track track = this.trackBank.getItemAt (i);
-         final Device device = track.createDeviceBank (1).getItemAt (0);
-         device.exists ().markInterested ();
-         device.name ().markInterested ();
-         devices[i] = device;
-      }
-      return new RoleState (match == null ? null : match.toLowerCase (), devices);
-   }
+    public DeviceLocator(final ControllerHost host, final int width) {
+        this.trackBank = host.createMainTrackBank(width, 0, 0);
+        for (int i = 0; i < width; i++) this.trackBank.getItemAt(i).exists().markInterested();
 
-   /**
-    * Try to focus the cached device index for the role (if one exists).
-    *
-    * @return Empty if no cache exists or focus failed.
-    */
-   public Optional<FocusResult> focusCached (final Role role)
-   {
-      final RoleState state = this.states.get (role);
-      if (state == null || state.cachedIndex < 0)
-         return Optional.empty ();
+        for (final Role role : Role.values()) {
+            this.states.put(role, this.createRoleState(host, role, width));
+        }
+    }
 
-      final Optional<FocusResult> result = this.focus (role, state.cachedIndex);
-      if (result.isEmpty ())
-         state.clearCache ();
-      return result;
-   }
+    private RoleState createRoleState(final ControllerHost host, final Role role, final int width) {
+        final Device[] devices = new Device[width];
+        final DeviceMatcher matcher = host.createBitwigDeviceMatcher(role.deviceId);
+        for (int i = 0; i < width; i++) {
+            final Track track = this.trackBank.getItemAt(i);
+            final DeviceBank deviceBank = track.createDeviceBank(1);
+            deviceBank.setDeviceMatcher(matcher);
+            final Device device = deviceBank.getItemAt(0);
+            device.exists().markInterested();
+            devices[i] = device;
+        }
+        return new RoleState(devices);
+    }
 
-   /**
-    * Scan all tracks for the first matching device of the given role and cache the index.
-    */
-   public Optional<FocusResult> focusFirst (final Role role)
-   {
-      final RoleState state = this.states.get (role);
-      if (state == null)
-         return Optional.empty ();
+    /**
+     * Try to focus the cached device index for the role (if one exists).
+     *
+     * @return Empty if no cache exists or focus failed.
+     */
+    public Optional<FocusResult> focusCached(final Role role) {
+        final RoleState state = this.states.get(role);
+        if (state == null || state.cachedIndex < 0) return Optional.empty();
 
-      final int index = this.findFirstMatchingIndex (state);
-      if (index < 0)
-      {
-         state.clearCache ();
-         return Optional.empty ();
-      }
+        final Optional<FocusResult> result = this.focus(role, state.cachedIndex);
+        if (result.isEmpty()) state.clearCache();
+        return result;
+    }
 
-      final Optional<FocusResult> result = this.focus (role, index);
-      if (result.isPresent ())
-         state.cachedIndex = index;
-      else
-         state.clearCache ();
-      return result;
-   }
+    /** Scan all tracks for the first matching device of the given role and cache the index. */
+    public Optional<FocusResult> focusFirst(final Role role) {
+        final RoleState state = this.states.get(role);
+        if (state == null) return Optional.empty();
 
-   /** Clear the cached index for the given role. */
-   public void clearCache (final Role role)
-   {
-      final RoleState state = this.states.get (role);
-      if (state != null)
-         state.clearCache ();
-   }
+        final int index = this.findFirstMatchingIndex(state);
+        if (index < 0) {
+            state.clearCache();
+            return Optional.empty();
+        }
 
-   /**
-    * Validate the device at the given index and return a {@link FocusResult} if it exists and matches
-    * the role.
-    */
-   private Optional<FocusResult> focus (final Role role, final int index)
-   {
-      final RoleState state = this.states.get (role);
-      if (state == null || index < 0 || index >= state.devices.length)
-         return Optional.empty ();
+        final Optional<FocusResult> result = this.focus(role, index);
+        if (result.isPresent()) state.cachedIndex = index;
+        else state.clearCache();
+        return result;
+    }
 
-      final Track track = this.trackBank.getItemAt (index);
-      if (track == null || !track.exists ().get ())
-         return Optional.empty ();
+    /** Clear the cached index for the given role. */
+    public void clearCache(final Role role) {
+        final RoleState state = this.states.get(role);
+        if (state != null) state.clearCache();
+    }
 
-      final Device device = state.devices[index];
-      if (device == null || !device.exists ().get ())
-         return Optional.empty ();
+    /**
+     * Validate the device at the given index and return a {@link FocusResult} if it exists and
+     * matches the role.
+     */
+    private Optional<FocusResult> focus(final Role role, final int index) {
+        final RoleState state = this.states.get(role);
+        if (state == null || index < 0 || index >= state.devices.length) return Optional.empty();
 
-      final String name = device.name ().get ();
-      if (state.nameMatch != null && (name == null || !name.toLowerCase ().contains (state.nameMatch)))
-         return Optional.empty ();
+        final Track track = this.trackBank.getItemAt(index);
+        if (track == null || !track.exists().get()) return Optional.empty();
 
-      return Optional.of (new FocusResult (index, track, device));
-   }
+        final Device device = state.devices[index];
+        if (device == null || !device.exists().get()) return Optional.empty();
 
-   private int findFirstMatchingIndex (final RoleState state)
-   {
-      for (int i = 0; i < state.devices.length; i++)
-      {
-         final Device device = state.devices[i];
-         if (device == null || !device.exists ().get ())
-            continue;
+        return Optional.of(new FocusResult(index, track, device));
+    }
 
-         final String name = device.name ().get ();
-         if (state.nameMatch != null && (name == null || !name.toLowerCase ().contains (state.nameMatch)))
-            continue;
-         return i;
-      }
-      return -1;
-   }
+    private int findFirstMatchingIndex(final RoleState state) {
+        for (int i = 0; i < state.devices.length; i++) {
+            final Device device = state.devices[i];
+            if (device == null || !device.exists().get()) continue;
+
+            return i;
+        }
+        return -1;
+    }
 }

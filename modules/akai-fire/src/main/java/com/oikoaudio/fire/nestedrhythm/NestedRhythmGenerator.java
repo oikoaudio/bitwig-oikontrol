@@ -1,5 +1,7 @@
 package com.oikoaudio.fire.nestedrhythm;
 
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker;
+import com.oikoaudio.fire.rhythm.MetricIndispensabilityRanker.RankedPosition;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -31,74 +33,108 @@ public final class NestedRhythmGenerator {
     private static final int[] SUPPORTED_DENOMINATORS = {2, 4, 8, 16};
     private static final int MAX_TUPLET_DIVISIONS = 16;
     private static final int MAX_RATCHET_DIVISIONS = 16;
-    private static final int[] SUPPORTED_RATCHET_DIVISIONS = integerRangeWithOff(MAX_RATCHET_DIVISIONS);
+    private static final int[] SUPPORTED_RATCHET_DIVISIONS =
+            integerRangeWithOff(MAX_RATCHET_DIVISIONS);
     private static final double[] SUPPORTED_RATES = {0.25, 0.5, 1.0, 2.0, 3.0, 4.0};
     private static final int CLUSTERED_INTERIOR_MIN_GAP = FINE_STEPS_PER_WHOLE / 16;
     private static final int FINAL_MIN_GAP = FINE_STEPS_PER_WHOLE / 32;
     private static final int RATCHET_MIN_GAP = FINE_STEPS_PER_WHOLE / 64;
-    private static final int[] VELOCITY_CONTOUR = {18, -9, 12, -16, 14, -7, 9, -13, 16, -11, 10, -8, 13, -15, 15, -6};
+    private static final int[] VELOCITY_CONTOUR = {
+        18, -9, 12, -16, 14, -7, 9, -13, 16, -11, 10, -8, 13, -15, 15, -6
+    };
 
     public NestedRhythmPattern generate(final Settings settings) {
         final Settings normalized = settings.normalized();
-        final int barFineSteps = fineStepsPerBar(normalized.meterNumerator(), normalized.meterDenominator());
+        final int barFineSteps =
+                fineStepsPerBar(normalized.meterNumerator(), normalized.meterDenominator());
         final int totalFineSteps = barFineSteps * normalized.barCount();
-        final TreeMap<Integer, PulseSpec> structure = fullStructure(normalized, barFineSteps, totalFineSteps);
-        final List<PulseSpec> retained = thinCrowdedClusteredInteriors(
-                thinStructure(structure, normalized.density(), normalized.cluster(),
-                        normalized.rhythmRotation(), totalFineSteps, normalized.densityDirection()),
-                normalized.cluster());
+        final TreeMap<Integer, PulseSpec> structure =
+                fullStructure(normalized, barFineSteps, totalFineSteps);
+        final List<PulseSpec> retained =
+                thinCrowdedClusteredInteriors(
+                        thinStructure(
+                                structure,
+                                normalized.density(),
+                                normalized.cluster(),
+                                normalized.rhythmRotation(),
+                                totalFineSteps,
+                                normalized.densityDirection()),
+                        normalized.cluster());
         final List<Integer> durationStarts = List.copyOf(structure.keySet());
-        final Map<Integer, Integer> durationCaps = durationCapsByOriginalStart(
-                List.copyOf(structure.values()), durationStarts, normalized.cluster(),
-                normalized.rhythmRotation(), totalFineSteps);
-        final Map<Integer, Integer> clusteredStarts = clusteredStartsByOriginalStart(retained,
-                normalized.cluster(), normalized.rhythmRotation(), totalFineSteps);
+        final Map<Integer, Integer> durationCaps =
+                durationCapsByOriginalStart(
+                        List.copyOf(structure.values()),
+                        durationStarts,
+                        normalized.cluster(),
+                        normalized.rhythmRotation(),
+                        totalFineSteps);
+        final Map<Integer, Integer> clusteredStarts =
+                clusteredStartsByOriginalStart(
+                        retained,
+                        normalized.cluster(),
+                        normalized.rhythmRotation(),
+                        totalFineSteps);
 
         final List<NestedRhythmPattern.PulseEvent> events = new ArrayList<>(retained.size());
         final List<Integer> rawVelocities = new ArrayList<>(events.size());
         for (int order = 0; order < retained.size(); order++) {
             final PulseSpec pulse = retained.get(order);
             final int structureOrder = durationStarts.indexOf(pulse.fineStart());
-            final int fineStart = clusteredStarts.getOrDefault(pulse.fineStart(), pulse.fineStart());
+            final int fineStart =
+                    clusteredStarts.getOrDefault(pulse.fineStart(), pulse.fineStart());
             rawVelocities.add(velocityFor(pulse, structureOrder));
-            events.add(new NestedRhythmPattern.PulseEvent(
-                    structureOrder,
-                    fineStart,
-                    durationCaps.getOrDefault(pulse.fineStart(),
-                            durationFor(pulse.fineStart(), pulse.role(), durationStarts, totalFineSteps)),
-                    normalized.midiNote(),
-                    0,
-                    pulse.role(),
-                    pulse.indispensability()));
+            events.add(
+                    new NestedRhythmPattern.PulseEvent(
+                            structureOrder,
+                            fineStart,
+                            durationCaps.getOrDefault(
+                                    pulse.fineStart(),
+                                    durationFor(
+                                            pulse.fineStart(),
+                                            pulse.role(),
+                                            durationStarts,
+                                            totalFineSteps)),
+                            normalized.midiNote(),
+                            0,
+                            pulse.role(),
+                            pulse.indispensability()));
         }
 
-        final List<Integer> shapedVelocities = applyVelocityDepth(rawVelocities,
-                normalized.velocityDepth(), normalized.velocityCenter());
-        final List<Integer> rotatedVelocities = rotateVelocities(shapedVelocities, normalized.velocityRotation());
+        final List<Integer> shapedVelocities =
+                applyVelocityDepth(
+                        rawVelocities, normalized.velocityDepth(), normalized.velocityCenter());
+        final List<Integer> rotatedVelocities =
+                rotateVelocities(shapedVelocities, normalized.velocityRotation());
         for (int index = 0; index < events.size(); index++) {
             final NestedRhythmPattern.PulseEvent event = events.get(index);
-            events.set(index, new NestedRhythmPattern.PulseEvent(
-                    event.order(),
-                    event.fineStart(),
-                    event.duration(),
-                    event.midiNote(),
-                    rotatedVelocities.get(index),
-                    event.role(),
-                    event.indispensability()));
+            events.set(
+                    index,
+                    new NestedRhythmPattern.PulseEvent(
+                            event.order(),
+                            event.fineStart(),
+                            event.duration(),
+                            event.midiNote(),
+                            rotatedVelocities.get(index),
+                            event.role(),
+                            event.indispensability()));
         }
         events.sort(Comparator.comparingInt(NestedRhythmPattern.PulseEvent::fineStart));
-        final List<NestedRhythmPattern.PulseEvent> spacedEvents = normalized.cluster() > 0.0001
-                ? pruneCloseFinalEvents(events, totalFineSteps)
-                : events;
-        final List<Integer> durationReferenceStarts = normalized.cluster() > 0.0001
-                ? spacedEvents.stream().map(NestedRhythmPattern.PulseEvent::fineStart).toList()
-                : durationStarts;
-        return new NestedRhythmPattern(withDurations(spacedEvents, durationReferenceStarts, totalFineSteps));
+        final List<NestedRhythmPattern.PulseEvent> spacedEvents =
+                normalized.cluster() > 0.0001
+                        ? pruneCloseFinalEvents(events, totalFineSteps)
+                        : events;
+        final List<Integer> durationReferenceStarts =
+                normalized.cluster() > 0.0001
+                        ? spacedEvents.stream()
+                                .map(NestedRhythmPattern.PulseEvent::fineStart)
+                                .toList()
+                        : durationStarts;
+        return new NestedRhythmPattern(
+                withDurations(spacedEvents, durationReferenceStarts, totalFineSteps));
     }
 
     private List<NestedRhythmPattern.PulseEvent> pruneCloseFinalEvents(
-            final List<NestedRhythmPattern.PulseEvent> events,
-            final int totalFineSteps) {
+            final List<NestedRhythmPattern.PulseEvent> events, final int totalFineSteps) {
         if (events.size() <= 1) {
             return events;
         }
@@ -108,12 +144,14 @@ public final class NestedRhythmGenerator {
             changed = false;
             for (int index = 0; index < retained.size() && retained.size() > 1; index++) {
                 final NestedRhythmPattern.PulseEvent current = retained.get(index);
-                final NestedRhythmPattern.PulseEvent next = retained.get((index + 1) % retained.size());
+                final NestedRhythmPattern.PulseEvent next =
+                        retained.get((index + 1) % retained.size());
                 final int gap = cyclicGap(current.fineStart(), next.fineStart(), totalFineSteps);
                 if (gap >= FINAL_MIN_GAP) {
                     continue;
                 }
-                final int removeIndex = weakerFinalEventIndex(retained, index, (index + 1) % retained.size());
+                final int removeIndex =
+                        weakerFinalEventIndex(retained, index, (index + 1) % retained.size());
                 retained.remove(removeIndex);
                 changed = true;
                 break;
@@ -123,15 +161,14 @@ public final class NestedRhythmGenerator {
         return retained;
     }
 
-    private int cyclicGap(final int current,
-                          final int next,
-                          final int totalFineSteps) {
+    private int cyclicGap(final int current, final int next, final int totalFineSteps) {
         return next > current ? next - current : totalFineSteps - current + next;
     }
 
-    private int weakerFinalEventIndex(final List<NestedRhythmPattern.PulseEvent> events,
-                                      final int leftIndex,
-                                      final int rightIndex) {
+    private int weakerFinalEventIndex(
+            final List<NestedRhythmPattern.PulseEvent> events,
+            final int leftIndex,
+            final int rightIndex) {
         final NestedRhythmPattern.PulseEvent left = events.get(leftIndex);
         final NestedRhythmPattern.PulseEvent right = events.get(rightIndex);
         final GestureFamily leftFamily = finalEventFamily(left);
@@ -152,8 +189,8 @@ public final class NestedRhythmGenerator {
         return rightIndex;
     }
 
-    private boolean isLastGeneratedFamilyEvent(final List<NestedRhythmPattern.PulseEvent> events,
-                                               final GestureFamily family) {
+    private boolean isLastGeneratedFamilyEvent(
+            final List<NestedRhythmPattern.PulseEvent> events, final GestureFamily family) {
         if (family == GestureFamily.ANCHOR || family == GestureFamily.OTHER) {
             return false;
         }
@@ -176,20 +213,21 @@ public final class NestedRhythmGenerator {
     }
 
     private int finalEventKeepScore(final NestedRhythmPattern.PulseEvent event) {
-        final int roleScore = switch (event.role()) {
-            case PRIMARY_ANCHOR -> 68;
-            case RATCHET_LEAD -> 64;
-            case TUPLET_LEAD -> 62;
-            case SECONDARY_ANCHOR -> 58;
-            case PICKUP -> 54;
-            case RATCHET_INTERIOR -> 48;
-            case TUPLET_INTERIOR -> 46;
-        };
+        final int roleScore =
+                switch (event.role()) {
+                    case PRIMARY_ANCHOR -> 68;
+                    case RATCHET_LEAD -> 64;
+                    case TUPLET_LEAD -> 62;
+                    case SECONDARY_ANCHOR -> 58;
+                    case PICKUP -> 54;
+                    case RATCHET_INTERIOR -> 48;
+                    case TUPLET_INTERIOR -> 46;
+                };
         return roleScore + (127 - event.velocity()) / 8;
     }
 
-    private List<PulseSpec> thinCrowdedClusteredInteriors(final List<PulseSpec> pulses,
-                                                          final double cluster) {
+    private List<PulseSpec> thinCrowdedClusteredInteriors(
+            final List<PulseSpec> pulses, final double cluster) {
         if (cluster <= 0.0001 || pulses.size() <= 1) {
             return pulses;
         }
@@ -208,15 +246,21 @@ public final class NestedRhythmGenerator {
                 || pulse.localStepFineSteps() >= CLUSTERED_INTERIOR_MIN_GAP) {
             return true;
         }
-        final int keepEvery = Math.max(2, (int) Math.ceil(
-                CLUSTERED_INTERIOR_MIN_GAP / (double) pulse.localStepFineSteps()));
+        final int keepEvery =
+                Math.max(
+                        2,
+                        (int)
+                                Math.ceil(
+                                        CLUSTERED_INTERIOR_MIN_GAP
+                                                / (double) pulse.localStepFineSteps()));
         return pulse.subdivisionIndex() % keepEvery == 0;
     }
 
-    private Map<Integer, Integer> clusteredStartsByOriginalStart(final List<PulseSpec> pulses,
-                                                                 final double cluster,
-                                                                 final int rhythmRotation,
-                                                                 final int totalFineSteps) {
+    private Map<Integer, Integer> clusteredStartsByOriginalStart(
+            final List<PulseSpec> pulses,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps) {
         final Map<Integer, Integer> starts = new HashMap<>();
         if (cluster <= 0.0001 || pulses.isEmpty() || totalFineSteps <= 1) {
             for (final PulseSpec pulse : pulses) {
@@ -228,24 +272,34 @@ public final class NestedRhythmGenerator {
         for (int index = 0; index < pulses.size(); index++) {
             final PulseSpec pulse = pulses.get(index);
             final int remaining = pulses.size() - index - 1;
-            final int preservedStart = preservedLocalClusteredStart(pulses, starts, index, remaining,
-                    totalFineSteps, lastClusteredStart);
-            final int clusteredStart = preservedStart >= 0
-                    ? preservedStart
-                    : clusteredFineStart(pulse.fineStart(), index, pulses.size(), cluster, totalFineSteps,
-                            lastClusteredStart, pulse.role(), rhythmRotation);
+            final int preservedStart =
+                    preservedLocalClusteredStart(
+                            pulses, starts, index, remaining, totalFineSteps, lastClusteredStart);
+            final int clusteredStart =
+                    preservedStart >= 0
+                            ? preservedStart
+                            : clusteredFineStart(
+                                    pulse.fineStart(),
+                                    index,
+                                    pulses.size(),
+                                    cluster,
+                                    totalFineSteps,
+                                    lastClusteredStart,
+                                    pulse.role(),
+                                    rhythmRotation);
             starts.put(pulse.fineStart(), clusteredStart);
             lastClusteredStart = clusteredStart;
         }
         return starts;
     }
 
-    private int preservedLocalClusteredStart(final List<PulseSpec> pulses,
-                                             final Map<Integer, Integer> clusteredStarts,
-                                             final int index,
-                                             final int remaining,
-                                             final int totalFineSteps,
-                                             final int previousStart) {
+    private int preservedLocalClusteredStart(
+            final List<PulseSpec> pulses,
+            final Map<Integer, Integer> clusteredStarts,
+            final int index,
+            final int remaining,
+            final int totalFineSteps,
+            final int previousStart) {
         if (index <= 0) {
             return -1;
         }
@@ -275,68 +329,93 @@ public final class NestedRhythmGenerator {
         final int minStart = previousStart + 1;
         final int maxStart = Math.max(minStart, totalFineSteps - remaining - 1);
         final int candidate = previousClusteredStart + originalDelta;
-        return candidate >= minStart && candidate <= maxStart && candidate < totalFineSteps ? candidate : -1;
+        return candidate >= minStart && candidate <= maxStart && candidate < totalFineSteps
+                ? candidate
+                : -1;
     }
 
-    private int clusteredFineStart(final int originalFineStart,
-                                   final int retainedIndex,
-                                   final int retainedCount,
-                                   final double cluster,
-                                   final int totalFineSteps,
-                                   final int previousStart,
-                                   final NestedRhythmPattern.Role role,
-                                   final int rhythmRotation) {
+    private int clusteredFineStart(
+            final int originalFineStart,
+            final int retainedIndex,
+            final int retainedCount,
+            final double cluster,
+            final int totalFineSteps,
+            final int previousStart,
+            final NestedRhythmPattern.Role role,
+            final int rhythmRotation) {
         if (cluster <= 0.0001 || retainedCount <= 0 || totalFineSteps <= 1) {
             return originalFineStart;
         }
         final int windowLength = clusterWindowLength(cluster, totalFineSteps);
         final int windowStart = clusterWindowStart(cluster, rhythmRotation, totalFineSteps);
         final double originalPosition = originalFineStart / (double) totalFineSteps;
-        final int target = windowStart + (int) Math.round(originalPosition * Math.max(0, windowLength - 1));
-        final int blended = (int) Math.round(originalFineStart * (1.0 - cluster) + target * cluster);
+        final int target =
+                windowStart + (int) Math.round(originalPosition * Math.max(0, windowLength - 1));
+        final int blended =
+                (int) Math.round(originalFineStart * (1.0 - cluster) + target * cluster);
         final int constrained = Math.max(windowStart, blended);
         final int remaining = retainedCount - retainedIndex - 1;
         final int minStart = previousStart + 1;
         final int maxStart = Math.max(minStart, totalFineSteps - remaining - 1);
-        return snapClusteredFineStart(constrained, role, retainedCount, cluster, rhythmRotation, minStart, maxStart,
-                remaining, totalFineSteps);
+        return snapClusteredFineStart(
+                constrained,
+                role,
+                retainedCount,
+                cluster,
+                rhythmRotation,
+                minStart,
+                maxStart,
+                remaining,
+                totalFineSteps);
     }
 
-    private int snapClusteredFineStart(final int desiredFineStart,
-                                       final NestedRhythmPattern.Role role,
-                                       final int retainedCount,
-                                       final double cluster,
-                                       final int rhythmRotation,
-                                       final int minStart,
-                                       final int maxStart,
-                                       final int remaining,
-                                       final int totalFineSteps) {
+    private int snapClusteredFineStart(
+            final int desiredFineStart,
+            final NestedRhythmPattern.Role role,
+            final int retainedCount,
+            final double cluster,
+            final int rhythmRotation,
+            final int minStart,
+            final int maxStart,
+            final int remaining,
+            final int totalFineSteps) {
         final int divisions = clusterGridDivisions(role, retainedCount, cluster, totalFineSteps);
         final int windowLength = clusterWindowLength(cluster, totalFineSteps);
-        final int windowStart = cluster <= 0.0001 ? 0 : clusterWindowStart(cluster, rhythmRotation, totalFineSteps);
+        final int windowStart =
+                cluster <= 0.0001 ? 0 : clusterWindowStart(cluster, rhythmRotation, totalFineSteps);
         if (!shouldSnapClusteredRole(role)) {
             return Math.max(minStart, Math.min(maxStart, desiredFineStart));
         }
-        final int candidate = nearestGridStart(desiredFineStart, divisions, Math.max(minStart, windowStart),
-                remaining, totalFineSteps);
+        final int candidate =
+                nearestGridStart(
+                        desiredFineStart,
+                        divisions,
+                        Math.max(minStart, windowStart),
+                        remaining,
+                        totalFineSteps);
         if (candidate >= 0) {
             return candidate;
         }
         return Math.max(minStart, Math.min(maxStart, desiredFineStart));
     }
 
-    private int nearestGridStart(final int desiredFineStart,
-                                 final int divisions,
-                                 final int minStart,
-                                 final int remaining,
-                                 final int totalFineSteps) {
-        final int minIndex = Math.max(0, (int) Math.floor(
-                minStart * divisions / (double) FINE_STEPS_PER_WHOLE) - 2);
-        final int maxIndex = (int) Math.ceil((totalFineSteps - 1) * divisions
-                / (double) FINE_STEPS_PER_WHOLE) + 2;
+    private int nearestGridStart(
+            final int desiredFineStart,
+            final int divisions,
+            final int minStart,
+            final int remaining,
+            final int totalFineSteps) {
+        final int minIndex =
+                Math.max(
+                        0,
+                        (int) Math.floor(minStart * divisions / (double) FINE_STEPS_PER_WHOLE) - 2);
+        final int maxIndex =
+                (int) Math.ceil((totalFineSteps - 1) * divisions / (double) FINE_STEPS_PER_WHOLE)
+                        + 2;
         final List<Integer> candidates = new ArrayList<>();
         for (int index = minIndex; index <= maxIndex; index++) {
-            final int candidate = (int) Math.round(index * FINE_STEPS_PER_WHOLE / (double) divisions);
+            final int candidate =
+                    (int) Math.round(index * FINE_STEPS_PER_WHOLE / (double) divisions);
             if (candidate < minStart || candidate >= totalFineSteps) {
                 continue;
             }
@@ -359,10 +438,11 @@ public final class NestedRhythmGenerator {
         return candidate;
     }
 
-    private int clusterGridDivisions(final NestedRhythmPattern.Role role,
-                                     final int retainedCount,
-                                     final double cluster,
-                                     final int totalFineSteps) {
+    private int clusterGridDivisions(
+            final NestedRhythmPattern.Role role,
+            final int retainedCount,
+            final double cluster,
+            final int totalFineSteps) {
         if (isAnchor(role)) {
             return 16;
         }
@@ -371,16 +451,22 @@ public final class NestedRhythmGenerator {
         return availableGridSlots(16, windowStart, totalFineSteps) >= retainedCount ? 16 : 32;
     }
 
-    private int availableGridSlots(final int divisions,
-                                   final int startInclusive,
-                                   final int endExclusive) {
+    private int availableGridSlots(
+            final int divisions, final int startInclusive, final int endExclusive) {
         int count = 0;
-        final int minIndex = Math.max(0, (int) Math.ceil(
-                startInclusive * divisions / (double) FINE_STEPS_PER_WHOLE));
-        final int maxIndex = (int) Math.floor(
-                (endExclusive - 1) * divisions / (double) FINE_STEPS_PER_WHOLE);
+        final int minIndex =
+                Math.max(
+                        0,
+                        (int)
+                                Math.ceil(
+                                        startInclusive
+                                                * divisions
+                                                / (double) FINE_STEPS_PER_WHOLE));
+        final int maxIndex =
+                (int) Math.floor((endExclusive - 1) * divisions / (double) FINE_STEPS_PER_WHOLE);
         for (int index = minIndex; index <= maxIndex; index++) {
-            final int candidate = (int) Math.round(index * FINE_STEPS_PER_WHOLE / (double) divisions);
+            final int candidate =
+                    (int) Math.round(index * FINE_STEPS_PER_WHOLE / (double) divisions);
             if (candidate >= startInclusive && candidate < endExclusive) {
                 count++;
             }
@@ -399,29 +485,39 @@ public final class NestedRhythmGenerator {
                 || role == NestedRhythmPattern.Role.RATCHET_LEAD;
     }
 
-    private Map<Integer, Integer> durationCapsByOriginalStart(final List<PulseSpec> structurePulses,
-                                                              final List<Integer> durationStarts,
-                                                              final double cluster,
-                                                              final int rhythmRotation,
-                                                              final int totalFineSteps) {
+    private Map<Integer, Integer> durationCapsByOriginalStart(
+            final List<PulseSpec> structurePulses,
+            final List<Integer> durationStarts,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps) {
         final Map<Integer, Integer> caps = new HashMap<>();
         if (cluster <= 0.0001) {
             for (final PulseSpec pulse : structurePulses) {
-                caps.put(pulse.fineStart(),
-                        durationFor(pulse.fineStart(), pulse.role(), durationStarts, totalFineSteps));
+                caps.put(
+                        pulse.fineStart(),
+                        durationFor(
+                                pulse.fineStart(), pulse.role(), durationStarts, totalFineSteps));
             }
             return caps;
         }
 
-        final Map<Integer, Integer> clusteredStartByOriginalStart = clusteredStartsByOriginalStart(
-                structurePulses, cluster, rhythmRotation, totalFineSteps);
-        final List<Integer> clusteredStarts = new ArrayList<>(clusteredStartByOriginalStart.values());
+        final Map<Integer, Integer> clusteredStartByOriginalStart =
+                clusteredStartsByOriginalStart(
+                        structurePulses, cluster, rhythmRotation, totalFineSteps);
+        final List<Integer> clusteredStarts =
+                new ArrayList<>(clusteredStartByOriginalStart.values());
         clusteredStarts.sort(Comparator.naturalOrder());
 
         for (final PulseSpec pulse : structurePulses) {
-            final int originalCap = durationFor(pulse.fineStart(), pulse.role(), durationStarts, totalFineSteps);
-            final int clusteredCap = durationFor(clusteredStartByOriginalStart.get(pulse.fineStart()),
-                    pulse.role(), clusteredStarts, totalFineSteps);
+            final int originalCap =
+                    durationFor(pulse.fineStart(), pulse.role(), durationStarts, totalFineSteps);
+            final int clusteredCap =
+                    durationFor(
+                            clusteredStartByOriginalStart.get(pulse.fineStart()),
+                            pulse.role(),
+                            clusteredStarts,
+                            totalFineSteps);
             caps.put(pulse.fineStart(), Math.min(originalCap, clusteredCap));
         }
         return caps;
@@ -439,47 +535,45 @@ public final class NestedRhythmGenerator {
         return normalizeNumerator(numerator) * (4.0 / normalizeDenominator(denominator));
     }
 
-    private static boolean isCompoundEighthMeter(final int numerator,
-                                                 final int denominator) {
+    private static boolean isCompoundEighthMeter(final int numerator, final int denominator) {
         return normalizeDenominator(denominator) == 8
                 && normalizeNumerator(numerator) >= 6
                 && normalizeNumerator(numerator) % 3 == 0;
     }
 
-    private static int structuralBeatFineSteps(final int numerator,
-                                               final int denominator) {
+    private static int structuralBeatFineSteps(final int numerator, final int denominator) {
         if (isCompoundEighthMeter(numerator, denominator)) {
             return fineStepsPerBeat(denominator) * 3;
         }
         return fineStepsPerBeat(denominator);
     }
 
-    public static int maxFineStepsFor(final int maxBars, final int maxNumerator, final int minDenominator) {
+    public static int maxFineStepsFor(
+            final int maxBars, final int maxNumerator, final int minDenominator) {
         return Math.max(1, maxBars) * fineStepsPerBar(maxNumerator, minDenominator);
     }
 
-    public static int[] supportedTupletCounts(final int meterNumerator,
-                                              final int meterDenominator,
-                                              final int tupletTargets) {
+    public static int[] supportedTupletCounts(
+            final int meterNumerator, final int meterDenominator, final int tupletTargets) {
         return supportedTupletCounts(meterNumerator, meterDenominator, tupletTargets, 1.0);
     }
 
-    public static int[] supportedTupletCounts(final int meterNumerator,
-                                              final int meterDenominator,
-                                              final int tupletTargets,
-                                              final double rate) {
+    public static int[] supportedTupletCounts(
+            final int meterNumerator,
+            final int meterDenominator,
+            final int tupletTargets,
+            final double rate) {
         return integerRangeWithOff(MAX_TUPLET_DIVISIONS);
     }
 
-    static int[] supportedTupletDivisions(final int meterNumerator,
-                                          final int meterDenominator) {
+    static int[] supportedTupletDivisions(final int meterNumerator, final int meterDenominator) {
         return supportedTupletDivisions(meterNumerator, meterDenominator, 1.0);
     }
 
-    static int[] supportedTupletDivisions(final int meterNumerator,
-                                          final int meterDenominator,
-                                          final double rate) {
-        final int[] supportedCounts = supportedTupletCounts(meterNumerator, meterDenominator, 1, rate);
+    static int[] supportedTupletDivisions(
+            final int meterNumerator, final int meterDenominator, final double rate) {
+        final int[] supportedCounts =
+                supportedTupletCounts(meterNumerator, meterDenominator, 1, rate);
         final List<Integer> divisions = new ArrayList<>();
         for (final int value : supportedCounts) {
             if (value > 0) {
@@ -501,23 +595,29 @@ public final class NestedRhythmGenerator {
         return SUPPORTED_RATES.clone();
     }
 
-    public static int tupletTargetSpanCount(final int meterNumerator,
-                                            final int meterDenominator,
-                                            final int barCount,
-                                            final double rate) {
+    public static int tupletTargetSpanCount(
+            final int meterNumerator,
+            final int meterDenominator,
+            final int barCount,
+            final double rate) {
         final int normalizedMeterNumerator = normalizeNumerator(meterNumerator);
         final int normalizedMeterDenominator = normalizeDenominator(meterDenominator);
         final int normalizedBarCount = Math.max(1, Math.min(MAX_BARS, barCount));
-        final int barFineSteps = fineStepsPerBar(normalizedMeterNumerator, normalizedMeterDenominator);
+        final int barFineSteps =
+                fineStepsPerBar(normalizedMeterNumerator, normalizedMeterDenominator);
         final int totalFineSteps = barFineSteps * normalizedBarCount;
         final double normalizedRate = normalizeRate(rate);
-        return totalTupletSpans(totalFineSteps, tupletSpanFineSteps(
-                normalizedMeterNumerator, normalizedMeterDenominator, barFineSteps, normalizedRate));
+        return totalTupletSpans(
+                totalFineSteps,
+                tupletSpanFineSteps(
+                        normalizedMeterNumerator,
+                        normalizedMeterDenominator,
+                        barFineSteps,
+                        normalizedRate));
     }
 
-    private TreeMap<Integer, PulseSpec> fullStructure(final Settings settings,
-                                                      final int barFineSteps,
-                                                      final int totalFineSteps) {
+    private TreeMap<Integer, PulseSpec> fullStructure(
+            final Settings settings, final int barFineSteps, final int totalFineSteps) {
         final TreeMap<Integer, PulseSpec> structure = new TreeMap<>();
         addBaseGrid(structure, settings, totalFineSteps);
         applyTuplet(structure, settings, barFineSteps, totalFineSteps);
@@ -526,37 +626,41 @@ public final class NestedRhythmGenerator {
         return structure;
     }
 
-    private void addBaseGrid(final TreeMap<Integer, PulseSpec> structure,
-                             final Settings settings,
-                             final int totalFineSteps) {
-        final int structuralBeatFineSteps = structuralBeatFineSteps(
-                settings.meterNumerator(), settings.meterDenominator());
-        final List<Integer> starts = baseGridStarts(structuralBeatFineSteps, totalFineSteps, settings.rate());
+    private void addBaseGrid(
+            final TreeMap<Integer, PulseSpec> structure,
+            final Settings settings,
+            final int totalFineSteps) {
+        final int structuralBeatFineSteps =
+                structuralBeatFineSteps(settings.meterNumerator(), settings.meterDenominator());
+        final List<Integer> starts =
+                baseGridStarts(structuralBeatFineSteps, totalFineSteps, settings.rate());
         int contourIndex = 0;
         for (final int fineStart : starts) {
             final boolean beatAligned = isGridAligned(fineStart, structuralBeatFineSteps);
-            final NestedRhythmPattern.Role role = beatAligned
-                    ? NestedRhythmPattern.Role.PRIMARY_ANCHOR
-                    : NestedRhythmPattern.Role.SECONDARY_ANCHOR;
-            structure.put(fineStart, new PulseSpec(
+            final NestedRhythmPattern.Role role =
+                    beatAligned
+                            ? NestedRhythmPattern.Role.PRIMARY_ANCHOR
+                            : NestedRhythmPattern.Role.SECONDARY_ANCHOR;
+            structure.put(
                     fineStart,
-                    role,
-                    GestureFamily.ANCHOR,
-                    beatAligned,
-                    beatAligned ? 1000 : rolePriority(role) - contourIndex,
-                    0.0,
-                    contourIndex,
-                    starts.size(),
-                    contourIndex,
-                    starts.size(),
-                    0));
+                    new PulseSpec(
+                            fineStart,
+                            role,
+                            GestureFamily.ANCHOR,
+                            beatAligned,
+                            beatAligned ? 1000 : rolePriority(role) - contourIndex,
+                            0.0,
+                            contourIndex,
+                            starts.size(),
+                            contourIndex,
+                            starts.size(),
+                            0));
             contourIndex++;
         }
     }
 
-    private static List<Integer> baseGridStarts(final int beatFineSteps,
-                                                final int totalFineSteps,
-                                                final double rate) {
+    private static List<Integer> baseGridStarts(
+            final int beatFineSteps, final int totalFineSteps, final double rate) {
         final LinkedHashSet<Integer> starts = new LinkedHashSet<>();
         final double step = Math.max(1.0, beatFineSteps / Math.max(0.0001, rate));
         for (double position = 0.0; position < totalFineSteps - 0.0001; position += step) {
@@ -565,8 +669,7 @@ public final class NestedRhythmGenerator {
         return List.copyOf(starts);
     }
 
-    private static boolean isGridAligned(final int fineStart,
-                                         final int gridSize) {
+    private static boolean isGridAligned(final int fineStart, final int gridSize) {
         if (gridSize <= 1) {
             return true;
         }
@@ -574,18 +677,24 @@ public final class NestedRhythmGenerator {
         return remainder == 0 || remainder == gridSize - 1;
     }
 
-    private void applyTuplet(final TreeMap<Integer, PulseSpec> structure,
-                             final Settings settings,
-                             final int barFineSteps,
-                             final int totalFineSteps) {
+    private void applyTuplet(
+            final TreeMap<Integer, PulseSpec> structure,
+            final Settings settings,
+            final int barFineSteps,
+            final int totalFineSteps) {
         if (settings.tupletDivisions() == 0 || settings.tupletTargets() == 0) {
             return;
         }
-        final int spanFineSteps = tupletSpanFineSteps(settings.meterNumerator(), settings.meterDenominator(),
-                barFineSteps, settings.rate());
+        final int spanFineSteps =
+                tupletSpanFineSteps(
+                        settings.meterNumerator(),
+                        settings.meterDenominator(),
+                        barFineSteps,
+                        settings.rate());
         final int totalSpans = totalTupletSpans(totalFineSteps, spanFineSteps);
-        final List<Integer> selectedSpans = selectedTupletTargetIndices(
-                totalSpans, settings.tupletTargets(), settings.tupletTargetPhase());
+        final List<Integer> selectedSpans =
+                selectedTupletTargetIndices(
+                        totalSpans, settings.tupletTargets(), settings.tupletTargetPhase());
         final int contourCount = Math.max(1, selectedSpans.size() * settings.tupletDivisions());
         int contourOffset = 0;
         for (final int spanIndex : selectedSpans) {
@@ -593,62 +702,81 @@ public final class NestedRhythmGenerator {
             if (settings.cluster() <= 0.0001) {
                 clearWrappedSpan(structure, start, spanFineSteps, totalFineSteps);
             }
-            final List<Integer> starts = evenlyDividedWrappedStarts(
-                    start, spanFineSteps, settings.tupletDivisions(), totalFineSteps);
-            addSubdivisionPulses(structure, starts, settings.tupletDivisions(),
+            final List<Integer> starts =
+                    evenlyDividedWrappedStarts(
+                            start, spanFineSteps, settings.tupletDivisions(), totalFineSteps);
+            addSubdivisionPulses(
+                    structure,
+                    starts,
+                    settings.tupletDivisions(),
                     Math.max(1, spanFineSteps / Math.max(1, settings.tupletDivisions())),
-                    contourOffset, contourCount,
-                    NestedRhythmPattern.Role.TUPLET_LEAD, NestedRhythmPattern.Role.TUPLET_INTERIOR,
+                    contourOffset,
+                    contourCount,
+                    NestedRhythmPattern.Role.TUPLET_LEAD,
+                    NestedRhythmPattern.Role.TUPLET_INTERIOR,
                     GestureFamily.TUPLET);
             contourOffset += settings.tupletDivisions();
         }
     }
 
-    private static int tupletSpanFineSteps(final int meterNumerator,
-                                           final int meterDenominator,
-                                           final int barFineSteps,
-                                           final double rate) {
-        final double baseSpan = isCompoundEighthMeter(meterNumerator, meterDenominator)
-                ? structuralBeatFineSteps(meterNumerator, meterDenominator)
-                : barFineSteps / 2.0;
+    private static int tupletSpanFineSteps(
+            final int meterNumerator,
+            final int meterDenominator,
+            final int barFineSteps,
+            final double rate) {
+        final double baseSpan =
+                isCompoundEighthMeter(meterNumerator, meterDenominator)
+                        ? structuralBeatFineSteps(meterNumerator, meterDenominator)
+                        : barFineSteps / 2.0;
         return Math.max(1, (int) Math.round(baseSpan / Math.max(0.0001, rate)));
     }
 
-    private static int totalTupletSpans(final int totalFineSteps,
-                                        final int spanFineSteps) {
+    private static int totalTupletSpans(final int totalFineSteps, final int spanFineSteps) {
         return Math.max(1, (int) Math.round(totalFineSteps / (double) Math.max(1, spanFineSteps)));
     }
 
-    private void applyRatchet(final TreeMap<Integer, PulseSpec> structure,
-                              final Settings settings,
-                              final int barFineSteps,
-                              final int totalFineSteps) {
+    private void applyRatchet(
+            final TreeMap<Integer, PulseSpec> structure,
+            final Settings settings,
+            final int barFineSteps,
+            final int totalFineSteps) {
         if (settings.ratchetDivisions() == 0 || settings.ratchetTargets() == 0) {
             return;
         }
-        final List<RatchetTargetRegion> targetRegions = ratchetTargetRegions(structure, settings, totalFineSteps);
+        final List<RatchetTargetRegion> targetRegions =
+                ratchetTargetRegions(structure, settings, totalFineSteps);
         final int contourCount = Math.max(1, targetRegions.size() * settings.ratchetDivisions());
         int contourOffset = 0;
         for (final RatchetTargetRegion target : targetRegions) {
             clearWrappedSpan(structure, target.start(), target.length(), totalFineSteps);
-            final List<Integer> starts = evenlyDividedWrappedStarts(
-                    target.start(), target.length(), settings.ratchetDivisions(), totalFineSteps);
-            addSubdivisionPulses(structure, starts, settings.ratchetDivisions(),
+            final List<Integer> starts =
+                    evenlyDividedWrappedStarts(
+                            target.start(),
+                            target.length(),
+                            settings.ratchetDivisions(),
+                            totalFineSteps);
+            addSubdivisionPulses(
+                    structure,
+                    starts,
+                    settings.ratchetDivisions(),
                     Math.max(1, target.length() / Math.max(1, settings.ratchetDivisions())),
-                    contourOffset, contourCount,
-                    NestedRhythmPattern.Role.RATCHET_LEAD, NestedRhythmPattern.Role.RATCHET_INTERIOR,
+                    contourOffset,
+                    contourCount,
+                    NestedRhythmPattern.Role.RATCHET_LEAD,
+                    NestedRhythmPattern.Role.RATCHET_INTERIOR,
                     target.gestureFamily());
             contourOffset += settings.ratchetDivisions();
         }
     }
 
-    private void addSubdivisionPulses(final TreeMap<Integer, PulseSpec> structure,
-                                      final List<Integer> starts,
-                                      final int count,
-                                      final int localStepFineSteps,
-                                      final NestedRhythmPattern.Role leadRole,
-                                      final NestedRhythmPattern.Role interiorRole,
-                                      final GestureFamily gestureFamily) {
+    private void addSubdivisionPulses(
+            final TreeMap<Integer, PulseSpec> structure,
+            final List<Integer> starts,
+            final int count,
+            final int localStepFineSteps,
+            final NestedRhythmPattern.Role leadRole,
+            final NestedRhythmPattern.Role interiorRole,
+            final GestureFamily gestureFamily) {
         int inserted = 0;
         for (int index = 0; index < starts.size(); index++) {
             final int fineStart = starts.get(index);
@@ -656,31 +784,34 @@ public final class NestedRhythmGenerator {
                 continue;
             }
             final NestedRhythmPattern.Role role = inserted == 0 ? leadRole : interiorRole;
-            structure.put(fineStart, new PulseSpec(
+            structure.put(
                     fineStart,
-                    role,
-                    gestureFamily,
-                        false,
-                        subdivisionPriority(role, index, count),
-                        0.0,
-                        index,
-                        count,
-                        index,
-                        count,
-                        localStepFineSteps));
+                    new PulseSpec(
+                            fineStart,
+                            role,
+                            gestureFamily,
+                            false,
+                            subdivisionPriority(role, index, count),
+                            0.0,
+                            index,
+                            count,
+                            index,
+                            count,
+                            localStepFineSteps));
             inserted++;
         }
     }
 
-    private void addSubdivisionPulses(final TreeMap<Integer, PulseSpec> structure,
-                                      final List<Integer> starts,
-                                      final int localCount,
-                                      final int localStepFineSteps,
-                                      final int contourOffset,
-                                      final int contourCount,
-                                      final NestedRhythmPattern.Role leadRole,
-                                      final NestedRhythmPattern.Role interiorRole,
-                                      final GestureFamily gestureFamily) {
+    private void addSubdivisionPulses(
+            final TreeMap<Integer, PulseSpec> structure,
+            final List<Integer> starts,
+            final int localCount,
+            final int localStepFineSteps,
+            final int contourOffset,
+            final int contourCount,
+            final NestedRhythmPattern.Role leadRole,
+            final NestedRhythmPattern.Role interiorRole,
+            final GestureFamily gestureFamily) {
         int inserted = 0;
         for (int index = 0; index < starts.size(); index++) {
             final int fineStart = starts.get(index);
@@ -688,41 +819,46 @@ public final class NestedRhythmGenerator {
                 continue;
             }
             final NestedRhythmPattern.Role role = inserted == 0 ? leadRole : interiorRole;
-            structure.put(fineStart, new PulseSpec(
+            structure.put(
                     fineStart,
-                    role,
-                    gestureFamily,
-                    false,
-                    subdivisionPriority(role, index, localCount),
-                    0.0,
-                    index,
-                    localCount,
-                    contourOffset + index,
-                    contourCount,
-                    localStepFineSteps));
+                    new PulseSpec(
+                            fineStart,
+                            role,
+                            gestureFamily,
+                            false,
+                            subdivisionPriority(role, index, localCount),
+                            0.0,
+                            index,
+                            localCount,
+                            contourOffset + index,
+                            contourCount,
+                            localStepFineSteps));
             inserted++;
         }
     }
 
-    private void applyIndispensability(final TreeMap<Integer, PulseSpec> structure,
-                                       final int totalFineSteps) {
-        final Map<Integer, RankedPulse> ranked = IndispensabilityRanker.rank(
-                new ArrayList<>(structure.keySet()), totalFineSteps);
+    private void applyIndispensability(
+            final TreeMap<Integer, PulseSpec> structure, final int totalFineSteps) {
+        final Map<Integer, RankedPosition> ranked =
+                MetricIndispensabilityRanker.rank(
+                        new ArrayList<>(structure.keySet()), totalFineSteps);
         for (final Map.Entry<Integer, PulseSpec> entry : new ArrayList<>(structure.entrySet())) {
-            final RankedPulse rank = ranked.get(entry.getKey());
+            final RankedPosition rank = ranked.get(entry.getKey());
             if (rank == null) {
                 continue;
             }
-            structure.put(entry.getKey(), entry.getValue().withIndispensability(rank.normalizedScore()));
+            structure.put(
+                    entry.getKey(), entry.getValue().withIndispensability(rank.normalizedScore()));
         }
     }
 
-    private List<PulseSpec> thinStructure(final TreeMap<Integer, PulseSpec> structure,
-                                          final double density,
-                                          final double cluster,
-                                          final int rhythmRotation,
-                                          final int totalFineSteps,
-                                          final DensityDirection densityDirection) {
+    private List<PulseSpec> thinStructure(
+            final TreeMap<Integer, PulseSpec> structure,
+            final double density,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps,
+            final DensityDirection densityDirection) {
         final List<PulseSpec> required = new ArrayList<>();
         final List<PulseSpec> optional = new ArrayList<>();
         for (final PulseSpec pulse : structure.values()) {
@@ -738,28 +874,39 @@ public final class NestedRhythmGenerator {
         if (optional.stream().allMatch(pulse -> pulse.gestureFamily() == GestureFamily.ANCHOR)) {
             final int keepCount = optionalKeepCount(optional.size(), density);
             final List<PulseSpec> retained = new ArrayList<>(required);
-            retained.addAll(selectOptionalPulses(optional, keepCount, cluster, rhythmRotation, totalFineSteps,
-                    densityDirection));
+            retained.addAll(
+                    selectOptionalPulses(
+                            optional,
+                            keepCount,
+                            cluster,
+                            rhythmRotation,
+                            totalFineSteps,
+                            densityDirection));
             retained.sort(Comparator.comparingInt(PulseSpec::fineStart));
             return retained;
         }
         final int keepCount = identityKeepCount(structure.values(), density);
         final List<PulseSpec> candidates = new ArrayList<>(structure.values());
         if (cluster > 0.0001) {
-            return selectOptionalPulses(candidates, keepCount, cluster, rhythmRotation, totalFineSteps,
+            return selectOptionalPulses(
+                    candidates,
+                    keepCount,
+                    cluster,
+                    rhythmRotation,
+                    totalFineSteps,
                     densityDirection);
         }
-        return selectOptionalPulses(candidates, keepCount, cluster, rhythmRotation, totalFineSteps, densityDirection);
+        return selectOptionalPulses(
+                candidates, keepCount, cluster, rhythmRotation, totalFineSteps, densityDirection);
     }
 
-    private int optionalKeepCount(final int candidateCount,
-                                  final double density) {
+    private int optionalKeepCount(final int candidateCount, final double density) {
         return Math.max(0, Math.min(candidateCount, (int) Math.round(density * candidateCount)));
     }
 
-    private int identityKeepCount(final Iterable<PulseSpec> candidates,
-                                  final double density) {
-        final EnumMap<GestureFamily, Boolean> generatedFamilies = new EnumMap<>(GestureFamily.class);
+    private int identityKeepCount(final Iterable<PulseSpec> candidates, final double density) {
+        final EnumMap<GestureFamily, Boolean> generatedFamilies =
+                new EnumMap<>(GestureFamily.class);
         int candidateCount = 0;
         for (final PulseSpec pulse : candidates) {
             candidateCount++;
@@ -770,47 +917,55 @@ public final class NestedRhythmGenerator {
         if (candidateCount <= 0) {
             return 0;
         }
-        final double phraseDensity = GENERATED_DENSITY_FLOOR + density * (1.0 - GENERATED_DENSITY_FLOOR);
+        final double phraseDensity =
+                GENERATED_DENSITY_FLOOR + density * (1.0 - GENERATED_DENSITY_FLOOR);
         final int densityCount = optionalKeepCount(candidateCount, phraseDensity);
         final int phraseCellFloor = Math.max(2, generatedFamilies.size() * 2);
         return Math.max(densityCount, Math.min(candidateCount, phraseCellFloor));
     }
 
-    private List<PulseSpec> selectOptionalPulses(final List<PulseSpec> optional,
-                                                 final int keepCount,
-                                                 final double cluster,
-                                                 final int rhythmRotation,
-                                                 final int totalFineSteps,
-                                                 final DensityDirection densityDirection) {
+    private List<PulseSpec> selectOptionalPulses(
+            final List<PulseSpec> optional,
+            final int keepCount,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps,
+            final DensityDirection densityDirection) {
         if (keepCount <= 0 || optional.isEmpty()) {
             return List.of();
         }
-        final List<PulseSpec> ranked = rankedOptionalPulses(optional, cluster, rhythmRotation, totalFineSteps,
-                densityDirection);
-        final List<PulseSpec> selected = new ArrayList<>(ranked.subList(0, Math.min(keepCount, ranked.size())));
+        final List<PulseSpec> ranked =
+                rankedOptionalPulses(
+                        optional, cluster, rhythmRotation, totalFineSteps, densityDirection);
+        final List<PulseSpec> selected =
+                new ArrayList<>(ranked.subList(0, Math.min(keepCount, ranked.size())));
         ensureGeneratedFamilyCoverage(selected, ranked, keepCount);
         selected.sort(Comparator.comparingInt(PulseSpec::fineStart));
         return selected;
     }
 
-    private void ensureGeneratedFamilyCoverage(final List<PulseSpec> selected,
-                                               final List<PulseSpec> ranked,
-                                               final int keepCount) {
-        final Set<GestureFamily> generatedFamilies = ranked.stream()
-                .map(PulseSpec::gestureFamily)
-                .filter(family -> family != GestureFamily.ANCHOR)
-                .collect(Collectors.toCollection(() -> EnumSet.noneOf(GestureFamily.class)));
-        if (selected.size() < keepCount || keepCount < generatedFamilies.size() || generatedFamilies.size() <= 1) {
+    private void ensureGeneratedFamilyCoverage(
+            final List<PulseSpec> selected, final List<PulseSpec> ranked, final int keepCount) {
+        final Set<GestureFamily> generatedFamilies =
+                ranked.stream()
+                        .map(PulseSpec::gestureFamily)
+                        .filter(family -> family != GestureFamily.ANCHOR)
+                        .collect(
+                                Collectors.toCollection(() -> EnumSet.noneOf(GestureFamily.class)));
+        if (selected.size() < keepCount
+                || keepCount < generatedFamilies.size()
+                || generatedFamilies.size() <= 1) {
             return;
         }
         for (final GestureFamily family : generatedFamilies) {
             if (selected.stream().anyMatch(pulse -> pulse.gestureFamily() == family)) {
                 continue;
             }
-            final PulseSpec replacement = ranked.stream()
-                    .filter(pulse -> pulse.gestureFamily() == family)
-                    .findFirst()
-                    .orElse(null);
+            final PulseSpec replacement =
+                    ranked.stream()
+                            .filter(pulse -> pulse.gestureFamily() == family)
+                            .findFirst()
+                            .orElse(null);
             final int replaceIndex = leastEssentialSelectedIndex(selected);
             if (replacement != null && replaceIndex >= 0) {
                 selected.set(replaceIndex, replacement);
@@ -819,17 +974,22 @@ public final class NestedRhythmGenerator {
     }
 
     private int leastEssentialSelectedIndex(final List<PulseSpec> selected) {
-        final Map<GestureFamily, Long> counts = selected.stream()
-                .collect(Collectors.groupingBy(PulseSpec::gestureFamily, () -> new EnumMap<>(GestureFamily.class),
-                        Collectors.counting()));
+        final Map<GestureFamily, Long> counts =
+                selected.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        PulseSpec::gestureFamily,
+                                        () -> new EnumMap<>(GestureFamily.class),
+                                        Collectors.counting()));
         int bestIndex = -1;
         double bestScore = Double.POSITIVE_INFINITY;
         for (int index = 0; index < selected.size(); index++) {
             final PulseSpec pulse = selected.get(index);
             final long familyCount = counts.getOrDefault(pulse.gestureFamily(), 0L);
-            final double score = (pulse.gestureFamily() == GestureFamily.ANCHOR ? 0.0 : 1000.0)
-                    + (familyCount > 1 ? 0.0 : 500.0)
-                    + pulse.priority();
+            final double score =
+                    (pulse.gestureFamily() == GestureFamily.ANCHOR ? 0.0 : 1000.0)
+                            + (familyCount > 1 ? 0.0 : 500.0)
+                            + pulse.priority();
             if (score < bestScore) {
                 bestScore = score;
                 bestIndex = index;
@@ -838,11 +998,12 @@ public final class NestedRhythmGenerator {
         return bestIndex;
     }
 
-    private List<PulseSpec> rankedOptionalPulses(final List<PulseSpec> optional,
-                                                 final double cluster,
-                                                 final int rhythmRotation,
-                                                 final int totalFineSteps,
-                                                 final DensityDirection densityDirection) {
+    private List<PulseSpec> rankedOptionalPulses(
+            final List<PulseSpec> optional,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps,
+            final DensityDirection densityDirection) {
         final List<PulseSpec> timeOrdered = new ArrayList<>(optional);
         timeOrdered.sort(Comparator.comparingInt(PulseSpec::fineStart));
         final List<PulseSpec> ranked = new ArrayList<>(optional.size());
@@ -850,9 +1011,15 @@ public final class NestedRhythmGenerator {
         final Map<GestureFamily, Integer> selectedFamilyCounts = new EnumMap<>(GestureFamily.class);
 
         while (ranked.size() + 1 < optional.size()) {
-            final PulsePair pair = bestOptionalPair(
-                    timeOrdered, selectedStarts, selectedFamilyCounts, cluster, rhythmRotation, totalFineSteps,
-                    densityDirection);
+            final PulsePair pair =
+                    bestOptionalPair(
+                            timeOrdered,
+                            selectedStarts,
+                            selectedFamilyCounts,
+                            cluster,
+                            rhythmRotation,
+                            totalFineSteps,
+                            densityDirection);
             if (pair == null) {
                 break;
             }
@@ -863,9 +1030,15 @@ public final class NestedRhythmGenerator {
         }
 
         while (ranked.size() < optional.size()) {
-            final PulseSpec pulse = bestOptionalSingle(
-                    timeOrdered, selectedStarts, selectedFamilyCounts, cluster, rhythmRotation, totalFineSteps,
-                    densityDirection);
+            final PulseSpec pulse =
+                    bestOptionalSingle(
+                            timeOrdered,
+                            selectedStarts,
+                            selectedFamilyCounts,
+                            cluster,
+                            rhythmRotation,
+                            totalFineSteps,
+                            densityDirection);
             if (pulse == null) {
                 break;
             }
@@ -875,29 +1048,37 @@ public final class NestedRhythmGenerator {
         return ranked;
     }
 
-    private PulsePair bestOptionalPair(final List<PulseSpec> optional,
-                                       final Set<Integer> selectedStarts,
-                                       final Map<GestureFamily, Integer> selectedFamilyCounts,
-                                       final double cluster,
-                                       final int rhythmRotation,
-                                       final int totalFineSteps,
-                                       final DensityDirection densityDirection) {
+    private PulsePair bestOptionalPair(
+            final List<PulseSpec> optional,
+            final Set<Integer> selectedStarts,
+            final Map<GestureFamily, Integer> selectedFamilyCounts,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps,
+            final DensityDirection densityDirection) {
         PulsePair best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (int index = 0; index + 1 < optional.size(); index++) {
             final PulseSpec left = optional.get(index);
             final PulseSpec right = optional.get(index + 1);
-            if (selectedStarts.contains(left.fineStart()) || selectedStarts.contains(right.fineStart())) {
+            if (selectedStarts.contains(left.fineStart())
+                    || selectedStarts.contains(right.fineStart())) {
                 continue;
             }
             if (!sameGestureFamily(left, right)) {
                 continue;
             }
-            final double score = optionalScore(left, cluster, rhythmRotation, totalFineSteps, densityDirection)
-                    + optionalScore(right, cluster, rhythmRotation, totalFineSteps, densityDirection)
-                    + phraseGroupScore(left.gestureFamily(), selectedFamilyCounts)
-                    + compactPairBonus(left, right, totalFineSteps)
-                    + localGestureIdentityBonus(left, right);
+            final double score =
+                    optionalScore(left, cluster, rhythmRotation, totalFineSteps, densityDirection)
+                            + optionalScore(
+                                    right,
+                                    cluster,
+                                    rhythmRotation,
+                                    totalFineSteps,
+                                    densityDirection)
+                            + phraseGroupScore(left.gestureFamily(), selectedFamilyCounts)
+                            + compactPairBonus(left, right, totalFineSteps)
+                            + localGestureIdentityBonus(left, right);
             if (score > bestScore) {
                 bestScore = score;
                 best = new PulsePair(left, right);
@@ -906,26 +1087,27 @@ public final class NestedRhythmGenerator {
         return best;
     }
 
-    private boolean sameGestureFamily(final PulseSpec left,
-                                      final PulseSpec right) {
+    private boolean sameGestureFamily(final PulseSpec left, final PulseSpec right) {
         return left.gestureFamily() == right.gestureFamily();
     }
 
-    private PulseSpec bestOptionalSingle(final List<PulseSpec> optional,
-                                         final Set<Integer> selectedStarts,
-                                         final Map<GestureFamily, Integer> selectedFamilyCounts,
-                                         final double cluster,
-                                         final int rhythmRotation,
-                                         final int totalFineSteps,
-                                         final DensityDirection densityDirection) {
+    private PulseSpec bestOptionalSingle(
+            final List<PulseSpec> optional,
+            final Set<Integer> selectedStarts,
+            final Map<GestureFamily, Integer> selectedFamilyCounts,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps,
+            final DensityDirection densityDirection) {
         PulseSpec best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (final PulseSpec pulse : optional) {
             if (selectedStarts.contains(pulse.fineStart())) {
                 continue;
             }
-            final double score = optionalScore(pulse, cluster, rhythmRotation, totalFineSteps, densityDirection)
-                    + singleGestureScore(pulse.gestureFamily(), selectedFamilyCounts);
+            final double score =
+                    optionalScore(pulse, cluster, rhythmRotation, totalFineSteps, densityDirection)
+                            + singleGestureScore(pulse.gestureFamily(), selectedFamilyCounts);
             if (score > bestScore) {
                 bestScore = score;
                 best = pulse;
@@ -934,26 +1116,31 @@ public final class NestedRhythmGenerator {
         return best;
     }
 
-    private void markSelected(final PulseSpec pulse,
-                              final Set<Integer> selectedStarts,
-                              final Map<GestureFamily, Integer> selectedFamilyCounts) {
+    private void markSelected(
+            final PulseSpec pulse,
+            final Set<Integer> selectedStarts,
+            final Map<GestureFamily, Integer> selectedFamilyCounts) {
         selectedStarts.add(pulse.fineStart());
         selectedFamilyCounts.merge(pulse.gestureFamily(), 1, Integer::sum);
     }
 
-    private double optionalScore(final PulseSpec pulse,
-                                 final double cluster,
-                                 final int rhythmRotation,
-                                 final int totalFineSteps,
-                                 final DensityDirection densityDirection) {
+    private double optionalScore(
+            final PulseSpec pulse,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps,
+            final DensityDirection densityDirection) {
         return selectionPriority(pulse)
                 + densityRankScore(pulse, densityDirection) * 1000.0
                 + phrasePositionScore(pulse.fineStart(), totalFineSteps) * 45.0
-                + cluster * clusterMembership(pulse.fineStart(), cluster, rhythmRotation, totalFineSteps) * 900.0;
+                + cluster
+                        * clusterMembership(
+                                pulse.fineStart(), cluster, rhythmRotation, totalFineSteps)
+                        * 900.0;
     }
 
-    private double densityRankScore(final PulseSpec pulse,
-                                    final DensityDirection densityDirection) {
+    private double densityRankScore(
+            final PulseSpec pulse, final DensityDirection densityDirection) {
         return densityDirection == DensityDirection.KEEP_WEAK
                 ? 1.0 - pulse.indispensability()
                 : pulse.indispensability();
@@ -966,43 +1153,46 @@ public final class NestedRhythmGenerator {
         return pulse.priority();
     }
 
-    private double phraseGroupScore(final GestureFamily family,
-                                    final Map<GestureFamily, Integer> selectedFamilyCounts) {
+    private double phraseGroupScore(
+            final GestureFamily family, final Map<GestureFamily, Integer> selectedFamilyCounts) {
         final int selectedCount = selectedFamilyCounts.getOrDefault(family, 0);
-        final double novelty = switch (family) {
-            case NESTED_RATCHET -> 170.0;
-            case TUPLET -> 145.0;
-            case RATCHET -> 85.0;
-            case ANCHOR -> 60.0;
-            case OTHER -> 40.0;
-        };
+        final double novelty =
+                switch (family) {
+                    case NESTED_RATCHET -> 170.0;
+                    case TUPLET -> 145.0;
+                    case RATCHET -> 85.0;
+                    case ANCHOR -> 60.0;
+                    case OTHER -> 40.0;
+                };
         return novelty - selectedCount * 70.0;
     }
 
-    private double singleGestureScore(final GestureFamily family,
-                                      final Map<GestureFamily, Integer> selectedFamilyCounts) {
+    private double singleGestureScore(
+            final GestureFamily family, final Map<GestureFamily, Integer> selectedFamilyCounts) {
         final int selectedCount = selectedFamilyCounts.getOrDefault(family, 0);
-        final double novelty = switch (family) {
-            case TUPLET -> 80.0;
-            case NESTED_RATCHET -> 70.0;
-            case RATCHET -> 35.0;
-            case ANCHOR -> 30.0;
-            case OTHER -> 20.0;
-        };
+        final double novelty =
+                switch (family) {
+                    case TUPLET -> 80.0;
+                    case NESTED_RATCHET -> 70.0;
+                    case RATCHET -> 35.0;
+                    case ANCHOR -> 30.0;
+                    case OTHER -> 20.0;
+                };
         return novelty - selectedCount * 35.0;
     }
 
-    private double compactPairBonus(final PulseSpec left,
-                                    final PulseSpec right,
-                                    final int totalFineSteps) {
+    private double compactPairBonus(
+            final PulseSpec left, final PulseSpec right, final int totalFineSteps) {
         final int distance = Math.max(1, right.fineStart() - left.fineStart());
-        final double compactness = 1.0 - Math.min(1.0, distance / (double) Math.max(1, totalFineSteps));
+        final double compactness =
+                1.0 - Math.min(1.0, distance / (double) Math.max(1, totalFineSteps));
         return 75.0 + compactness * 24.0;
     }
 
-    private double localGestureIdentityBonus(final PulseSpec left,
-                                             final PulseSpec right) {
-        if (!sameGestureFamily(left, right) || left.subdivisionCount() <= 1 || right.subdivisionCount() <= 1) {
+    private double localGestureIdentityBonus(final PulseSpec left, final PulseSpec right) {
+        if (!sameGestureFamily(left, right)
+                || left.subdivisionCount() <= 1
+                || right.subdivisionCount() <= 1) {
             return 0.0;
         }
         double bonus = 0.0;
@@ -1022,8 +1212,7 @@ public final class NestedRhythmGenerator {
         return bonus;
     }
 
-    private boolean sameLocalSubdivisionCell(final PulseSpec left,
-                                             final PulseSpec right) {
+    private boolean sameLocalSubdivisionCell(final PulseSpec left, final PulseSpec right) {
         if (left.subdivisionCount() != right.subdivisionCount()) {
             return false;
         }
@@ -1031,8 +1220,7 @@ public final class NestedRhythmGenerator {
         return left.contourIndex() / count == right.contourIndex() / count;
     }
 
-    private double phrasePositionScore(final int fineStart,
-                                       final int totalFineSteps) {
+    private double phrasePositionScore(final int fineStart, final int totalFineSteps) {
         if (totalFineSteps <= 1) {
             return 1.0;
         }
@@ -1045,8 +1233,7 @@ public final class NestedRhythmGenerator {
         return Math.max(metric, Math.max(Math.max(call, response), Math.max(cadence, start)));
     }
 
-    private static double metricPositionWeight(final int fineStart,
-                                               final int totalFineSteps) {
+    private static double metricPositionWeight(final int fineStart, final int totalFineSteps) {
         if (fineStart <= 0) {
             return 1.0;
         }
@@ -1054,19 +1241,18 @@ public final class NestedRhythmGenerator {
         return Math.log(common + 1.0) / Math.log(Math.max(2, totalFineSteps) + 1.0);
     }
 
-    private static double gaussian(final double value,
-                                   final double center,
-                                   final double width) {
+    private static double gaussian(final double value, final double center, final double width) {
         final double distance = Math.abs(value - center);
         final double wrappedDistance = Math.min(distance, 1.0 - distance);
         final double normalized = wrappedDistance / Math.max(0.0001, width);
         return Math.exp(-0.5 * normalized * normalized);
     }
 
-    private double clusterMembership(final int fineStart,
-                                     final double cluster,
-                                     final int rhythmRotation,
-                                     final int totalFineSteps) {
+    private double clusterMembership(
+            final int fineStart,
+            final double cluster,
+            final int rhythmRotation,
+            final int totalFineSteps) {
         if (cluster <= 0.0001 || totalFineSteps <= 1) {
             return 0.0;
         }
@@ -1085,9 +1271,8 @@ public final class NestedRhythmGenerator {
         return Math.max(1, totalFineSteps - (int) Math.round(totalFineSteps * windowStartFraction));
     }
 
-    private int clusterWindowStart(final double cluster,
-                                   final int rhythmRotation,
-                                   final int totalFineSteps) {
+    private int clusterWindowStart(
+            final double cluster, final int rhythmRotation, final int totalFineSteps) {
         if (cluster <= 0.0001 || totalFineSteps <= 1) {
             return 0;
         }
@@ -1100,18 +1285,23 @@ public final class NestedRhythmGenerator {
         return Math.max(0, Math.min(travel, (int) Math.round(travel * (1.0 - phase))));
     }
 
-    private List<RatchetTargetRegion> ratchetTargetRegions(final TreeMap<Integer, PulseSpec> structure,
-                                                           final Settings settings,
-                                                           final int totalFineSteps) {
+    private List<RatchetTargetRegion> ratchetTargetRegions(
+            final TreeMap<Integer, PulseSpec> structure,
+            final Settings settings,
+            final int totalFineSteps) {
         final List<RatchetTargetRegion> regions = ratchetParentRegions(structure, totalFineSteps);
         if (regions.isEmpty()) {
             return List.of();
         }
-        final List<RatchetTargetRegion> ordered = ratchetTargetPriorityOrder(regions, settings.barCount(),
-                        settings.rate(), settings.ratchetTargetMode())
-                .stream()
-                .filter(region -> canRatchetRegion(region, settings.ratchetDivisions()))
-                .toList();
+        final List<RatchetTargetRegion> ordered =
+                ratchetTargetPriorityOrder(
+                                regions,
+                                settings.barCount(),
+                                settings.rate(),
+                                settings.ratchetTargetMode())
+                        .stream()
+                        .filter(region -> canRatchetRegion(region, settings.ratchetDivisions()))
+                        .toList();
         if (ordered.isEmpty()) {
             return List.of();
         }
@@ -1125,16 +1315,15 @@ public final class NestedRhythmGenerator {
         return selected;
     }
 
-    private boolean canRatchetRegion(final RatchetTargetRegion region,
-                                     final int ratchetDivisions) {
+    private boolean canRatchetRegion(final RatchetTargetRegion region, final int ratchetDivisions) {
         if (ratchetDivisions <= 0) {
             return false;
         }
         return region.length() / ratchetDivisions >= RATCHET_MIN_GAP;
     }
 
-    private List<RatchetTargetRegion> ratchetParentRegions(final TreeMap<Integer, PulseSpec> structure,
-                                                           final int totalFineSteps) {
+    private List<RatchetTargetRegion> ratchetParentRegions(
+            final TreeMap<Integer, PulseSpec> structure, final int totalFineSteps) {
         if (structure.isEmpty() || totalFineSteps <= 0) {
             return List.of();
         }
@@ -1144,11 +1333,16 @@ public final class NestedRhythmGenerator {
         for (int index = 0; index < pulses.size(); index++) {
             final PulseSpec pulse = pulses.get(index);
             final PulseSpec next = pulses.get((index + 1) % pulses.size());
-            final int length = next.fineStart() > pulse.fineStart()
-                    ? next.fineStart() - pulse.fineStart()
-                    : totalFineSteps - pulse.fineStart() + next.fineStart();
-            regions.add(new RatchetTargetRegion(pulse.fineStart(), Math.max(1, length),
-                    ratchetGestureFamilyFor(pulse), pulse.indispensability()));
+            final int length =
+                    next.fineStart() > pulse.fineStart()
+                            ? next.fineStart() - pulse.fineStart()
+                            : totalFineSteps - pulse.fineStart() + next.fineStart();
+            regions.add(
+                    new RatchetTargetRegion(
+                            pulse.fineStart(),
+                            Math.max(1, length),
+                            ratchetGestureFamilyFor(pulse),
+                            pulse.indispensability()));
         }
         return regions;
     }
@@ -1160,14 +1354,16 @@ public final class NestedRhythmGenerator {
         return GestureFamily.RATCHET;
     }
 
-    private List<RatchetTargetRegion> ratchetTargetPriorityOrder(final List<RatchetTargetRegion> regions,
-                                                                 final int barCount,
-                                                                 final double rate,
-                                                                 final RatchetTargetMode mode) {
+    private List<RatchetTargetRegion> ratchetTargetPriorityOrder(
+            final List<RatchetTargetRegion> regions,
+            final int barCount,
+            final double rate,
+            final RatchetTargetMode mode) {
         if (mode == RatchetTargetMode.BARLOW) {
             return barlowRatchetTargetPriorityOrder(regions);
         }
-        if (regions.stream().anyMatch(region -> region.gestureFamily() == GestureFamily.NESTED_RATCHET)) {
+        if (regions.stream()
+                .anyMatch(region -> region.gestureFamily() == GestureFamily.NESTED_RATCHET)) {
             final List<RatchetTargetRegion> ordered = new ArrayList<>(regions.size());
             for (final int index : complementaryRatchetTargetPriorityOrder(regions)) {
                 ordered.add(regions.get(index));
@@ -1186,24 +1382,27 @@ public final class NestedRhythmGenerator {
         return ordered;
     }
 
-    private List<RatchetTargetRegion> barlowRatchetTargetPriorityOrder(final List<RatchetTargetRegion> regions) {
+    private List<RatchetTargetRegion> barlowRatchetTargetPriorityOrder(
+            final List<RatchetTargetRegion> regions) {
         final List<RatchetTargetRegion> ordered = new ArrayList<>(regions);
-        ordered.sort(Comparator
-                .comparingDouble(RatchetTargetRegion::indispensability)
-                .thenComparing(Comparator.comparingInt(RatchetTargetRegion::length).reversed())
-                .thenComparingInt(RatchetTargetRegion::start));
+        ordered.sort(
+                Comparator.comparingDouble(RatchetTargetRegion::indispensability)
+                        .thenComparing(
+                                Comparator.comparingInt(RatchetTargetRegion::length).reversed())
+                        .thenComparingInt(RatchetTargetRegion::start));
         return ordered;
     }
 
-    private List<RatchetTargetRegion> regionPriorityOrder(final List<RatchetTargetRegion> regions,
-                                                          final boolean phrasePositioned) {
+    private List<RatchetTargetRegion> regionPriorityOrder(
+            final List<RatchetTargetRegion> regions, final boolean phrasePositioned) {
         if (regions.isEmpty()) {
             return List.of();
         }
         final List<RatchetTargetRegion> ordered = new ArrayList<>(regions.size());
-        final List<Integer> priorityOrder = phrasePositioned
-                ? structuralTargetPriorityOrder(regions.size())
-                : targetPriorityOrder(regions.size());
+        final List<Integer> priorityOrder =
+                phrasePositioned
+                        ? structuralTargetPriorityOrder(regions.size())
+                        : targetPriorityOrder(regions.size());
         for (final int index : priorityOrder) {
             ordered.add(regions.get(index));
         }
@@ -1232,7 +1431,8 @@ public final class NestedRhythmGenerator {
         final List<Integer> ordered = new ArrayList<>(targetCount);
         addTargetIndex(ordered, targetCount, targetCount / 2);
         addTargetIndex(ordered, targetCount, targetCount - 1);
-        final List<Integer> scored = scoredTargetPriorityOrder(targetCount, TargetOrderProfile.TUPLET);
+        final List<Integer> scored =
+                scoredTargetPriorityOrder(targetCount, TargetOrderProfile.TUPLET);
         for (final int index : scored) {
             addTargetIndex(ordered, targetCount, index);
         }
@@ -1247,7 +1447,8 @@ public final class NestedRhythmGenerator {
         return scoredTargetPriorityOrder(targetCount, TargetOrderProfile.RATCHET);
     }
 
-    private static List<Integer> complementaryRatchetTargetPriorityOrder(final List<RatchetTargetRegion> regions) {
+    private static List<Integer> complementaryRatchetTargetPriorityOrder(
+            final List<RatchetTargetRegion> regions) {
         final int targetCount = regions.size();
         if (targetCount <= 0) {
             return List.of();
@@ -1261,16 +1462,17 @@ public final class NestedRhythmGenerator {
             }
         }
         final List<Integer> stableTieBreak = targetPriorityOrder(targetCount);
-        indices.sort(Comparator
-                .comparingDouble((Integer index) -> complementaryRatchetTargetScore(index, regions))
-                .reversed()
-                .thenComparingInt(stableTieBreak::indexOf));
+        indices.sort(
+                Comparator.comparingDouble(
+                                (Integer index) -> complementaryRatchetTargetScore(index, regions))
+                        .reversed()
+                        .thenComparingInt(stableTieBreak::indexOf));
         ordered.addAll(indices);
         return ordered;
     }
 
-    private static void addComplementaryRatchetSeedTargets(final List<Integer> ordered,
-                                                           final List<RatchetTargetRegion> regions) {
+    private static void addComplementaryRatchetSeedTargets(
+            final List<Integer> ordered, final List<RatchetTargetRegion> regions) {
         addTargetIndex(ordered, regions.size(), 0);
         if (regions.size() > 5 && isBroadCadenceRegion(regions.get(regions.size() - 1))) {
             addTargetIndex(ordered, regions.size(), regions.size() - 1);
@@ -1286,15 +1488,16 @@ public final class NestedRhythmGenerator {
                 || region.length() >= FINE_STEPS_PER_QUARTER / 2;
     }
 
-    private static double complementaryRatchetTargetScore(final int index,
-                                                          final List<RatchetTargetRegion> regions) {
+    private static double complementaryRatchetTargetScore(
+            final int index, final List<RatchetTargetRegion> regions) {
         final RatchetTargetRegion region = regions.get(index);
-        final double familyBias = region.gestureFamily() == GestureFamily.NESTED_RATCHET ? -0.04 : 0.08;
+        final double familyBias =
+                region.gestureFamily() == GestureFamily.NESTED_RATCHET ? -0.04 : 0.08;
         return targetPhraseScore(index, regions.size(), TargetOrderProfile.RATCHET) + familyBias;
     }
 
-    private static int firstRegionWithFamily(final List<RatchetTargetRegion> regions,
-                                             final GestureFamily family) {
+    private static int firstRegionWithFamily(
+            final List<RatchetTargetRegion> regions, final GestureFamily family) {
         for (int index = 0; index < regions.size(); index++) {
             if (regions.get(index).gestureFamily() == family) {
                 return index;
@@ -1303,8 +1506,8 @@ public final class NestedRhythmGenerator {
         return -1;
     }
 
-    private static int lastRegionWithFamily(final List<RatchetTargetRegion> regions,
-                                            final GestureFamily family) {
+    private static int lastRegionWithFamily(
+            final List<RatchetTargetRegion> regions, final GestureFamily family) {
         for (int index = regions.size() - 1; index >= 0; index--) {
             if (regions.get(index).gestureFamily() == family) {
                 return index;
@@ -1313,8 +1516,8 @@ public final class NestedRhythmGenerator {
         return -1;
     }
 
-    private static List<Integer> scoredTargetPriorityOrder(final int targetCount,
-                                                           final TargetOrderProfile profile) {
+    private static List<Integer> scoredTargetPriorityOrder(
+            final int targetCount, final TargetOrderProfile profile) {
         if (targetCount <= 0) {
             return List.of();
         }
@@ -1323,40 +1526,57 @@ public final class NestedRhythmGenerator {
             indices.add(index);
         }
         final List<Integer> stableTieBreak = targetPriorityOrder(targetCount);
-        indices.sort(Comparator
-                .comparingDouble((Integer index) -> targetPhraseScore(index, targetCount, profile))
-                .reversed()
-                .thenComparingInt(stableTieBreak::indexOf));
+        indices.sort(
+                Comparator.comparingDouble(
+                                (Integer index) -> targetPhraseScore(index, targetCount, profile))
+                        .reversed()
+                        .thenComparingInt(stableTieBreak::indexOf));
         return indices;
     }
 
-    private static double targetPhraseScore(final int index,
-                                            final int targetCount,
-                                            final TargetOrderProfile profile) {
+    private static double targetPhraseScore(
+            final int index, final int targetCount, final TargetOrderProfile profile) {
         final double position = index / (double) Math.max(1, targetCount);
         final double metric = targetMetricWeight(index, targetCount);
-        final double anticipation = targetMetricWeight(Math.floorMod(index + 1, targetCount), targetCount);
+        final double anticipation =
+                targetMetricWeight(Math.floorMod(index + 1, targetCount), targetCount);
         final boolean compactPhrase = profile == TargetOrderProfile.STRUCTURAL;
-        final double call = gaussian(position, 0.25, profile == TargetOrderProfile.TUPLET ? 0.16
-                : compactPhrase ? 0.18 : 0.13);
-        final double response = gaussian(position, 0.50, profile == TargetOrderProfile.TUPLET ? 0.18
-                : compactPhrase ? 0.20 : 0.15);
-        final double cadence = gaussian(position, 0.88, profile == TargetOrderProfile.TUPLET ? 0.14
-                : compactPhrase ? 0.16 : 0.12);
-        final double ground = gaussian(position, 0.0, profile == TargetOrderProfile.TUPLET ? 0.12
-                : compactPhrase ? 0.13 : 0.10);
-        final double responseWeight = profile == TargetOrderProfile.TUPLET ? 0.95 : compactPhrase ? 0.92 : 0.90;
-        final double cadenceWeight = profile == TargetOrderProfile.TUPLET ? 0.58 : compactPhrase ? 0.82 : 0.72;
-        final double groundWeight = profile == TargetOrderProfile.TUPLET ? 0.42 : compactPhrase ? 0.72 : 0.50;
-        final double phraseRole = Math.max(Math.max(call, response * responseWeight),
-                Math.max(cadence * cadenceWeight, ground * groundWeight));
+        final double call =
+                gaussian(
+                        position,
+                        0.25,
+                        profile == TargetOrderProfile.TUPLET ? 0.16 : compactPhrase ? 0.18 : 0.13);
+        final double response =
+                gaussian(
+                        position,
+                        0.50,
+                        profile == TargetOrderProfile.TUPLET ? 0.18 : compactPhrase ? 0.20 : 0.15);
+        final double cadence =
+                gaussian(
+                        position,
+                        0.88,
+                        profile == TargetOrderProfile.TUPLET ? 0.14 : compactPhrase ? 0.16 : 0.12);
+        final double ground =
+                gaussian(
+                        position,
+                        0.0,
+                        profile == TargetOrderProfile.TUPLET ? 0.12 : compactPhrase ? 0.13 : 0.10);
+        final double responseWeight =
+                profile == TargetOrderProfile.TUPLET ? 0.95 : compactPhrase ? 0.92 : 0.90;
+        final double cadenceWeight =
+                profile == TargetOrderProfile.TUPLET ? 0.58 : compactPhrase ? 0.82 : 0.72;
+        final double groundWeight =
+                profile == TargetOrderProfile.TUPLET ? 0.42 : compactPhrase ? 0.72 : 0.50;
+        final double phraseRole =
+                Math.max(
+                        Math.max(call, response * responseWeight),
+                        Math.max(cadence * cadenceWeight, ground * groundWeight));
         return profile == TargetOrderProfile.TUPLET
                 ? metric * 0.28 + phraseRole * 0.58 + anticipation * 0.14
                 : metric * 0.34 + phraseRole * 0.46 + anticipation * 0.20;
     }
 
-    private static double targetMetricWeight(final int index,
-                                             final int targetCount) {
+    private static double targetMetricWeight(final int index, final int targetCount) {
         if (index == 0) {
             return 1.0;
         }
@@ -1364,17 +1584,15 @@ public final class NestedRhythmGenerator {
         return Math.log(common + 1.0) / Math.log(Math.max(2, targetCount) + 1.0);
     }
 
-    private static void addTargetIndex(final List<Integer> ordered,
-                                       final int targetCount,
-                                       final int index) {
+    private static void addTargetIndex(
+            final List<Integer> ordered, final int targetCount, final int index) {
         if (index >= 0 && index < targetCount && !ordered.contains(index)) {
             ordered.add(index);
         }
     }
 
-    private static List<Integer> selectedTupletTargetIndices(final int totalTargets,
-                                                             final int selectedCount,
-                                                             final int targetPhase) {
+    private static List<Integer> selectedTupletTargetIndices(
+            final int totalTargets, final int selectedCount, final int targetPhase) {
         if (totalTargets <= 0 || selectedCount <= 0) {
             return List.of();
         }
@@ -1389,45 +1607,65 @@ public final class NestedRhythmGenerator {
         return selected;
     }
 
-    static int ratchetParentRegionCount(final int meterNumerator,
-                                        final int meterDenominator,
-                                        final int barCount,
-                                        final int tupletDivisions,
-                                        final int tupletTargets,
-                                        final int tupletTargetPhase,
-                                        final double cluster) {
-        return ratchetParentRegionCount(meterNumerator, meterDenominator, barCount, tupletDivisions,
-                tupletTargets, tupletTargetPhase, cluster, 1.0);
+    static int ratchetParentRegionCount(
+            final int meterNumerator,
+            final int meterDenominator,
+            final int barCount,
+            final int tupletDivisions,
+            final int tupletTargets,
+            final int tupletTargetPhase,
+            final double cluster) {
+        return ratchetParentRegionCount(
+                meterNumerator,
+                meterDenominator,
+                barCount,
+                tupletDivisions,
+                tupletTargets,
+                tupletTargetPhase,
+                cluster,
+                1.0);
     }
 
-    static int ratchetParentRegionCount(final int meterNumerator,
-                                        final int meterDenominator,
-                                        final int barCount,
-                                        final int tupletDivisions,
-                                        final int tupletTargets,
-                                        final int tupletTargetPhase,
-                                        final double cluster,
-                                        final double rate) {
-        return ratchetParentRegionCount(meterNumerator, meterDenominator, barCount, tupletDivisions,
-                tupletTargets, tupletTargetPhase, cluster, rate, 1);
+    static int ratchetParentRegionCount(
+            final int meterNumerator,
+            final int meterDenominator,
+            final int barCount,
+            final int tupletDivisions,
+            final int tupletTargets,
+            final int tupletTargetPhase,
+            final double cluster,
+            final double rate) {
+        return ratchetParentRegionCount(
+                meterNumerator,
+                meterDenominator,
+                barCount,
+                tupletDivisions,
+                tupletTargets,
+                tupletTargetPhase,
+                cluster,
+                rate,
+                1);
     }
 
-    static int ratchetParentRegionCount(final int meterNumerator,
-                                        final int meterDenominator,
-                                        final int barCount,
-                                        final int tupletDivisions,
-                                        final int tupletTargets,
-                                        final int tupletTargetPhase,
-                                        final double cluster,
-                                        final double rate,
-                                        final int ratchetDivisions) {
+    static int ratchetParentRegionCount(
+            final int meterNumerator,
+            final int meterDenominator,
+            final int barCount,
+            final int tupletDivisions,
+            final int tupletTargets,
+            final int tupletTargetPhase,
+            final double cluster,
+            final double rate,
+            final int ratchetDivisions) {
         final int normalizedMeterNumerator = normalizeNumerator(meterNumerator);
         final int normalizedMeterDenominator = normalizeDenominator(meterDenominator);
         final int normalizedBarCount = Math.max(1, Math.min(MAX_BARS, barCount));
-        final int barFineSteps = fineStepsPerBar(normalizedMeterNumerator, normalizedMeterDenominator);
+        final int barFineSteps =
+                fineStepsPerBar(normalizedMeterNumerator, normalizedMeterDenominator);
         final int totalFineSteps = barFineSteps * normalizedBarCount;
         final TreeMap<Integer, Boolean> starts = new TreeMap<>();
-        final int beatFineSteps = structuralBeatFineSteps(normalizedMeterNumerator, normalizedMeterDenominator);
+        final int beatFineSteps =
+                structuralBeatFineSteps(normalizedMeterNumerator, normalizedMeterDenominator);
         final double normalizedRate = normalizeRate(rate);
         for (final int fineStart : baseGridStarts(beatFineSteps, totalFineSteps, normalizedRate)) {
             starts.put(fineStart, true);
@@ -1435,26 +1673,36 @@ public final class NestedRhythmGenerator {
         if (tupletDivisions <= 0 || tupletTargets <= 0) {
             return eligibleRatchetParentRegionCount(starts, totalFineSteps, ratchetDivisions);
         }
-        final int spanFineSteps = tupletSpanFineSteps(normalizedMeterNumerator, normalizedMeterDenominator,
-                barFineSteps, normalizedRate);
+        final int spanFineSteps =
+                tupletSpanFineSteps(
+                        normalizedMeterNumerator,
+                        normalizedMeterDenominator,
+                        barFineSteps,
+                        normalizedRate);
         final int totalSpans = totalTupletSpans(totalFineSteps, spanFineSteps);
-        for (final int spanIndex : selectedTupletTargetIndices(totalSpans, tupletTargets, tupletTargetPhase)) {
+        for (final int spanIndex :
+                selectedTupletTargetIndices(totalSpans, tupletTargets, tupletTargetPhase)) {
             final int start = Math.floorMod(spanIndex * spanFineSteps, totalFineSteps);
             if (cluster <= 0.0001) {
-                starts.keySet().removeIf(candidate ->
-                        isInsideWrappedSpan(candidate, start, spanFineSteps, totalFineSteps));
+                starts.keySet()
+                        .removeIf(
+                                candidate ->
+                                        isInsideWrappedSpan(
+                                                candidate, start, spanFineSteps, totalFineSteps));
             }
-            for (final int tupletStart : wrappedSubdivisionStarts(
-                    start, spanFineSteps, tupletDivisions, totalFineSteps)) {
+            for (final int tupletStart :
+                    wrappedSubdivisionStarts(
+                            start, spanFineSteps, tupletDivisions, totalFineSteps)) {
                 starts.put(tupletStart, true);
             }
         }
         return eligibleRatchetParentRegionCount(starts, totalFineSteps, ratchetDivisions);
     }
 
-    private static int eligibleRatchetParentRegionCount(final TreeMap<Integer, Boolean> starts,
-                                                        final int totalFineSteps,
-                                                        final int ratchetDivisions) {
+    private static int eligibleRatchetParentRegionCount(
+            final TreeMap<Integer, Boolean> starts,
+            final int totalFineSteps,
+            final int ratchetDivisions) {
         if (starts.isEmpty()) {
             return 0;
         }
@@ -1466,9 +1714,7 @@ public final class NestedRhythmGenerator {
         for (int index = 0; index < orderedStarts.size(); index++) {
             final int start = orderedStarts.get(index);
             final int next = orderedStarts.get((index + 1) % orderedStarts.size());
-            final int length = next > start
-                    ? next - start
-                    : totalFineSteps - start + next;
+            final int length = next > start ? next - start : totalFineSteps - start + next;
             if (Math.max(1, length) / ratchetDivisions >= RATCHET_MIN_GAP) {
                 eligible++;
             }
@@ -1476,10 +1722,8 @@ public final class NestedRhythmGenerator {
         return eligible;
     }
 
-    private static boolean isInsideWrappedSpan(final int candidate,
-                                               final int start,
-                                               final int length,
-                                               final int totalFineSteps) {
+    private static boolean isInsideWrappedSpan(
+            final int candidate, final int start, final int length, final int totalFineSteps) {
         if (length >= totalFineSteps) {
             return true;
         }
@@ -1491,10 +1735,8 @@ public final class NestedRhythmGenerator {
         return candidate >= start || candidate < wrappedEnd;
     }
 
-    private static List<Integer> wrappedSubdivisionStarts(final int start,
-                                                          final int length,
-                                                          final int count,
-                                                          final int totalFineSteps) {
+    private static List<Integer> wrappedSubdivisionStarts(
+            final int start, final int length, final int count, final int totalFineSteps) {
         final LinkedHashSet<Integer> starts = new LinkedHashSet<>();
         for (int index = 0; index < count; index++) {
             starts.add(Math.floorMod(start + index * (length / count), totalFineSteps));
@@ -1502,7 +1744,8 @@ public final class NestedRhythmGenerator {
         return List.copyOf(starts);
     }
 
-    private int subdivisionPriority(final NestedRhythmPattern.Role role, final int index, final int count) {
+    private int subdivisionPriority(
+            final NestedRhythmPattern.Role role, final int index, final int count) {
         final int base = rolePriority(role);
         if (index == 0) {
             return base;
@@ -1532,10 +1775,8 @@ public final class NestedRhythmGenerator {
         return List.copyOf(starts);
     }
 
-    private List<Integer> evenlyDividedWrappedStarts(final int start,
-                                                     final int length,
-                                                     final int count,
-                                                     final int totalFineSteps) {
+    private List<Integer> evenlyDividedWrappedStarts(
+            final int start, final int length, final int count, final int totalFineSteps) {
         final LinkedHashSet<Integer> starts = new LinkedHashSet<>();
         for (int index = 0; index < count; index++) {
             starts.add(Math.floorMod(start + index * (length / count), totalFineSteps));
@@ -1543,10 +1784,11 @@ public final class NestedRhythmGenerator {
         return List.copyOf(starts);
     }
 
-    private void clearWrappedSpan(final TreeMap<Integer, PulseSpec> structure,
-                                  final int start,
-                                  final int length,
-                                  final int totalFineSteps) {
+    private void clearWrappedSpan(
+            final TreeMap<Integer, PulseSpec> structure,
+            final int start,
+            final int length,
+            final int totalFineSteps) {
         if (length >= totalFineSteps) {
             structure.clear();
             return;
@@ -1563,33 +1805,48 @@ public final class NestedRhythmGenerator {
         }
     }
 
-    private List<NestedRhythmPattern.PulseEvent> withDurations(final List<NestedRhythmPattern.PulseEvent> startsOnly,
-                                                               final List<Integer> durationStarts,
-                                                               final int totalFineSteps) {
+    private List<NestedRhythmPattern.PulseEvent> withDurations(
+            final List<NestedRhythmPattern.PulseEvent> startsOnly,
+            final List<Integer> durationStarts,
+            final int totalFineSteps) {
         final List<NestedRhythmPattern.PulseEvent> events = new ArrayList<>(startsOnly.size());
         for (final NestedRhythmPattern.PulseEvent current : startsOnly) {
             final int loopEndCap = Math.max(1, totalFineSteps - current.fineStart());
-            final int duration = Math.min(loopEndCap, Math.min(
-                    durationFor(current.fineStart(), current.role(), durationStarts, totalFineSteps),
-                    Math.max(1, current.duration())));
-            events.add(new NestedRhythmPattern.PulseEvent(current.order(), current.fineStart(),
-                    duration, current.midiNote(), current.velocity(), current.role(), current.indispensability()));
+            final int duration =
+                    Math.min(
+                            loopEndCap,
+                            Math.min(
+                                    durationFor(
+                                            current.fineStart(),
+                                            current.role(),
+                                            durationStarts,
+                                            totalFineSteps),
+                                    Math.max(1, current.duration())));
+            events.add(
+                    new NestedRhythmPattern.PulseEvent(
+                            current.order(),
+                            current.fineStart(),
+                            duration,
+                            current.midiNote(),
+                            current.velocity(),
+                            current.role(),
+                            current.indispensability()));
         }
         return events;
     }
 
-    private int durationFor(final int fineStart,
-                            final NestedRhythmPattern.Role role,
-                            final List<Integer> durationStarts,
-                            final int totalFineSteps) {
+    private int durationFor(
+            final int fineStart,
+            final NestedRhythmPattern.Role role,
+            final List<Integer> durationStarts,
+            final int totalFineSteps) {
         final int gap = gapToNextDurationStart(fineStart, durationStarts, totalFineSteps);
         final double gateRatio = role == NestedRhythmPattern.Role.RATCHET_INTERIOR ? 0.72 : 0.82;
         return Math.max(1, (int) Math.round(gap * gateRatio));
     }
 
-    private int gapToNextDurationStart(final int fineStart,
-                                       final List<Integer> durationStarts,
-                                       final int totalFineSteps) {
+    private int gapToNextDurationStart(
+            final int fineStart, final List<Integer> durationStarts, final int totalFineSteps) {
         if (durationStarts.isEmpty()) {
             return totalFineSteps;
         }
@@ -1611,18 +1868,21 @@ public final class NestedRhythmGenerator {
         }
         final List<Integer> rotated = new ArrayList<>(velocities.size());
         for (int index = 0; index < velocities.size(); index++) {
-            rotated.add(velocities.get(Math.floorMod(index + normalizedRotation, velocities.size())));
+            rotated.add(
+                    velocities.get(Math.floorMod(index + normalizedRotation, velocities.size())));
         }
         return rotated;
     }
 
-    private List<Integer> applyVelocityDepth(final List<Integer> rawVelocities,
-                                             final double velocityDepth,
-                                             final int velocityCenter) {
+    private List<Integer> applyVelocityDepth(
+            final List<Integer> rawVelocities,
+            final double velocityDepth,
+            final int velocityCenter) {
         if (rawVelocities.isEmpty()) {
             return List.of();
         }
-        final double depthScale = Math.max(MIN_VELOCITY_DEPTH, Math.min(MAX_VELOCITY_DEPTH, velocityDepth));
+        final double depthScale =
+                Math.max(MIN_VELOCITY_DEPTH, Math.min(MAX_VELOCITY_DEPTH, velocityDepth));
         final int center = Math.max(1, Math.min(127, velocityCenter));
         final List<Integer> shaped = new ArrayList<>(rawVelocities.size());
         for (final int raw : rawVelocities) {
@@ -1652,15 +1912,16 @@ public final class NestedRhythmGenerator {
 
     private int baseVelocityFor(final NestedRhythmPattern.Role role, final int order) {
         final int contour = contourAt(order);
-        final int peak = switch (role) {
-            case PRIMARY_ANCHOR -> 118;
-            case SECONDARY_ANCHOR -> 110;
-            case TUPLET_LEAD -> 114;
-            case TUPLET_INTERIOR -> 100;
-            case RATCHET_LEAD -> 116;
-            case RATCHET_INTERIOR -> 98;
-            case PICKUP -> 104;
-        };
+        final int peak =
+                switch (role) {
+                    case PRIMARY_ANCHOR -> 118;
+                    case SECONDARY_ANCHOR -> 110;
+                    case TUPLET_LEAD -> 114;
+                    case TUPLET_INTERIOR -> 100;
+                    case RATCHET_LEAD -> 116;
+                    case RATCHET_INTERIOR -> 98;
+                    case PICKUP -> 104;
+                };
         return Math.max(1, Math.min(127, peak + contour));
     }
 
@@ -1701,84 +1962,220 @@ public final class NestedRhythmGenerator {
         KEEP_WEAK
     }
 
-    public record Settings(int midiNote, double density, int tupletDivisions, int tupletTargets,
-                           int tupletTargetPhase, int ratchetDivisions, int ratchetTargets, int ratchetTargetPhase,
-                           double velocityDepth, int velocityCenter, int velocityRotation, int rhythmRotation,
-                           double cluster, int meterNumerator, int meterDenominator, int barCount, double rate,
-                           RatchetTargetMode ratchetTargetMode, DensityDirection densityDirection) {
-        public Settings(final int midiNote, final double density, final int tupletDivisions, final int tupletTargets,
-                        final int tupletTargetPhase, final int ratchetDivisions, final int ratchetTargets,
-                        final int ratchetTargetPhase, final double velocityDepth, final int velocityCenter,
-                        final int velocityRotation, final int rhythmRotation, final double cluster,
-                        final int meterNumerator, final int meterDenominator, final int barCount,
-                        final double rate) {
-            this(midiNote, density, tupletDivisions, tupletTargets, tupletTargetPhase,
-                    ratchetDivisions, ratchetTargets, ratchetTargetPhase,
-                    velocityDepth, velocityCenter, velocityRotation, rhythmRotation, cluster, meterNumerator,
-                    meterDenominator, barCount, rate, RatchetTargetMode.DEFAULT, DensityDirection.KEEP_STRONG);
+    public record Settings(
+            int midiNote,
+            double density,
+            int tupletDivisions,
+            int tupletTargets,
+            int tupletTargetPhase,
+            int ratchetDivisions,
+            int ratchetTargets,
+            int ratchetTargetPhase,
+            double velocityDepth,
+            int velocityCenter,
+            int velocityRotation,
+            int rhythmRotation,
+            double cluster,
+            int meterNumerator,
+            int meterDenominator,
+            int barCount,
+            double rate,
+            RatchetTargetMode ratchetTargetMode,
+            DensityDirection densityDirection) {
+        public Settings(
+                final int midiNote,
+                final double density,
+                final int tupletDivisions,
+                final int tupletTargets,
+                final int tupletTargetPhase,
+                final int ratchetDivisions,
+                final int ratchetTargets,
+                final int ratchetTargetPhase,
+                final double velocityDepth,
+                final int velocityCenter,
+                final int velocityRotation,
+                final int rhythmRotation,
+                final double cluster,
+                final int meterNumerator,
+                final int meterDenominator,
+                final int barCount,
+                final double rate) {
+            this(
+                    midiNote,
+                    density,
+                    tupletDivisions,
+                    tupletTargets,
+                    tupletTargetPhase,
+                    ratchetDivisions,
+                    ratchetTargets,
+                    ratchetTargetPhase,
+                    velocityDepth,
+                    velocityCenter,
+                    velocityRotation,
+                    rhythmRotation,
+                    cluster,
+                    meterNumerator,
+                    meterDenominator,
+                    barCount,
+                    rate,
+                    RatchetTargetMode.DEFAULT,
+                    DensityDirection.KEEP_STRONG);
         }
 
-        public Settings(final int midiNote, final double density, final int tupletDivisions, final int tupletTargets,
-                        final int tupletTargetPhase, final int ratchetDivisions, final int ratchetTargets,
-                        final int ratchetTargetPhase, final double velocityDepth, final int velocityCenter,
-                        final int velocityRotation, final int rhythmRotation, final double cluster,
-                        final int meterNumerator, final int meterDenominator, final int barCount,
-                        final double rate, final RatchetTargetMode ratchetTargetMode) {
-            this(midiNote, density, tupletDivisions, tupletTargets, tupletTargetPhase,
-                    ratchetDivisions, ratchetTargets, ratchetTargetPhase,
-                    velocityDepth, velocityCenter, velocityRotation, rhythmRotation, cluster, meterNumerator,
-                    meterDenominator, barCount, rate, ratchetTargetMode, DensityDirection.KEEP_STRONG);
+        public Settings(
+                final int midiNote,
+                final double density,
+                final int tupletDivisions,
+                final int tupletTargets,
+                final int tupletTargetPhase,
+                final int ratchetDivisions,
+                final int ratchetTargets,
+                final int ratchetTargetPhase,
+                final double velocityDepth,
+                final int velocityCenter,
+                final int velocityRotation,
+                final int rhythmRotation,
+                final double cluster,
+                final int meterNumerator,
+                final int meterDenominator,
+                final int barCount,
+                final double rate,
+                final RatchetTargetMode ratchetTargetMode) {
+            this(
+                    midiNote,
+                    density,
+                    tupletDivisions,
+                    tupletTargets,
+                    tupletTargetPhase,
+                    ratchetDivisions,
+                    ratchetTargets,
+                    ratchetTargetPhase,
+                    velocityDepth,
+                    velocityCenter,
+                    velocityRotation,
+                    rhythmRotation,
+                    cluster,
+                    meterNumerator,
+                    meterDenominator,
+                    barCount,
+                    rate,
+                    ratchetTargetMode,
+                    DensityDirection.KEEP_STRONG);
         }
 
-        public Settings(final int midiNote, final double density, final int tupletDivisions, final int tupletTargets,
-                        final int tupletTargetPhase, final int ratchetDivisions, final int ratchetTargets,
-                        final int ratchetTargetPhase, final double velocityDepth, final int velocityCenter,
-                        final int velocityRotation, final int rhythmRotation, final double cluster,
-                        final int meterNumerator, final int meterDenominator, final int barCount) {
-            this(midiNote, density, tupletDivisions, tupletTargets, tupletTargetPhase,
-                    ratchetDivisions, ratchetTargets, ratchetTargetPhase,
-                    velocityDepth, velocityCenter, velocityRotation, rhythmRotation, cluster, meterNumerator,
-                    meterDenominator, barCount, 1.0, RatchetTargetMode.DEFAULT, DensityDirection.KEEP_STRONG);
+        public Settings(
+                final int midiNote,
+                final double density,
+                final int tupletDivisions,
+                final int tupletTargets,
+                final int tupletTargetPhase,
+                final int ratchetDivisions,
+                final int ratchetTargets,
+                final int ratchetTargetPhase,
+                final double velocityDepth,
+                final int velocityCenter,
+                final int velocityRotation,
+                final int rhythmRotation,
+                final double cluster,
+                final int meterNumerator,
+                final int meterDenominator,
+                final int barCount) {
+            this(
+                    midiNote,
+                    density,
+                    tupletDivisions,
+                    tupletTargets,
+                    tupletTargetPhase,
+                    ratchetDivisions,
+                    ratchetTargets,
+                    ratchetTargetPhase,
+                    velocityDepth,
+                    velocityCenter,
+                    velocityRotation,
+                    rhythmRotation,
+                    cluster,
+                    meterNumerator,
+                    meterDenominator,
+                    barCount,
+                    1.0,
+                    RatchetTargetMode.DEFAULT,
+                    DensityDirection.KEEP_STRONG);
         }
 
-        public Settings(final int midiNote, final double density, final int tupletDivisions, final int tupletTargets,
-                        final int tupletTargetPhase, final int ratchetDivisions, final int ratchetTargets,
-                        final int ratchetTargetPhase, final double velocityDepth, final int velocityCenter,
-                        final int velocityRotation, final int rhythmRotation, final int meterNumerator,
-                        final int meterDenominator, final int barCount) {
-            this(midiNote, density, tupletDivisions, tupletTargets, tupletTargetPhase,
-                    ratchetDivisions, ratchetTargets, ratchetTargetPhase,
-                    velocityDepth, velocityCenter, velocityRotation, rhythmRotation, 0.0, meterNumerator,
-                    meterDenominator, barCount);
+        public Settings(
+                final int midiNote,
+                final double density,
+                final int tupletDivisions,
+                final int tupletTargets,
+                final int tupletTargetPhase,
+                final int ratchetDivisions,
+                final int ratchetTargets,
+                final int ratchetTargetPhase,
+                final double velocityDepth,
+                final int velocityCenter,
+                final int velocityRotation,
+                final int rhythmRotation,
+                final int meterNumerator,
+                final int meterDenominator,
+                final int barCount) {
+            this(
+                    midiNote,
+                    density,
+                    tupletDivisions,
+                    tupletTargets,
+                    tupletTargetPhase,
+                    ratchetDivisions,
+                    ratchetTargets,
+                    ratchetTargetPhase,
+                    velocityDepth,
+                    velocityCenter,
+                    velocityRotation,
+                    rhythmRotation,
+                    0.0,
+                    meterNumerator,
+                    meterDenominator,
+                    barCount);
         }
 
         public Settings normalized() {
             final int normalizedBarCount = Math.max(1, Math.min(MAX_BARS, barCount));
             final int normalizedMeterNumerator = normalizeNumerator(meterNumerator);
             final int normalizedMeterDenominator = normalizeDenominator(meterDenominator);
-            final int barFineSteps = fineStepsPerBar(normalizedMeterNumerator, normalizedMeterDenominator);
+            final int barFineSteps =
+                    fineStepsPerBar(normalizedMeterNumerator, normalizedMeterDenominator);
             final int totalFineSteps = barFineSteps * normalizedBarCount;
             final double normalizedRate = normalizeRate(rate);
-            final int totalHalfBars = totalTupletSpans(totalFineSteps, tupletSpanFineSteps(
-                    normalizedMeterNumerator, normalizedMeterDenominator, barFineSteps, normalizedRate));
+            final int totalHalfBars =
+                    totalTupletSpans(
+                            totalFineSteps,
+                            tupletSpanFineSteps(
+                                    normalizedMeterNumerator,
+                                    normalizedMeterDenominator,
+                                    barFineSteps,
+                                    normalizedRate));
             final int normalizedTupletTargets = Math.max(0, Math.min(totalHalfBars, tupletTargets));
-            final int normalizedTupletDivisions = normalizeCount(tupletDivisions, supportedTupletDivisions(
-                    normalizedMeterNumerator,
-                    normalizedMeterDenominator,
-                    normalizedRate));
+            final int normalizedTupletDivisions =
+                    normalizeCount(
+                            tupletDivisions,
+                            supportedTupletDivisions(
+                                    normalizedMeterNumerator,
+                                    normalizedMeterDenominator,
+                                    normalizedRate));
             final int normalizedTupletTargetPhase = Math.floorMod(tupletTargetPhase, totalHalfBars);
             final double normalizedCluster = Math.max(0.0, Math.min(1.0, cluster));
-            final int normalizedRatchetDivisions = normalizeCount(ratchetDivisions, SUPPORTED_RATCHET_DIVISIONS);
-            final int ratchetParentRegionCount = ratchetParentRegionCount(
-                    normalizedMeterNumerator,
-                    normalizedMeterDenominator,
-                    normalizedBarCount,
-                    normalizedTupletDivisions,
-                    normalizedTupletTargets,
-                    normalizedTupletTargetPhase,
-                    normalizedCluster,
-                    normalizedRate,
-                    normalizedRatchetDivisions);
+            final int normalizedRatchetDivisions =
+                    normalizeCount(ratchetDivisions, SUPPORTED_RATCHET_DIVISIONS);
+            final int ratchetParentRegionCount =
+                    ratchetParentRegionCount(
+                            normalizedMeterNumerator,
+                            normalizedMeterDenominator,
+                            normalizedBarCount,
+                            normalizedTupletDivisions,
+                            normalizedTupletTargets,
+                            normalizedTupletTargetPhase,
+                            normalizedCluster,
+                            normalizedRate,
+                            normalizedRatchetDivisions);
             return new Settings(
                     Math.max(0, Math.min(127, midiNote)),
                     Math.max(0.0, Math.min(1.0, density)),
@@ -1829,7 +2226,8 @@ public final class NestedRhythmGenerator {
         double bestDistance = Double.MAX_VALUE;
         for (final double supported : SUPPORTED_RATES) {
             final double distance = Math.abs(supported - rate);
-            if (distance < bestDistance || (Math.abs(distance - bestDistance) <= 0.0001 && supported < best)) {
+            if (distance < bestDistance
+                    || (Math.abs(distance - bestDistance) <= 0.0001 && supported < best)) {
                 bestDistance = distance;
                 best = supported;
             }
@@ -1866,22 +2264,38 @@ public final class NestedRhythmGenerator {
         return values;
     }
 
-    private record PulseSpec(int fineStart, NestedRhythmPattern.Role role, GestureFamily gestureFamily,
-                             boolean required, int priority, double indispensability,
-                             int subdivisionIndex, int subdivisionCount,
-                             int contourIndex, int contourCount, int localStepFineSteps) {
+    private record PulseSpec(
+            int fineStart,
+            NestedRhythmPattern.Role role,
+            GestureFamily gestureFamily,
+            boolean required,
+            int priority,
+            double indispensability,
+            int subdivisionIndex,
+            int subdivisionCount,
+            int contourIndex,
+            int contourCount,
+            int localStepFineSteps) {
         private PulseSpec withIndispensability(final double value) {
-            return new PulseSpec(fineStart, role, gestureFamily, required, priority,
-                    Math.max(0.0, Math.min(1.0, value)), subdivisionIndex, subdivisionCount,
-                    contourIndex, contourCount, localStepFineSteps);
+            return new PulseSpec(
+                    fineStart,
+                    role,
+                    gestureFamily,
+                    required,
+                    priority,
+                    Math.max(0.0, Math.min(1.0, value)),
+                    subdivisionIndex,
+                    subdivisionCount,
+                    contourIndex,
+                    contourCount,
+                    localStepFineSteps);
         }
     }
 
-    private record RatchetTargetRegion(int start, int length, GestureFamily gestureFamily, double indispensability) {
-    }
+    private record RatchetTargetRegion(
+            int start, int length, GestureFamily gestureFamily, double indispensability) {}
 
-    private record PulsePair(PulseSpec left, PulseSpec right) {
-    }
+    private record PulsePair(PulseSpec left, PulseSpec right) {}
 
     private enum GestureFamily {
         ANCHOR,

@@ -3,7 +3,7 @@ package com.oikoaudio.fire.chordstep;
 import com.bitwig.extensions.framework.MusicalScale;
 import com.oikoaudio.fire.note.ChordBank;
 import com.oikoaudio.fire.note.NoteGridLayout;
-
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * Owns the selected chord source, preset page, octave, interpretation, and builder-note selection.
  */
-public final class ChordStepChordSelection {
+final class ChordStepChordSelection {
     public static final int BUILDER_FAMILY_INDEX = 0;
     public static final String BUILDER_FAMILY_LABEL = "Builder";
     private static final int MIN_CHORD_OCTAVE_OFFSET = -3;
@@ -31,6 +31,7 @@ public final class ChordStepChordSelection {
 
     private final ChordBank chordBank = new ChordBank();
     private final Set<Integer> builderSelectedNotes = new HashSet<>();
+    private final Set<Integer> selectedPresetSlots = new HashSet<>(Set.of(0));
 
     private ChordInterpretation interpretation = ChordInterpretation.AS_IS;
     private int selectedFamily = BUILDER_FAMILY_INDEX;
@@ -43,7 +44,8 @@ public final class ChordStepChordSelection {
     }
 
     public boolean hasSlot(final int sourcePadIndex) {
-        return !isBuilderFamily() && chordBank.hasSlot(currentPresetFamilyIndex(), page, sourcePadIndex);
+        return !isBuilderFamily()
+                && chordBank.hasSlot(currentPresetFamilyIndex(), page, sourcePadIndex);
     }
 
     public ChordBank.Slot slot(final int sourcePadIndex) {
@@ -51,7 +53,25 @@ public final class ChordStepChordSelection {
     }
 
     public void selectSlot(final int sourcePadIndex) {
-        selectedSlot = sourcePadIndex;
+        selectSlots(Set.of(sourcePadIndex), sourcePadIndex);
+    }
+
+    public void selectSlots(
+            final Collection<Integer> sourcePadIndices, final int primarySourcePadIndex) {
+        selectedPresetSlots.clear();
+        sourcePadIndices.stream().filter(this::hasSlot).forEach(selectedPresetSlots::add);
+        if (selectedPresetSlots.isEmpty()) {
+            ensureSelectedSlotValid();
+            return;
+        }
+        selectedSlot =
+                selectedPresetSlots.contains(primarySourcePadIndex)
+                        ? primarySourcePadIndex
+                        : selectedPresetSlots.stream().min(Integer::compareTo).orElse(0);
+    }
+
+    public boolean isSlotSelected(final int sourcePadIndex) {
+        return !isBuilderFamily() && selectedPresetSlots.contains(sourcePadIndex);
     }
 
     public int selectedSlot() {
@@ -83,6 +103,7 @@ public final class ChordStepChordSelection {
             return false;
         }
         page = nextPage;
+        resetPresetSlotSelection();
         ensureSelectedSlotValid();
         return true;
     }
@@ -97,7 +118,7 @@ public final class ChordStepChordSelection {
         }
         selectedFamily = nextFamily;
         page = 0;
-        selectedSlot = 0;
+        resetPresetSlotSelection();
         ensureSelectedSlotValid();
         return true;
     }
@@ -106,8 +127,10 @@ public final class ChordStepChordSelection {
         if (amount == 0) {
             return false;
         }
-        final int nextOffset = Math.max(MIN_CHORD_OCTAVE_OFFSET,
-                Math.min(MAX_CHORD_OCTAVE_OFFSET, octaveOffset + amount));
+        final int nextOffset =
+                Math.max(
+                        MIN_CHORD_OCTAVE_OFFSET,
+                        Math.min(MAX_CHORD_OCTAVE_OFFSET, octaveOffset + amount));
         if (nextOffset == octaveOffset) {
             return false;
         }
@@ -128,9 +151,10 @@ public final class ChordStepChordSelection {
     }
 
     public void toggleInterpretation() {
-        interpretation = interpretation == ChordInterpretation.AS_IS
-                ? ChordInterpretation.IN_SCALE
-                : ChordInterpretation.AS_IS;
+        interpretation =
+                interpretation == ChordInterpretation.AS_IS
+                        ? ChordInterpretation.IN_SCALE
+                        : ChordInterpretation.AS_IS;
     }
 
     public void resetInterpretation() {
@@ -154,10 +178,12 @@ public final class ChordStepChordSelection {
     }
 
     public String interpretationSuffix(final int rootNote) {
-        return "F%d %s K%s O%s".formatted(selectedFamily + 1,
-                interpretation.displayName,
-                NoteGridLayout.noteName(rootNote),
-                formatSignedValue(octaveOffset));
+        return "F%d %s K%s O%s"
+                .formatted(
+                        selectedFamily + 1,
+                        interpretation.displayName,
+                        NoteGridLayout.noteName(rootNote),
+                        formatSignedValue(octaveOffset));
     }
 
     public int[] renderSelectedChord(final MusicalScale scale, final int rootNote) {
@@ -165,17 +191,20 @@ public final class ChordStepChordSelection {
             return renderBuilderChord();
         }
         ensureSelectedSlotValid();
-        if (interpretation == ChordInterpretation.IN_SCALE) {
-            return transpose(chordBank.renderCast(currentPresetFamilyIndex(), page, selectedSlot, scale,
-                    Math.floorMod(rootNote, 12)), octaveOffset * 12);
-        }
-        return chordBank.renderAsIs(currentPresetFamilyIndex(), page, selectedSlot, chordRootMidi(rootNote));
+        return selectedPresetSlots.stream()
+                .sorted()
+                .flatMapToInt(slot -> Arrays.stream(renderPresetSlot(slot, scale, rootNote)))
+                .distinct()
+                .sorted()
+                .toArray();
     }
 
     public void resetToBuilder() {
         selectedFamily = BUILDER_FAMILY_INDEX;
         page = 0;
         selectedSlot = 0;
+        selectedPresetSlots.clear();
+        selectedPresetSlots.add(0);
         builderSelectedNotes.clear();
     }
 
@@ -220,15 +249,27 @@ public final class ChordStepChordSelection {
                 : oledFamilyLabel(chordBank.family(currentPresetFamilyIndex()).family());
     }
 
+    public String familyDisplayLabel() {
+        if (pageCount() <= 1) {
+            return familyLabel();
+        }
+        return "%s %d/%d".formatted(pagedOledFamilyLabel(rawFamilyName()), page + 1, pageCount());
+    }
+
     public String chordName() {
         if (isBuilderFamily()) {
             return builderSelectedNotes.isEmpty() ? "Empty" : builderSelectionSummary();
+        }
+        if (selectedPresetSlots.size() > 1) {
+            return selectedPresetSlots.size() + " Chords";
         }
         return oledChordName(currentChordSlot());
     }
 
     public String rawFamilyName() {
-        return isBuilderFamily() ? BUILDER_FAMILY_LABEL : chordBank.family(currentPresetFamilyIndex()).family();
+        return isBuilderFamily()
+                ? BUILDER_FAMILY_LABEL
+                : chordBank.family(currentPresetFamilyIndex()).family();
     }
 
     public int currentPresetFamilyIndex() {
@@ -245,7 +286,10 @@ public final class ChordStepChordSelection {
             selectedSlot = 0;
             return;
         }
-        if (chordBank.hasSlot(currentPresetFamilyIndex(), page, selectedSlot)) {
+        selectedPresetSlots.removeIf(
+                slot -> !chordBank.hasSlot(currentPresetFamilyIndex(), page, slot));
+        if (chordBank.hasSlot(currentPresetFamilyIndex(), page, selectedSlot)
+                && !selectedPresetSlots.isEmpty()) {
             return;
         }
         final int pageStart = page * ChordBank.PAGE_SIZE;
@@ -261,6 +305,8 @@ public final class ChordStepChordSelection {
         if (selectedSlot >= ChordBank.PAGE_SIZE) {
             selectedSlot = 0;
         }
+        selectedPresetSlots.clear();
+        selectedPresetSlots.add(selectedSlot);
     }
 
     private ChordBank.Slot currentChordSlot() {
@@ -272,20 +318,37 @@ public final class ChordStepChordSelection {
     }
 
     private int[] renderBuilderChord() {
-        return builderSelectedNotes.stream()
-                .sorted()
-                .mapToInt(Integer::intValue)
-                .toArray();
+        return builderSelectedNotes.stream().sorted().mapToInt(Integer::intValue).toArray();
+    }
+
+    private int[] renderPresetSlot(final int slot, final MusicalScale scale, final int rootNote) {
+        if (interpretation == ChordInterpretation.IN_SCALE) {
+            return transpose(
+                    chordBank.renderCast(
+                            currentPresetFamilyIndex(),
+                            page,
+                            slot,
+                            scale,
+                            Math.floorMod(rootNote, 12)),
+                    octaveOffset * 12);
+        }
+        return chordBank.renderAsIs(
+                currentPresetFamilyIndex(), page, slot, chordRootMidi(rootNote));
+    }
+
+    private void resetPresetSlotSelection() {
+        selectedSlot = 0;
+        selectedPresetSlots.clear();
+        selectedPresetSlots.add(0);
     }
 
     private String builderSelectionSummary() {
-        final List<Integer> renderedNotes = builderSelectedNotes.stream()
-                .sorted()
-                .toList();
-        final List<String> noteNames = renderedNotes.stream()
-                .limit(4)
-                .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
-                .toList();
+        final List<Integer> renderedNotes = builderSelectedNotes.stream().sorted().toList();
+        final List<String> noteNames =
+                renderedNotes.stream()
+                        .limit(4)
+                        .map(midiNote -> NoteGridLayout.noteName(Math.floorMod(midiNote, 12)))
+                        .toList();
         final String suffix = renderedNotes.size() > 4 ? " +" + (renderedNotes.size() - 4) : "";
         return "%s%s".formatted(String.join(" ", noteNames), suffix).trim();
     }
@@ -335,6 +398,20 @@ public final class ChordStepChordSelection {
             case "Dorian Lift" -> "DorLift";
             case "Root Drone" -> "RootDrn";
             default -> family;
+        };
+    }
+
+    private static String pagedOledFamilyLabel(final String family) {
+        return switch (family) {
+            case "Audible" -> "Audibl";
+            case "Barker" -> "Barker";
+            case "Sus Motion" -> "SusMot";
+            case "Quartal" -> "Quartl";
+            case "Cluster" -> "Clustr";
+            case "Minor Drift" -> "MinDrf";
+            case "Dorian Lift" -> "DorLft";
+            case "Root Drone" -> "RtDrn";
+            default -> oledFamilyLabel(family);
         };
     }
 

@@ -1,8 +1,5 @@
 package com.oikoaudio.fire.sequence;
 
-import java.util.ArrayList;
-import java.util.List;
-
 class EuclidUtil {
     static boolean[] build(int length, int pulses) {
         if (length <= 0) {

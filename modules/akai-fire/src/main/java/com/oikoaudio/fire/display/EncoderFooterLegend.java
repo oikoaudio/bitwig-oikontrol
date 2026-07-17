@@ -6,18 +6,15 @@ public final class EncoderFooterLegend {
     private static final int[] COLUMN_STARTS = {0, 5, 10, 15};
     private static final int WIDTH = 20;
 
-    private EncoderFooterLegend() {
-    }
+    private EncoderFooterLegend() {}
 
-    public static String of(final String encoder1,
-                            final String encoder2,
-                            final String encoder3,
-                            final String encoder4) {
+    public static String of(
+            final String encoder1,
+            final String encoder2,
+            final String encoder3,
+            final String encoder4) {
         final String[] labels = {
-                normalize(encoder1),
-                normalize(encoder2),
-                normalize(encoder3),
-                normalize(encoder4)
+            normalize(encoder1), normalize(encoder2), normalize(encoder3), normalize(encoder4)
         };
         final StringBuilder legend = new StringBuilder(" ".repeat(WIDTH));
         for (int slot = 0; slot < labels.length; slot++) {
@@ -36,27 +33,32 @@ public final class EncoderFooterLegend {
         for (int i = 0; i < labels.length && i < lines.length; i++) {
             labels[i] = labelFromInfoLine(lines[i]);
         }
-        if ("Volume".equals(labels[0]) && "Pan".equals(labels[1])
-                && "Send 1".equals(labels[2]) && "Send 2".equals(labels[3])) {
+        if ("Volume".equals(labels[0])
+                && "Pan".equals(labels[1])
+                && "Send 1".equals(labels[2])
+                && "Send 2".equals(labels[3])) {
             return MIXER;
         }
         return of(labels[0], labels[1], labels[2], labels[3]);
     }
 
-    public static String remoteControls(final String scopePrefix,
-                                        final int firstParameterNumber,
-                                        final String... parameterNames) {
+    public static String remoteControls(
+            final String scopePrefix,
+            final int firstParameterNumber,
+            final String... parameterNames) {
         final String prefix = normalizeScopePrefix(scopePrefix);
-        return of(remoteLabel(prefix, firstParameterNumber, parameterNames, 0),
+        return of(
+                remoteLabel(prefix, firstParameterNumber, parameterNames, 0),
                 remoteLabel(prefix, firstParameterNumber, parameterNames, 1),
                 remoteLabel(prefix, firstParameterNumber, parameterNames, 2),
                 remoteLabel(prefix, firstParameterNumber, parameterNames, 3));
     }
 
-    public static String remoteModeInfo(final String scopeLabel,
-                                        final String scopePrefix,
-                                        final int firstParameterNumber,
-                                        final String... parameterNames) {
+    public static String remoteModeInfo(
+            final String scopeLabel,
+            final String scopePrefix,
+            final int firstParameterNumber,
+            final String... parameterNames) {
         final String prefix = normalizeScopePrefix(scopePrefix);
         final StringBuilder info = new StringBuilder(normalizeScopeLabel(scopeLabel));
         for (int slot = 0; slot < 4; slot++) {
@@ -86,20 +88,24 @@ public final class EncoderFooterLegend {
         return primary.isBlank() ? "--" : primary;
     }
 
-    private static String remoteLabel(final String scopePrefix,
-                                      final int firstParameterNumber,
-                                      final String[] parameterNames,
-                                      final int slot) {
+    private static String remoteLabel(
+            final String scopePrefix,
+            final int firstParameterNumber,
+            final String[] parameterNames,
+            final int slot) {
         final String name = parameterName(parameterNames, slot);
         return isUsefulRemoteName(name) ? name : scopePrefix + (firstParameterNumber + slot);
     }
 
-    private static String remoteDetailLabel(final String scopePrefix,
-                                            final int firstParameterNumber,
-                                            final String[] parameterNames,
-                                            final int slot) {
+    private static String remoteDetailLabel(
+            final String scopePrefix,
+            final int firstParameterNumber,
+            final String[] parameterNames,
+            final int slot) {
         final String name = parameterName(parameterNames, slot);
-        return isUsefulRemoteName(name) ? name : scopePrefix + (firstParameterNumber + slot) + " Remote";
+        return isUsefulRemoteName(name)
+                ? name
+                : scopePrefix + (firstParameterNumber + slot) + " Remote";
     }
 
     private static String parameterName(final String[] parameterNames, final int slot) {

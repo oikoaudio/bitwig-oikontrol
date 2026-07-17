@@ -1,14 +1,11 @@
 package com.oikoaudio.fire.control;
 
-/**
- * Converts Bitwig relative adjustment amounts into signed logical encoder units.
- */
+/** Converts Bitwig relative adjustment amounts into signed logical encoder units. */
 public final class RelativeEncoderMagnitude {
     private static final double MAX_RELATIVE_SPEED = 63.0;
     private static final int STANDARD_FAST_TURN_LIMIT = 8;
 
-    private RelativeEncoderMagnitude() {
-    }
+    private RelativeEncoderMagnitude() {}
 
     public static int toSignedUnits(final double adjustment) {
         if (adjustment == 0.0) {

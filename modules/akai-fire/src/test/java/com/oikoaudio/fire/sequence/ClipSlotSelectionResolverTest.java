@@ -1,16 +1,16 @@
 package com.oikoaudio.fire.sequence;
 
-import com.bitwig.extension.controller.api.ClipLauncherSlot;
-import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
-import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
+import com.bitwig.extension.controller.api.ClipLauncherSlotBank;
+import com.oikoaudio.fire.testutil.BitwigApiValueStubs.BooleanValueStub;
+import org.junit.jupiter.api.Test;
 
 class ClipSlotSelectionResolverTest {
 
@@ -63,10 +63,11 @@ class ClipSlotSelectionResolverTest {
         verify(slot, never()).select();
     }
 
-    private static ClipLauncherSlot slot(final boolean playing,
-                                         final boolean recording,
-                                         final boolean selected,
-                                         final boolean existsValue) {
+    private static ClipLauncherSlot slot(
+            final boolean playing,
+            final boolean recording,
+            final boolean selected,
+            final boolean existsValue) {
         final ClipLauncherSlot slot = mock(ClipLauncherSlot.class);
         when(slot.isPlaying()).thenReturn(new BooleanValueStub(playing).value());
         when(slot.isRecording()).thenReturn(new BooleanValueStub(recording).value());

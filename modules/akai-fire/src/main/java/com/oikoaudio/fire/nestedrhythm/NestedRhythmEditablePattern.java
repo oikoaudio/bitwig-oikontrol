@@ -10,9 +10,10 @@ final class NestedRhythmEditablePattern {
         return pulses;
     }
 
-    void applyGeneratedPattern(final NestedRhythmPattern pattern,
-                               final NestedRhythmExpressionSettings settings,
-                               final int totalFineStepCount) {
+    void applyGeneratedPattern(
+            final NestedRhythmPattern pattern,
+            final NestedRhythmExpressionSettings settings,
+            final int totalFineStepCount) {
         final List<NestedRhythmEditablePulse> previousPulses = List.copyOf(pulses);
         pulses.clear();
         for (final NestedRhythmPattern.PulseEvent event : pattern.events()) {
@@ -36,7 +37,8 @@ final class NestedRhythmEditablePattern {
         }
     }
 
-    int findSelectedPulseIndex(final int previousSelectionFineStart, final int previousSelectedPulseIndex) {
+    int findSelectedPulseIndex(
+            final int previousSelectionFineStart, final int previousSelectedPulseIndex) {
         if (pulses.isEmpty()) {
             return -1;
         }
@@ -55,19 +57,22 @@ final class NestedRhythmEditablePattern {
         return bestIndex;
     }
 
-    private NestedRhythmEditablePulse restoreLocalEdits(final NestedRhythmEditablePulse current,
-                                                       final List<NestedRhythmEditablePulse> previousPulses,
-                                                       final int totalFineStepCount) {
-        final NestedRhythmEditablePulse match = findOverlayMatch(current, previousPulses, totalFineStepCount);
+    private NestedRhythmEditablePulse restoreLocalEdits(
+            final NestedRhythmEditablePulse current,
+            final List<NestedRhythmEditablePulse> previousPulses,
+            final int totalFineStepCount) {
+        final NestedRhythmEditablePulse match =
+                findOverlayMatch(current, previousPulses, totalFineStepCount);
         if (match != null) {
             current.copyLocalEditsFrom(match);
         }
         return current;
     }
 
-    private NestedRhythmEditablePulse findOverlayMatch(final NestedRhythmEditablePulse current,
-                                                      final List<NestedRhythmEditablePulse> previousPulses,
-                                                      final int totalFineStepCount) {
+    private NestedRhythmEditablePulse findOverlayMatch(
+            final NestedRhythmEditablePulse current,
+            final List<NestedRhythmEditablePulse> previousPulses,
+            final int totalFineStepCount) {
         NestedRhythmEditablePulse best = null;
         int bestScore = Integer.MAX_VALUE;
         for (final NestedRhythmEditablePulse previous : previousPulses) {
@@ -80,7 +85,8 @@ final class NestedRhythmEditablePattern {
         return bestScore <= overlayMatchTolerance(totalFineStepCount) ? best : null;
     }
 
-    private int matchScore(final NestedRhythmEditablePulse current, final NestedRhythmEditablePulse previous) {
+    private int matchScore(
+            final NestedRhythmEditablePulse current, final NestedRhythmEditablePulse previous) {
         if (current.midiNote != previous.midiNote || current.role != previous.role) {
             return Integer.MAX_VALUE;
         }

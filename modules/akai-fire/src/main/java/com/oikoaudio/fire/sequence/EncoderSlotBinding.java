@@ -6,5 +6,9 @@ import com.oikoaudio.fire.control.TouchEncoder;
 public interface EncoderSlotBinding {
     double stepSize();
 
-    void bind(StepSequencerEncoderLayer encoderLayer, Layer layer, TouchEncoder encoder, int slotIndex);
+    void bind(
+            StepSequencerEncoderLayer encoderLayer,
+            Layer layer,
+            TouchEncoder encoder,
+            int slotIndex);
 }

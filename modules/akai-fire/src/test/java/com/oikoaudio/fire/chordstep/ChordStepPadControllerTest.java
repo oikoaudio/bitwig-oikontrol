@@ -1,19 +1,18 @@
 package com.oikoaudio.fire.chordstep;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.bitwig.extension.controller.api.NoteStep;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.UnaryOperator;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.Test;
 
 class ChordStepPadControllerTest {
     private static final int CLIP_ROW_PAD_COUNT = 16;
@@ -42,6 +41,26 @@ class ChordStepPadControllerTest {
 
         assertEquals(2, host.selectedChordSlot);
         assertEquals(List.of("assign-held 99"), host.events);
+    }
+
+    @Test
+    void simultaneousPresetPadsFormAndRetainACombinedChordGrip() {
+        final FakeHost host = new FakeHost();
+        host.chordSlots.addAll(Set.of(2, 3));
+        final ChordStepPadController controller = controller(host);
+
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 2, true, 99);
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 3, true, 98);
+
+        assertEquals(Set.of(2, 3), host.selectedChordSlots);
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 2, false, 0);
+        assertTrue(host.events.stream().noneMatch("stop-audition"::equals));
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 3, false, 0);
+        assertEquals(1, host.events.stream().filter("stop-audition"::equals).count());
+        assertEquals(Set.of(2, 3), host.selectedChordSlots);
+
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 2, true, 97);
+        assertEquals(Set.of(2), host.selectedChordSlots);
     }
 
     @Test
@@ -91,6 +110,22 @@ class ChordStepPadControllerTest {
     }
 
     @Test
+    void holdingBuilderPitchesThenTappingAnOccupiedStepReplacesAndKeepsTheStep() {
+        final FakeHost host = new FakeHost();
+        host.builderFamily = true;
+        host.startedSteps.add(6);
+        final ChordStepPadController controller = controller(host);
+
+        controller.handlePadPress(CHORD_SOURCE_PAD_OFFSET + 4, true, 100);
+        controller.handlePadPress(STEP_PAD_OFFSET + 6, true, 90);
+        controller.handlePadPress(STEP_PAD_OFFSET + 6, false, 0);
+
+        assertTrue(host.events.contains("replace 6"));
+        assertTrue(host.events.stream().noneMatch(event -> event.equals("load-builder 6")));
+        assertTrue(host.events.stream().noneMatch(event -> event.equals("clear 6")));
+    }
+
+    @Test
     void heldClipRowPadsEditRecurrenceInsteadOfLaunchingClips() {
         final FakeHost host = new FakeHost();
         host.heldNotes = List.of(note(5, 8, 0b00000001));
@@ -108,11 +143,14 @@ class ChordStepPadControllerTest {
         return controller(new ChordStepPadSurface(), host);
     }
 
-    private static ChordStepPadController controller(final ChordStepPadSurface surface, final FakeHost host) {
-        return new ChordStepPadController(surface, CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, host);
+    private static ChordStepPadController controller(
+            final ChordStepPadSurface surface, final FakeHost host) {
+        return new ChordStepPadController(
+                surface, CLIP_ROW_PAD_COUNT, CHORD_SOURCE_PAD_OFFSET, STEP_PAD_OFFSET, host);
     }
 
-    private static NoteStep note(final int x, final int recurrenceLength, final int recurrenceMask) {
+    private static NoteStep note(
+            final int x, final int recurrenceLength, final int recurrenceMask) {
         final NoteStep note = mock(NoteStep.class);
         when(note.x()).thenReturn(x);
         when(note.recurrenceLength()).thenReturn(recurrenceLength);
@@ -123,10 +161,12 @@ class ChordStepPadControllerTest {
     static final class FakeHost implements ChordStepPadController.Host {
         final List<String> events = new ArrayList<>();
         private final Set<Integer> chordSlots = new HashSet<>();
+        private final Set<Integer> startedSteps = new HashSet<>();
         private List<NoteStep> heldNotes = List.of();
         private boolean builderFamily;
         private boolean builderSourceChanged = true;
         private int selectedChordSlot = -1;
+        private Set<Integer> selectedChordSlots = Set.of();
         private Set<Integer> assignedSteps = Set.of();
         private int assignedVelocity;
         private int recurrenceEdits;
@@ -147,8 +187,10 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public void selectChordSlot(final int sourcePadIndex) {
-            selectedChordSlot = sourcePadIndex;
+        public void selectChordSlots(
+                final Set<Integer> sourcePadIndexes, final int primarySourcePadIndex) {
+            selectedChordSlot = primarySourcePadIndex;
+            selectedChordSlots = Set.copyOf(sourcePadIndexes);
         }
 
         @Override
@@ -187,9 +229,16 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public boolean assignSelectedChordToSteps(final Set<Integer> stepIndexes, final int velocity) {
+        public boolean assignSelectedChordToSteps(
+                final Set<Integer> stepIndexes, final int velocity) {
             assignedSteps = Set.copyOf(stepIndexes);
             assignedVelocity = velocity;
+            return true;
+        }
+
+        @Override
+        public boolean replaceSelectedChordAtStep(final int stepIndex) {
+            events.add("replace " + stepIndex);
             return true;
         }
 
@@ -215,10 +264,12 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public void applyChordStepRecurrence(final List<NoteStep> targets,
-                                             final UnaryOperator<RecurrencePattern> updater) {
+        public void applyChordStepRecurrence(
+                final List<NoteStep> targets, final UnaryOperator<RecurrencePattern> updater) {
             recurrenceEdits++;
-            updater.apply(RecurrencePattern.of(targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
+            updater.apply(
+                    RecurrencePattern.of(
+                            targets.get(0).recurrenceLength(), targets.get(0).recurrenceMask()));
         }
 
         @Override
@@ -277,7 +328,8 @@ class ChordStepPadControllerTest {
         }
 
         @Override
-        public boolean canExtendHeldChordRange(final int anchorStepIndex, final int targetStepIndex) {
+        public boolean canExtendHeldChordRange(
+                final int anchorStepIndex, final int targetStepIndex) {
             return true;
         }
 
@@ -299,7 +351,7 @@ class ChordStepPadControllerTest {
 
         @Override
         public boolean hasStepStartNote(final int stepIndex) {
-            return false;
+            return startedSteps.contains(stepIndex);
         }
 
         @Override

@@ -1,9 +1,9 @@
 package com.oikoaudio.fire.note;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class DrumMachinePadLayoutTest {
 
@@ -15,7 +15,7 @@ class DrumMachinePadLayoutTest {
         assertEquals(37, layout.noteForPad(49));
         assertEquals(51, layout.noteForPad(63));
         assertEquals(84, layout.noteForPad(0));
-        assertArrayEquals(new int[]{36}, layout.notesForPad(48));
+        assertArrayEquals(new int[] {36}, layout.notesForPad(48));
     }
 
     @Test
@@ -38,8 +38,8 @@ class DrumMachinePadLayoutTest {
 
     @Test
     void velocityUsesLeftBlockAsSelectorsAndRemainderAsSelectedSound() {
-        final DrumMachinePadLayout layout = new DrumMachinePadLayout(36,
-                DrumMachinePadLayout.Layout.VELOCITY, 7);
+        final DrumMachinePadLayout layout =
+                new DrumMachinePadLayout(36, DrumMachinePadLayout.Layout.VELOCITY, 7);
 
         assertEquals(0, layout.selectorOffsetForPad(48));
         assertEquals(7, layout.selectorOffsetForPad(35));
@@ -50,8 +50,8 @@ class DrumMachinePadLayoutTest {
 
     @Test
     void bongosSplitsPlayableAreaAcrossSelectedSounds() {
-        final DrumMachinePadLayout layout = new DrumMachinePadLayout(36,
-                DrumMachinePadLayout.Layout.BONGOS, 7, 12);
+        final DrumMachinePadLayout layout =
+                new DrumMachinePadLayout(36, DrumMachinePadLayout.Layout.BONGOS, 7, 12);
 
         assertEquals(-1, layout.noteForPad(52));
         assertEquals(-1, layout.noteForPad(58));

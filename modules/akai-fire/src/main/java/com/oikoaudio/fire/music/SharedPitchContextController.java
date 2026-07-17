@@ -9,14 +9,16 @@ public final class SharedPitchContextController {
     private final SharedMusicalContext context;
     private final MusicalScaleLibrary scaleLibrary;
 
-    public SharedPitchContextController(final SharedMusicalContext context, final MusicalScaleLibrary scaleLibrary) {
+    public SharedPitchContextController(
+            final SharedMusicalContext context, final MusicalScaleLibrary scaleLibrary) {
         this.context = context;
         this.scaleLibrary = scaleLibrary;
     }
 
-    public void initializeFromPreferences(final String defaultScalePreference,
-                                          final int defaultRootKey,
-                                          final int defaultOctave) {
+    public void initializeFromPreferences(
+            final String defaultScalePreference,
+            final int defaultRootKey,
+            final int defaultOctave) {
         setScaleIndex(resolveDefaultScaleIndex(defaultScalePreference));
         setRootNote(defaultRootKey);
         setOctave(defaultOctave);
@@ -168,9 +170,12 @@ public final class SharedPitchContextController {
         return switch (defaultScalePreference) {
             case FireControlPreferences.DEFAULT_SCALE_MAJOR -> findScaleIndex("Major", 1);
             case FireControlPreferences.DEFAULT_SCALE_MINOR -> findScaleIndex("Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR -> findScaleIndex("Harmonic Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR -> findScaleIndex("Jazz Minor", 2);
-            case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC -> findScaleIndex("Minor Pentatonic", 2);
+            case FireControlPreferences.DEFAULT_SCALE_HARMONIC_MINOR ->
+                    findScaleIndex("Harmonic Minor", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MELODIC_MINOR ->
+                    findScaleIndex("Jazz Minor", 2);
+            case FireControlPreferences.DEFAULT_SCALE_MINOR_PENTATONIC ->
+                    findScaleIndex("Minor Pentatonic", 2);
             case FireControlPreferences.DEFAULT_SCALE_DORIAN -> findScaleIndex("Dorian", 2);
             case FireControlPreferences.DEFAULT_SCALE_MIXOLYDIAN -> findScaleIndex("Mixolydian", 1);
             default -> findScaleIndex("Major", 1);

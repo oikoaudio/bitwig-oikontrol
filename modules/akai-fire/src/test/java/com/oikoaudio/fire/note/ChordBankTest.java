@@ -1,13 +1,13 @@
 package com.oikoaudio.fire.note;
 
-import com.bitwig.extensions.framework.MusicalScaleLibrary;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.bitwig.extensions.framework.MusicalScaleLibrary;
+import org.junit.jupiter.api.Test;
 
 class ChordBankTest {
 
@@ -105,7 +105,13 @@ class ChordBankTest {
         final ChordBank bank = new ChordBank();
         final ChordBank.Slot slot = bank.slot(2, 0, 0);
         final int[] asIs = bank.renderAsIs(2, 0, 0, 48);
-        final int[] cast = bank.renderCast(2, 0, 0, MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"), 0);
+        final int[] cast =
+                bank.renderCast(
+                        2,
+                        0,
+                        0,
+                        MusicalScaleLibrary.getInstance().getMusicalScale("Ionan (Major)"),
+                        0);
 
         assertEquals(asIs.length, cast.length);
         assertTrue(java.util.Arrays.mismatch(asIs, cast) >= 0);

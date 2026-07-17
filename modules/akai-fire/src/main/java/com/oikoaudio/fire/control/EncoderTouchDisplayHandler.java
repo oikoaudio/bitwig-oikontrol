@@ -1,8 +1,6 @@
 package com.oikoaudio.fire.control;
 
-/**
- * Shared touch display orchestration for encoder interactions.
- */
+/** Shared touch display orchestration for encoder interactions. */
 public final class EncoderTouchDisplayHandler {
     private final Runnable clearDisplay;
 

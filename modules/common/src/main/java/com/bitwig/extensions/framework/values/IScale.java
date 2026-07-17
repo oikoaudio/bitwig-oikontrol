@@ -2,13 +2,13 @@ package com.bitwig.extensions.framework.values;
 
 public interface IScale {
     String getName();
-    
+
     int[] getIntervals();
-    
+
     boolean inScale(int noteBase);
-    
+
     IScale[] getValues();
-    
+
     static int findScaleIndex(final int noteIndex, final int[] intervalls) {
         for (int i = 0; i < intervalls.length; i++) {
             if (intervalls[i] >= noteIndex) {
@@ -17,14 +17,17 @@ public interface IScale {
         }
         return -1;
     }
-    
+
     default int getNextNote(final int startNote, final int baseNote, final int amount) {
         final int noteIndex = (startNote + 12 - baseNote) % 12;
-        int octave = startNote < baseNote ? (startNote - baseNote - 12) / 12 : (startNote - baseNote) / 12;
-        
+        int octave =
+                startNote < baseNote
+                        ? (startNote - baseNote - 12) / 12
+                        : (startNote - baseNote) / 12;
+
         final int[] intervals = getIntervals();
         final int index = findScaleIndex(noteIndex, intervals);
-        
+
         int nextIndex = index + amount;
         if (nextIndex >= intervals.length) {
             nextIndex = 0;
@@ -35,7 +38,7 @@ public interface IScale {
         }
         return intervals[nextIndex] + baseNote + octave * 12;
     }
-    
+
     default int nextInScale(int index) {
         while (true) {
             final int numberOfScales = getValues().length;
@@ -49,7 +52,6 @@ public interface IScale {
         }
         return index;
     }
-    
-    
+
     int highestNote(int startNote, int noteRange);
 }

@@ -10,14 +10,14 @@ final class MainEncoderGlobalChord {
         TIMELINE_ZOOM_VERTICAL
     }
 
-    private MainEncoderGlobalChord() {
-    }
+    private MainEncoderGlobalChord() {}
 
-    static Action resolve(final int increment,
-                          final boolean popupBrowserActive,
-                          final boolean patternHeld,
-                          final boolean shiftHeld,
-                          final boolean altHeld) {
+    static Action resolve(
+            final int increment,
+            final boolean popupBrowserActive,
+            final boolean patternHeld,
+            final boolean shiftHeld,
+            final boolean altHeld) {
         if (increment == 0 || popupBrowserActive) {
             return Action.NONE;
         }

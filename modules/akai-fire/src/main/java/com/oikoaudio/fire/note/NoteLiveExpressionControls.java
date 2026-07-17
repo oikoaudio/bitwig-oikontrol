@@ -131,8 +131,11 @@ final class NoteLiveExpressionControls {
             return (int) Math.round((value / (double) DEFAULT_PITCH_EXPRESSION) * 8192.0);
         }
         final int rangeAboveCenter = MAX_MIDI_VALUE - DEFAULT_PITCH_EXPRESSION;
-        return 8192 + (int) Math.round(((value - DEFAULT_PITCH_EXPRESSION) / (double) rangeAboveCenter)
-                * (16383.0 - 8192.0));
+        return 8192
+                + (int)
+                        Math.round(
+                                ((value - DEFAULT_PITCH_EXPRESSION) / (double) rangeAboveCenter)
+                                        * (16383.0 - 8192.0));
     }
 
     private static int clampPitchBend(final int bend) {
@@ -140,7 +143,8 @@ final class NoteLiveExpressionControls {
     }
 
     private void emitPitchBend() {
-        midiOut.pitchBend(clampPitchBend(pitchBendValueFor(pitchExpression) + transientPitchBendOffset));
+        midiOut.pitchBend(
+                clampPitchBend(pitchBendValueFor(pitchExpression) + transientPitchBendOffset));
     }
 
     interface MidiExpressionOut {

@@ -11,5 +11,4 @@ public class DiException extends RuntimeException {
     public DiException(final String message, final Throwable cause) {
         super(message, cause);
     }
-
 }

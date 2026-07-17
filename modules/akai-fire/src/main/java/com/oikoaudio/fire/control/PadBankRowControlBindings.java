@@ -4,8 +4,7 @@ import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.lights.BiColorLightState;
-import com.oikoaudio.fire.lights.RgbLigthState;
-
+import com.oikoaudio.fire.lights.RgbLightState;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -16,21 +15,28 @@ public final class PadBankRowControlBindings {
     private final boolean velocitySensitivePads;
     private final ExtraButtonBinding[] extraButtonBindings;
 
-    public PadBankRowControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host,
-                                     final ExtraButtonBinding... extraButtonBindings) {
+    public PadBankRowControlBindings(
+            final AkaiFireOikontrolExtension driver,
+            final Layer layer,
+            final Host host,
+            final ExtraButtonBinding... extraButtonBindings) {
         this(driver, layer, host, false, extraButtonBindings);
     }
 
-    public static PadBankRowControlBindings velocitySensitivePads(final AkaiFireOikontrolExtension driver,
-                                                                  final Layer layer,
-                                                                  final Host host,
-                                                                  final ExtraButtonBinding... extraButtonBindings) {
+    public static PadBankRowControlBindings velocitySensitivePads(
+            final AkaiFireOikontrolExtension driver,
+            final Layer layer,
+            final Host host,
+            final ExtraButtonBinding... extraButtonBindings) {
         return new PadBankRowControlBindings(driver, layer, host, true, extraButtonBindings);
     }
 
-    private PadBankRowControlBindings(final AkaiFireOikontrolExtension driver, final Layer layer, final Host host,
-                                      final boolean velocitySensitivePads,
-                                      final ExtraButtonBinding... extraButtonBindings) {
+    private PadBankRowControlBindings(
+            final AkaiFireOikontrolExtension driver,
+            final Layer layer,
+            final Host host,
+            final boolean velocitySensitivePads,
+            final ExtraButtonBinding... extraButtonBindings) {
         this.driver = driver;
         this.layer = layer;
         this.host = host;
@@ -45,37 +51,48 @@ public final class PadBankRowControlBindings {
 
     private void bindPads() {
         if (velocitySensitivePads) {
-            PadMatrixBindings.bindPressedVelocity(layer, driver.getRgbButtons(), new PadMatrixBindings.Host() {
-                @Override
-                public void handlePadPress(final int padIndex, final boolean pressed, final int velocity) {
-                    host.handlePadPress(padIndex, pressed, velocity);
-                }
+            PadMatrixBindings.bindPressedVelocity(
+                    layer,
+                    driver.getRgbButtons(),
+                    new PadMatrixBindings.Host() {
+                        @Override
+                        public void handlePadPress(
+                                final int padIndex, final boolean pressed, final int velocity) {
+                            host.handlePadPress(padIndex, pressed, velocity);
+                        }
 
-                @Override
-                public RgbLigthState padLight(final int padIndex) {
-                    return host.padLight(padIndex);
-                }
-            });
+                        @Override
+                        public RgbLightState padLight(final int padIndex) {
+                            return host.padLight(padIndex);
+                        }
+                    });
             return;
         }
-        PadMatrixBindings.bindPressed(layer, driver.getRgbButtons(), new PadMatrixBindings.PressHost() {
-            @Override
-            public void handlePadPress(final int padIndex, final boolean pressed) {
-                host.handlePadPress(padIndex, pressed);
-            }
+        PadMatrixBindings.bindPressed(
+                layer,
+                driver.getRgbButtons(),
+                new PadMatrixBindings.PressHost() {
+                    @Override
+                    public void handlePadPress(final int padIndex, final boolean pressed) {
+                        host.handlePadPress(padIndex, pressed);
+                    }
 
-            @Override
-            public RgbLigthState padLight(final int padIndex) {
-                return host.padLight(padIndex);
-            }
-        });
+                    @Override
+                    public RgbLightState padLight(final int padIndex) {
+                        return host.padLight(padIndex);
+                    }
+                });
     }
 
     private void bindButtons() {
         for (final ExtraButtonBinding binding : extraButtonBindings) {
-            driver.getButton(binding.assignment()).bindPressed(layer, binding.handler(), binding.lightState());
+            driver.getButton(binding.assignment())
+                    .bindPressed(layer, binding.handler(), binding.lightState());
         }
-        BankButtonBindings.bind(layer, driver.getButton(NoteAssign.BANK_L), driver.getButton(NoteAssign.BANK_R),
+        BankButtonBindings.bind(
+                layer,
+                driver.getButton(NoteAssign.BANK_L),
+                driver.getButton(NoteAssign.BANK_R),
                 new BankButtonBindings.Host() {
                     @Override
                     public void handleBankButton(final boolean pressed, final int amount) {
@@ -93,22 +110,25 @@ public final class PadBankRowControlBindings {
                     }
                 });
         final BiColorButton[] rowButtons = {
-                driver.getButton(NoteAssign.MUTE_1),
-                driver.getButton(NoteAssign.MUTE_2),
-                driver.getButton(NoteAssign.MUTE_3),
-                driver.getButton(NoteAssign.MUTE_4)
+            driver.getButton(NoteAssign.MUTE_1),
+            driver.getButton(NoteAssign.MUTE_2),
+            driver.getButton(NoteAssign.MUTE_3),
+            driver.getButton(NoteAssign.MUTE_4)
         };
-        ButtonRowBindings.bindPressed(layer, rowButtons, new ButtonRowBindings.Host() {
-            @Override
-            public void handleButton(final int index, final boolean pressed) {
-                host.handleRowButton(index, pressed);
-            }
+        ButtonRowBindings.bindPressed(
+                layer,
+                rowButtons,
+                new ButtonRowBindings.Host() {
+                    @Override
+                    public void handleButton(final int index, final boolean pressed) {
+                        host.handleRowButton(index, pressed);
+                    }
 
-            @Override
-            public BiColorLightState lightState(final int index) {
-                return host.rowLightState(index);
-            }
-        });
+                    @Override
+                    public BiColorLightState lightState(final int index) {
+                        return host.rowLightState(index);
+                    }
+                });
     }
 
     public interface Host {
@@ -118,7 +138,7 @@ public final class PadBankRowControlBindings {
             handlePadPress(padIndex, pressed);
         }
 
-        RgbLigthState padLight(int padIndex);
+        RgbLightState padLight(int padIndex);
 
         void handleBankButton(boolean pressed, int amount);
 
@@ -133,7 +153,8 @@ public final class PadBankRowControlBindings {
         BiColorLightState rowLightState(int index);
     }
 
-    public record ExtraButtonBinding(NoteAssign assignment, Consumer<Boolean> handler,
-                                     Supplier<BiColorLightState> lightState) {
-    }
+    public record ExtraButtonBinding(
+            NoteAssign assignment,
+            Consumer<Boolean> handler,
+            Supplier<BiColorLightState> lightState) {}
 }
