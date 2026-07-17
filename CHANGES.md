@@ -72,6 +72,43 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.21.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.20.0...oikontrol-v2.21.0) (2026-07-17)
+
+
+### Features
+
+* **fire:** add baked note variation foundation ([c9301e8](https://github.com/oikoaudio/bitwig-oikontrol/commit/c9301e8a4c6f1e934c31c521da59313a6235201e))
+* **fire:** add Drum XOX baked variation ([9c2144d](https://github.com/oikoaudio/bitwig-oikontrol/commit/9c2144d13b4fe345b3caaa9e87af26b61a591732))
+* **fire:** add harmonic voicing selector ([1baeb58](https://github.com/oikoaudio/bitwig-oikontrol/commit/1baeb58c2b88acd3353b1a8876273e0bf28bf862))
+* **fire:** add held note repeat rate gesture ([3ef297e](https://github.com/oikoaudio/bitwig-oikontrol/commit/3ef297e1994b068ce6887ec01bf9d83a4c726683))
+* **fire:** add Melodic and Fugue baked variation ([a8661f4](https://github.com/oikoaudio/bitwig-oikontrol/commit/a8661f4cc10bae2b786c4cb8ede7283f6bf06797))
+* **fire:** add melodic scale encoder shortcut ([117d31f](https://github.com/oikoaudio/bitwig-oikontrol/commit/117d31f6f95d27781ae440b54c562bdcb1c1c21f))
+* **fire:** add Nested Rhythm baked variation ([0e19bad](https://github.com/oikoaudio/bitwig-oikontrol/commit/0e19bad91ca86444307861f90b61fed87227090c))
+* **fire:** add Poly Step baked variation pilot ([7b506d7](https://github.com/oikoaudio/bitwig-oikontrol/commit/7b506d7ccd76fadf53de024eeeff4e155e0db9d2))
+* **fire:** add Poly Step insertion defaults ([ba30d86](https://github.com/oikoaudio/bitwig-oikontrol/commit/ba30d8621537f17c5c583aa9834dfcc874083fd0))
+* **fire:** add Poly Step pitch replacement gesture ([f09bce6](https://github.com/oikoaudio/bitwig-oikontrol/commit/f09bce6da7f49e35974aee134fe60509c16fdc34))
+* **fire:** combine Poly Step chord-set pads ([ca46c75](https://github.com/oikoaudio/bitwig-oikontrol/commit/ca46c751f2a02e3924370e426c3c47493c002b0a))
+* **fire:** map note pan and gain variation ([3e6a1ca](https://github.com/oikoaudio/bitwig-oikontrol/commit/3e6a1ca616b477e4a0947a0b679a9d3720ae70ff))
+* refine controller architecture and sequencing workflows ([04ffa41](https://github.com/oikoaudio/bitwig-oikontrol/commit/04ffa41eb4ca79bedcea3dad527d8e4283405aaf))
+
+
+### Bug Fixes
+
+* **akai-fire:** align track select indicator LED feedback ([af5d921](https://github.com/oikoaudio/bitwig-oikontrol/commit/af5d9216fae0d5b54bde8d7ced77be83afe17bff))
+* **fire:** align Poly Step fine-note ownership ([4853253](https://github.com/oikoaudio/bitwig-oikontrol/commit/485325363f4e34658d312b08f9bc990e4299af3e))
+* **fire:** allow overlapping live pad unions ([a4c0a03](https://github.com/oikoaudio/bitwig-oikontrol/commit/a4c0a034ca80ba07daee2e4cabd2ede318c95a0a))
+* **fire:** clarify Poly Step chord set feedback ([6d59034](https://github.com/oikoaudio/bitwig-oikontrol/commit/6d59034f13ddfef343a9383a7d3338e2d754bc08))
+* **fire:** fit Poly Step chord page labels ([37c9ed4](https://github.com/oikoaudio/bitwig-oikontrol/commit/37c9ed482d70403e239e308ac77713aba2963cc4))
+* **fire:** keep Poly Step pads visible during refresh ([9470cc3](https://github.com/oikoaudio/bitwig-oikontrol/commit/9470cc31b5def543f7d925201070182ceac48bbc))
+* **fire:** make acid density span sparse to full ([10a2a1b](https://github.com/oikoaudio/bitwig-oikontrol/commit/10a2a1b5e52aa764338f5cdd673065fa377f8e7b))
+* **fire:** make melodic density regenerate existing phrases ([aa2c00c](https://github.com/oikoaudio/bitwig-oikontrol/commit/aa2c00cd5643f8e46a2db19a46c36325291956cd))
+* **fire:** order note repeat rates by duration ([b898fe3](https://github.com/oikoaudio/bitwig-oikontrol/commit/b898fe3f7d91ba57eab8bc366b234764bd90b872))
+* **fire:** preserve copied drum pattern parameters ([57e29fe](https://github.com/oikoaudio/bitwig-oikontrol/commit/57e29fe60e7d7cd0fcdad1aa5fa5bc54915175e4))
+* **fire:** protect fugue derived lines on entry ([922c7aa](https://github.com/oikoaudio/bitwig-oikontrol/commit/922c7aa71647f349c3ea1767d001faf1667f6ba2))
+* **fire:** restore encoder routing and safe initialization ([02913b8](https://github.com/oikoaudio/bitwig-oikontrol/commit/02913b8982b1f8bd4b138206fe40227d572fba2c))
+* **fire:** restore musical melodic density ([e91eb65](https://github.com/oikoaudio/bitwig-oikontrol/commit/e91eb6512c8464c50e3d38df6edcbcc22e7e17ad))
+* **fire:** widen rolling density range ([7f9ffe5](https://github.com/oikoaudio/bitwig-oikontrol/commit/7f9ffe55b1b19a037d39dc09fef2b88fb4d7cb00))
+
 ## [2.20.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.19.0...oikontrol-v2.20.0) (2026-07-06)
 
 
