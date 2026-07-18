@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
@@ -50,7 +51,15 @@ class MulticlipClipControllerPinningTest {
         final MulticlipClipController controller = new MulticlipClipController(host);
         clearInvocations(clips[0].isPinned(), fineClips[0].isPinned(), cursors[0]);
         final Track track = mock(Track.class);
-        controller.retarget(0, track, TrackLaneMapping.fromChildPosition(0), 0, 2);
+        final ClipLauncherSlot targetSlot = mock(ClipLauncherSlot.class);
+        final boolean[] completed = {false};
+        controller.retarget(
+                0,
+                track,
+                targetSlot,
+                TrackLaneMapping.fromChildPosition(0),
+                0,
+                () -> completed[0] = true);
         assertFalse(controller.isReady(0));
 
         final SettableBooleanValue clipPinned = clips[0].isPinned();
@@ -67,11 +76,12 @@ class MulticlipClipControllerPinningTest {
         org.mockito.Mockito.verify(host, times(2)).scheduleTask(readyTask.capture(), eq(50L));
         readyTask.getAllValues().get(1).run();
         assertTrue(controller.isReady(0));
+        assertTrue(completed[0]);
 
-        final InOrder order = inOrder(clipPinned, fineClipPinned, cursors[0]);
+        final InOrder order = inOrder(clipPinned, fineClipPinned, targetSlot);
         order.verify(clipPinned).set(false);
         order.verify(fineClipPinned).set(false);
-        order.verify(cursors[0]).selectSlot(2);
+        order.verify(targetSlot).select();
         order.verify(clipPinned).set(true);
         order.verify(fineClipPinned).set(true);
     }

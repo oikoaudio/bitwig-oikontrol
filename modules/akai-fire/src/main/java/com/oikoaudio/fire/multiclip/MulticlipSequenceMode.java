@@ -17,6 +17,8 @@ import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.utils.PatternButtons;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Four-row sequencer whose lanes are direct child tracks of a Drum Machine group. */
 public final class MulticlipSequenceMode extends Layer {
@@ -41,13 +43,13 @@ public final class MulticlipSequenceMode extends Layer {
     private final MulticlipTimingController timingController;
     private final PendingStepCreation[] pendingCreations = new PendingStepCreation[VISIBLE_LANES];
     private final MulticlipSceneOverlayState sceneOverlay = new MulticlipSceneOverlayState();
-    private final boolean[] sceneSelectedInEditor = new boolean[SCENE_BANK_SIZE];
 
     private MulticlipPageState pageState = MulticlipPageState.initial(0);
     private int activeScene;
     private long targetGeneration;
     private long sceneActivationGeneration;
     private boolean active;
+    private boolean cursorRetargetInProgress;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
 
     public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
@@ -247,9 +249,6 @@ public final class MulticlipSequenceMode extends Layer {
             scene.color().markInterested();
             scene.clipCount().markInterested();
             scene.sceneIndex().markInterested();
-            final int visibleScene = index;
-            scene.addIsSelectedInEditorObserver(
-                    selected -> sceneSelectedInEditor[visibleScene] = selected);
         }
     }
 
@@ -283,10 +282,8 @@ public final class MulticlipSequenceMode extends Layer {
                         }
                         return;
                     }
-                    sceneBank.getScene(visibleScene).launch();
+                    MulticlipChildSceneLauncher.launch(eligibleChildSlots(visibleScene));
                     retargetVisibleClipCursors();
-                    selectActiveTrack();
-                    scheduleEditorFallback(visibleScene, currentTarget(pageState.activeRow()));
                     driver.getOled().valueInfo("Scene " + (absoluteScene + 1), "Playing + Editing");
                 },
                 50);
@@ -304,6 +301,19 @@ public final class MulticlipSequenceMode extends Layer {
             }
         }
         return true;
+    }
+
+    private List<ClipLauncherSlot> eligibleChildSlots(final int visibleScene) {
+        final List<ClipLauncherSlot> slots = new ArrayList<>();
+        for (int childPosition = 0; childPosition < pageState.laneCount(); childPosition++) {
+            if (isEligibleLane(childPosition)) {
+                slots.add(
+                        laneBank.getItemAt(childPosition)
+                                .clipLauncherSlotBank()
+                                .getItemAt(visibleScene));
+            }
+        }
+        return List.copyOf(slots);
     }
 
     private void populateSelectedScene(final int visibleScene, final int absoluteScene) {
@@ -326,27 +336,6 @@ public final class MulticlipSequenceMode extends Layer {
             laneBank.getItemAt(childPosition)
                     .createNewLauncherClip(absoluteScene, driver.getDefaultClipLengthBeats());
         }
-    }
-
-    private void scheduleEditorFallback(
-            final int visibleScene, final MulticlipTargetIdentity target) {
-        host.scheduleTask(
-                () -> {
-                    final int row = pageState.activeRow();
-                    if (!active || row < 0 || !target.equals(currentTarget(row))) {
-                        return;
-                    }
-                    final EditorPresentationPlan plan =
-                            EditorPresentationPlan.choose(
-                                    groupCursor.exists().get(),
-                                    sceneBank.getScene(visibleScene).exists().get(),
-                                    sceneSelectedInEditor[visibleScene]);
-                    if (plan == EditorPresentationPlan.ACTIVE_CLIP && clipController.exists(row)) {
-                        clipController.showInEditor(row);
-                    }
-                    selectActiveTrack();
-                },
-                50);
     }
 
     private void pageScenes(final int direction) {
@@ -496,23 +485,56 @@ public final class MulticlipSequenceMode extends Layer {
     }
 
     private void retargetVisibleClipCursors() {
-        targetGeneration++;
+        final long generation = ++targetGeneration;
+        final int activeChildPosition = pageState.activeChildPosition();
+        cursorRetargetInProgress = true;
         for (int row = 0; row < VISIBLE_LANES; row++) {
-            final int childPosition = childPositionForRow(row);
-            if (childPosition < 0
-                    || childPosition >= pageState.laneCount()
-                    || !isEligibleLane(childPosition)) {
-                clipController.clearRow(row);
-                continue;
-            }
-            final TrackLaneMapping mapping = TrackLaneMapping.fromChildPosition(childPosition);
-            clipController.retarget(
-                    row,
-                    laneBank.getItemAt(childPosition),
-                    mapping,
-                    pageState.firstVisibleStep(),
-                    activeScene);
+            clipController.clearRow(row);
         }
+        retargetVisibleClipCursor(0, generation, activeChildPosition);
+    }
+
+    private void retargetVisibleClipCursor(
+            final int row, final long generation, final int activeChildPosition) {
+        if (!active || targetGeneration != generation) {
+            return;
+        }
+        if (row >= VISIBLE_LANES) {
+            cursorRetargetInProgress = false;
+            if (isEligibleLane(activeChildPosition)) {
+                pageState = pageState.withActiveChildPosition(activeChildPosition);
+            }
+            selectActiveTrack();
+            final int activeRow = pageState.activeRow();
+            if (activeRow >= 0
+                    && clipController.isReady(activeRow)
+                    && clipController.exists(activeRow)) {
+                clipController.showInEditor(activeRow);
+            }
+            return;
+        }
+        final int childPosition = childPositionForRow(row);
+        if (childPosition < 0
+                || childPosition >= pageState.laneCount()
+                || !isEligibleLane(childPosition)) {
+            retargetVisibleClipCursor(row + 1, generation, activeChildPosition);
+            return;
+        }
+        final int visibleScene = activeScene - sceneBank.scrollPosition().get();
+        if (visibleScene < 0 || visibleScene >= SCENE_BANK_SIZE) {
+            cursorRetargetInProgress = false;
+            driver.getOled().valueInfo("Scene off page", "Select scene again");
+            return;
+        }
+        final Track track = laneBank.getItemAt(childPosition);
+        final ClipLauncherSlot targetSlot = track.clipLauncherSlotBank().getItemAt(visibleScene);
+        clipController.retarget(
+                row,
+                track,
+                targetSlot,
+                TrackLaneMapping.fromChildPosition(childPosition),
+                pageState.firstVisibleStep(),
+                () -> retargetVisibleClipCursor(row + 1, generation, activeChildPosition));
     }
 
     private int childPositionForRow(final int row) {
@@ -592,11 +614,11 @@ public final class MulticlipSequenceMode extends Layer {
 
     private void createClipAndAddFirstStep(
             final int row, final int step, final int velocity, final Track track) {
+        track.createNewLauncherClip(activeScene, driver.getDefaultClipLengthBeats());
+        retargetVisibleClipCursors();
         final PendingStepCreation request =
                 new PendingStepCreation(currentTarget(row), row, step, velocity);
         pendingCreations[row] = request;
-        track.createNewLauncherClip(activeScene, driver.getDefaultClipLengthBeats());
-        clipController.selectSlot(row, activeScene);
         driver.getOled().valueInfo("Creating clip", "Lane " + (childPositionForRow(row) + 1));
         schedulePendingCreation(request, 0);
     }
@@ -612,7 +634,7 @@ public final class MulticlipSequenceMode extends Layer {
                     }
                     final int childPosition = childPositionForRow(row);
                     if (!clipController.isReady(row) || !clipController.exists(row)) {
-                        if (attempt < 7) {
+                        if (attempt < 15) {
                             schedulePendingCreation(request, attempt + 1);
                         } else {
                             pendingCreations[row] = null;
@@ -721,7 +743,7 @@ public final class MulticlipSequenceMode extends Layer {
     }
 
     private void handleExternalSelection(final int childPosition, final boolean selected) {
-        if (!selected || !isEligibleLane(childPosition)) {
+        if (cursorRetargetInProgress || !selected || !isEligibleLane(childPosition)) {
             return;
         }
         final int oldPage = pageState.lanePage();
@@ -941,6 +963,7 @@ public final class MulticlipSequenceMode extends Layer {
     @Override
     protected void onDeactivate() {
         active = false;
+        cursorRetargetInProgress = false;
         padLayer.deactivate();
         clipController.setPinned(false);
         clearPatternButtons();

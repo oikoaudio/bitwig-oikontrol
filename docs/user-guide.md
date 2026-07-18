@@ -310,7 +310,7 @@ Bitwig automatically displays a group-track **sub scene** when its child tracks 
 
 Each row has its own playhead, loop length, and play start. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 
-Multiclip Seq first asks Bitwig to show the native scene context in the Detail Editor and then restores the active child track. If Bitwig does not retain the compound scene view, the controller shows the active Lane Clip instead. Fire continues to observe and edit all four visible Lane Clips in either case and never depends on additive GUI clip selection. `Edit only selected layers: On` is not a supported Multiclip Seq template setting.
+Multiclip Seq never selects the group track's scene or sub scene as an editing target. It selects and pins each visible child-track clip sequentially, then restores the active child Track Lane and shows that Lane Clip in Bitwig's Detail Editor. Fire continues to observe and edit all four visible child clips independently and never depends on additive GUI clip selection. `Edit only selected layers: On` is not a supported Multiclip Seq template setting.
 
 ### Nested Rhythm mode
 

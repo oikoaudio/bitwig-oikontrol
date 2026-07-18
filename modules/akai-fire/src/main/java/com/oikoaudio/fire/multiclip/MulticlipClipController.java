@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.multiclip;
 
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteStep;
@@ -80,9 +81,10 @@ final class MulticlipClipController {
     void retarget(
             final int row,
             final Track track,
+            final ClipLauncherSlot targetSlot,
             final TrackLaneMapping mapping,
             final int firstVisibleStep,
-            final int absoluteScene) {
+            final Runnable onReady) {
         final long generation = ++targetGenerations[row];
         beginRetarget(row);
         firstVisibleSteps[row] = firstVisibleStep;
@@ -92,8 +94,8 @@ final class MulticlipClipController {
         clips[row].scrollToStep(firstVisibleStep);
         fineClips[row].scrollToKey(mapping.midiNote());
         fineClips[row].scrollToStep(0);
-        selectIndependentSlot(row, absoluteScene);
-        scheduleObservationRefresh(row, generation);
+        selectIndependentSlot(row, targetSlot);
+        scheduleObservationRefresh(row, generation, onReady);
     }
 
     void clearRow(final int row) {
@@ -146,14 +148,8 @@ final class MulticlipClipController {
         clips[row].clearStep(channel, step, 0);
     }
 
-    void selectSlot(final int row, final int absoluteScene) {
-        final long generation = ++targetGenerations[row];
-        beginRetarget(row);
-        selectIndependentSlot(row, absoluteScene);
-        scheduleObservationRefresh(row, generation);
-    }
-
-    private void scheduleObservationRefresh(final int row, final long generation) {
+    private void scheduleObservationRefresh(
+            final int row, final long generation, final Runnable onReady) {
         host.scheduleTask(
                 () -> {
                     if (targetGenerations[row] != generation) {
@@ -163,16 +159,18 @@ final class MulticlipClipController {
                     fineClips[row].isPinned().set(true);
                     clips[row].scrollToStep(firstVisibleSteps[row]);
                     fineClips[row].scrollToStep(0);
-                    scheduleWriteReadiness(row, generation);
+                    scheduleWriteReadiness(row, generation, onReady);
                 },
                 50);
     }
 
-    private void scheduleWriteReadiness(final int row, final long generation) {
+    private void scheduleWriteReadiness(
+            final int row, final long generation, final Runnable onReady) {
         host.scheduleTask(
                 () -> {
                     if (targetGenerations[row] == generation) {
                         state.finishRetarget(row);
+                        onReady.run();
                     }
                 },
                 50);
@@ -288,9 +286,9 @@ final class MulticlipClipController {
         fineNotes[row].clear();
     }
 
-    private void selectIndependentSlot(final int row, final int absoluteScene) {
+    private void selectIndependentSlot(final int row, final ClipLauncherSlot targetSlot) {
         clips[row].isPinned().set(false);
         fineClips[row].isPinned().set(false);
-        cursors[row].selectSlot(absoluteScene);
+        targetSlot.select();
     }
 }
