@@ -321,6 +321,8 @@ Bitwig may display a group-track **sub scene** when its child tracks contain Lau
 
 Each child clip retains its own loop length and play start. Fire displays the active clip's existing notes and playing-step feedback across rows 3-4. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 
+Hold `MUTE_2` to preview the active Lane Clip's length on rows 3-4: its current last step is white and pads beyond the loop are off. Pressing a pattern pad moves that last step for only the active clip. During normal sequencing, the active clip's moving playhead is white across the same two rows.
+
 Copy/paste has no captured buffer. The active lane and active editing scene remain the live source until you change them. Scene-set paste touches only eligible direct child slots and never copies to, creates, clears, or selects the group-track slot.
 
 Multiclip Seq never selects the group track's scene or sub scene as an editing target. It uses one ordinary selected-track cursor and selects the exact active child slot once, matching Bitwig's single-clip Detail Editor model. It never depends on additive GUI clip selection. `Edit only selected layers: On` is not a supported Multiclip Seq template setting.

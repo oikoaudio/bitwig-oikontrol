@@ -124,6 +124,7 @@ final class MulticlipClipController {
                     }
                     ready = true;
                     refreshObservedViews();
+                    observePlayingStep(clip.playingStep().get());
                     host.scheduleTask(
                             () -> {
                                 if (targetGeneration == generation) {

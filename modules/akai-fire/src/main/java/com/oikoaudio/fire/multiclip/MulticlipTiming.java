@@ -20,4 +20,10 @@ public final class MulticlipTiming {
     public static int adjustLoopSteps(final int current, final int delta) {
         return Math.max(MIN_LOOP_STEPS, Math.min(MAX_LOOP_STEPS, current + delta));
     }
+
+    public static int visibleLoopStepCount(
+            final double loopBeats, final int firstVisibleStep, final int visibleStepCount) {
+        final int remaining = stepsForBeats(loopBeats) - Math.max(0, firstVisibleStep);
+        return Math.max(0, Math.min(Math.max(0, visibleStepCount), remaining));
+    }
 }

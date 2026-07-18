@@ -87,6 +87,30 @@ class MulticlipClipControllerPinningTest {
     }
 
     @Test
+    void hydratesTheCurrentPlayingStepWhenTheClipTargetBecomesReady() {
+        final Fixture fixture = new Fixture();
+        final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);
+        final ClipLauncherSlot targetSlot = mock(ClipLauncherSlot.class);
+        when(targetTrack.position().get()).thenReturn(7);
+        when(fixture.cursor.position().get()).thenReturn(7);
+        fixture.existingClipAtScene(5);
+        when(fixture.clip.playingStep().get()).thenReturn(33);
+
+        fixture.controller.retarget(
+                targetTrack,
+                targetSlot,
+                TrackLaneMapping.fromChildPosition(0),
+                32,
+                5,
+                true,
+                ignored -> {});
+        fixture.runAllTasks();
+
+        assertTrue(fixture.controller.isPlaying(1));
+        assertFalse(fixture.controller.isPlaying(0));
+    }
+
+    @Test
     void reportsFailureWhenTheSelectedTrackNeverSettles() {
         final Fixture fixture = new Fixture();
         final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);

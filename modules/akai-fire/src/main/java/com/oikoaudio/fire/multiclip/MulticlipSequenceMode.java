@@ -653,6 +653,9 @@ public final class MulticlipSequenceMode extends Layer {
         }
         if (pressed) {
             laneSoloMode = false;
+            driver.getOled().valueInfo("Last Step", "Pattern pad");
+        } else {
+            driver.getOled().clearScreenDelayed();
         }
         lastStepHeld = pressed;
     }
@@ -718,6 +721,9 @@ public final class MulticlipSequenceMode extends Layer {
         }
         final int step = MulticlipXoxLayout.visibleStep(padIndex);
         final RgbLightState color = laneColor(activeChildPosition);
+        if (lastStepHeld) {
+            return lastStepLight(step, color);
+        }
         if (padInteraction.isHeld(padIndex)) {
             return padInteraction.isConsumed(padIndex)
                     ? RgbLightState.PURPLE
@@ -730,6 +736,25 @@ public final class MulticlipSequenceMode extends Layer {
             return color.getBrightend();
         }
         return color.getVeryDimmed();
+    }
+
+    private RgbLightState lastStepLight(final int step, final RgbLightState color) {
+        if (!activeLaneHasClip()) {
+            return RgbLightState.OFF;
+        }
+        final int visibleLoopSteps =
+                MulticlipTiming.visibleLoopStepCount(
+                        clipController.loopLength(),
+                        firstVisibleStep,
+                        MulticlipXoxLayout.PATTERN_COUNT);
+        if (step >= visibleLoopSteps) {
+            return RgbLightState.OFF;
+        }
+        final int loopSteps = MulticlipTiming.stepsForBeats(clipController.loopLength());
+        if (firstVisibleStep + step == loopSteps - 1) {
+            return RgbLightState.WHITE;
+        }
+        return clipController.isOccupied(step) ? color.getBrightend() : color.getVeryDimmed();
     }
 
     private RgbLightState sceneLight(final int visibleScene) {

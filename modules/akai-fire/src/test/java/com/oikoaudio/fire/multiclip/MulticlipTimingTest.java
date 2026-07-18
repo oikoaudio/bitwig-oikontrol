@@ -18,4 +18,19 @@ class MulticlipTimingTest {
             final int current, final int delta, final int expected) {
         assertEquals(expected, MulticlipTiming.adjustLoopSteps(current, delta));
     }
+
+    @ParameterizedTest
+    @CsvSource({"7,0,32,7", "40,32,32,8", "7,32,32,0", "64,32,32,32"})
+    void reportsHowMuchOfTheActiveClipLengthFallsOnTheVisiblePage(
+            final int loopSteps,
+            final int firstVisibleStep,
+            final int visibleStepCount,
+            final int expectedVisibleSteps) {
+        assertEquals(
+                expectedVisibleSteps,
+                MulticlipTiming.visibleLoopStepCount(
+                        MulticlipTiming.beatsForSteps(loopSteps),
+                        firstVisibleStep,
+                        visibleStepCount));
+    }
 }
