@@ -7,12 +7,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class ScenePopulationTest {
     @ParameterizedTest
-    @CsvSource({"false,0,4,NEW", "true,0,4,EMPTY", "true,1,4,PARTIAL", "true,4,4,POPULATED"})
-    void classifiesMappedLaneClipPopulation(
-            final boolean exists,
-            final int clips,
-            final int lanes,
-            final ScenePopulation expected) {
-        assertEquals(expected, ScenePopulation.of(exists, clips, lanes));
+    @CsvSource({"0,4,NEW", "1,4,PARTIAL", "4,4,POPULATED"})
+    void classifiesOnlyMappedChildLaneClips(
+            final int clips, final int lanes, final ScenePopulation expected) {
+        assertEquals(expected, ScenePopulation.ofChildClips(clips, lanes));
     }
 }

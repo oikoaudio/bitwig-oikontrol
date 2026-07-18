@@ -46,6 +46,7 @@ public final class MulticlipSequenceMode extends Layer {
     private MulticlipPageState pageState = MulticlipPageState.initial(0);
     private int activeScene;
     private long targetGeneration;
+    private long sceneActivationGeneration;
     private boolean active;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
 
@@ -254,27 +255,55 @@ public final class MulticlipSequenceMode extends Layer {
 
     private void handleScenePad(final int visibleScene) {
         final int absoluteScene = sceneBank.scrollPosition().get() + visibleScene;
-        final Scene scene = sceneBank.getScene(visibleScene);
-        if (driver.isGlobalShiftHeld()) {
-            if (scene.exists().get()) {
-                scene.launch();
-                driver.getOled()
-                        .valueInfo("Launch Scene " + (absoluteScene + 1), "Default quantize");
-            } else {
-                driver.getOled().valueInfo("Empty scene", "Nothing to launch");
-            }
-            return;
-        }
         activeScene = absoluteScene;
         populateSelectedScene(visibleScene, absoluteScene);
-        if (scene.exists().get()) {
-            scene.selectInEditor();
-            scene.showInEditor();
+        final long activation = ++sceneActivationGeneration;
+        scheduleSceneActivation(visibleScene, absoluteScene, activation, 0);
+        driver.getOled().valueInfo("Scene " + (activeScene + 1), "Preparing child clips");
+    }
+
+    private void scheduleSceneActivation(
+            final int visibleScene,
+            final int absoluteScene,
+            final long activation,
+            final int attempt) {
+        host.scheduleTask(
+                () -> {
+                    if (!active
+                            || sceneActivationGeneration != activation
+                            || activeScene != absoluteScene) {
+                        return;
+                    }
+                    if (!allEligibleLaneClipsExist(visibleScene)) {
+                        if (attempt < 7) {
+                            scheduleSceneActivation(
+                                    visibleScene, absoluteScene, activation, attempt + 1);
+                        } else {
+                            driver.getOled().valueInfo("Scene not ready", "Try scene again");
+                        }
+                        return;
+                    }
+                    sceneBank.getScene(visibleScene).launch();
+                    retargetVisibleClipCursors();
+                    selectActiveTrack();
+                    scheduleEditorFallback(visibleScene, currentTarget(pageState.activeRow()));
+                    driver.getOled().valueInfo("Scene " + (absoluteScene + 1), "Playing + Editing");
+                },
+                50);
+    }
+
+    private boolean allEligibleLaneClipsExist(final int visibleScene) {
+        for (int childPosition = 0; childPosition < pageState.laneCount(); childPosition++) {
+            if (isEligibleLane(childPosition)
+                    && !laneBank.getItemAt(childPosition)
+                            .clipLauncherSlotBank()
+                            .getItemAt(visibleScene)
+                            .hasContent()
+                            .get()) {
+                return false;
+            }
         }
-        retargetVisibleClipCursors();
-        selectActiveTrack();
-        scheduleEditorFallback(visibleScene, currentTarget(pageState.activeRow()));
-        driver.getOled().valueInfo("Scene " + (activeScene + 1), "Editing");
+        return true;
     }
 
     private void populateSelectedScene(final int visibleScene, final int absoluteScene) {
@@ -655,6 +684,7 @@ public final class MulticlipSequenceMode extends Layer {
                 slot.isSelected().markInterested();
                 slot.isPlaying().markInterested();
                 slot.isPlaybackQueued().markInterested();
+                slot.color().markInterested();
                 slot.isSelected()
                         .addValueObserver(
                                 selected -> {
@@ -774,11 +804,11 @@ public final class MulticlipSequenceMode extends Layer {
     }
 
     private RgbLightState sceneLight(final int visibleScene) {
-        final Scene scene = sceneBank.getScene(visibleScene);
         final int absoluteScene = sceneBank.scrollPosition().get() + visibleScene;
         int clips = 0;
         boolean playing = false;
         boolean queued = false;
+        RgbLightState childClipColor = RgbLightState.GRAY_1;
         for (int childPosition = 0; childPosition < pageState.laneCount(); childPosition++) {
             if (!isEligibleLane(childPosition)) {
                 continue;
@@ -789,6 +819,9 @@ public final class MulticlipSequenceMode extends Layer {
                             .getItemAt(visibleScene);
             if (slot.hasContent().get()) {
                 clips++;
+                if (clips == 1) {
+                    childClipColor = ColorLookup.getColor(slot.color().get());
+                }
             }
             playing |= slot.isPlaying().get();
             queued |= slot.isPlaybackQueued().get();
@@ -799,18 +832,13 @@ public final class MulticlipSequenceMode extends Layer {
         if (queued) {
             return RgbLightState.PURPLE;
         }
-        final RgbLightState sceneColor =
-                scene.exists().get()
-                        ? ColorLookup.getColor(scene.color().get())
-                        : RgbLightState.GRAY_1;
         if (absoluteScene == activeScene) {
-            return sceneColor.getBrightend();
+            return childClipColor.getBrightend();
         }
-        return switch (ScenePopulation.of(scene.exists().get(), clips, eligibleLaneCount())) {
+        return switch (ScenePopulation.ofChildClips(clips, eligibleLaneCount())) {
             case NEW -> RgbLightState.GRAY_1;
-            case EMPTY -> RgbLightState.GRAY_2.getVeryDimmed();
-            case PARTIAL -> sceneColor.getDimmed();
-            case POPULATED -> sceneColor.getSoftDimmed();
+            case PARTIAL -> childClipColor.getDimmed();
+            case POPULATED -> childClipColor.getSoftDimmed();
         };
     }
 

@@ -298,15 +298,15 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | `MUTE_1`-`MUTE_4` | Toggle the aligned child Track mute; bright means audible, dim means muted |
 | `SHIFT + MUTE_1`-`MUTE_4` | Toggle the aligned child Track solo |
 | `ALT + MUTE_1`-`MUTE_4` | Select the aligned child track without changing mute or solo |
-| Hold `ALT`, then scene pad | Select that Multiclip Scene, creating missing clips on every eligible lane |
-| Hold `ALT + SHIFT`, then scene pad | Launch that scene with Bitwig's default quantization |
+| Hold `ALT`, then scene pad | Create missing child-track clips, launch the scene, and make it the Multiclip edit target |
+| Hold `ALT + SHIFT`, then scene pad | Same launch-and-edit scene activation gesture |
 | `PATTERN UP/DOWN` while Scene Overlay is visible | Page scenes by sixteen |
 
 The active lane is always the active Bitwig child track. Selecting a child track from Bitwig reveals its lane page; touching a sequencer pad selects that pad's lane before editing, while `ALT + MUTE_n` selects without editing. Rows without an eligible child track remain off.
 
-Selecting a Multiclip Scene creates a `Default Clip Length` clip in that scene on every eligible child track that does not already have one. Cursor retargeting temporarily blocks step writes, so a pad press cannot fall through to the previously selected scene. If a Lane Clip is independently removed later, its first inserted step recreates only that child track's clip and writes the step after the new clip cursor is confirmed.
+Activating a Multiclip Scene creates a `Default Clip Length` clip in that scene on every eligible child track that does not already have one, waits until those child slots exist, then launches the scene and makes it the edit target. Launching is part of scene selection because it is the reliable Bitwig operation for moving all Lane Clip contexts together. Cursor retargeting temporarily blocks step writes, so a pad press cannot fall through to the previously selected scene. If a Lane Clip is independently removed later, its first inserted step recreates only that child track's clip and writes the step after the new clip cursor is confirmed.
 
-Bitwig automatically displays a group-track **sub scene** when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq.
+Bitwig automatically displays a group-track **sub scene** when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq. Scene Overlay LEDs ignore that group-level alias and derive their population, color, queued, and playing feedback only from eligible child-track clip slots.
 
 Each row has its own playhead, loop length, and play start. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 
