@@ -5,6 +5,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.ButtonRowBindings;
+import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
@@ -58,11 +59,10 @@ final class MulticlipControlBindings {
 
         for (int index = 0; index < driver.getEncoders().length; index++) {
             final int encoderIndex = index;
-            driver.getEncoders()[index].bindThresholdedEncoder(
+            driver.getEncoders()[index].bindContinuousEncoder(
                     layer,
-                    5,
-                    10,
                     driver::isGlobalShiftHeld,
+                    ContinuousEncoderScaler.Profile.STRONG,
                     increment -> host.encoderTurn(encoderIndex, increment));
         }
     }

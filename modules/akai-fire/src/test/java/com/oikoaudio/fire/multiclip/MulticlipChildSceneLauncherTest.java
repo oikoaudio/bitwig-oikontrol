@@ -16,7 +16,7 @@ class MulticlipChildSceneLauncherTest {
 
         assertEquals(2, MulticlipChildSceneLauncher.launch(List.of(childOne, childTwo)));
 
-        verify(childOne).launch();
-        verify(childTwo).launch();
+        verify(childOne).launchWithOptions("default", "from_start");
+        verify(childTwo).launchWithOptions("default", "from_start");
     }
 }

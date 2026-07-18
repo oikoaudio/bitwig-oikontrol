@@ -29,4 +29,14 @@ class MulticlipPadInteractionStateTest {
         assertFalse(state.isConsumed(2));
         assertFalse(state.isConsumed(18));
     }
+
+    @Test
+    void canConsumeOnePatternPadUsedAsTheLastStepGesture() {
+        final MulticlipPadInteractionState state = new MulticlipPadInteractionState();
+
+        state.press(42);
+        state.consume(42);
+
+        assertTrue(state.isConsumed(42));
+    }
 }

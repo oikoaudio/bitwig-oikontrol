@@ -408,9 +408,18 @@
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
         <tbody>
-          <tr><td>Row 1</td><td>Sixteen project scenes</td></tr>
+          <tr><td>Row 1</td><td>Launch or select sixteen project scenes</td></tr>
           <tr><td>Row 2</td><td>Sixteen direct child Track Lanes</td></tr>
           <tr><td>Rows 3-4</td><td>32-step pattern for the active Lane Clip</td></tr>
+      </tbody>
+      </table>
+      <table class="encoder-map">
+        <thead><tr><th>Encoder page</th><th>Encoder 1</th><th>Encoder 2</th><th>Encoder 3</th><th>Encoder 4</th></tr></thead>
+        <tbody>
+          <tr class="encoder-primary"><td><code>Channel</code></td><td>Active clip length</td><td>Active clip play start</td><td>—</td><td>—</td></tr>
+          <tr class="encoder-mode"><td><code>Mixer</code></td><td>Matching Drum Machine pad volume</td><td>Pad pan</td><td>Pad send 1</td><td>Pad send 2</td></tr>
+          <tr class="encoder-shared"><td><code>User 1</code></td><td>Pad-chain remote 1</td><td>Remote 2</td><td>Remote 3</td><td>Remote 4</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Pad-chain remote 5</td><td>Remote 6</td><td>Remote 7</td><td>Remote 8</td></tr>
       </tbody>
       </table>
       <table class="control-map">
@@ -422,18 +431,23 @@
           <tr><td>Hold step(s) + <code>BANK LEFT/RIGHT</code></td><td>Fine-nudge only the held notes by 1/64</td></tr>
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Move the active Lane Clip play start (lane rotation)</td></tr>
           <tr><td><code>SHIFT + ALT + BANK LEFT/RIGHT</code></td><td>Fine-nudge all notes in the active Lane Clip by 1/64</td></tr>
-          <tr><td>Channel encoder 1</td><td>Change the active Lane Clip length in whole sequencer steps</td></tr>
-          <tr><td><code>MUTE_2</code></td><td>Toggle the active child Track mute; bright means audible, dim means muted</td></tr>
-          <tr><td><code>SHIFT + MUTE_2</code></td><td>Toggle the active child Track solo</td></tr>
-          <tr><td><code>ALT + MUTE_2</code></td><td>Reselect the active child clip without changing mute or solo</td></tr>
-          <tr><td>Scene pad</td><td>Select that project scene for the active child track; append empty project scenes when needed</td></tr>
-          <tr><td><code>SHIFT + scene pad</code></td><td>Select the scene and launch only existing eligible child clips in it</td></tr>
+          <tr><td>Scene pad</td><td>Launch that existing child-only scene from the start with project launch quantization; keep the edit source unchanged</td></tr>
+          <tr><td><code>ALT + scene pad</code> or hold <code>MUTE_1</code> + scene pad</td><td>Select that scene for editing; append missing empty project scenes when needed</td></tr>
+          <tr><td>Hold <code>MUTE_3</code> + scene pad</td><td>Paste the active Lane Clip into that lane's destination slot</td></tr>
+          <tr><td><code>SHIFT + MUTE_3</code> + scene pad</td><td>Paste an exact child-only snapshot of the active scene, including empty source lanes</td></tr>
+          <tr><td><code>MUTE_1</code></td><td>Select modifier</td></tr>
+          <tr><td><code>SHIFT + MUTE_1</code></td><td>Toggle child-track Mute mode; row-2 pads then toggle lane mute</td></tr>
+          <tr><td><code>MUTE_2</code></td><td>Last Step modifier; press a pattern pad to set the active clip length</td></tr>
+          <tr><td><code>SHIFT + MUTE_2</code></td><td>Toggle child-track Solo mode; row-2 pads then toggle lane solo</td></tr>
+          <tr><td><code>ALT + MUTE_2</code></td><td>Select the containing Drum Machine group without forgetting the active lane</td></tr>
+          <tr><td>Hold <code>MUTE_4</code> + pattern pad</td><td>Delete that step immediately; scene and lane pads are protected from deletion</td></tr>
       </tbody>
       </table>
-      <p>The active lane is always the active Bitwig child track. Press a row-2 pad to change it; selecting a child clip in Bitwig updates both the lane and scene. Ineligible or nonexistent child-track pads remain off. The positional child order remains authoritative even when tracks or clips have duplicate or misleading names.</p>
-      <p>Selecting a Multiclip Scene creates only missing project scenes; every track slot, including the group-track slot, remains empty. Pressing the first pattern step creates a <code>Default Clip Length</code> clip only in the exact active child slot, waits for Bitwig to expose it through the selected-track cursor, and then writes the step. Every retarget confirms both child-track position and absolute scene before edits are enabled, so a pad press cannot fall through to the group track or a previous scene.</p>
+      <p>The active lane is normally the active Bitwig child track. Press a row-2 pad to change it; selecting a child clip in Bitwig updates both the lane and scene. After <code>ALT + MUTE_2</code> selects the group for direct Drum Machine access, pressing a row-2 pad returns to child-clip editing. Ineligible or nonexistent child-track pads remain off. The positional child order remains authoritative even when tracks or clips have duplicate or misleading names.</p>
+      <p>Selecting a Multiclip Scene with <code>ALT</code> or <code>MUTE_1</code> creates only missing project scenes; every track slot, including the group-track slot, remains empty. A plain scene-pad launch never changes the editing source. Pressing the first pattern step creates a <code>Default Clip Length</code> clip only in the exact active child slot, waits for Bitwig to expose it through the selected-track cursor, and then writes the step. Every retarget confirms both child-track position and absolute scene before edits are enabled, so a pad press cannot fall through to the group track or a previous scene.</p>
       <p>Bitwig may display a group-track <strong>sub scene</strong> when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq. Scene-row LEDs ignore it and derive population, color, queued, and playing feedback only from eligible child-track slots.</p>
       <p>Each child clip retains its own loop length and play start. Fire displays the active clip's existing notes and playing-step feedback across rows 3-4. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.</p>
+      <p>Copy/paste has no captured buffer. The active lane and active editing scene remain the live source until you change them. Scene-set paste touches only eligible direct child slots and never copies to, creates, clears, or selects the group-track slot.</p>
       <p>Multiclip Seq never selects the group track's scene or sub scene as an editing target. It uses one ordinary selected-track cursor and selects the exact active child slot once, matching Bitwig's single-clip Detail Editor model. It never depends on additive GUI clip selection. <code>Edit only selected layers: On</code> is not a supported Multiclip Seq template setting.</p>
       <h3>Nested Rhythm mode</h3>
       <p><code>Nested Rhythm</code> is the third <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>

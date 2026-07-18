@@ -68,11 +68,11 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Lane Clip**: The launcher clip on a Track Lane at the active Multiclip Scene.
 
-**Active Lane**: The Track Lane whose child track is currently active in Bitwig; Multiclip Seq has no separate controller-only lane selection.
+**Active Lane**: The Track Lane whose child track is the Multiclip Seq editing target and is normally active in Bitwig. Explicit group access temporarily selects the parent without forgetting this lane; pressing a Lane Row pad restores child-track editing.
 
 **Multiclip Scene**: An absolute Bitwig launcher scene used as the shared clip target across all Multiclip Seq Track Lanes.
 
-**Scene Row**: Multiclip Seq row 1, which always addresses sixteen project scenes and derives its feedback only from eligible child-track slots.
+**Scene Row**: Multiclip Seq row 1, which launches sixteen project scenes or selects them for editing with `ALT`/Select and derives its feedback only from eligible child-track slots.
 
 **Lane Row**: Multiclip Seq row 2, where each pad selects one of up to sixteen positional direct child tracks.
 

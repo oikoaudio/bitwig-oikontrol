@@ -2,9 +2,13 @@ package com.oikoaudio.fire.multiclip;
 
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
+import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.Device;
 import com.bitwig.extension.controller.api.DeviceBank;
+import com.bitwig.extension.controller.api.DrumPadBank;
+import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.Scene;
 import com.bitwig.extension.controller.api.SceneBank;
 import com.bitwig.extension.controller.api.Track;
@@ -41,6 +45,7 @@ public final class MulticlipSequenceMode extends Layer {
     private final MulticlipClipController clipController;
     private final MulticlipPadInteractionState padInteraction = new MulticlipPadInteractionState();
     private final MulticlipTimingController timingController;
+    private final MulticlipDrumPadEncoderController drumPadEncoderController;
 
     private final RgbLightState[] laneColors = new RgbLightState[MAX_LANES];
     private final boolean[] laneExists = new boolean[MAX_LANES];
@@ -57,6 +62,13 @@ public final class MulticlipSequenceMode extends Layer {
     private boolean active;
     private boolean groupContextReady;
     private boolean cursorRetargetInProgress;
+    private boolean groupSelected;
+    private boolean selectHeld;
+    private boolean lastStepHeld;
+    private boolean copyHeld;
+    private boolean deleteHeld;
+    private boolean laneMuteMode;
+    private boolean laneSoloMode;
     private EncoderMode encoderMode = EncoderMode.CHANNEL;
 
     public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
@@ -72,6 +84,17 @@ public final class MulticlipSequenceMode extends Layer {
         groupCursor.isGroup().markInterested();
         groupCursor.isPinned().markInterested();
         groupCursorController = new MulticlipGroupCursorController(host, groupCursor);
+        final PinnableCursorDevice drumMachine =
+                groupCursor.createCursorDevice(
+                        "MULTICLIP_DRUM_MACHINE",
+                        "Multiclip Drum Machine",
+                        2,
+                        CursorDeviceFollowMode.FIRST_INSTRUMENT);
+        drumMachine.exists().markInterested();
+        drumMachine.hasDrumPads().markInterested();
+        final DrumPadBank drumPads = drumMachine.createDrumPadBank(MAX_LANES);
+        drumPadEncoderController =
+                new MulticlipDrumPadEncoderController(drumPads, driver.getOled());
         laneBank = groupCursor.createTrackBank(MAX_LANES, 0, SCENE_BANK_SIZE, false);
         sceneBank = laneBank.sceneBank();
         laneBank.channelCount().markInterested();
@@ -153,9 +176,7 @@ public final class MulticlipSequenceMode extends Layer {
 
                     @Override
                     public void rowButton(final int row, final boolean pressed) {
-                        if (pressed) {
-                            handleRowButton(row);
-                        }
+                        handleRowButton(row, pressed);
                     }
 
                     @Override
@@ -175,23 +196,19 @@ public final class MulticlipSequenceMode extends Layer {
 
                     @Override
                     public void encoderTurn(final int encoderIndex, final int increment) {
-                        if (encoderMode == EncoderMode.CHANNEL && encoderIndex == 0) {
-                            timingController.adjustLoopLength(increment);
-                        }
+                        handleEncoderTurn(encoderIndex, increment);
                     }
                 });
     }
 
     private void handlePad(final int padIndex, final boolean pressed, final int velocity) {
         if (MulticlipXoxLayout.isScenePad(padIndex)) {
-            if (pressed) {
-                selectScene(MulticlipXoxLayout.sceneInPage(padIndex));
-            }
+            handleScenePad(MulticlipXoxLayout.sceneInPage(padIndex), pressed);
             return;
         }
         if (MulticlipXoxLayout.isLanePad(padIndex)) {
             if (pressed) {
-                selectLane(MulticlipXoxLayout.childPosition(padIndex));
+                handleLanePad(MulticlipXoxLayout.childPosition(padIndex));
             }
             return;
         }
@@ -200,20 +217,58 @@ public final class MulticlipSequenceMode extends Layer {
         }
         if (pressed) {
             padInteraction.press(padIndex);
-            handleStepPress(padIndex, velocity);
+            if (deleteHeld) {
+                padInteraction.consume(padIndex);
+                deleteStep(padIndex);
+            } else if (lastStepHeld) {
+                padInteraction.consume(padIndex);
+                setLastStep(padIndex);
+            } else {
+                handleStepPress(padIndex, velocity);
+            }
         } else {
             handleStepRelease(padIndex);
             padInteraction.release(padIndex);
         }
     }
 
-    private void selectScene(final int visibleScene) {
+    private void handleScenePad(final int visibleScene, final boolean pressed) {
         if (!groupContextReady) {
             showInvalidContext();
             return;
         }
+        if (deleteHeld) {
+            if (pressed) {
+                driver.getOled().valueInfo("Delete", "Use a pattern pad");
+            }
+            return;
+        }
         final int absoluteScene = sceneBank.scrollPosition().get() + visibleScene;
-        final boolean launch = driver.isGlobalShiftHeld();
+        final MulticlipSceneActionResolver.Action action =
+                MulticlipSceneActionResolver.resolve(
+                        pressed,
+                        absoluteScene < sceneBank.itemCount().get(),
+                        driver.isGlobalAltHeld(),
+                        selectHeld,
+                        copyHeld,
+                        driver.isGlobalShiftHeld());
+        switch (action) {
+            case IGNORE -> {
+                if (pressed) {
+                    driver.getOled().valueInfo("Empty scene", "ALT + pad to edit");
+                }
+            }
+            case LAUNCH -> {
+                MulticlipChildSceneLauncher.launch(eligibleChildSlots(visibleScene));
+                driver.getOled().valueInfo("Launch Scene " + (absoluteScene + 1), "From start");
+            }
+            case SELECT -> selectSceneForEditing(absoluteScene);
+            case COPY_CLIP -> copyLaneClipToScene(absoluteScene);
+            case COPY_SCENE -> copyChildSceneToScene(absoluteScene);
+        }
+    }
+
+    private void selectSceneForEditing(final int absoluteScene) {
         creationGeneration++;
         sceneCreator.ensureExists(
                 absoluteScene,
@@ -222,18 +277,102 @@ public final class MulticlipSequenceMode extends Layer {
                         return;
                     }
                     activeScene = absoluteScene;
+                    groupSelected = false;
                     focusActiveTarget(null);
-                    if (launch) {
-                        final int currentVisible = activeScene - sceneBank.scrollPosition().get();
-                        if (currentVisible >= 0 && currentVisible < SCENE_BANK_SIZE) {
-                            MulticlipChildSceneLauncher.launch(eligibleChildSlots(currentVisible));
-                        }
-                    }
+                    driver.getOled()
+                            .valueInfo("Scene " + (activeScene + 1), "Selected for editing");
+                });
+    }
+
+    private void copyLaneClipToScene(final int targetScene) {
+        ensureCopyTarget(
+                targetScene,
+                () -> {
+                    final ClipLauncherSlot source = slot(activeChildPosition, activeScene);
+                    final ClipLauncherSlot target = slot(activeChildPosition, targetScene);
+                    final boolean copied = MulticlipChildCopyController.copyClip(source, target);
                     driver.getOled()
                             .valueInfo(
-                                    "Scene " + (activeScene + 1),
-                                    launch ? "Playing + Editing" : "Editing");
+                                    copied ? "Paste Lane Clip" : "Nothing to paste",
+                                    "Scene " + (targetScene + 1));
                 });
+    }
+
+    private void copyChildSceneToScene(final int targetScene) {
+        ensureCopyTarget(
+                targetScene,
+                () -> {
+                    final List<MulticlipChildCopyController.SlotPair> pairs = new ArrayList<>();
+                    for (int child = 0; child < laneCount; child++) {
+                        if (isEligibleLane(child)) {
+                            pairs.add(
+                                    new MulticlipChildCopyController.SlotPair(
+                                            slot(child, activeScene), slot(child, targetScene)));
+                        }
+                    }
+                    final int changed = MulticlipChildCopyController.copyScene(pairs);
+                    driver.getOled()
+                            .valueInfo(
+                                    "Paste Child Scene",
+                                    changed + " lane" + (changed == 1 ? "" : "s"));
+                });
+    }
+
+    private void ensureCopyTarget(final int targetScene, final Runnable copyAction) {
+        if (!isValidContext() || !isEligibleLane(activeChildPosition)) {
+            showInvalidContext();
+            return;
+        }
+        if (!isSceneVisible(activeScene)) {
+            driver.getOled().valueInfo("Source off page", "Page back to source");
+            return;
+        }
+        if (targetScene == activeScene) {
+            driver.getOled().valueInfo("Same scene", "Choose destination");
+            return;
+        }
+        creationGeneration++;
+        sceneCreator.ensureExists(
+                targetScene,
+                created -> {
+                    if (active && created && isSceneVisible(targetScene)) {
+                        copyAction.run();
+                    }
+                });
+    }
+
+    private ClipLauncherSlot slot(final int childPosition, final int absoluteScene) {
+        final int visibleScene = absoluteScene - sceneBank.scrollPosition().get();
+        return laneBank.getItemAt(childPosition).clipLauncherSlotBank().getItemAt(visibleScene);
+    }
+
+    private boolean isSceneVisible(final int absoluteScene) {
+        final int visibleScene = absoluteScene - sceneBank.scrollPosition().get();
+        return visibleScene >= 0 && visibleScene < SCENE_BANK_SIZE;
+    }
+
+    private void handleLanePad(final int childPosition) {
+        if (!isEligibleLane(childPosition)) {
+            return;
+        }
+        if (deleteHeld) {
+            driver.getOled().valueInfo("Delete", "Use a pattern pad");
+            return;
+        }
+        final Track track = laneBank.getItemAt(childPosition);
+        if (laneMuteMode) {
+            final boolean muted = !track.mute().get();
+            track.mute().set(muted);
+            driver.getOled().valueInfo(muted ? "Mute On" : "Mute Off", laneName(childPosition));
+            return;
+        }
+        if (laneSoloMode) {
+            final boolean soloed = !track.solo().get();
+            track.solo().set(soloed);
+            driver.getOled().valueInfo(soloed ? "Solo On" : "Solo Off", laneName(childPosition));
+            return;
+        }
+        selectLane(childPosition);
     }
 
     private void selectLane(final int childPosition) {
@@ -241,6 +380,8 @@ public final class MulticlipSequenceMode extends Layer {
             return;
         }
         activeChildPosition = childPosition;
+        groupSelected = false;
+        drumPadEncoderController.setActivePad(childPosition);
         creationGeneration++;
         focusActiveTarget(null);
         showLaneInfo();
@@ -250,6 +391,8 @@ public final class MulticlipSequenceMode extends Layer {
         if (!active || !isValidContext() || !isEligibleLane(activeChildPosition)) {
             return;
         }
+        groupSelected = false;
+        drumPadEncoderController.setActivePad(activeChildPosition);
         final int visibleScene = activeScene - sceneBank.scrollPosition().get();
         if (visibleScene < 0 || visibleScene >= SCENE_BANK_SIZE) {
             driver.getOled().valueInfo("Scene off page", "Select scene again");
@@ -292,6 +435,10 @@ public final class MulticlipSequenceMode extends Layer {
             showInvalidContext();
             return;
         }
+        if (groupSelected) {
+            driver.getOled().valueInfo("Group selected", "Choose a lane first");
+            return;
+        }
         if (cursorRetargetInProgress || !clipController.isReady()) {
             driver.getOled().valueInfo("Clip loading", "Pad input blocked");
             return;
@@ -305,6 +452,29 @@ public final class MulticlipSequenceMode extends Layer {
         if (!padInteraction.wasOccupied(padIndex)) {
             clipController.setStep(activeMapping().midiChannel(), step, velocity, DEFAULT_GATE);
         }
+    }
+
+    private void setLastStep(final int padIndex) {
+        if (!activeLaneHasClip()) {
+            driver.getOled().valueInfo("Empty lane", "Length unchanged");
+            return;
+        }
+        final int steps = firstVisibleStep + MulticlipXoxLayout.visibleStep(padIndex) + 1;
+        clipController.setLoopLength(MulticlipTiming.beatsForSteps(steps));
+        driver.getOled().valueInfo("Length " + steps + " steps", activeLaneName());
+    }
+
+    private void deleteStep(final int padIndex) {
+        if (cursorRetargetInProgress || !clipController.isReady() || groupSelected) {
+            driver.getOled().valueInfo("Step unavailable", "Select a Lane Clip");
+            return;
+        }
+        final int step = MulticlipXoxLayout.visibleStep(padIndex);
+        for (final int channel : clipController.channelsAt(step)) {
+            clipController.clearStep(channel, step);
+        }
+        driver.getOled()
+                .valueInfo("Delete step " + (firstVisibleStep + step + 1), activeLaneName());
     }
 
     private void handleStepRelease(final int padIndex) {
@@ -442,34 +612,76 @@ public final class MulticlipSequenceMode extends Layer {
                 0);
     }
 
-    private void handleRowButton(final int row) {
-        if (row != 1 || !isEligibleLane(activeChildPosition)) {
-            return;
-        }
-        final Track track = laneBank.getItemAt(activeChildPosition);
-        switch (MulticlipRowButtonAction.resolve(
-                driver.isGlobalAltHeld(), driver.isGlobalShiftHeld())) {
-            case SELECT -> focusActiveTarget(null);
-            case SOLO -> {
-                final boolean enabled = !track.solo().get();
-                track.solo().set(enabled);
-                driver.getOled().valueInfo(enabled ? "Solo On" : "Solo Off", activeLaneName());
-            }
-            case MUTE -> {
-                final boolean enabled = !track.mute().get();
-                track.mute().set(enabled);
-                driver.getOled().valueInfo(enabled ? "Mute On" : "Mute Off", activeLaneName());
+    private void handleRowButton(final int row, final boolean pressed) {
+        switch (row) {
+            case 0 -> handleSelectButton(pressed);
+            case 1 -> handleLastStepButton(pressed);
+            case 2 -> copyHeld = pressed;
+            case 3 -> deleteHeld = pressed;
+            default -> {
+                // The Fire exposes four row buttons.
             }
         }
     }
 
-    private BiColorLightState rowButtonLight(final int row) {
-        if (row != 1 || !isEligibleLane(activeChildPosition)) {
-            return BiColorLightState.OFF;
+    private void handleSelectButton(final boolean pressed) {
+        if (pressed && driver.isGlobalShiftHeld()) {
+            laneMuteMode = !laneMuteMode;
+            laneSoloMode = false;
+            selectHeld = false;
+            driver.getOled().valueInfo("Lane Mute", laneMuteMode ? "On" : "Off");
+            return;
         }
-        final Track track = laneBank.getItemAt(activeChildPosition);
-        return MulticlipRowButtonRenderer.render(
-                true, true, track.mute().get(), track.solo().get());
+        if (pressed) {
+            laneMuteMode = false;
+        }
+        selectHeld = pressed;
+    }
+
+    private void handleLastStepButton(final boolean pressed) {
+        if (pressed && driver.isGlobalAltHeld()) {
+            lastStepHeld = false;
+            selectContainingGroup();
+            return;
+        }
+        if (pressed && driver.isGlobalShiftHeld()) {
+            laneSoloMode = !laneSoloMode;
+            laneMuteMode = false;
+            lastStepHeld = false;
+            driver.getOled().valueInfo("Lane Solo", laneSoloMode ? "On" : "Off");
+            return;
+        }
+        if (pressed) {
+            laneSoloMode = false;
+        }
+        lastStepHeld = pressed;
+    }
+
+    private void selectContainingGroup() {
+        if (!groupContextReady || !groupCursor.exists().get()) {
+            showInvalidContext();
+            return;
+        }
+        creationGeneration++;
+        targetGeneration++;
+        cursorRetargetInProgress = false;
+        clipController.clear();
+        groupSelected = true;
+        groupCursor.selectInMixer();
+        groupCursor.selectInEditor();
+        driver.getOled().valueInfo("Drum group", "Device control");
+    }
+
+    private BiColorLightState rowButtonLight(final int row) {
+        final boolean activeState =
+                switch (row) {
+                    case 0 -> selectHeld || laneMuteMode;
+                    case 1 -> lastStepHeld || laneSoloMode || groupSelected;
+                    case 2 -> copyHeld;
+                    case 3 -> deleteHeld;
+                    default -> false;
+                };
+        return activeState ? BiColorLightState.GREEN_FULL : BiColorLightState.GREEN_HALF;
     }
 
     private RgbLightState padLight(final int padIndex) {
@@ -490,6 +702,13 @@ public final class MulticlipSequenceMode extends Layer {
             return RgbLightState.OFF;
         }
         final RgbLightState color = laneColor(childPosition);
+        final Track track = laneBank.getItemAt(childPosition);
+        if (laneMuteMode) {
+            return track.mute().get() ? color.getVeryDimmed() : color.getBrightest();
+        }
+        if (laneSoloMode) {
+            return track.solo().get() ? color.getBrightest() : color.getVeryDimmed();
+        }
         return childPosition == activeChildPosition ? color.getBrightest() : color.getVeryDimmed();
     }
 
@@ -639,6 +858,8 @@ public final class MulticlipSequenceMode extends Layer {
         // Do not retarget here: a clip click selects its track before its exact slot observer
         // fires.
         activeChildPosition = childPosition;
+        groupSelected = false;
+        drumPadEncoderController.setActivePad(childPosition);
         showLaneInfo();
     }
 
@@ -656,6 +877,8 @@ public final class MulticlipSequenceMode extends Layer {
         }
         activeChildPosition = childPosition;
         activeScene = selectedScene;
+        groupSelected = false;
+        drumPadEncoderController.setActivePad(childPosition);
         creationGeneration++;
         sceneCreator.invalidate();
         if (changed) {
@@ -677,6 +900,7 @@ public final class MulticlipSequenceMode extends Layer {
         for (int child = 0; child < laneCount; child++) {
             if (isEligibleLane(child)) {
                 activeChildPosition = child;
+                drumPadEncoderController.setActivePad(child);
                 return;
             }
         }
@@ -695,6 +919,7 @@ public final class MulticlipSequenceMode extends Layer {
                         .get()) {
                     activeChildPosition = child;
                     activeScene = sceneBank.scrollPosition().get() + scene;
+                    drumPadEncoderController.setActivePad(child);
                     return;
                 }
             }
@@ -814,14 +1039,43 @@ public final class MulticlipSequenceMode extends Layer {
         }
     }
 
-    private void showEncoderMode() {
-        if (encoderMode == EncoderMode.CHANNEL) {
-            driver.getOled().detailInfo("Multiclip Channel", "1 Clip Length");
-            driver.getOled().setFooterLegend(EncoderFooterLegend.of("Lgth", "", "", ""));
-        } else {
-            driver.getOled().detailInfo("Multiclip " + encoderMode, "Reserved");
-            driver.getOled().setFooterLegend(null);
+    private void handleEncoderTurn(final int encoderIndex, final int increment) {
+        final MulticlipEncoderTarget target =
+                MulticlipEncoderTarget.resolve(encoderMode, encoderIndex);
+        switch (target.kind()) {
+            case CLIP_LENGTH -> timingController.adjustLoopLength(increment);
+            case PLAY_START -> timingController.movePlayStart(increment);
+            case PAD_MIXER, PAD_REMOTE ->
+                    drumPadEncoderController.adjust(target, driver.isGlobalShiftHeld(), increment);
+            case NONE -> {
+                // Unassigned on the Channel page.
+            }
         }
+    }
+
+    private void showEncoderMode() {
+        switch (encoderMode) {
+            case CHANNEL -> {
+                driver.getOled().detailInfo("Multiclip Channel", "Clip timing");
+                driver.getOled().setFooterLegend(EncoderFooterLegend.of("Lgth", "Start", "", ""));
+            }
+            case MIXER -> {
+                driver.getOled().detailInfo("Multiclip Mixer", activeLaneName());
+                driver.getOled().setFooterLegend(EncoderFooterLegend.of("Vol", "Pan", "S1", "S2"));
+            }
+            case USER_1 -> {
+                driver.getOled().detailInfo("Multiclip Pad Remote", "Parameters 1-4");
+                driver.getOled().setFooterLegend(EncoderFooterLegend.of("R1", "R2", "R3", "R4"));
+            }
+            case USER_2 -> {
+                driver.getOled().detailInfo("Multiclip Pad Remote", "Parameters 5-8");
+                driver.getOled().setFooterLegend(EncoderFooterLegend.of("R5", "R6", "R7", "R8"));
+            }
+        }
+    }
+
+    public CursorRemoteControlsPage getActiveRemoteControlsPage() {
+        return drumPadEncoderController.activeRemoteControlsPage();
     }
 
     private void bindPatternButtons() {

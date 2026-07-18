@@ -54,6 +54,12 @@ final class MulticlipPadInteractionState {
         }
     }
 
+    void consume(final int padIndex) {
+        if (padIndex >= MulticlipXoxLayout.PATTERN_START && padIndex < PAD_COUNT) {
+            consumed[padIndex] = true;
+        }
+    }
+
     void clear() {
         Arrays.fill(held, false);
         Arrays.fill(occupiedAtPress, false);
