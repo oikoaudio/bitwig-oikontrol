@@ -2045,6 +2045,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
             return true;
         }
         if (modeState.activeMode() == Mode.DRUM
+                && modeState.activeDrumMode() == DrumMode.MULTICLIP_SEQ
+                && multiclipSequenceMode != null
+                && multiclipSequenceMode.showIdleInfoIfNeeded()) {
+            return true;
+        }
+        if (modeState.activeMode() == Mode.DRUM
                 && modeState.activeDrumMode() == DrumMode.STANDARD
                 && drumSequenceMode != null
                 && drumSequenceMode.showIdleInfoIfNeeded()) {

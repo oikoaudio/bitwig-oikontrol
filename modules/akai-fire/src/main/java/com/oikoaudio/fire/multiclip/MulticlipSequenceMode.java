@@ -1079,6 +1079,10 @@ public final class MulticlipSequenceMode extends Layer {
                 || !hasEligibleLane()) {
             return false;
         }
+        return hasDrumMachine();
+    }
+
+    private boolean hasDrumMachine() {
         for (final boolean drumMachine : groupDeviceIsDrumMachine) {
             if (drumMachine) {
                 return true;
@@ -1109,9 +1113,22 @@ public final class MulticlipSequenceMode extends Layer {
     }
 
     private void showInvalidContext() {
-        driver.getOled()
-                .valueInfo(
-                        laneCount == 0 ? "No child tracks" : "Select Drum group", "Multiclip Seq");
+        final MulticlipContextFeedback.Message message = invalidContextMessage();
+        driver.getOled().valueInfo(message.title(), message.detail());
+    }
+
+    private MulticlipContextFeedback.Message invalidContextMessage() {
+        return MulticlipContextFeedback.message(
+                groupContextReady, hasDrumMachine(), laneCount, eligibleLaneCount());
+    }
+
+    public boolean showIdleInfoIfNeeded() {
+        if (!active || isValidContext()) {
+            return false;
+        }
+        final MulticlipContextFeedback.Message message = invalidContextMessage();
+        driver.getOled().valueInfoPersistentNoClear(message.title(), message.detail());
+        return true;
     }
 
     private void showLaneInfo() {

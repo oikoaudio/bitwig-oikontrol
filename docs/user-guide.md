@@ -227,7 +227,16 @@ Global `SELECT` turn chords:
 
 ### DRUM Mode
 
-`Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Press `DRUM` again to cycle through `Multiclip Seq`, `Nested Rhythm`, and `Drum Pads`. If `Drum Mode Pinning` is `Auto-select First Drum Machine`, Drum XOX focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, Drum XOX follows the selected drum context.
+`Drum XOX` is the default sequencer-oriented workflow for a Drum Machine. Repeatedly press `DRUM` to cycle through the surfaces in this order:
+
+| Current surface | Next `DRUM` surface |
+| --- | --- |
+| `Drum XOX` | `Nested Rhythm` |
+| `Nested Rhythm` | `Drum Pads` |
+| `Drum Pads` | `Multiclip Seq` |
+| `Multiclip Seq` | `Drum XOX` |
+
+If `Drum Mode Pinning` is `Auto-select First Drum Machine`, Drum XOX focuses and pins the first Drum Machine it finds. If it is `Follow Selection`, Drum XOX follows the selected drum context.
 
 When Drum XOX is idle, the OLED shows the selected pad name with the current encoder legend when `Idle Perf & Drum OLED` is `Context`. Set `Idle Perf & Drum OLED` to `Meters` to show vertical RMS meters for the 16 visible Drum Machine pad chains with the same legend. On the `Mixer` encoder page, it instead shows selected-pad maximum peak/RMS on the first large row, current peak/RMS on the second large row, and the compact encoder legend.
 
@@ -266,18 +275,24 @@ Hold one or more step pads, then use the timing gestures to move those held note
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 
-In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this, while `ALT + BANK LEFT/RIGHT` still undo/redo Bitwig project history. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
+In `Drum Pads`, the third `DRUM` surface, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this, while `ALT + BANK LEFT/RIGHT` still undo/redo Bitwig project history. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
 ### Multiclip Seq mode
 
-`Multiclip Seq` is the second `DRUM` surface. It sequences up to sixteen full child tracks rather than Drum Machine pad channels, making independent clip lengths and play starts available for polyrhythms. It deliberately focuses one child clip at a time so the Fire pattern and Bitwig Detail Editor always refer to the same clip.
+`Multiclip Seq` is the fourth and final `DRUM` surface because it requires a specific Bitwig track layout. It sequences up to sixteen full child tracks rather than Drum Machine pad channels, making independent clip lengths and play starts available for polyrhythms. It deliberately focuses one child clip at a time so the Fire pattern and Bitwig Detail Editor always refer to the same clip.
 
 Set up the Bitwig project as follows:
 
 - Put a Drum Machine device on a group track.
 - Add one to sixteen direct child instrument or hybrid tracks and route their MIDI to that group.
+- Keep the group track's own Launcher slots empty; its role is to host the Drum Machine.
 - Put each pattern's child-track clips in the same launcher scene.
+- Before entering Multiclip Seq, select either the group track or one of those direct child tracks. Selecting a child clip is preferred when that exact lane and scene should open for editing.
 - Open the Detail Editor in Hybrid view and set `Edit only selected layers` to `Off` (recommended).
+
+Multiclip Seq anchors itself to the current Bitwig track selection; it does not search the whole project for a matching template. If the group is selected, the mode pins it and chooses an eligible direct child lane. If a direct child is selected, the mode moves to and pins its parent group while keeping the selected child clip authoritative for editing. A deeper nested track resolves only to its nearest group, so the sequencing tracks must be direct children of the Drum Machine group. The extension can verify the group, Drum Machine, and MIDI-capable direct children, but it cannot verify that the children's MIDI routing reaches the group.
+
+If the selected track does not resolve to this setup, the pad grid remains off and the OLED persistently identifies the missing context: `Setup not found`, `No Drum Machine`, or `No MIDI children`. Correct the Bitwig selection or setup, leave Multiclip Seq, and enter it again to reacquire the group.
 
 Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MIDI channels 0-15, and Drum Machine notes 36-51. Track and clip names do not affect mapping; reordering tracks intentionally changes it.
 
@@ -335,7 +350,7 @@ Multiclip Seq never selects the group track's scene or sub scene as an editing t
 
 ### Nested Rhythm mode
 
-`Nested Rhythm` is the third `DRUM` surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.
+`Nested Rhythm` is the second `DRUM` surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.
 
 Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press `PATTERN DOWN` to overwrite and claim the clip for Nested Rhythm editing.
 
@@ -358,9 +373,6 @@ The `Channel` encoder page is the primary Nested Rhythm surface: it changes the 
 
 | Control | Action |
 | --- | --- |
-| `DRUM` while in `XOX Drum mode` | Enter `Multiclip Seq` |
-| `DRUM` while in `Multiclip Seq` | Enter `Nested Rhythm mode` |
-| `DRUM` while in `Nested Rhythm` | Enter `Drum Pads` |
 | `STEP` | Enter `Poly Step` |
 | `ALT + STEP` | Fill |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |

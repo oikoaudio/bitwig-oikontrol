@@ -12,9 +12,9 @@ public final class TopLevelModeState {
 
     public enum DrumMode {
         STANDARD,
-        MULTICLIP_SEQ,
         NESTED_RHYTHM,
-        DRUM_PADS;
+        DRUM_PADS,
+        MULTICLIP_SEQ;
 
         public DrumMode next() {
             return values()[(ordinal() + 1) % values().length];
