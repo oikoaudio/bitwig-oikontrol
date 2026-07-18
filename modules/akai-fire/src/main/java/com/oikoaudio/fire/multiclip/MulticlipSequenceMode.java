@@ -720,6 +720,7 @@ public final class MulticlipSequenceMode extends Layer {
             final int position = childPosition;
             final Track track = laneBank.getItemAt(position);
             track.exists().markInterested();
+            track.position().markInterested();
             track.name().markInterested();
             track.color().markInterested();
             track.canHoldNoteData().markInterested();

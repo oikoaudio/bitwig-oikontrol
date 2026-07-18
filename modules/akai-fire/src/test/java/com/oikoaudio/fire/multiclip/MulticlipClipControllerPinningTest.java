@@ -43,6 +43,7 @@ class MulticlipClipControllerPinningTest {
                 0, targetTrack, TrackLaneMapping.fromChildPosition(0), 0, 5, true, completed::set);
 
         verify(fixture.cursor).selectChannel(targetTrack);
+        verify(targetTrack.position(), never()).markInterested();
         verify(fixture.cursor, never()).selectSlot(5);
         assertNull(completed.get());
 

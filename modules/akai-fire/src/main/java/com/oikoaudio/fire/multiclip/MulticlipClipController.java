@@ -96,7 +96,6 @@ final class MulticlipClipController {
         final long generation = ++targetGenerations[row];
         beginRetarget(row);
         firstVisibleSteps[row] = firstVisibleStep;
-        track.position().markInterested();
         cursors[row].isPinned().set(false);
         clips[row].isPinned().set(false);
         fineClips[row].isPinned().set(false);
