@@ -648,11 +648,8 @@ public final class MulticlipSequenceMode extends Layer {
         switch (row) {
             case 0 -> handleSelectButton(pressed);
             case 1 -> handleLastStepButton(pressed);
-            case 2 -> copyHeld = pressed;
-            case 3 -> {
-                deleteHeld = pressed;
-                encoderController.setDeleteHeld(pressed);
-            }
+            case 2 -> handleCopyButton(pressed);
+            case 3 -> handleDeleteButton(pressed);
             default -> {
                 // The Fire exposes four row buttons.
             }
@@ -671,6 +668,7 @@ public final class MulticlipSequenceMode extends Layer {
             laneMuteMode = false;
         }
         selectHeld = pressed;
+        showEditButtonFeedback(0, pressed);
     }
 
     private void handleLastStepButton(final boolean pressed) {
@@ -688,11 +686,30 @@ public final class MulticlipSequenceMode extends Layer {
         }
         if (pressed) {
             laneSoloMode = false;
-            driver.getOled().valueInfo("Last Step", "Pattern pad");
-        } else {
-            driver.getOled().clearScreenDelayed();
         }
         lastStepHeld = pressed;
+        showEditButtonFeedback(1, pressed);
+    }
+
+    private void handleCopyButton(final boolean pressed) {
+        copyHeld = pressed;
+        showEditButtonFeedback(2, pressed);
+    }
+
+    private void handleDeleteButton(final boolean pressed) {
+        deleteHeld = pressed;
+        encoderController.setDeleteHeld(pressed);
+        showEditButtonFeedback(3, pressed);
+    }
+
+    private void showEditButtonFeedback(final int row, final boolean pressed) {
+        if (!pressed) {
+            driver.getOled().clearScreenDelayed();
+            return;
+        }
+        final MulticlipEditButtonFeedback.Message message =
+                MulticlipEditButtonFeedback.message(row, driver.isGlobalShiftHeld());
+        driver.getOled().valueInfo(message.title(), message.detail());
     }
 
     private void selectContainingGroup() {

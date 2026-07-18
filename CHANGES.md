@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Multiclip Seq now drives the four TRACK status LEDs with the shared sequencer palette and shows each mute-row button's function and valid target on the OLED, including Lane Clip versus Child Scene paste.
 - Multiclip Seq now hydrates the active Lane Clip playhead immediately after lane or scene retargeting and displays it across pattern rows 3-4. Holding `MUTE_2` previews that clip's length and sets its Last Step without changing another lane.
 - Added Akai Fire Multiclip Seq as a `DRUM` surface with sixteen project scenes on row 1, sixteen positional child tracks on row 2, and a focused 32-step Lane Clip on rows 3-4. Child clips retain independent lengths and play starts for polyrhythms.
 - Multiclip Seq now follows a plainly launched child-only scene as its editing source, while `ALT + scene` or `MUTE_1 + scene` can select a non-playing scene for preparation. `MUTE_3` pastes either the active Lane Clip or an exact child-only scene snapshot.
