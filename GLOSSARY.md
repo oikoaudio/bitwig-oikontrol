@@ -36,7 +36,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Drum XOX**: The default Akai Fire `DRUM` x0x-style Drum Machine step sequencer.
 
-**Multiclip Seq**: The Akai Fire `DRUM` mode that shows four direct child-track clips at once, supports independent clip lengths and play starts, and pages across up to sixteen positional Track Lanes.
+**Multiclip Seq**: The Akai Fire `DRUM` mode with a scene row, a sixteen-child Track Lane row, and a 32-step view of one active Lane Clip. Each child clip retains an independent length and play start.
 
 **Nested Rhythm**: The Akai Fire `DRUM` structural rhythm generator that creates deterministic patterns from nested divisions, tuplets, ratchets, density, clustering, and editable generated hits.
 
@@ -64,7 +64,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 ## Sequencing and rhythm terms
 
-**Track Lane**: One Multiclip Seq row backed by a full direct child track of the parent Drum Machine group. It is not a Drum Machine pad channel.
+**Track Lane**: One positional Multiclip Seq lane backed by a full direct child track of the parent Drum Machine group. It is not a Drum Machine pad channel.
 
 **Lane Clip**: The launcher clip on a Track Lane at the active Multiclip Scene.
 
@@ -72,9 +72,9 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Multiclip Scene**: An absolute Bitwig launcher scene used as the shared clip target across all Multiclip Seq Track Lanes.
 
-**Lane Page**: One four-track window within Multiclip Seq's maximum of sixteen positional Track Lanes.
+**Scene Row**: Multiclip Seq row 1, which always addresses sixteen project scenes and derives its feedback only from eligible child-track slots.
 
-**Scene Overlay**: The momentary Multiclip Seq state entered by holding `ALT` before any lane pad, where row 1 becomes a sixteen-scene selector while rows 2-4 remain Track Lanes.
+**Lane Row**: Multiclip Seq row 2, where each pad selects one of up to sixteen positional direct child tracks.
 
 **Step**: A time position in a step sequencer mode whose editing and clip-writing semantics are owned by that mode.
 

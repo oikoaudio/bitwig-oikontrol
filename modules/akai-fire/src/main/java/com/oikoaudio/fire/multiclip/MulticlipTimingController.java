@@ -25,10 +25,9 @@ final class MulticlipTimingController {
             oled.valueInfo("Empty lane", "Length unchanged");
             return;
         }
-        final int row = context.activeRow();
-        final int currentSteps = MulticlipTiming.stepsForBeats(clips.loopLength(row));
+        final int currentSteps = MulticlipTiming.stepsForBeats(clips.loopLength());
         final int newSteps = MulticlipTiming.adjustLoopSteps(currentSteps, increment);
-        clips.setLoopLength(row, MulticlipTiming.beatsForSteps(newSteps));
+        clips.setLoopLength(MulticlipTiming.beatsForSteps(newSteps));
         oled.valueInfo("Length " + newSteps + " steps", context.activeLaneName());
     }
 
@@ -37,14 +36,13 @@ final class MulticlipTimingController {
             oled.valueInfo("Empty lane", "Rotation unchanged");
             return;
         }
-        final int row = context.activeRow();
-        final double loopLength = Math.max(MulticlipTiming.STEP_BEATS, clips.loopLength(row));
-        double newStart = clips.playStart(row) + direction * MulticlipTiming.STEP_BEATS;
+        final double loopLength = Math.max(MulticlipTiming.STEP_BEATS, clips.loopLength());
+        double newStart = clips.playStart() + direction * MulticlipTiming.STEP_BEATS;
         newStart %= loopLength;
         if (newStart < 0) {
             newStart += loopLength;
         }
-        clips.setPlayStart(row, newStart);
+        clips.setPlayStart(newStart);
         final int startStep = (int) Math.round(newStart / MulticlipTiming.STEP_BEATS);
         oled.valueInfo("Play start " + startStep + " steps", context.activeLaneName());
     }
@@ -54,24 +52,22 @@ final class MulticlipTimingController {
             oled.valueInfo("Empty lane", "Nudge ignored");
             return;
         }
-        final int row = context.activeRow();
-        clips.fineNudge(
-                row, direction, fineStep -> !heldOnly || fineStepBelongsToHeldPad(row, fineStep));
+        clips.fineNudge(direction, fineStep -> !heldOnly || fineStepBelongsToHeldPad(fineStep));
         if (pads.hasHeldPads()) {
-            pads.consumeHeldRow(row);
+            pads.consumeHeldPattern();
         }
         oled.valueInfo(
                 heldOnly ? "Step nudge " + signed(direction) : "Lane nudge " + signed(direction),
                 context.activeLaneName());
     }
 
-    private boolean fineStepBelongsToHeldPad(final int row, final int fineStep) {
+    private boolean fineStepBelongsToHeldPad(final int fineStep) {
         final int coarseStep = MulticlipClipController.coarseStepForFineStep(fineStep);
         final int visibleStep = coarseStep - context.firstVisibleStep();
-        if (visibleStep < 0 || visibleStep >= MulticlipPageState.STEPS_PER_PAGE) {
+        if (visibleStep < 0 || visibleStep >= MulticlipXoxLayout.PATTERN_COUNT) {
             return false;
         }
-        return pads.isHeld(row * MulticlipPageState.STEPS_PER_PAGE + visibleStep);
+        return pads.isHeld(MulticlipXoxLayout.PATTERN_START + visibleStep);
     }
 
     private String signed(final int direction) {
@@ -79,8 +75,6 @@ final class MulticlipTimingController {
     }
 
     interface Context {
-        int activeRow();
-
         int firstVisibleStep();
 
         boolean activeLaneHasClip();

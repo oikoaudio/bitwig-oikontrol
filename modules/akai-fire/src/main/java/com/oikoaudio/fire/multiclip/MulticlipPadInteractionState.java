@@ -5,8 +5,6 @@ import java.util.Arrays;
 /** Pure held-pad session state, including delayed toggle and nudge consumption. */
 final class MulticlipPadInteractionState {
     private static final int PAD_COUNT = 64;
-    private static final int STEPS_PER_ROW = 16;
-
     private final boolean[] held = new boolean[PAD_COUNT];
     private final boolean[] occupiedAtPress = new boolean[PAD_COUNT];
     private final boolean[] consumed = new boolean[PAD_COUNT];
@@ -48,21 +46,10 @@ final class MulticlipPadInteractionState {
         return false;
     }
 
-    boolean hasHeldPadInAnotherRow(final int padIndex) {
-        final int row = padIndex / STEPS_PER_ROW;
-        for (int heldPad = 0; heldPad < PAD_COUNT; heldPad++) {
-            if (heldPad != padIndex && held[heldPad] && heldPad / STEPS_PER_ROW != row) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void consumeHeldRow(final int row) {
-        final int start = row * STEPS_PER_ROW;
-        for (int step = 0; step < STEPS_PER_ROW; step++) {
-            if (held[start + step]) {
-                consumed[start + step] = true;
+    void consumeHeldPattern() {
+        for (int pad = MulticlipXoxLayout.PATTERN_START; pad < PAD_COUNT; pad++) {
+            if (held[pad]) {
+                consumed[pad] = true;
             }
         }
     }

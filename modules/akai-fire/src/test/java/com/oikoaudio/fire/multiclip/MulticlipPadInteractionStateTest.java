@@ -7,21 +7,26 @@ import org.junit.jupiter.api.Test;
 
 class MulticlipPadInteractionStateTest {
     @Test
-    void reportsHeldPadsOnlyWhenTheyBelongToAnotherRow() {
+    void consumesHeldStepsAcrossBothPatternRows() {
         final MulticlipPadInteractionState state = new MulticlipPadInteractionState();
 
-        state.press(2);
+        state.press(34);
+        state.press(51);
+        state.consumeHeldPattern();
 
-        assertFalse(state.hasHeldPadInAnotherRow(7));
-        assertTrue(state.hasHeldPadInAnotherRow(18));
+        assertTrue(state.isConsumed(34));
+        assertTrue(state.isConsumed(51));
     }
 
     @Test
-    void ignoresThePadCurrentlyBeginningItsPress() {
+    void doesNotConsumeSceneOrLanePads() {
         final MulticlipPadInteractionState state = new MulticlipPadInteractionState();
 
+        state.press(2);
         state.press(18);
+        state.consumeHeldPattern();
 
-        assertFalse(state.hasHeldPadInAnotherRow(18));
+        assertFalse(state.isConsumed(2));
+        assertFalse(state.isConsumed(18));
     }
 }

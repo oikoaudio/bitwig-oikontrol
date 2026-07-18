@@ -4,11 +4,8 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
-- Added Akai Fire Multiclip Seq as a four-row `DRUM` surface for sequencing up to sixteen positional child-track clips with independent lengths/play starts, lane and time paging, scene population, Track mute/solo, and independent playheads.
-- Fixed Multiclip Seq retargeting so existing clip notes hydrate into the pad display and writes cannot fall through to a previously selected scene; row LEDs now show bright-audible/dim-muted state, with `ALT + MUTE_n` reserved for lane selection.
-- Fixed Multiclip Seq Lane Clip cursors remaining attached to the previous globally selected clip by waiting for each requested scene slot to settle before independently pinning its observation views and enabling edits.
-- Multiclip Scene activation now populates only eligible child-track slots, launches those child clips only with the explicit Shift gesture, never launches or selects the aggregate group scene/sub scene, and derives overlay feedback exclusively from child-track clips.
-- Fixed Multiclip Seq parent and lane initialization with identity-verified cursor pinning: all four visible child clips again show independent notes and playheads, cursor-scoped scene targeting cannot settle on the group track, and cross-row pad input remains blocked while another row is held or cursors are settling.
+- Added Akai Fire Multiclip Seq as a `DRUM` surface with sixteen project scenes on row 1, sixteen positional child tracks on row 2, and a focused 32-step Lane Clip on rows 3-4. Child clips retain independent lengths and play starts for polyrhythms.
+- Multiclip Seq now creates real empty project scenes without group-track clips, selects one exact child slot through Bitwig's ordinary selected-track cursor, hydrates existing notes and playhead feedback, and delays writes until the requested child track and scene are confirmed. `MUTE_2` controls the active child track with bright-audible/dim-muted feedback.
 - Note Repeat divisions are now ordered monotonically from fastest to slowest, interleaving triplet and straight rates while retaining `1/16` as the default.
 - In live Note, Harmonic, and Drum Pads input, hold `MUTE_3` and turn `SELECT` to adjust the remembered Note Repeat division without toggling repeat; an unmodified `MUTE_3` tap still toggles it.
 - Live Note and Harmonic pads now use per-note ownership, so overlapping pads play their combined note union and shared notes remain sounding until the last owning pad is released, including with Hold mode.

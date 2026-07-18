@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.multiclip;
 
+import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteStep;
@@ -15,194 +16,85 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;
 
-/** Owns four independently pinned Lane Clip cursors and their observed note/playhead state. */
+/** Observes and edits the one child-track clip selected by Multiclip Seq. */
 final class MulticlipClipController {
-    static final int VISIBLE_LANES = 4;
-    private static final int SCENE_BANK_SIZE = 16;
-    private static final int MAX_TARGET_ATTEMPTS = 15;
+    private static final int MAX_TARGET_ATTEMPTS = 20;
     private static final long TARGET_RETRY_MS = 50;
     private static final int FINE_STEPS_PER_COARSE_STEP = 16;
     private static final int FINE_OBSERVATION_STEPS =
             MulticlipTiming.MAX_LOOP_STEPS * FINE_STEPS_PER_COARSE_STEP;
 
     private final ControllerHost host;
-    private final CursorTrack[] cursors = new CursorTrack[VISIBLE_LANES];
-    private final PinnableCursorClip[] clips = new PinnableCursorClip[VISIBLE_LANES];
-    private final PinnableCursorClip[] fineClips = new PinnableCursorClip[VISIBLE_LANES];
-    private final MulticlipLaneState state = new MulticlipLaneState();
+    private final CursorTrack cursor;
+    private final PinnableCursorClip clip;
+    private final PinnableCursorClip fineClip;
+    private final Set<Integer>[] observedChannels;
+    private final Map<Integer, Set<Integer>> fineNotes = new HashMap<>();
+
+    private long targetGeneration;
+    private int firstVisibleStep;
+    private int midiNote;
+    private int playingStep = -1;
+    private boolean ready;
 
     @SuppressWarnings("unchecked")
-    private final Map<Integer, Set<Integer>>[] fineNotes = new Map[VISIBLE_LANES];
-
-    private final int[] firstVisibleSteps = new int[VISIBLE_LANES];
-    private final long[] targetGenerations = new long[VISIBLE_LANES];
-
-    MulticlipClipController(final ControllerHost host) {
+    MulticlipClipController(final ControllerHost host, final CursorTrack cursor) {
         this.host = host;
-        for (int row = 0; row < VISIBLE_LANES; row++) {
-            final int laneRow = row;
-            final CursorTrack cursor =
-                    host.createCursorTrack(
-                            "MULTICLIP_LANE_" + (row + 1),
-                            "Multiclip Lane " + (row + 1),
-                            0,
-                            SCENE_BANK_SIZE,
-                            false);
-            cursor.isPinned().markInterested();
-            cursor.exists().markInterested();
-            cursor.position().markInterested();
-            cursor.isPinned().set(false);
-            final PinnableCursorClip clip =
-                    cursor.createLauncherCursorClip(
-                            "MULTICLIP_CLIP_" + (row + 1),
-                            "Multiclip Clip " + (row + 1),
-                            MulticlipPageState.STEPS_PER_PAGE,
-                            1);
-            clip.isPinned().markInterested();
-            clip.exists().markInterested();
-            clip.clipLauncherSlot().sceneIndex().markInterested();
-            clip.setStepSize(MulticlipTiming.STEP_BEATS);
-            clip.addNoteStepObserver(note -> observeStep(laneRow, note));
-            clip.playingStep().addValueObserver(step -> observePlayingStep(laneRow, step));
-            clip.getLoopLength().markInterested();
-            clip.getPlayStart().markInterested();
-
-            final PinnableCursorClip fineClip =
-                    cursor.createLauncherCursorClip(
-                            "MULTICLIP_FINE_" + (row + 1),
-                            "Multiclip Fine " + (row + 1),
-                            FINE_OBSERVATION_STEPS,
-                            1);
-            fineClip.isPinned().markInterested();
-            fineClip.exists().markInterested();
-            fineClip.clipLauncherSlot().sceneIndex().markInterested();
-            fineClip.setStepSize(MulticlipTiming.FINE_STEP_BEATS);
-            fineNotes[row] = new HashMap<>();
-            fineClip.addNoteStepObserver(note -> observeFineStep(laneRow, note));
-            cursors[row] = cursor;
-            clips[row] = clip;
-            fineClips[row] = fineClip;
+        this.cursor = cursor;
+        observedChannels = new Set[MulticlipXoxLayout.PATTERN_COUNT];
+        for (int step = 0; step < observedChannels.length; step++) {
+            observedChannels[step] = new HashSet<>();
         }
+
+        clip =
+                cursor.createLauncherCursorClip(
+                        "MULTICLIP_ACTIVE_CLIP",
+                        "Multiclip Active Clip",
+                        MulticlipXoxLayout.PATTERN_COUNT,
+                        1);
+        clip.isPinned().markInterested();
+        clip.exists().markInterested();
+        clip.clipLauncherSlot().sceneIndex().markInterested();
+        clip.getLoopLength().markInterested();
+        clip.getPlayStart().markInterested();
+        clip.setStepSize(MulticlipTiming.STEP_BEATS);
+        clip.addNoteStepObserver(this::observeStep);
+        clip.playingStep().addValueObserver(this::observePlayingStep);
+
+        fineClip =
+                cursor.createLauncherCursorClip(
+                        "MULTICLIP_ACTIVE_FINE",
+                        "Multiclip Active Fine",
+                        FINE_OBSERVATION_STEPS,
+                        1);
+        fineClip.isPinned().markInterested();
+        fineClip.exists().markInterested();
+        fineClip.clipLauncherSlot().sceneIndex().markInterested();
+        fineClip.setStepSize(MulticlipTiming.FINE_STEP_BEATS);
+        fineClip.addNoteStepObserver(this::observeFineStep);
     }
 
     void retarget(
-            final int row,
             final Track track,
+            final ClipLauncherSlot targetSlot,
             final TrackLaneMapping mapping,
             final int firstVisibleStep,
             final int absoluteScene,
             final boolean expectedClip,
             final Consumer<Boolean> onComplete) {
-        final long generation = ++targetGenerations[row];
-        beginRetarget(row);
-        firstVisibleSteps[row] = firstVisibleStep;
-        cursors[row].isPinned().set(false);
-        clips[row].isPinned().set(false);
-        fineClips[row].isPinned().set(false);
-        cursors[row].selectChannel(track);
-        scheduleTrackTarget(
-                row, generation, track, mapping, absoluteScene, expectedClip, onComplete, 0);
+        final long generation = ++targetGeneration;
+        clearObservedState();
+        this.firstVisibleStep = firstVisibleStep;
+        midiNote = mapping.midiNote();
+        cursor.isPinned().set(false);
+        clip.isPinned().set(false);
+        fineClip.isPinned().set(false);
+        cursor.selectChannel(track);
+        targetSlot.select();
+        scheduleTarget(generation, track, absoluteScene, expectedClip, onComplete, 0);
     }
 
-    private void scheduleTrackTarget(
-            final int row,
-            final long generation,
-            final Track track,
-            final TrackLaneMapping mapping,
-            final int absoluteScene,
-            final boolean expectedClip,
-            final Consumer<Boolean> onComplete,
-            final int attempt) {
-        host.scheduleTask(
-                () -> {
-                    if (targetGenerations[row] != generation) {
-                        return;
-                    }
-                    if (!cursors[row].exists().get()
-                            || cursors[row].position().get() != track.position().get()) {
-                        if (attempt < MAX_TARGET_ATTEMPTS) {
-                            scheduleTrackTarget(
-                                    row,
-                                    generation,
-                                    track,
-                                    mapping,
-                                    absoluteScene,
-                                    expectedClip,
-                                    onComplete,
-                                    attempt + 1);
-                        } else {
-                            failRetarget(row, generation, onComplete);
-                        }
-                        return;
-                    }
-                    cursors[row].isPinned().set(true);
-                    configureClipViews(row, mapping);
-                    cursors[row].selectSlot(absoluteScene);
-                    scheduleClipTarget(
-                            row, generation, track, absoluteScene, expectedClip, onComplete, 0);
-                },
-                TARGET_RETRY_MS);
-    }
-
-    private void configureClipViews(final int row, final TrackLaneMapping mapping) {
-        clips[row].scrollToKey(mapping.midiNote());
-        clips[row].scrollToStep(firstVisibleSteps[row]);
-        fineClips[row].scrollToKey(mapping.midiNote());
-        fineClips[row].scrollToStep(0);
-    }
-
-    void clearRow(final int row) {
-        targetGenerations[row]++;
-        state.deactivateRow(row);
-        fineNotes[row].clear();
-        cursors[row].isPinned().set(false);
-        clips[row].isPinned().set(false);
-        fineClips[row].isPinned().set(false);
-    }
-
-    boolean isReady(final int row) {
-        return state.isReady(row);
-    }
-
-    void setPinned(final boolean pinned) {
-        for (int row = 0; row < VISIBLE_LANES; row++) {
-            cursors[row].isPinned().set(pinned);
-            clips[row].isPinned().set(pinned);
-            fineClips[row].isPinned().set(pinned);
-        }
-    }
-
-    boolean exists(final int row) {
-        return clips[row].exists().get();
-    }
-
-    boolean isOccupied(final int row, final int step) {
-        return state.isOccupied(row, step);
-    }
-
-    Set<Integer> channelsAt(final int row, final int step) {
-        return state.channelsAt(row, step);
-    }
-
-    boolean isPlaying(final int row, final int step) {
-        return state.isPlaying(row, step);
-    }
-
-    void setStep(
-            final int row,
-            final int channel,
-            final int step,
-            final int velocity,
-            final double duration) {
-        clips[row].setStep(channel, step, 0, velocity, duration);
-    }
-
-    void clearStep(final int row, final int channel, final int step) {
-        clips[row].clearStep(channel, step, 0);
-    }
-
-    private void scheduleClipTarget(
-            final int row,
+    private void scheduleTarget(
             final long generation,
             final Track track,
             final int absoluteScene,
@@ -211,14 +103,13 @@ final class MulticlipClipController {
             final int attempt) {
         host.scheduleTask(
                 () -> {
-                    if (targetGenerations[row] != generation) {
+                    if (targetGeneration != generation) {
                         return;
                     }
-                    if (cursors[row].position().get() != track.position().get()
-                            || !clipTargetSettled(row, absoluteScene, expectedClip)) {
+                    if (cursor.position().get() != track.position().get()
+                            || !clipTargetSettled(absoluteScene, expectedClip)) {
                         if (attempt < MAX_TARGET_ATTEMPTS) {
-                            scheduleClipTarget(
-                                    row,
+                            scheduleTarget(
                                     generation,
                                     track,
                                     absoluteScene,
@@ -226,86 +117,109 @@ final class MulticlipClipController {
                                     onComplete,
                                     attempt + 1);
                         } else {
-                            failRetarget(row, generation, onComplete);
+                            clearObservedState();
+                            onComplete.accept(false);
                         }
                         return;
                     }
-                    clips[row].isPinned().set(true);
-                    fineClips[row].isPinned().set(true);
-                    clips[row].scrollToStep(firstVisibleSteps[row]);
-                    fineClips[row].scrollToStep(0);
-                    scheduleObservationRefresh(row, generation, onComplete);
+                    ready = true;
+                    refreshObservedViews();
+                    host.scheduleTask(
+                            () -> {
+                                if (targetGeneration == generation) {
+                                    onComplete.accept(true);
+                                }
+                            },
+                            TARGET_RETRY_MS);
                 },
                 TARGET_RETRY_MS);
     }
 
-    private boolean clipTargetSettled(
-            final int row, final int absoluteScene, final boolean expectedClip) {
+    private boolean clipTargetSettled(final int absoluteScene, final boolean expectedClip) {
         if (!expectedClip) {
-            return !clips[row].exists().get() && !fineClips[row].exists().get();
+            return !clip.exists().get() && !fineClip.exists().get();
         }
-        return clips[row].exists().get()
-                && fineClips[row].exists().get()
-                && clips[row].clipLauncherSlot().sceneIndex().get() == absoluteScene
-                && fineClips[row].clipLauncherSlot().sceneIndex().get() == absoluteScene;
+        return clip.exists().get()
+                && fineClip.exists().get()
+                && clip.clipLauncherSlot().sceneIndex().get() == absoluteScene
+                && fineClip.clipLauncherSlot().sceneIndex().get() == absoluteScene;
     }
 
-    private void scheduleObservationRefresh(
-            final int row, final long generation, final Consumer<Boolean> onComplete) {
-        host.scheduleTask(
-                () -> {
-                    if (targetGenerations[row] == generation) {
-                        state.finishRetarget(row);
-                        onComplete.accept(true);
-                    }
-                },
-                TARGET_RETRY_MS);
+    private void refreshObservedViews() {
+        clip.scrollToKey(Math.max(0, midiNote - 1));
+        clip.scrollToStep(firstVisibleStep + 1);
+        clip.scrollToKey(midiNote);
+        clip.scrollToStep(firstVisibleStep);
+        fineClip.scrollToKey(Math.max(0, midiNote - 1));
+        fineClip.scrollToStep(1);
+        fineClip.scrollToKey(midiNote);
+        fineClip.scrollToStep(0);
     }
 
-    private void failRetarget(
-            final int row, final long generation, final Consumer<Boolean> onComplete) {
-        if (targetGenerations[row] != generation) {
-            return;
-        }
-        state.deactivateRow(row);
-        cursors[row].isPinned().set(false);
-        clips[row].isPinned().set(false);
-        fineClips[row].isPinned().set(false);
-        onComplete.accept(false);
+    void clear() {
+        targetGeneration++;
+        clearObservedState();
+        clip.isPinned().set(false);
+        fineClip.isPinned().set(false);
     }
 
-    double loopLength(final int row) {
-        return clips[row].getLoopLength().get();
+    boolean isReady() {
+        return ready;
     }
 
-    void setLoopLength(final int row, final double beats) {
-        clips[row].getLoopLength().set(beats);
+    boolean exists() {
+        return ready && clip.exists().get();
     }
 
-    double playStart(final int row) {
-        return clips[row].getPlayStart().get();
+    boolean isOccupied(final int step) {
+        return validStep(step) && !observedChannels[step].isEmpty();
     }
 
-    void setPlayStart(final int row, final double beats) {
-        clips[row].getPlayStart().set(beats);
+    Set<Integer> channelsAt(final int step) {
+        return validStep(step) ? Set.copyOf(observedChannels[step]) : Set.of();
     }
 
-    void showInEditor(final int row) {
-        clips[row].showInEditor();
+    boolean isPlaying(final int step) {
+        return ready && step == playingStep;
     }
 
-    int fineNudge(final int row, final int direction, final IntPredicate includeFineStep) {
+    void setStep(final int channel, final int step, final int velocity, final double duration) {
+        clip.setStep(channel, step, 0, velocity, duration);
+    }
+
+    void clearStep(final int channel, final int step) {
+        clip.clearStep(channel, step, 0);
+    }
+
+    double loopLength() {
+        return clip.getLoopLength().get();
+    }
+
+    void setLoopLength(final double beats) {
+        clip.getLoopLength().set(beats);
+    }
+
+    double playStart() {
+        return clip.getPlayStart().get();
+    }
+
+    void setPlayStart(final double beats) {
+        clip.getPlayStart().set(beats);
+    }
+
+    void showInEditor() {
+        clip.showInEditor();
+    }
+
+    int fineNudge(final int direction, final IntPredicate includeFineStep) {
         final int loopFineSteps =
                 Math.min(
                         FINE_OBSERVATION_STEPS,
                         Math.max(
                                 1,
-                                (int)
-                                        Math.round(
-                                                loopLength(row)
-                                                        / MulticlipTiming.FINE_STEP_BEATS)));
+                                (int) Math.round(loopLength() / MulticlipTiming.FINE_STEP_BEATS)));
         final List<FineTarget> targets = new ArrayList<>();
-        for (final Map.Entry<Integer, Set<Integer>> entry : fineNotes[row].entrySet()) {
+        for (final Map.Entry<Integer, Set<Integer>> entry : fineNotes.entrySet()) {
             final int fineStep = entry.getKey();
             if (fineStep < 0 || fineStep >= loopFineSteps || !includeFineStep.test(fineStep)) {
                 continue;
@@ -325,7 +239,7 @@ final class MulticlipClipController {
             } else if (destination >= loopFineSteps) {
                 destination = 0;
             }
-            fineClips[row].moveStep(
+            fineClip.moveStep(
                     target.channel(), target.fineStep(), 0, destination - target.fineStep(), 0);
         }
         return targets.size();
@@ -335,52 +249,58 @@ final class MulticlipClipController {
         return fineStep / FINE_STEPS_PER_COARSE_STEP;
     }
 
-    private void observeStep(final int row, final NoteStep note) {
-        if (!state.acceptsObservations(row)
+    private void observeStep(final NoteStep note) {
+        if (!ready
                 || note.x() < 0
-                || note.x() >= MulticlipPageState.STEPS_PER_PAGE
+                || note.x() >= MulticlipXoxLayout.PATTERN_COUNT
                 || note.y() != 0) {
             return;
         }
-        state.observeChannel(row, note.x(), note.channel(), note.state() == NoteStep.State.NoteOn);
-    }
-
-    private void observePlayingStep(final int row, final int absoluteStep) {
-        if (!state.acceptsObservations(row)) {
-            return;
-        }
-        final int firstVisibleStep = firstVisibleSteps[row];
-        if (absoluteStep < firstVisibleStep
-                || absoluteStep >= firstVisibleStep + MulticlipPageState.STEPS_PER_PAGE) {
-            state.setPlayingStep(row, -1);
+        if (note.state() == NoteStep.State.NoteOn) {
+            observedChannels[note.x()].add(note.channel());
         } else {
-            state.setPlayingStep(row, absoluteStep - firstVisibleStep);
+            observedChannels[note.x()].remove(note.channel());
         }
     }
 
-    private void observeFineStep(final int row, final NoteStep note) {
-        if (!state.acceptsObservations(row)
-                || note.x() < 0
-                || note.x() >= FINE_OBSERVATION_STEPS
-                || note.y() != 0) {
+    private void observePlayingStep(final int absoluteStep) {
+        if (!ready
+                || absoluteStep < firstVisibleStep
+                || absoluteStep >= firstVisibleStep + MulticlipXoxLayout.PATTERN_COUNT) {
+            playingStep = -1;
+        } else {
+            playingStep = absoluteStep - firstVisibleStep;
+        }
+    }
+
+    private void observeFineStep(final NoteStep note) {
+        if (!ready || note.x() < 0 || note.x() >= FINE_OBSERVATION_STEPS || note.y() != 0) {
             return;
         }
         final Set<Integer> channels =
-                fineNotes[row].computeIfAbsent(note.x(), ignored -> new HashSet<>());
+                fineNotes.computeIfAbsent(note.x(), ignored -> new HashSet<>());
         if (note.state() == NoteStep.State.NoteOn) {
             channels.add(note.channel());
         } else {
             channels.remove(note.channel());
             if (channels.isEmpty()) {
-                fineNotes[row].remove(note.x());
+                fineNotes.remove(note.x());
             }
         }
     }
 
-    private record FineTarget(int fineStep, int channel) {}
-
-    private void beginRetarget(final int row) {
-        state.beginRetarget(row);
-        fineNotes[row].clear();
+    private void clearObservedState() {
+        ready = false;
+        playingStep = -1;
+        fineNotes.clear();
+        for (final Set<Integer> channels : observedChannels) {
+            channels.clear();
+        }
     }
+
+    private boolean validStep(final int step) {
+        return step >= 0 && step < observedChannels.length;
+    }
+
+    private record FineTarget(int fineStep, int channel) {}
 }
