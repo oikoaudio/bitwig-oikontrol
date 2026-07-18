@@ -758,13 +758,29 @@ public final class MulticlipSequenceMode extends Layer {
         }
         final RgbLightState color = laneColor(childPosition);
         final Track track = laneBank.getItemAt(childPosition);
-        if (laneMuteMode) {
-            return track.mute().get() ? color.getVeryDimmed() : color.getBrightest();
+        return laneLightState(
+                color,
+                childPosition == activeChildPosition,
+                laneMuteMode,
+                track.mute().get(),
+                laneSoloMode,
+                track.solo().get());
+    }
+
+    static RgbLightState laneLightState(
+            final RgbLightState color,
+            final boolean activeLane,
+            final boolean muteMode,
+            final boolean muted,
+            final boolean soloMode,
+            final boolean soloed) {
+        if (muteMode) {
+            return muted ? color.getVeryDimmed() : color.getBrightest();
         }
-        if (laneSoloMode) {
-            return track.solo().get() ? color.getBrightest() : color.getVeryDimmed();
+        if (soloMode) {
+            return soloed ? color.getBrightest() : color.getVeryDimmed();
         }
-        return childPosition == activeChildPosition ? color.getBrightest() : color.getVeryDimmed();
+        return activeLane ? color.getBrightest() : color.getSoftDimmed();
     }
 
     private RgbLightState patternLight(final int padIndex) {
