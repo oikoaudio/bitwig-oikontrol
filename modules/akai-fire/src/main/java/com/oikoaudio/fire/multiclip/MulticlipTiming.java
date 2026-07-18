@@ -26,4 +26,10 @@ public final class MulticlipTiming {
         final int remaining = stepsForBeats(loopBeats) - Math.max(0, firstVisibleStep);
         return Math.max(0, Math.min(Math.max(0, visibleStepCount), remaining));
     }
+
+    public static boolean isVisibleStepWithinLoop(
+            final double loopBeats, final int firstVisibleStep, final int visibleStep) {
+        return visibleStep >= 0
+                && Math.max(0, firstVisibleStep) + visibleStep < stepsForBeats(loopBeats);
+    }
 }

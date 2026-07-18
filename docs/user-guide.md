@@ -327,7 +327,7 @@ The encoder pages use the same assignments and OLED feedback as Drum XOX, but re
 
 The OLED keeps the compact four-encoder legend visible. Tap `KNOB MODE` to cycle pages, or hold `MUTE_1` and tap `KNOB MODE` to show all four assignments for the current page without changing it. Touching or turning an encoder shows its current target and value; `KNOB MODE + touch encoder` performs the same supported reset gesture as Drum XOX.
 
-Hold `MUTE_2` to preview the active Lane Clip's length on rows 3-4: its current last step is white and pads beyond the loop are off. Pressing a pattern pad moves that last step for only the active clip. During normal sequencing, the active clip's moving playhead is white across the same two rows.
+During normal sequencing, empty steps inside the active Lane Clip's loop are dim, occupied steps are bright, and pads beyond the loop are off. A non-zero play start is purple and the moving playhead is white, including when it crosses the play-start step. A plain press beyond the loop is blocked to avoid creating an inaudible note; hold `MUTE_2` and press that pad to extend the clip first. While `MUTE_2` is held, the current last step is white and pads beyond it remain off. Each boundary and edit applies only to the active clip.
 
 Copy/paste has no captured buffer. The active lane and active editing scene remain the live source until you change them. Scene-set paste touches only eligible direct child slots and never copies to, creates, clears, or selects the group-track slot.
 

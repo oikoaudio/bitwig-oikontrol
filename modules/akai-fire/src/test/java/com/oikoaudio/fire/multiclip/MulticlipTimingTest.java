@@ -33,4 +33,17 @@ class MulticlipTimingTest {
                         firstVisibleStep,
                         visibleStepCount));
     }
+
+    @ParameterizedTest
+    @CsvSource({"20,0,19,true", "20,0,20,false", "40,32,7,true", "40,32,8,false"})
+    void identifiesWhetherAPageRelativeStepBelongsToTheClipLoop(
+            final int loopSteps,
+            final int firstVisibleStep,
+            final int visibleStep,
+            final boolean expected) {
+        assertEquals(
+                expected,
+                MulticlipTiming.isVisibleStepWithinLoop(
+                        MulticlipTiming.beatsForSteps(loopSteps), firstVisibleStep, visibleStep));
+    }
 }

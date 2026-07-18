@@ -18,6 +18,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.ArrayList;
 import java.util.List;
@@ -478,11 +479,18 @@ public final class MulticlipSequenceMode extends Layer {
             return;
         }
         final int step = MulticlipXoxLayout.visibleStep(padIndex);
-        padInteraction.captureOccupied(padIndex, clipController.isOccupied(step));
         if (!clipController.exists()) {
+            padInteraction.captureOccupied(padIndex, false);
             createClipAndAddFirstStep(step);
             return;
         }
+        if (!MulticlipTiming.isVisibleStepWithinLoop(
+                clipController.loopLength(), firstVisibleStep, step)) {
+            padInteraction.consume(padIndex);
+            driver.getOled().valueInfo("Outside clip", "Hold Last Step to extend");
+            return;
+        }
+        padInteraction.captureOccupied(padIndex, clipController.isOccupied(step));
         if (!padInteraction.wasOccupied(padIndex)) {
             clipController.setStep(
                     activeMapping().midiChannel(),
@@ -793,18 +801,28 @@ public final class MulticlipSequenceMode extends Layer {
         if (lastStepHeld) {
             return lastStepLight(step, color);
         }
-        if (padInteraction.isHeld(padIndex)) {
-            return padInteraction.isConsumed(padIndex)
-                    ? RgbLightState.PURPLE
-                    : color.getBrightest();
-        }
-        if (clipController.isPlaying(step)) {
-            return RgbLightState.WHITE;
-        }
-        if (clipController.isOccupied(step)) {
-            return color.getBrightend();
-        }
-        return color.getVeryDimmed();
+        final boolean hasClip = activeLaneHasClip();
+        final boolean withinLoop =
+                !hasClip
+                        || MulticlipTiming.isVisibleStepWithinLoop(
+                                clipController.loopLength(), firstVisibleStep, step);
+        final int shiftedPlayStart =
+                hasClip
+                        ? StepPadLightHelper.nearestVisibleStepForShiftedClipStart(
+                                clipController.playStart(),
+                                clipController.loopLength(),
+                                MulticlipTiming.STEP_BEATS,
+                                firstVisibleStep,
+                                MulticlipXoxLayout.PATTERN_COUNT)
+                        : -1;
+        return MulticlipPatternLight.render(
+                color,
+                withinLoop,
+                padInteraction.isHeld(padIndex),
+                padInteraction.isConsumed(padIndex),
+                clipController.isPlaying(step),
+                clipController.isOccupied(step),
+                step == shiftedPlayStart);
     }
 
     private RgbLightState lastStepLight(final int step, final RgbLightState color) {
