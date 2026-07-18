@@ -63,6 +63,7 @@ public final class MulticlipSequenceMode extends Layer {
             new PendingStepCreation[VISIBLE_LANES];
     private final MulticlipSceneOverlayState sceneOverlay =
             new MulticlipSceneOverlayState();
+    private final boolean[] sceneSelectedInEditor = new boolean[SCENE_BANK_SIZE];
 
     private MulticlipPageState pageState = MulticlipPageState.initial(0);
     private int activeScene;
@@ -157,6 +158,9 @@ public final class MulticlipSequenceMode extends Layer {
             scene.color().markInterested();
             scene.clipCount().markInterested();
             scene.sceneIndex().markInterested();
+            final int visibleScene = index;
+            scene.addIsSelectedInEditorObserver(
+                    selected -> sceneSelectedInEditor[visibleScene] = selected);
         }
     }
 
@@ -179,7 +183,30 @@ public final class MulticlipSequenceMode extends Layer {
         }
         retargetVisibleClipCursors();
         selectActiveTrack();
+        scheduleEditorFallback(visibleScene, currentTarget(pageState.activeRow()));
         driver.getOled().valueInfo("Scene " + (activeScene + 1), "Editing");
+    }
+
+    private void scheduleEditorFallback(
+            final int visibleScene, final MulticlipTargetIdentity target) {
+        host.scheduleTask(
+                () -> {
+                    final int row = pageState.activeRow();
+                    if (!active || row < 0 || !target.equals(currentTarget(row))) {
+                        return;
+                    }
+                    final EditorPresentationPlan plan =
+                            EditorPresentationPlan.choose(
+                                    groupCursor.exists().get(),
+                                    sceneBank.getScene(visibleScene).exists().get(),
+                                    sceneSelectedInEditor[visibleScene]);
+                    if (plan == EditorPresentationPlan.ACTIVE_CLIP
+                            && laneClips[row].exists().get()) {
+                        laneClips[row].showInEditor();
+                    }
+                    selectActiveTrack();
+                },
+                50);
     }
 
     private void pageScenes(final int direction) {
@@ -825,6 +852,10 @@ public final class MulticlipSequenceMode extends Layer {
         final Track track = laneBank.getItemAt(childPosition);
         track.selectInMixer();
         track.selectInEditor();
+        final int activeRow = pageState.activeRow();
+        if (activeRow >= 0 && laneClips[activeRow].exists().get()) {
+            laneClips[activeRow].showInEditor();
+        }
         showLaneInfo();
     }
 
