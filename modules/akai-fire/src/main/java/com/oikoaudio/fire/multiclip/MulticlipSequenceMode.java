@@ -56,6 +56,7 @@ public final class MulticlipSequenceMode extends Layer {
     private int activeChildPosition = -1;
     private int activeScene;
     private int firstVisibleStep;
+    private int blinkState;
     private long targetGeneration;
     private long creationGeneration;
     private boolean active;
@@ -758,13 +759,26 @@ public final class MulticlipSequenceMode extends Layer {
         }
         final RgbLightState color = laneColor(childPosition);
         final Track track = laneBank.getItemAt(childPosition);
-        return laneLightState(
-                color,
-                childPosition == activeChildPosition,
-                laneMuteMode,
-                track.mute().get(),
-                laneSoloMode,
-                track.solo().get());
+        final boolean activeLane = childPosition == activeChildPosition;
+        final RgbLightState idle =
+                laneLightState(
+                        color,
+                        activeLane,
+                        laneMuteMode,
+                        track.mute().get(),
+                        laneSoloMode,
+                        track.solo().get());
+        if (laneMuteMode || laneSoloMode) {
+            return idle;
+        }
+        boolean playing = false;
+        boolean queued = false;
+        for (int scene = 0; scene < SCENE_BANK_SIZE; scene++) {
+            final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(scene);
+            playing |= slot.isPlaying().get();
+            queued |= slot.isPlaybackQueued().get();
+        }
+        return MulticlipPlaybackLight.render(color, activeLane, playing, queued, idle, blinkState);
     }
 
     static RgbLightState laneLightState(
@@ -851,20 +865,17 @@ public final class MulticlipSequenceMode extends Layer {
             playing |= slot.isPlaying().get();
             queued |= slot.isPlaybackQueued().get();
         }
-        if (playing) {
-            return RgbLightState.WHITE;
-        }
-        if (queued) {
-            return RgbLightState.PURPLE;
-        }
-        if (absoluteScene == activeScene) {
-            return childColor.getBrightend();
-        }
-        return switch (ScenePopulation.ofChildClips(clips, eligibleLaneCount())) {
-            case NEW -> RgbLightState.GRAY_1;
-            case PARTIAL -> childColor.getDimmed();
-            case POPULATED -> childColor.getSoftDimmed();
-        };
+        final boolean selected = absoluteScene == activeScene;
+        final RgbLightState idle =
+                selected
+                        ? childColor.getBrightend()
+                        : switch (ScenePopulation.ofChildClips(clips, eligibleLaneCount())) {
+                            case NEW -> RgbLightState.GRAY_1;
+                            case PARTIAL -> childColor.getDimmed();
+                            case POPULATED -> childColor.getSoftDimmed();
+                        };
+        return MulticlipPlaybackLight.render(
+                childColor, selected, playing, queued, idle, blinkState);
     }
 
     private void observeScenes() {
@@ -1121,6 +1132,10 @@ public final class MulticlipSequenceMode extends Layer {
 
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
         return encoderController.getActiveRemoteControlsPage();
+    }
+
+    public void notifyBlink(final int blinkTicks) {
+        blinkState = blinkTicks;
     }
 
     private void bindPatternButtons() {

@@ -358,6 +358,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         ensureDrumPinningStillValid();
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
+        multiclipSequenceMode.notifyBlink(blinkTicks);
         notePlayMode.notifyBlink(blinkTicks);
         drumPadPlayMode.notifyBlink(blinkTicks);
         chordStepMode.notifyBlink(blinkTicks);
