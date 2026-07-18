@@ -12,8 +12,11 @@ import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.utils.PatternButtons;
 
 /** Four-row sequencer whose lanes are direct child tracks of a Drum Machine group. */
 public final class MulticlipSequenceMode extends Layer {
@@ -32,6 +35,7 @@ public final class MulticlipSequenceMode extends Layer {
     private final boolean[] laneExists = new boolean[TrackLaneMapping.MAX_LANES];
     private final String[] laneNames = new String[TrackLaneMapping.MAX_LANES];
     private final boolean[] groupDeviceIsDrumMachine = new boolean[DEVICE_SCAN_SIZE];
+    private final boolean[] heldPads = new boolean[64];
     private final CursorTrack[] laneCursors = new CursorTrack[VISIBLE_LANES];
     private final PinnableCursorClip[] laneClips = new PinnableCursorClip[VISIBLE_LANES];
     private final MulticlipLaneState laneState = new MulticlipLaneState();
@@ -65,6 +69,7 @@ public final class MulticlipSequenceMode extends Layer {
                     @Override
                     public void handlePadPress(
                             final int padIndex, final boolean pressed, final int velocity) {
+                        heldPads[padIndex] = pressed;
                         if (pressed) {
                             handleStepPress(padIndex, velocity);
                         }
@@ -75,6 +80,120 @@ public final class MulticlipSequenceMode extends Layer {
                         return laneIdentityLight(padIndex);
                     }
                 });
+        bindNavigationButtons();
+    }
+
+    private void bindNavigationButtons() {
+        driver.getButton(NoteAssign.BANK_L)
+                .bindPressed(
+                        padLayer,
+                        pressed -> {
+                            if (pressed && !hasHeldPads()) {
+                                pageTime(-1);
+                            }
+                        },
+                        () ->
+                                pageState.canPageTime(-1)
+                                        ? BiColorLightState.HALF
+                                        : BiColorLightState.OFF);
+        driver.getButton(NoteAssign.BANK_R)
+                .bindPressed(
+                        padLayer,
+                        pressed -> {
+                            if (pressed && !hasHeldPads()) {
+                                pageTime(1);
+                            }
+                        },
+                        () -> BiColorLightState.HALF);
+    }
+
+    private boolean hasHeldPads() {
+        for (final boolean held : heldPads) {
+            if (held) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void bindPatternButtons() {
+        final PatternButtons buttons = driver.getPatternButtons();
+        if (buttons == null) {
+            return;
+        }
+        buttons.setUpCallback(
+                pressed -> {
+                    if (pressed) {
+                        pageLanes(-1);
+                    }
+                },
+                () ->
+                        pageState.canPageLanes(-1)
+                                ? BiColorLightState.HALF
+                                : BiColorLightState.OFF);
+        buttons.setDownCallback(
+                pressed -> {
+                    if (pressed) {
+                        pageLanes(1);
+                    }
+                },
+                () ->
+                        pageState.canPageLanes(1)
+                                ? BiColorLightState.HALF
+                                : BiColorLightState.OFF);
+    }
+
+    private void clearPatternButtons() {
+        final PatternButtons buttons = driver.getPatternButtons();
+        if (buttons == null) {
+            return;
+        }
+        buttons.setUpCallback(pressed -> {}, () -> BiColorLightState.OFF);
+        buttons.setDownCallback(pressed -> {}, () -> BiColorLightState.OFF);
+    }
+
+    private void pageLanes(final int direction) {
+        if (!pageState.canPageLanes(direction)) {
+            return;
+        }
+        pageState = pageState.pageLanes(direction);
+        retargetVisibleClipCursors();
+        selectActiveTrack();
+        driver.getOled()
+                .valueInfo(
+                        "Lanes "
+                                + (pageState.lanePage() * VISIBLE_LANES + 1)
+                                + "-"
+                                + Math.min(
+                                        pageState.laneCount(),
+                                        (pageState.lanePage() + 1) * VISIBLE_LANES),
+                        "Multiclip Seq");
+    }
+
+    private void pageTime(final int direction) {
+        if (!pageState.canPageTime(direction)) {
+            return;
+        }
+        pageState = pageState.pageTime(direction);
+        retargetVisibleClipCursors();
+        driver.getOled()
+                .valueInfo(
+                        "Steps "
+                                + (pageState.firstVisibleStep() + 1)
+                                + "-"
+                                + (pageState.firstVisibleStep()
+                                        + MulticlipPageState.STEPS_PER_PAGE),
+                        "Time Page");
+    }
+
+    private void selectActiveTrack() {
+        final int childPosition = pageState.activeChildPosition();
+        if (childPosition < 0 || childPosition >= pageState.laneCount()) {
+            return;
+        }
+        final Track track = laneBank.getItemAt(childPosition);
+        track.selectInMixer();
+        track.selectInEditor();
     }
 
     private void createVisibleClipCursors() {
@@ -244,7 +363,11 @@ public final class MulticlipSequenceMode extends Layer {
         if (!selected || childPosition >= pageState.laneCount()) {
             return;
         }
+        final int oldPage = pageState.lanePage();
         pageState = pageState.withActiveChildPosition(childPosition);
+        if (oldPage != pageState.lanePage()) {
+            retargetVisibleClipCursors();
+        }
         if (active) {
             showLaneInfo();
         }
@@ -352,12 +475,14 @@ public final class MulticlipSequenceMode extends Layer {
                 },
                 0);
         padLayer.activate();
+        bindPatternButtons();
     }
 
     @Override
     protected void onDeactivate() {
         active = false;
         padLayer.deactivate();
+        clearPatternButtons();
         groupCursor.isPinned().set(false);
     }
 }

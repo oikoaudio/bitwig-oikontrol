@@ -42,11 +42,23 @@ public record MulticlipPageState(
         return new MulticlipPageState(laneCount, targetPage, targetPosition, firstVisibleStep);
     }
 
+    public boolean canPageLanes(final int direction) {
+        if (laneCount == 0 || direction == 0) {
+            return false;
+        }
+        final int lastPage = (laneCount - 1) / TrackLaneMapping.LANES_PER_PAGE;
+        return direction < 0 ? lanePage > 0 : lanePage < lastPage;
+    }
+
     public MulticlipPageState pageTime(final int direction) {
         if (direction == 0) {
             return this;
         }
         final int firstStep = Math.max(0, firstVisibleStep + Integer.signum(direction) * STEPS_PER_PAGE);
         return new MulticlipPageState(laneCount, lanePage, activeChildPosition, firstStep);
+    }
+
+    public boolean canPageTime(final int direction) {
+        return direction > 0 || (direction < 0 && firstVisibleStep > 0);
     }
 }
