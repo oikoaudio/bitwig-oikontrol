@@ -16,6 +16,8 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.control.BiColorButton;
+import com.oikoaudio.fire.control.ButtonRowBindings;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
@@ -124,6 +126,75 @@ public final class MulticlipSequenceMode extends Layer {
         bindNavigationButtons();
         bindEncoderControls();
         bindAltOverlay();
+        bindRowButtons();
+    }
+
+    private void bindRowButtons() {
+        final BiColorButton[] buttons = {
+            driver.getButton(NoteAssign.MUTE_1),
+            driver.getButton(NoteAssign.MUTE_2),
+            driver.getButton(NoteAssign.MUTE_3),
+            driver.getButton(NoteAssign.MUTE_4)
+        };
+        ButtonRowBindings.bindPressed(
+                padLayer,
+                buttons,
+                new ButtonRowBindings.Host() {
+                    @Override
+                    public void handleButton(final int row, final boolean pressed) {
+                        if (pressed) {
+                            handleRowButton(row);
+                        }
+                    }
+
+                    @Override
+                    public BiColorLightState lightState(final int row) {
+                        return rowButtonLight(row);
+                    }
+                });
+    }
+
+    private void handleRowButton(final int row) {
+        final int childPosition = childPositionForRow(row);
+        if (childPosition < 0
+                || childPosition >= pageState.laneCount()
+                || !laneExists[childPosition]) {
+            return;
+        }
+        pageState = pageState.withActiveChildPosition(childPosition);
+        final Track track = laneBank.getItemAt(childPosition);
+        track.selectInMixer();
+        track.selectInEditor();
+        if (driver.isGlobalShiftHeld()) {
+            final boolean enabled = !track.solo().get();
+            track.solo().set(enabled);
+            driver.getOled()
+                    .valueInfo(
+                            enabled ? "Solo On" : "Solo Off",
+                            activeLaneName());
+        } else {
+            final boolean enabled = !track.mute().get();
+            track.mute().set(enabled);
+            driver.getOled()
+                    .valueInfo(
+                            enabled ? "Mute On" : "Mute Off",
+                            activeLaneName());
+        }
+    }
+
+    private BiColorLightState rowButtonLight(final int row) {
+        final int childPosition = childPositionForRow(row);
+        if (childPosition < 0
+                || childPosition >= pageState.laneCount()
+                || !laneExists[childPosition]) {
+            return BiColorLightState.OFF;
+        }
+        final Track track = laneBank.getItemAt(childPosition);
+        return MulticlipRowButtonRenderer.render(
+                true,
+                childPosition == pageState.activeChildPosition(),
+                track.mute().get(),
+                track.solo().get());
     }
 
     private void bindAltOverlay() {
@@ -766,6 +837,8 @@ public final class MulticlipSequenceMode extends Layer {
             track.exists().markInterested();
             track.name().markInterested();
             track.color().markInterested();
+            track.mute().markInterested();
+            track.solo().markInterested();
             track.exists()
                     .addValueObserver(
                             exists -> {
@@ -876,6 +949,11 @@ public final class MulticlipSequenceMode extends Layer {
                 laneColors[childPosition] == null
                         ? RgbLightState.WHITE
                         : laneColors[childPosition];
+        if (heldPads[padIndex]) {
+            return heldGestureConsumed[padIndex]
+                    ? RgbLightState.PURPLE
+                    : color.getBrightest();
+        }
         if (laneState.isPlaying(row, step)) {
             return RgbLightState.WHITE;
         }
@@ -958,9 +1036,23 @@ public final class MulticlipSequenceMode extends Layer {
             return;
         }
         driver.getOled()
-                .valueInfo(
-                        "Lane " + (position + 1),
-                        laneNames[position] == null ? "Track" : laneNames[position]);
+                .detailInfo(
+                        "Multiclip Seq",
+                        activeLaneName()
+                                + "  Lane "
+                                + (position + 1)
+                                + "\nLanes "
+                                + (pageState.lanePage() * VISIBLE_LANES + 1)
+                                + "-"
+                                + Math.min(
+                                        pageState.laneCount(),
+                                        (pageState.lanePage() + 1) * VISIBLE_LANES)
+                                + "  Scene "
+                                + (activeScene + 1)
+                                + "\n"
+                                + (laneClips[pageState.activeRow()].exists().get()
+                                        ? "Clip ready"
+                                        : "Empty lane"));
     }
 
     @Override
@@ -996,9 +1088,15 @@ public final class MulticlipSequenceMode extends Layer {
         clearPatternButtons();
         driver.getOled().setFooterLegend(null);
         groupCursor.isPinned().set(false);
+        sceneOverlay.altReleased();
         targetGeneration++;
         for (int row = 0; row < VISIBLE_LANES; row++) {
             pendingCreations[row] = null;
+        }
+        for (int pad = 0; pad < heldPads.length; pad++) {
+            heldPads[pad] = false;
+            pressWasOccupied[pad] = false;
+            heldGestureConsumed[pad] = false;
         }
     }
 }
