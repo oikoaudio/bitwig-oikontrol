@@ -1,0 +1,235 @@
+package com.oikoaudio.fire.multiclip;
+
+import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.Device;
+import com.bitwig.extension.controller.api.DeviceBank;
+import com.bitwig.extension.controller.api.Track;
+import com.bitwig.extension.controller.api.TrackBank;
+import com.bitwig.extensions.framework.Layer;
+import com.oikoaudio.fire.AkaiFireOikontrolExtension;
+import com.oikoaudio.fire.ColorLookup;
+import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.lights.RgbLightState;
+
+/** Four-row sequencer whose lanes are direct child tracks of a Drum Machine group. */
+public final class MulticlipSequenceMode extends Layer {
+    private static final int DEVICE_SCAN_SIZE = 16;
+    private static final int SCENE_BANK_SIZE = 16;
+
+    private final AkaiFireOikontrolExtension driver;
+    private final ControllerHost host;
+    private final Layer padLayer;
+    private final CursorTrack groupCursor;
+    private final TrackBank laneBank;
+    private final RgbLightState[] laneColors = new RgbLightState[TrackLaneMapping.MAX_LANES];
+    private final boolean[] laneExists = new boolean[TrackLaneMapping.MAX_LANES];
+    private final String[] laneNames = new String[TrackLaneMapping.MAX_LANES];
+    private final boolean[] groupDeviceIsDrumMachine = new boolean[DEVICE_SCAN_SIZE];
+
+    private MulticlipPageState pageState = MulticlipPageState.initial(0);
+    private boolean active;
+
+    public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
+        super(driver.getLayers(), "MULTICLIP_SEQUENCE");
+        this.driver = driver;
+        this.host = driver.getHost();
+        this.padLayer = new Layer(driver.getLayers(), "MULTICLIP_SEQUENCE_PADS");
+        this.groupCursor =
+                host.createCursorTrack(
+                        "MULTICLIP_GROUP", "Multiclip Group", 0, SCENE_BANK_SIZE, true);
+        groupCursor.exists().markInterested();
+        groupCursor.isGroup().markInterested();
+        groupCursor.isPinned().markInterested();
+        this.laneBank =
+                groupCursor.createTrackBank(
+                        TrackLaneMapping.MAX_LANES, 0, SCENE_BANK_SIZE, false);
+        laneBank.channelCount().markInterested();
+        observeGroupDevices();
+        observeTrackLanes();
+        PadMatrixBindings.bindPressedVelocity(
+                padLayer,
+                driver.getRgbButtons(),
+                new PadMatrixBindings.Host() {
+                    @Override
+                    public void handlePadPress(
+                            final int padIndex, final boolean pressed, final int velocity) {
+                        if (pressed) {
+                            selectLaneForPad(padIndex);
+                        }
+                    }
+
+                    @Override
+                    public RgbLightState padLight(final int padIndex) {
+                        return laneIdentityLight(padIndex);
+                    }
+                });
+    }
+
+    private void observeGroupDevices() {
+        final DeviceBank devices = groupCursor.createDeviceBank(DEVICE_SCAN_SIZE);
+        for (int index = 0; index < DEVICE_SCAN_SIZE; index++) {
+            final int deviceIndex = index;
+            final Device device = devices.getItemAt(index);
+            device.exists().markInterested();
+            device.hasDrumPads().markInterested();
+            device.hasDrumPads()
+                    .addValueObserver(
+                            value -> groupDeviceIsDrumMachine[deviceIndex] = value);
+            groupDeviceIsDrumMachine[deviceIndex] = device.hasDrumPads().get();
+        }
+    }
+
+    private void observeTrackLanes() {
+        for (int childPosition = 0;
+                childPosition < TrackLaneMapping.MAX_LANES;
+                childPosition++) {
+            final int position = childPosition;
+            final Track track = laneBank.getItemAt(position);
+            track.exists().markInterested();
+            track.name().markInterested();
+            track.color().markInterested();
+            track.exists()
+                    .addValueObserver(
+                            exists -> {
+                                laneExists[position] = exists;
+                                refreshLaneCount();
+                            });
+            track.name().addValueObserver(name -> laneNames[position] = name);
+            track.color()
+                    .addValueObserver(
+                            (red, green, blue) ->
+                                    laneColors[position] =
+                                            ColorLookup.getColor(red, green, blue));
+            track.addIsSelectedInMixerObserver(selected -> handleExternalSelection(position, selected));
+            track.addIsSelectedInEditorObserver(selected -> handleExternalSelection(position, selected));
+            laneExists[position] = track.exists().get();
+            laneNames[position] = track.name().get();
+            laneColors[position] = ColorLookup.getColor(track.color().get());
+        }
+        refreshLaneCount();
+    }
+
+    private void refreshLaneCount() {
+        int count = 0;
+        while (count < laneExists.length && laneExists[count]) {
+            count++;
+        }
+        final int activePosition = pageState.activeChildPosition();
+        pageState = MulticlipPageState.initial(count);
+        if (activePosition >= 0 && activePosition < count) {
+            pageState = pageState.withActiveChildPosition(activePosition);
+        }
+    }
+
+    private void handleExternalSelection(final int childPosition, final boolean selected) {
+        if (!selected || childPosition >= pageState.laneCount()) {
+            return;
+        }
+        pageState = pageState.withActiveChildPosition(childPosition);
+        if (active) {
+            showLaneInfo();
+        }
+    }
+
+    private void selectLaneForPad(final int padIndex) {
+        if (!isValidContext()) {
+            showInvalidContext();
+            return;
+        }
+        final int row = padIndex / MulticlipPageState.STEPS_PER_PAGE;
+        final int childPosition =
+                pageState.lanePage() * TrackLaneMapping.LANES_PER_PAGE + row;
+        if (childPosition < 0
+                || childPosition >= pageState.laneCount()
+                || !laneExists[childPosition]) {
+            return;
+        }
+        pageState = pageState.withActiveChildPosition(childPosition);
+        final Track track = laneBank.getItemAt(childPosition);
+        track.selectInMixer();
+        track.selectInEditor();
+        showLaneInfo();
+    }
+
+    private RgbLightState laneIdentityLight(final int padIndex) {
+        final int row = padIndex / MulticlipPageState.STEPS_PER_PAGE;
+        final int childPosition =
+                pageState.lanePage() * TrackLaneMapping.LANES_PER_PAGE + row;
+        if (!isValidContext()
+                || childPosition >= pageState.laneCount()
+                || !laneExists[childPosition]) {
+            return RgbLightState.OFF;
+        }
+        final RgbLightState color =
+                laneColors[childPosition] == null
+                        ? RgbLightState.WHITE
+                        : laneColors[childPosition];
+        return childPosition == pageState.activeChildPosition()
+                ? color.getBrightend()
+                : color.getVeryDimmed();
+    }
+
+    private boolean isValidContext() {
+        if (!groupCursor.exists().get()
+                || !groupCursor.isGroup().get()
+                || pageState.laneCount() == 0) {
+            return false;
+        }
+        for (final boolean drumMachine : groupDeviceIsDrumMachine) {
+            if (drumMachine) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void showInvalidContext() {
+        driver.getOled()
+                .valueInfo(
+                        pageState.laneCount() == 0 ? "No child tracks" : "Select Drum group",
+                        "Multiclip Seq");
+    }
+
+    private void showLaneInfo() {
+        final int position = pageState.activeChildPosition();
+        if (position < 0 || position >= pageState.laneCount()) {
+            showInvalidContext();
+            return;
+        }
+        driver.getOled()
+                .valueInfo(
+                        "Lane " + (position + 1),
+                        laneNames[position] == null ? "Track" : laneNames[position]);
+    }
+
+    @Override
+    protected void onActivate() {
+        active = true;
+        groupCursor.isPinned().set(false);
+        if (groupCursor.exists().get() && !groupCursor.isGroup().get()) {
+            groupCursor.selectParent();
+        }
+        host.scheduleTask(
+                () -> {
+                    if (!active) {
+                        return;
+                    }
+                    groupCursor.isPinned().set(true);
+                    if (isValidContext()) {
+                        showLaneInfo();
+                    } else {
+                        showInvalidContext();
+                    }
+                },
+                0);
+        padLayer.activate();
+    }
+
+    @Override
+    protected void onDeactivate() {
+        active = false;
+        padLayer.deactivate();
+        groupCursor.isPinned().set(false);
+    }
+}

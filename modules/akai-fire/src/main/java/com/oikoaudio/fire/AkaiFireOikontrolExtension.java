@@ -28,6 +28,7 @@ import com.oikoaudio.fire.melodic.MelodicStepMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.note.DrumPadPlayMode;
+import com.oikoaudio.fire.multiclip.MulticlipSequenceMode;
 import com.oikoaudio.fire.note.NotePlayMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -135,6 +136,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final Map<NoteAssign, BiColorButton> controlButtons = new HashMap<>();
     private NoteInput noteInput;
     private DrumSequenceMode drumSequenceMode;
+    private MulticlipSequenceMode multiclipSequenceMode;
     private ViewCursorControl viewControl;
     private FireDeviceLocator deviceLocator;
     private DrumAutoPinController drumAutoPinController;
@@ -330,6 +332,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         // ready.
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
+        multiclipSequenceMode = new MulticlipSequenceMode(this);
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
         drumPadPlayMode = new DrumPadPlayMode(this, noteRepeatHandler);
         chordStepMode = new ChordStepMode(this);
@@ -797,6 +800,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private BiColorLightState drumModeLightState(final DrumMode mode) {
         return switch (mode) {
             case STANDARD -> ModeButtonLights.MODE_1;
+            case MULTICLIP_SEQ -> ModeButtonLights.MODE_4;
             case NESTED_RHYTHM -> ModeButtonLights.MODE_2;
             case DRUM_PADS -> ModeButtonLights.MODE_3;
         };
@@ -805,6 +809,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private String drumModeLabel(final DrumMode mode) {
         return switch (mode) {
             case STANDARD -> "Drum XOX";
+            case MULTICLIP_SEQ -> "Multiclip Seq";
             case NESTED_RHYTHM -> "NestedRytm";
             case DRUM_PADS -> "Drum Pads";
         };
@@ -1543,6 +1548,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void switchActiveMode() {
         releaseAutoPinnedDrumContext(true);
         drumSequenceMode.deactivate();
+        multiclipSequenceMode.deactivate();
         notePlayMode.deactivate();
         drumPadPlayMode.deactivate();
         chordStepMode.deactivate();
@@ -1556,6 +1562,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 nestedRhythmMode.activate();
             } else if (modeState.activeDrumMode() == DrumMode.DRUM_PADS) {
                 drumPadPlayMode.activate();
+            } else if (modeState.activeDrumMode() == DrumMode.MULTICLIP_SEQ) {
+                multiclipSequenceMode.activate();
             } else {
                 drumSequenceMode.activate();
             }

@@ -83,6 +83,9 @@ class TopLevelModeStateTest {
 
         assertEquals(TopLevelModeState.DrumMode.STANDARD, state.activeDrumMode());
         state.cycleDrumMode();
+        assertEquals(TopLevelModeState.DrumMode.MULTICLIP_SEQ, state.activeDrumMode());
+
+        state.cycleDrumMode();
         assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.activeDrumMode());
 
         state.activatePerform();
@@ -90,6 +93,16 @@ class TopLevelModeStateTest {
 
         assertEquals(TopLevelModeState.Mode.DRUM, state.activeMode());
         assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.activeDrumMode());
+    }
+
+    @Test
+    void drumModeCycleIncludesMulticlipBeforeExistingSecondaryModes() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        assertEquals(TopLevelModeState.DrumMode.MULTICLIP_SEQ, state.cycleDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.cycleDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.DRUM_PADS, state.cycleDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.STANDARD, state.cycleDrumMode());
     }
 
     @Test

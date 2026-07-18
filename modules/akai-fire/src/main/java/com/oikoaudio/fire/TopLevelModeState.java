@@ -12,6 +12,7 @@ public final class TopLevelModeState {
 
     public enum DrumMode {
         STANDARD,
+        MULTICLIP_SEQ,
         NESTED_RHYTHM,
         DRUM_PADS;
 

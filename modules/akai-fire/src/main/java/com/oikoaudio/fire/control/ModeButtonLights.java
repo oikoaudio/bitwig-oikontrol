@@ -12,6 +12,7 @@ public final class ModeButtonLights {
     public static final BiColorLightState MODE_1 = BiColorLightState.GREEN_FULL;
     public static final BiColorLightState MODE_2 = BiColorLightState.AMBER_FULL;
     public static final BiColorLightState MODE_3 = BiColorLightState.RED_HALF;
+    public static final BiColorLightState MODE_4 = BiColorLightState.GREEN_HALF;
 
     private ModeButtonLights() {}
 }
