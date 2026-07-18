@@ -16,10 +16,8 @@ import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extensions.framework.Layer;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
-import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
-import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +44,7 @@ public final class MulticlipSequenceMode extends Layer {
     private final MulticlipPadInteractionState padInteraction = new MulticlipPadInteractionState();
     private final MulticlipTimingController timingController;
     private final MulticlipDrumPadEncoderController drumPadEncoderController;
+    private final MulticlipEncoderController encoderController;
 
     private final RgbLightState[] laneColors = new RgbLightState[MAX_LANES];
     private final boolean[] laneExists = new boolean[MAX_LANES];
@@ -69,7 +68,6 @@ public final class MulticlipSequenceMode extends Layer {
     private boolean deleteHeld;
     private boolean laneMuteMode;
     private boolean laneSoloMode;
-    private EncoderMode encoderMode = EncoderMode.CHANNEL;
 
     public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "MULTICLIP_SEQUENCE");
@@ -129,6 +127,50 @@ public final class MulticlipSequenceMode extends Layer {
                                 return MulticlipSequenceMode.this.activeLaneName();
                             }
                         });
+        encoderController =
+                new MulticlipEncoderController(
+                        driver,
+                        clipController,
+                        padInteraction,
+                        drumPadEncoderController,
+                        new MulticlipEncoderController.Context() {
+                            @Override
+                            public boolean selectHeld() {
+                                return MulticlipSequenceMode.this.selectHeld;
+                            }
+
+                            @Override
+                            public String activeLaneName() {
+                                return MulticlipSequenceMode.this.activeLaneName();
+                            }
+
+                            @Override
+                            public int activeChildPosition() {
+                                return activeChildPosition;
+                            }
+
+                            @Override
+                            public int activeScene() {
+                                return activeScene;
+                            }
+
+                            @Override
+                            public int firstVisibleStep() {
+                                return firstVisibleStep;
+                            }
+
+                            @Override
+                            public int midiChannel() {
+                                return isEligibleLane(activeChildPosition)
+                                        ? activeMapping().midiChannel()
+                                        : 0;
+                            }
+
+                            @Override
+                            public boolean activeClipExists() {
+                                return activeLaneHasClip();
+                            }
+                        });
         bindControls();
     }
 
@@ -139,8 +181,8 @@ public final class MulticlipSequenceMode extends Layer {
                 new MulticlipControlBindings.Host() {
                     @Override
                     public void padPress(
-                            final int padIndex, final boolean pressed, final int velocity) {
-                        handlePad(padIndex, pressed, velocity);
+                            final int padIndex, final boolean pressed, final int ignoredVelocity) {
+                        handlePad(padIndex, pressed);
                     }
 
                     @Override
@@ -183,25 +225,10 @@ public final class MulticlipSequenceMode extends Layer {
                     public BiColorLightState rowLight(final int row) {
                         return rowButtonLight(row);
                     }
-
-                    @Override
-                    public void knobModeButton(final boolean pressed) {
-                        handleKnobModeButton(pressed);
-                    }
-
-                    @Override
-                    public BiColorLightState knobModeLight() {
-                        return encoderMode.getState();
-                    }
-
-                    @Override
-                    public void encoderTurn(final int encoderIndex, final int increment) {
-                        handleEncoderTurn(encoderIndex, increment);
-                    }
                 });
     }
 
-    private void handlePad(final int padIndex, final boolean pressed, final int velocity) {
+    private void handlePad(final int padIndex, final boolean pressed) {
         if (MulticlipXoxLayout.isScenePad(padIndex)) {
             handleScenePad(MulticlipXoxLayout.sceneInPage(padIndex), pressed);
             return;
@@ -224,7 +251,7 @@ public final class MulticlipSequenceMode extends Layer {
                 padInteraction.consume(padIndex);
                 setLastStep(padIndex);
             } else {
-                handleStepPress(padIndex, velocity);
+                handleStepPress(padIndex);
             }
         } else {
             handleStepRelease(padIndex);
@@ -430,7 +457,7 @@ public final class MulticlipSequenceMode extends Layer {
                 });
     }
 
-    private void handleStepPress(final int padIndex, final int velocity) {
+    private void handleStepPress(final int padIndex) {
         if (!isValidContext()) {
             showInvalidContext();
             return;
@@ -446,11 +473,16 @@ public final class MulticlipSequenceMode extends Layer {
         final int step = MulticlipXoxLayout.visibleStep(padIndex);
         padInteraction.captureOccupied(padIndex, clipController.isOccupied(step));
         if (!clipController.exists()) {
-            createClipAndAddFirstStep(step, velocity);
+            createClipAndAddFirstStep(step);
             return;
         }
         if (!padInteraction.wasOccupied(padIndex)) {
-            clipController.setStep(activeMapping().midiChannel(), step, velocity, DEFAULT_GATE);
+            clipController.setStep(
+                    activeMapping().midiChannel(),
+                    step,
+                    encoderController.insertionVelocity(),
+                    DEFAULT_GATE,
+                    encoderController.insertionDefaults());
         }
     }
 
@@ -487,7 +519,7 @@ public final class MulticlipSequenceMode extends Layer {
         }
     }
 
-    private void createClipAndAddFirstStep(final int step, final int velocity) {
+    private void createClipAndAddFirstStep(final int step) {
         final int childPosition = activeChildPosition;
         final int scene = activeScene;
         final int visibleScene = scene - sceneBank.scrollPosition().get();
@@ -501,7 +533,7 @@ public final class MulticlipSequenceMode extends Layer {
                 track.clipLauncherSlotBank(), visibleScene, driver.getDefaultClipLengthBeats());
         cursorRetargetInProgress = true;
         driver.getOled().valueInfo("Creating child clip", activeLaneName());
-        awaitCreatedClip(creation, childPosition, scene, slot, step, velocity, 0);
+        awaitCreatedClip(creation, childPosition, scene, slot, step, 0);
     }
 
     private void awaitCreatedClip(
@@ -510,7 +542,6 @@ public final class MulticlipSequenceMode extends Layer {
             final int scene,
             final ClipLauncherSlot slot,
             final int step,
-            final int velocity,
             final int attempt) {
         host.scheduleTask(
                 () -> {
@@ -523,13 +554,7 @@ public final class MulticlipSequenceMode extends Layer {
                     if (!slot.hasContent().get()) {
                         if (attempt < MAX_CREATION_ATTEMPTS) {
                             awaitCreatedClip(
-                                    creation,
-                                    childPosition,
-                                    scene,
-                                    slot,
-                                    step,
-                                    velocity,
-                                    attempt + 1);
+                                    creation, childPosition, scene, slot, step, attempt + 1);
                         } else {
                             cursorRetargetInProgress = false;
                             driver.getOled().valueInfo("Clip not created", "Try step again");
@@ -545,8 +570,9 @@ public final class MulticlipSequenceMode extends Layer {
                                             TrackLaneMapping.fromChildPosition(childPosition)
                                                     .midiChannel(),
                                             step,
-                                            velocity,
-                                            DEFAULT_GATE);
+                                            encoderController.insertionVelocity(),
+                                            DEFAULT_GATE,
+                                            encoderController.insertionDefaults());
                                 }
                             });
                 },
@@ -617,7 +643,10 @@ public final class MulticlipSequenceMode extends Layer {
             case 0 -> handleSelectButton(pressed);
             case 1 -> handleLastStepButton(pressed);
             case 2 -> copyHeld = pressed;
-            case 3 -> deleteHeld = pressed;
+            case 3 -> {
+                deleteHeld = pressed;
+                encoderController.setDeleteHeld(pressed);
+            }
             default -> {
                 // The Fire exposes four row buttons.
             }
@@ -1051,56 +1080,8 @@ public final class MulticlipSequenceMode extends Layer {
                                 + (clipController.exists() ? "Clip ready" : "Empty lane"));
     }
 
-    private void handleKnobModeButton(final boolean pressed) {
-        if (!pressed && !driver.consumeKnobModeGesture()) {
-            encoderMode =
-                    switch (encoderMode) {
-                        case CHANNEL -> EncoderMode.MIXER;
-                        case MIXER -> EncoderMode.USER_1;
-                        case USER_1 -> EncoderMode.USER_2;
-                        case USER_2 -> EncoderMode.CHANNEL;
-                    };
-            showEncoderMode();
-        }
-    }
-
-    private void handleEncoderTurn(final int encoderIndex, final int increment) {
-        final MulticlipEncoderTarget target =
-                MulticlipEncoderTarget.resolve(encoderMode, encoderIndex);
-        switch (target.kind()) {
-            case CLIP_LENGTH -> timingController.adjustLoopLength(increment);
-            case PLAY_START -> timingController.movePlayStart(increment);
-            case PAD_MIXER, PAD_REMOTE ->
-                    drumPadEncoderController.adjust(target, driver.isGlobalShiftHeld(), increment);
-            case NONE -> {
-                // Unassigned on the Channel page.
-            }
-        }
-    }
-
-    private void showEncoderMode() {
-        switch (encoderMode) {
-            case CHANNEL -> {
-                driver.getOled().detailInfo("Multiclip Channel", "Clip timing");
-                driver.getOled().setFooterLegend(EncoderFooterLegend.of("Lgth", "Start", "", ""));
-            }
-            case MIXER -> {
-                driver.getOled().detailInfo("Multiclip Mixer", activeLaneName());
-                driver.getOled().setFooterLegend(EncoderFooterLegend.of("Vol", "Pan", "S1", "S2"));
-            }
-            case USER_1 -> {
-                driver.getOled().detailInfo("Multiclip Pad Remote", "Parameters 1-4");
-                driver.getOled().setFooterLegend(EncoderFooterLegend.of("R1", "R2", "R3", "R4"));
-            }
-            case USER_2 -> {
-                driver.getOled().detailInfo("Multiclip Pad Remote", "Parameters 5-8");
-                driver.getOled().setFooterLegend(EncoderFooterLegend.of("R5", "R6", "R7", "R8"));
-            }
-        }
-    }
-
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
-        return drumPadEncoderController.activeRemoteControlsPage();
+        return encoderController.getActiveRemoteControlsPage();
     }
 
     private void bindPatternButtons() {
@@ -1145,6 +1126,7 @@ public final class MulticlipSequenceMode extends Layer {
         groupContextReady = false;
         cursorRetargetInProgress = true;
         padLayer.activate();
+        encoderController.activate();
         bindPatternButtons();
         groupCursorController.activate(
                 ready -> {
@@ -1168,7 +1150,6 @@ public final class MulticlipSequenceMode extends Layer {
                         showInvalidContext();
                     }
                 });
-        showEncoderMode();
     }
 
     @Override
@@ -1183,7 +1164,7 @@ public final class MulticlipSequenceMode extends Layer {
         groupCursorController.deactivate();
         padInteraction.clear();
         padLayer.deactivate();
+        encoderController.deactivate();
         clearPatternButtons();
-        driver.getOled().setFooterLegend(null);
     }
 }

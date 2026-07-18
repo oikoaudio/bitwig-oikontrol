@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.multiclip;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,13 +13,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.bitwig.extension.callback.NoteStepChangedCallback;
 import com.bitwig.extension.controller.api.ClipLauncherSlot;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
+import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.Track;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -111,6 +115,65 @@ class MulticlipClipControllerPinningTest {
     }
 
     @Test
+    void exposesObservedNoteObjectsForHeldStepEncoderEditing() {
+        final Fixture fixture = new Fixture();
+        final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);
+        final ClipLauncherSlot targetSlot = mock(ClipLauncherSlot.class);
+        when(targetTrack.position().get()).thenReturn(7);
+        when(fixture.cursor.position().get()).thenReturn(7);
+        fixture.existingClipAtScene(5);
+        fixture.controller.retarget(
+                targetTrack,
+                targetSlot,
+                TrackLaneMapping.fromChildPosition(0),
+                0,
+                5,
+                true,
+                ignored -> {});
+        fixture.runAllTasks();
+        final NoteStep note = mock(NoteStep.class);
+        when(note.x()).thenReturn(3);
+        when(note.y()).thenReturn(0);
+        when(note.channel()).thenReturn(2);
+        when(note.state()).thenReturn(NoteStep.State.NoteOn);
+
+        fixture.noteStepObserver.noteStepChanged(note);
+
+        assertEquals(List.of(note), fixture.controller.notesAt(3));
+        assertEquals(List.of(note), fixture.controller.allNotes());
+    }
+
+    @Test
+    void appliesMulticlipInsertionDefaultsWhenTheNewNoteIsObserved() {
+        final Fixture fixture = new Fixture();
+        final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);
+        final ClipLauncherSlot targetSlot = mock(ClipLauncherSlot.class);
+        when(targetTrack.position().get()).thenReturn(7);
+        when(fixture.cursor.position().get()).thenReturn(7);
+        fixture.existingClipAtScene(5);
+        fixture.controller.retarget(
+                targetTrack,
+                targetSlot,
+                TrackLaneMapping.fromChildPosition(0),
+                0,
+                5,
+                true,
+                ignored -> {});
+        fixture.runAllTasks();
+        fixture.controller.setStep(2, 3, 96, 0.12, new MulticlipNoteDefaults(0.35, -0.4));
+        final NoteStep note = mock(NoteStep.class);
+        when(note.x()).thenReturn(3);
+        when(note.y()).thenReturn(0);
+        when(note.channel()).thenReturn(2);
+        when(note.state()).thenReturn(NoteStep.State.NoteOn);
+
+        fixture.noteStepObserver.noteStepChanged(note);
+
+        verify(note).setPressure(0.35);
+        verify(note).setTimbre(-0.4);
+    }
+
+    @Test
     void reportsFailureWhenTheSelectedTrackNeverSettles() {
         final Fixture fixture = new Fixture();
         final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);
@@ -144,6 +207,7 @@ class MulticlipClipControllerPinningTest {
         private final PinnableCursorClip fineClip =
                 mock(PinnableCursorClip.class, Mockito.RETURNS_DEEP_STUBS);
         private final Deque<Runnable> tasks = new ArrayDeque<>();
+        private NoteStepChangedCallback noteStepObserver;
         private final MulticlipClipController controller;
 
         private Fixture() {
@@ -159,6 +223,13 @@ class MulticlipClipControllerPinningTest {
                             })
                     .when(host)
                     .scheduleTask(any(Runnable.class), anyLong());
+            Mockito.doAnswer(
+                            invocation -> {
+                                noteStepObserver = invocation.getArgument(0);
+                                return null;
+                            })
+                    .when(clip)
+                    .addNoteStepObserver(any(NoteStepChangedCallback.class));
             controller = new MulticlipClipController(host, cursor);
         }
 

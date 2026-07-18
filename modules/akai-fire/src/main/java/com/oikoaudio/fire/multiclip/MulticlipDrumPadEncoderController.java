@@ -53,34 +53,48 @@ final class MulticlipDrumPadEncoderController {
         return remotePages[activePad];
     }
 
-    void adjust(final MulticlipEncoderTarget target, final boolean fine, final int increment) {
-        final Parameter parameter = parameter(target);
+    void adjustMixer(final int index, final boolean fine, final int increment) {
+        final Parameter parameter = mixerParameter(index);
         if (!ParameterEncoderBinding.isMapped(parameter)) {
-            oled.valueInfo(label(target), "Unmapped");
+            oled.valueInfo(mixerLabel(index), "Unmapped");
             return;
         }
         final EncoderValueProfile profile =
-                target.kind() == MulticlipEncoderTarget.Kind.PAD_MIXER
-                                && target.parameterIndex() == 1
-                        ? EncoderValueProfile.PAN
-                        : EncoderValueProfile.LARGE_RANGE;
+                index == 1 ? EncoderValueProfile.PAN : EncoderValueProfile.LARGE_RANGE;
         ParameterEncoderBinding.adjustParameter(parameter, fine, increment, profile);
-        ParameterEncoderBinding.showValue(parameter, label(target), oled::valueInfo);
+        ParameterEncoderBinding.showValue(parameter, mixerLabel(index), oled::valueInfo);
     }
 
-    private Parameter parameter(final MulticlipEncoderTarget target) {
-        return switch (target.kind()) {
-            case PAD_MIXER -> mixerParameters[activePad][target.parameterIndex()];
-            case PAD_REMOTE -> remotePages[activePad].getParameter(target.parameterIndex());
-            default -> null;
-        };
+    boolean hasMixerParameter(final int index) {
+        return index >= 0
+                && index < mixerParameters[activePad].length
+                && ParameterEncoderBinding.isMapped(mixerParameters[activePad][index]);
     }
 
-    private static String label(final MulticlipEncoderTarget target) {
-        if (target.kind() == MulticlipEncoderTarget.Kind.PAD_REMOTE) {
-            return "Remote " + (target.parameterIndex() + 1);
+    void showMixer(final int index) {
+        final Parameter parameter = mixerParameter(index);
+        if (!ParameterEncoderBinding.isMapped(parameter)) {
+            oled.valueInfo(mixerLabel(index), "Unmapped");
+            return;
         }
-        return switch (target.parameterIndex()) {
+        ParameterEncoderBinding.showValue(parameter, mixerLabel(index), oled::valueInfo);
+    }
+
+    void resetMixer(final int index) {
+        final Parameter parameter = mixerParameter(index);
+        if (ParameterEncoderBinding.isMapped(parameter)) {
+            ParameterEncoderBinding.ResetPolicy.PARAMETER_DEFAULT.reset(parameter);
+        }
+    }
+
+    private Parameter mixerParameter(final int index) {
+        return index >= 0 && index < mixerParameters[activePad].length
+                ? mixerParameters[activePad][index]
+                : null;
+    }
+
+    private static String mixerLabel(final int parameterIndex) {
+        return switch (parameterIndex) {
             case 0 -> "Pad Volume";
             case 1 -> "Pad Pan";
             case 2 -> "Pad Send 1";

@@ -16,7 +16,7 @@ Multiclip Seq keeps the parent and lane identities separate:
 - the first inserted step creates a clip only in the exact active child slot;
 - direct child position, absolute scene, and a target generation identify every delayed write;
 - the active Track Lane is the active Bitwig child track;
-- a group-rooted first-instrument cursor owns Drum Machine pad mixer parameters and pad-chain remotes, so encoder control does not retarget the selected-child cursor;
+- a group-rooted first-instrument cursor owns the corresponding Drum Machine pad mixer parameters, while the active child clip exposes note objects to the shared Drum XOX encoder pages; encoder control therefore does not retarget the selected-child cursor;
 - copy/paste uses the current editing scene and Track Lane as a live source and targets child slots directly; it has no captured buffer and never includes the group slot;
 - GUI presentation selects only the active child Track Lane and its Lane Clip; group scene/sub-scene selection is never used as an editing target.
 

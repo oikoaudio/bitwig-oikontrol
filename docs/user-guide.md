@@ -174,7 +174,7 @@ On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin c
 
 The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data. The `Note OLED Notes/Chords` hardware preference defaults to `Pads`: live Note pads show notes/chords on the OLED, while selected-track DAW playback notes do not take over the idle display. Set it to `Pads + DAW` if you also want playing clip notes/chords to appear during playback.
 
-Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Melo Gen, Poly Step, Nested Rhythm, and Fugue. The `Encoder Legend Position` hardware preference defaults to `Bottom`; set it to `Top` if the top row is easier to read in your controller setup.
+Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Multiclip Seq, Melo Gen, Poly Step, Nested Rhythm, and Fugue. The `Encoder Legend Position` hardware preference defaults to `Bottom`; set it to `Top` if the top row is easier to read in your controller setup.
 
 ### Baked Note Variation
 
@@ -289,10 +289,10 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
-| `Channel` | Active clip length | Active clip play start | — | — |
+| `Channel` | Note length | Chance | Velocity spread | Repeats |
 | `Mixer` | Matching Drum Machine pad volume | Pad pan | Pad send 1 | Pad send 2 |
-| `User 1` | Pad-chain remote 1 | Remote 2 | Remote 3 | Remote 4 |
-| `User 2` | Pad-chain remote 5 | Remote 6 | Remote 7 | Remote 8 |
+| `User 1` | Velocity or insertion velocity | Pressure or insertion pressure | Timbre or insertion timbre | Pitch expression |
+| `User 2` | Lane Clip Euclid length | Euclid pulses | Euclid rotation | Accent density |
 
 | Control | Action |
 | --- | --- |
@@ -320,6 +320,10 @@ Selecting a Multiclip Scene with `ALT` or `MUTE_1` creates only missing project 
 Bitwig may display a group-track **sub scene** when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq. Scene-row LEDs ignore it and derive population, color, queued, and playing feedback only from eligible child-track slots.
 
 Each child clip retains its own loop length and play start. Fire displays the active clip's existing notes and playing-step feedback across rows 3-4. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
+
+The encoder pages use the same assignments and OLED feedback as Drum XOX, but resolve their targets through Multiclip's split context. `Channel` and held-step `User 1` edits act on notes in the active Lane Clip. With no held step, User 1 encoders 1-3 edit the velocity, pressure, and timbre defaults applied to the next inserted notes; pitch expression requires a held step. `Mixer` controls the Drum Machine pad at the active lane's positional mapping through the group-rooted device cursor, so it does not move Bitwig away from the selected child clip. `User 2` keeps session-local Euclid settings independently for each lane and scene and applies the pattern to the active clip's visible page only.
+
+The OLED keeps the compact four-encoder legend visible. Tap `KNOB MODE` to cycle pages, or hold `MUTE_1` and tap `KNOB MODE` to show all four assignments for the current page without changing it. Touching or turning an encoder shows its current target and value; `KNOB MODE + touch encoder` performs the same supported reset gesture as Drum XOX.
 
 Hold `MUTE_2` to preview the active Lane Clip's length on rows 3-4: its current last step is white and pads beyond the loop are off. Pressing a pattern pad moves that last step for only the active clip. During normal sequencing, the active clip's moving playhead is white across the same two rows.
 

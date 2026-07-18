@@ -29,7 +29,9 @@ final class MulticlipClipController {
     private final PinnableCursorClip clip;
     private final PinnableCursorClip fineClip;
     private final Set<Integer>[] observedChannels;
+    private final Map<Integer, NoteStep>[] observedNotes;
     private final Map<Integer, Set<Integer>> fineNotes = new HashMap<>();
+    private final Map<PendingStep, MulticlipNoteDefaults> pendingDefaults = new HashMap<>();
 
     private long targetGeneration;
     private int firstVisibleStep;
@@ -42,8 +44,10 @@ final class MulticlipClipController {
         this.host = host;
         this.cursor = cursor;
         observedChannels = new Set[MulticlipXoxLayout.PATTERN_COUNT];
+        observedNotes = new Map[MulticlipXoxLayout.PATTERN_COUNT];
         for (int step = 0; step < observedChannels.length; step++) {
             observedChannels[step] = new HashSet<>();
+            observedNotes[step] = new HashMap<>();
         }
 
         clip =
@@ -180,6 +184,24 @@ final class MulticlipClipController {
         return validStep(step) ? Set.copyOf(observedChannels[step]) : Set.of();
     }
 
+    List<NoteStep> notesAt(final int step) {
+        if (!validStep(step)) {
+            return List.of();
+        }
+        return observedNotes[step].entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
+                .toList();
+    }
+
+    List<NoteStep> allNotes() {
+        final List<NoteStep> notes = new ArrayList<>();
+        for (int step = 0; step < observedNotes.length; step++) {
+            notes.addAll(notesAt(step));
+        }
+        return List.copyOf(notes);
+    }
+
     boolean isPlaying(final int step) {
         return ready && step == playingStep;
     }
@@ -188,7 +210,18 @@ final class MulticlipClipController {
         clip.setStep(channel, step, 0, velocity, duration);
     }
 
+    void setStep(
+            final int channel,
+            final int step,
+            final int velocity,
+            final double duration,
+            final MulticlipNoteDefaults defaults) {
+        pendingDefaults.put(new PendingStep(step, channel), defaults);
+        setStep(channel, step, velocity, duration);
+    }
+
     void clearStep(final int channel, final int step) {
+        pendingDefaults.remove(new PendingStep(step, channel));
         clip.clearStep(channel, step, 0);
     }
 
@@ -259,8 +292,15 @@ final class MulticlipClipController {
         }
         if (note.state() == NoteStep.State.NoteOn) {
             observedChannels[note.x()].add(note.channel());
+            observedNotes[note.x()].put(note.channel(), note);
+            final MulticlipNoteDefaults defaults =
+                    pendingDefaults.remove(new PendingStep(note.x(), note.channel()));
+            if (defaults != null) {
+                defaults.applyTo(note);
+            }
         } else {
             observedChannels[note.x()].remove(note.channel());
+            observedNotes[note.x()].remove(note.channel());
         }
     }
 
@@ -294,8 +334,12 @@ final class MulticlipClipController {
         ready = false;
         playingStep = -1;
         fineNotes.clear();
+        pendingDefaults.clear();
         for (final Set<Integer> channels : observedChannels) {
             channels.clear();
+        }
+        for (final Map<Integer, NoteStep> notes : observedNotes) {
+            notes.clear();
         }
     }
 
@@ -304,4 +348,6 @@ final class MulticlipClipController {
     }
 
     private record FineTarget(int fineStep, int channel) {}
+
+    private record PendingStep(int step, int channel) {}
 }

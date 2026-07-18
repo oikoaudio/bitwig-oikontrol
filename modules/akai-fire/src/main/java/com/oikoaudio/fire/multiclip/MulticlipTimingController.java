@@ -2,7 +2,7 @@ package com.oikoaudio.fire.multiclip;
 
 import com.oikoaudio.fire.display.OledDisplay;
 
-/** Owns active-Lane Clip length, play-start, and 1/64-note nudge operations. */
+/** Owns active-Lane Clip play-start and 1/64-note nudge operations. */
 final class MulticlipTimingController {
     private final MulticlipClipController clips;
     private final MulticlipPadInteractionState pads;
@@ -18,17 +18,6 @@ final class MulticlipTimingController {
         this.pads = pads;
         this.oled = oled;
         this.context = context;
-    }
-
-    void adjustLoopLength(final int increment) {
-        if (!context.activeLaneHasClip()) {
-            oled.valueInfo("Empty lane", "Length unchanged");
-            return;
-        }
-        final int currentSteps = MulticlipTiming.stepsForBeats(clips.loopLength());
-        final int newSteps = MulticlipTiming.adjustLoopSteps(currentSteps, increment);
-        clips.setLoopLength(MulticlipTiming.beatsForSteps(newSteps));
-        oled.valueInfo("Length " + newSteps + " steps", context.activeLaneName());
     }
 
     void movePlayStart(final int direction) {

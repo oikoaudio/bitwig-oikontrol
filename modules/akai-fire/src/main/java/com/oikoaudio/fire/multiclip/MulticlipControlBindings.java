@@ -5,7 +5,6 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.ButtonRowBindings;
-import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.PadMatrixBindings;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
@@ -33,8 +32,6 @@ final class MulticlipControlBindings {
         bindGridButton(driver, layer, host, NoteAssign.BANK_L, -1);
         bindGridButton(driver, layer, host, NoteAssign.BANK_R, 1);
         driver.getButton(NoteAssign.ALT).bindPressed(layer, host::altButton, host::altLight);
-        driver.getButton(NoteAssign.KNOB_MODE)
-                .bindPressed(layer, host::knobModeButton, host::knobModeLight);
 
         final BiColorButton[] rowButtons = {
             driver.getButton(NoteAssign.MUTE_1),
@@ -56,15 +53,6 @@ final class MulticlipControlBindings {
                         return host.rowLight(row);
                     }
                 });
-
-        for (int index = 0; index < driver.getEncoders().length; index++) {
-            final int encoderIndex = index;
-            driver.getEncoders()[index].bindContinuousEncoder(
-                    layer,
-                    driver::isGlobalShiftHeld,
-                    ContinuousEncoderScaler.Profile.STRONG,
-                    increment -> host.encoderTurn(encoderIndex, increment));
-        }
     }
 
     private static void bindGridButton(
@@ -100,11 +88,5 @@ final class MulticlipControlBindings {
         void rowButton(int row, boolean pressed);
 
         BiColorLightState rowLight(int row);
-
-        void knobModeButton(boolean pressed);
-
-        BiColorLightState knobModeLight();
-
-        void encoderTurn(int encoderIndex, int increment);
     }
 }
