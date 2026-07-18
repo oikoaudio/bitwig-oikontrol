@@ -39,9 +39,12 @@ public final class MulticlipSequenceMode extends Layer {
     private final CursorTrack[] laneCursors = new CursorTrack[VISIBLE_LANES];
     private final PinnableCursorClip[] laneClips = new PinnableCursorClip[VISIBLE_LANES];
     private final MulticlipLaneState laneState = new MulticlipLaneState();
+    private final PendingStepCreation[] pendingCreations =
+            new PendingStepCreation[VISIBLE_LANES];
 
     private MulticlipPageState pageState = MulticlipPageState.initial(0);
     private int activeScene;
+    private long targetGeneration;
     private boolean active;
 
     public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
@@ -249,6 +252,7 @@ public final class MulticlipSequenceMode extends Layer {
     }
 
     private void retargetVisibleClipCursors() {
+        targetGeneration++;
         for (int row = 0; row < VISIBLE_LANES; row++) {
             laneState.clearRow(row);
             final int childPosition = childPositionForRow(row);
@@ -271,6 +275,11 @@ public final class MulticlipSequenceMode extends Layer {
         return pageState.lanePage() * TrackLaneMapping.LANES_PER_PAGE + row;
     }
 
+    private MulticlipTargetIdentity currentTarget(final int row) {
+        return new MulticlipTargetIdentity(
+                targetGeneration, childPositionForRow(row), activeScene);
+    }
+
     private void handleStepPress(final int padIndex, final int velocity) {
         selectLaneForPad(padIndex);
         if (!isValidContext()) {
@@ -286,7 +295,7 @@ public final class MulticlipSequenceMode extends Layer {
         }
         final Track track = laneBank.getItemAt(childPosition);
         if (!track.clipLauncherSlotBank().getItemAt(activeScene).hasContent().get()) {
-            driver.getOled().valueInfo("Empty clip", "Add first step");
+            createClipAndAddFirstStep(row, step, velocity, track);
             return;
         }
         final int channel = TrackLaneMapping.fromChildPosition(childPosition).midiChannel();
@@ -295,6 +304,49 @@ public final class MulticlipSequenceMode extends Layer {
         } else {
             laneClips[row].setStep(channel, step, 0, velocity, DEFAULT_GATE);
         }
+    }
+
+    private void createClipAndAddFirstStep(
+            final int row, final int step, final int velocity, final Track track) {
+        final PendingStepCreation request =
+                new PendingStepCreation(currentTarget(row), row, step, velocity);
+        pendingCreations[row] = request;
+        track.createNewLauncherClip(activeScene, 4);
+        laneCursors[row].selectSlot(activeScene);
+        driver.getOled().valueInfo("Creating clip", "Lane " + (childPositionForRow(row) + 1));
+        schedulePendingCreation(request, 0);
+    }
+
+    private void schedulePendingCreation(
+            final PendingStepCreation request, final int attempt) {
+        host.scheduleTask(
+                () -> {
+                    final int row = request.row();
+                    if (!active
+                            || pendingCreations[row] != request
+                            || !request.matches(currentTarget(row))) {
+                        return;
+                    }
+                    final int childPosition = childPositionForRow(row);
+                    final Track track = laneBank.getItemAt(childPosition);
+                    final ClipLauncherSlot slot =
+                            track.clipLauncherSlotBank().getItemAt(activeScene);
+                    if (!slot.hasContent().get()) {
+                        if (attempt < 7) {
+                            schedulePendingCreation(request, attempt + 1);
+                        } else {
+                            pendingCreations[row] = null;
+                            driver.getOled().valueInfo("Clip not ready", "Try step again");
+                        }
+                        return;
+                    }
+                    pendingCreations[row] = null;
+                    final int channel =
+                            TrackLaneMapping.fromChildPosition(childPosition).midiChannel();
+                    laneClips[row]
+                            .setStep(channel, request.step(), 0, request.velocity(), DEFAULT_GATE);
+                },
+                50);
     }
 
     private void observeGroupDevices() {
@@ -484,5 +536,9 @@ public final class MulticlipSequenceMode extends Layer {
         padLayer.deactivate();
         clearPatternButtons();
         groupCursor.isPinned().set(false);
+        targetGeneration++;
+        for (int row = 0; row < VISIBLE_LANES; row++) {
+            pendingCreations[row] = null;
+        }
     }
 }
