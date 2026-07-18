@@ -14,9 +14,18 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.sequence.EncoderMode;
 import com.oikoaudio.fire.utils.PatternButtons;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /** Four-row sequencer whose lanes are direct child tracks of a Drum Machine group. */
 public final class MulticlipSequenceMode extends Layer {
@@ -25,6 +34,9 @@ public final class MulticlipSequenceMode extends Layer {
     private static final int VISIBLE_LANES = 4;
     private static final double STEP_SIZE = 0.25;
     private static final double DEFAULT_GATE = 0.12;
+    private static final int FINE_STEPS_PER_COARSE_STEP = 16;
+    private static final int FINE_OBSERVATION_STEPS =
+            MulticlipTiming.MAX_LOOP_STEPS * FINE_STEPS_PER_COARSE_STEP;
 
     private final AkaiFireOikontrolExtension driver;
     private final ControllerHost host;
@@ -36,8 +48,13 @@ public final class MulticlipSequenceMode extends Layer {
     private final String[] laneNames = new String[TrackLaneMapping.MAX_LANES];
     private final boolean[] groupDeviceIsDrumMachine = new boolean[DEVICE_SCAN_SIZE];
     private final boolean[] heldPads = new boolean[64];
+    private final boolean[] pressWasOccupied = new boolean[64];
+    private final boolean[] heldGestureConsumed = new boolean[64];
     private final CursorTrack[] laneCursors = new CursorTrack[VISIBLE_LANES];
     private final PinnableCursorClip[] laneClips = new PinnableCursorClip[VISIBLE_LANES];
+    private final PinnableCursorClip[] fineLaneClips = new PinnableCursorClip[VISIBLE_LANES];
+    @SuppressWarnings("unchecked")
+    private final Map<Integer, Set<Integer>>[] fineNotes = new Map[VISIBLE_LANES];
     private final MulticlipLaneState laneState = new MulticlipLaneState();
     private final PendingStepCreation[] pendingCreations =
             new PendingStepCreation[VISIBLE_LANES];
@@ -46,6 +63,7 @@ public final class MulticlipSequenceMode extends Layer {
     private int activeScene;
     private long targetGeneration;
     private boolean active;
+    private EncoderMode encoderMode = EncoderMode.CHANNEL;
 
     public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "MULTICLIP_SEQUENCE");
@@ -72,9 +90,14 @@ public final class MulticlipSequenceMode extends Layer {
                     @Override
                     public void handlePadPress(
                             final int padIndex, final boolean pressed, final int velocity) {
-                        heldPads[padIndex] = pressed;
                         if (pressed) {
+                            heldPads[padIndex] = true;
                             handleStepPress(padIndex, velocity);
+                        } else {
+                            handleStepRelease(padIndex);
+                            heldPads[padIndex] = false;
+                            pressWasOccupied[padIndex] = false;
+                            heldGestureConsumed[padIndex] = false;
                         }
                     }
 
@@ -84,6 +107,7 @@ public final class MulticlipSequenceMode extends Layer {
                     }
                 });
         bindNavigationButtons();
+        bindEncoderControls();
     }
 
     private void bindNavigationButtons() {
@@ -91,8 +115,8 @@ public final class MulticlipSequenceMode extends Layer {
                 .bindPressed(
                         padLayer,
                         pressed -> {
-                            if (pressed && !hasHeldPads()) {
-                                pageTime(-1);
+                            if (pressed) {
+                                handleGridButton(-1);
                             }
                         },
                         () ->
@@ -103,11 +127,65 @@ public final class MulticlipSequenceMode extends Layer {
                 .bindPressed(
                         padLayer,
                         pressed -> {
-                            if (pressed && !hasHeldPads()) {
-                                pageTime(1);
+                            if (pressed) {
+                                handleGridButton(1);
                             }
                         },
                         () -> BiColorLightState.HALF);
+    }
+
+    private void handleGridButton(final int direction) {
+        switch (MulticlipGridGesture.resolve(
+                driver.isGlobalShiftHeld(), driver.isGlobalAltHeld(), hasHeldPads())) {
+            case TIME_PAGE -> pageTime(direction);
+            case HELD_STEP_NUDGE -> fineNudge(direction, true);
+            case PLAY_START -> movePlayStart(direction);
+            case WHOLE_LANE_NUDGE -> fineNudge(direction, false);
+        }
+    }
+
+    private void bindEncoderControls() {
+        driver.getButton(NoteAssign.KNOB_MODE)
+                .bindPressed(
+                        padLayer,
+                        pressed -> {
+                            if (!pressed && !driver.consumeKnobModeGesture()) {
+                                encoderMode =
+                                        switch (encoderMode) {
+                                            case CHANNEL -> EncoderMode.MIXER;
+                                            case MIXER -> EncoderMode.USER_1;
+                                            case USER_1 -> EncoderMode.USER_2;
+                                            case USER_2 -> EncoderMode.CHANNEL;
+                                        };
+                                showEncoderMode();
+                            }
+                        },
+                        () -> encoderMode.getState());
+        for (int index = 0; index < driver.getEncoders().length; index++) {
+            final int encoderIndex = index;
+            driver.getEncoders()[index]
+                    .bindThresholdedEncoder(
+                            padLayer,
+                            5,
+                            10,
+                            driver::isGlobalShiftHeld,
+                            increment -> {
+                                if (encoderMode == EncoderMode.CHANNEL && encoderIndex == 0) {
+                                    adjustActiveLoopLength(increment);
+                                }
+                            });
+        }
+    }
+
+    private void showEncoderMode() {
+        if (encoderMode == EncoderMode.CHANNEL) {
+            driver.getOled().detailInfo("Multiclip Channel", "1 Lane Length");
+            driver.getOled()
+                    .setFooterLegend(EncoderFooterLegend.of("Lgth", "", "", ""));
+        } else {
+            driver.getOled().detailInfo("Multiclip " + encoderMode, "Reserved");
+            driver.getOled().setFooterLegend(null);
+        }
     }
 
     private boolean hasHeldPads() {
@@ -222,8 +300,20 @@ public final class MulticlipSequenceMode extends Layer {
             clip.playingStep()
                     .addValueObserver(
                             step -> laneState.setPlayingStep(laneRow, visiblePlayingStep(step)));
+            clip.getLoopLength().markInterested();
+            clip.getPlayStart().markInterested();
+            final PinnableCursorClip fineClip =
+                    cursor.createLauncherCursorClip(
+                            "MULTICLIP_FINE_" + (row + 1),
+                            "Multiclip Fine " + (row + 1),
+                            FINE_OBSERVATION_STEPS,
+                            1);
+            fineClip.setStepSize(MulticlipTiming.FINE_STEP_BEATS);
+            fineNotes[row] = new HashMap<>();
+            fineClip.addNoteStepObserver(note -> handleFineObservedStep(laneRow, note));
             laneCursors[row] = cursor;
             laneClips[row] = clip;
+            fineLaneClips[row] = fineClip;
         }
     }
 
@@ -251,10 +341,27 @@ public final class MulticlipSequenceMode extends Layer {
         }
     }
 
+    private void handleFineObservedStep(final int row, final NoteStep note) {
+        if (note.x() < 0 || note.x() >= FINE_OBSERVATION_STEPS || note.y() != 0) {
+            return;
+        }
+        final Set<Integer> channels =
+                fineNotes[row].computeIfAbsent(note.x(), ignored -> new HashSet<>());
+        if (note.state() == NoteStep.State.NoteOn) {
+            channels.add(note.channel());
+        } else {
+            channels.remove(note.channel());
+            if (channels.isEmpty()) {
+                fineNotes[row].remove(note.x());
+            }
+        }
+    }
+
     private void retargetVisibleClipCursors() {
         targetGeneration++;
         for (int row = 0; row < VISIBLE_LANES; row++) {
             laneState.clearRow(row);
+            fineNotes[row].clear();
             final int childPosition = childPositionForRow(row);
             if (childPosition < 0
                     || childPosition >= pageState.laneCount()
@@ -267,6 +374,8 @@ public final class MulticlipSequenceMode extends Layer {
             laneCursors[row].isPinned().set(true);
             laneClips[row].scrollToKey(mapping.midiNote());
             laneClips[row].scrollToStep(pageState.firstVisibleStep());
+            fineLaneClips[row].scrollToKey(mapping.midiNote());
+            fineLaneClips[row].scrollToStep(0);
             laneCursors[row].selectSlot(activeScene);
         }
     }
@@ -294,17 +403,178 @@ public final class MulticlipSequenceMode extends Layer {
             return;
         }
         final Track track = laneBank.getItemAt(childPosition);
+        pressWasOccupied[padIndex] = laneState.isOccupied(row, step);
+        heldGestureConsumed[padIndex] = false;
         if (!track.clipLauncherSlotBank().getItemAt(activeScene).hasContent().get()) {
             createClipAndAddFirstStep(row, step, velocity, track);
             return;
         }
         final int channel = TrackLaneMapping.fromChildPosition(childPosition).midiChannel();
-        if (laneState.isOccupied(row, step)) {
-            laneClips[row].clearStep(channel, step, 0);
-        } else {
+        if (!pressWasOccupied[padIndex]) {
             laneClips[row].setStep(channel, step, 0, velocity, DEFAULT_GATE);
         }
     }
+
+    private void handleStepRelease(final int padIndex) {
+        if (!pressWasOccupied[padIndex] || heldGestureConsumed[padIndex]) {
+            return;
+        }
+        final int row = padIndex / MulticlipPageState.STEPS_PER_PAGE;
+        final int step = padIndex % MulticlipPageState.STEPS_PER_PAGE;
+        final int childPosition = childPositionForRow(row);
+        if (childPosition < 0 || childPosition >= pageState.laneCount()) {
+            return;
+        }
+        final int channel = TrackLaneMapping.fromChildPosition(childPosition).midiChannel();
+        laneClips[row].clearStep(channel, step, 0);
+    }
+
+    private boolean activeLaneHasClip() {
+        final int row = pageState.activeRow();
+        final int childPosition = pageState.activeChildPosition();
+        return row >= 0
+                && childPosition >= 0
+                && childPosition < pageState.laneCount()
+                && laneBank
+                        .getItemAt(childPosition)
+                        .clipLauncherSlotBank()
+                        .getItemAt(activeScene)
+                        .hasContent()
+                        .get();
+    }
+
+    private void adjustActiveLoopLength(final int increment) {
+        if (!activeLaneHasClip()) {
+            driver.getOled().valueInfo("Empty lane", "Length unchanged");
+            return;
+        }
+        final PinnableCursorClip clip = laneClips[pageState.activeRow()];
+        final int currentSteps = MulticlipTiming.stepsForBeats(clip.getLoopLength().get());
+        final int newSteps = MulticlipTiming.adjustLoopSteps(currentSteps, increment);
+        clip.getLoopLength().set(MulticlipTiming.beatsForSteps(newSteps));
+        driver.getOled()
+                .valueInfo(
+                        "Length " + newSteps + " steps",
+                        activeLaneName());
+    }
+
+    private void movePlayStart(final int direction) {
+        if (!activeLaneHasClip()) {
+            driver.getOled().valueInfo("Empty lane", "Rotation unchanged");
+            return;
+        }
+        final PinnableCursorClip clip = laneClips[pageState.activeRow()];
+        final double loopLength =
+                Math.max(MulticlipTiming.STEP_BEATS, clip.getLoopLength().get());
+        double newStart =
+                clip.getPlayStart().get() + direction * MulticlipTiming.STEP_BEATS;
+        newStart %= loopLength;
+        if (newStart < 0) {
+            newStart += loopLength;
+        }
+        clip.getPlayStart().set(newStart);
+        driver.getOled()
+                .valueInfo(
+                        "Play start "
+                                + MulticlipTiming.stepsForBeats(newStart)
+                                + " steps",
+                        activeLaneName());
+    }
+
+    private void fineNudge(final int direction, final boolean heldOnly) {
+        if (!activeLaneHasClip()) {
+            driver.getOled().valueInfo("Empty lane", "Nudge ignored");
+            return;
+        }
+        final int row = pageState.activeRow();
+        final int loopFineSteps =
+                Math.min(
+                        FINE_OBSERVATION_STEPS,
+                        Math.max(
+                                1,
+                                (int)
+                                        Math.round(
+                                                laneClips[row].getLoopLength().get()
+                                                        / MulticlipTiming.FINE_STEP_BEATS)));
+        final List<FineTarget> targets = collectFineTargets(row, heldOnly, loopFineSteps);
+        targets.sort(
+                direction > 0
+                        ? Comparator.comparingInt(FineTarget::fineStep).reversed()
+                        : Comparator.comparingInt(FineTarget::fineStep));
+        for (final FineTarget target : targets) {
+            int destination = target.fineStep() + direction;
+            if (destination < 0) {
+                destination = loopFineSteps - 1;
+            } else if (destination >= loopFineSteps) {
+                destination = 0;
+            }
+            fineLaneClips[row]
+                    .moveStep(
+                            target.channel(),
+                            target.fineStep(),
+                            0,
+                            destination - target.fineStep(),
+                            0);
+        }
+        if (hasHeldPads()) {
+            markHeldStepsConsumed(row);
+        }
+        driver.getOled()
+                .valueInfo(
+                        heldOnly ? "Step nudge " + signed(direction) : "Lane nudge " + signed(direction),
+                        activeLaneName());
+    }
+
+    private List<FineTarget> collectFineTargets(
+            final int row, final boolean heldOnly, final int loopFineSteps) {
+        final List<FineTarget> targets = new ArrayList<>();
+        for (final Map.Entry<Integer, Set<Integer>> entry : fineNotes[row].entrySet()) {
+            final int fineStep = entry.getKey();
+            if (fineStep < 0 || fineStep >= loopFineSteps) {
+                continue;
+            }
+            if (heldOnly && !fineStepBelongsToHeldPad(row, fineStep)) {
+                continue;
+            }
+            for (final int channel : entry.getValue()) {
+                targets.add(new FineTarget(fineStep, channel));
+            }
+        }
+        return targets;
+    }
+
+    private boolean fineStepBelongsToHeldPad(final int row, final int fineStep) {
+        final int coarseStep = fineStep / FINE_STEPS_PER_COARSE_STEP;
+        final int visibleStep = coarseStep - pageState.firstVisibleStep();
+        if (visibleStep < 0 || visibleStep >= MulticlipPageState.STEPS_PER_PAGE) {
+            return false;
+        }
+        return heldPads[row * MulticlipPageState.STEPS_PER_PAGE + visibleStep];
+    }
+
+    private void markHeldStepsConsumed(final int row) {
+        final int start = row * MulticlipPageState.STEPS_PER_PAGE;
+        for (int step = 0; step < MulticlipPageState.STEPS_PER_PAGE; step++) {
+            if (heldPads[start + step]) {
+                heldGestureConsumed[start + step] = true;
+            }
+        }
+    }
+
+    private String activeLaneName() {
+        final int childPosition = pageState.activeChildPosition();
+        if (childPosition < 0 || childPosition >= laneNames.length) {
+            return "Lane";
+        }
+        final String name = laneNames[childPosition];
+        return name == null || name.isBlank() ? "Lane " + (childPosition + 1) : name;
+    }
+
+    private String signed(final int direction) {
+        return direction > 0 ? "+1/64" : "-1/64";
+    }
+
+    private record FineTarget(int fineStep, int channel) {}
 
     private void createClipAndAddFirstStep(
             final int row, final int step, final int velocity, final Track track) {
@@ -528,6 +798,7 @@ public final class MulticlipSequenceMode extends Layer {
                 0);
         padLayer.activate();
         bindPatternButtons();
+        showEncoderMode();
     }
 
     @Override
@@ -535,6 +806,7 @@ public final class MulticlipSequenceMode extends Layer {
         active = false;
         padLayer.deactivate();
         clearPatternButtons();
+        driver.getOled().setFooterLegend(null);
         groupCursor.isPinned().set(false);
         targetGeneration++;
         for (int row = 0; row < VISIBLE_LANES; row++) {
