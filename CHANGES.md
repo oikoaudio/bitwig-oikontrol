@@ -4,7 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
-- Multiclip Seq now keeps Bitwig's selected child clip authoritative on entry while slow-blinking playing scenes and lanes and fast-blinking queued ones, matching Drum XOX's separation of selection and playback feedback.
+- Multiclip Seq now keeps Bitwig's selected child clip authoritative on entry while slow-blinking playing scenes and fast-blinking queued ones. Row-2 lane pads remain steady because playback is controlled at scene level.
 - Multiclip Seq row-2 Track Lane pads now match Drum XOX's soft-dim intensity when unselected, while retaining the darker state for muted or excluded solo lanes.
 - Multiclip Seq now drives the four TRACK status LEDs with the shared sequencer palette and shows each mute-row button's function and valid target on the OLED, including Lane Clip versus Child Scene paste.
 - Multiclip Seq now hydrates the active Lane Clip playhead immediately after lane or scene retargeting and displays it across pattern rows 3-4. Holding `MUTE_2` previews that clip's length and sets its Last Step without changing another lane.

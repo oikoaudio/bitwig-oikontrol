@@ -9,7 +9,7 @@ class MulticlipPlaybackLightTest {
     private final RgbLightState color = new RgbLightState(60, 90, 30, true);
 
     @Test
-    void slowlyBlinksPlayingTargetsLikeTheDrumXoxClipRow() {
+    void slowlyBlinksPlayingScenesLikeTheDrumXoxClipRow() {
         assertEquals(
                 color.getBrightest(),
                 MulticlipPlaybackLight.render(color, true, true, false, color, 0));
@@ -23,7 +23,7 @@ class MulticlipPlaybackLightTest {
     }
 
     @Test
-    void quicklyBlinksQueuedTargetsAndLeavesIdleTargetsUntouched() {
+    void quicklyBlinksQueuedScenesAndLeavesIdleScenesUntouched() {
         assertEquals(
                 color.getBrightest(),
                 MulticlipPlaybackLight.render(color, true, false, true, color, 0));

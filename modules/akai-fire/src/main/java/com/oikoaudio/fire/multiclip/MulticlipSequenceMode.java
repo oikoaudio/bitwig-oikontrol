@@ -759,26 +759,13 @@ public final class MulticlipSequenceMode extends Layer {
         }
         final RgbLightState color = laneColor(childPosition);
         final Track track = laneBank.getItemAt(childPosition);
-        final boolean activeLane = childPosition == activeChildPosition;
-        final RgbLightState idle =
-                laneLightState(
-                        color,
-                        activeLane,
-                        laneMuteMode,
-                        track.mute().get(),
-                        laneSoloMode,
-                        track.solo().get());
-        if (laneMuteMode || laneSoloMode) {
-            return idle;
-        }
-        boolean playing = false;
-        boolean queued = false;
-        for (int scene = 0; scene < SCENE_BANK_SIZE; scene++) {
-            final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(scene);
-            playing |= slot.isPlaying().get();
-            queued |= slot.isPlaybackQueued().get();
-        }
-        return MulticlipPlaybackLight.render(color, activeLane, playing, queued, idle, blinkState);
+        return laneLightState(
+                color,
+                childPosition == activeChildPosition,
+                laneMuteMode,
+                track.mute().get(),
+                laneSoloMode,
+                track.solo().get());
     }
 
     static RgbLightState laneLightState(
