@@ -48,6 +48,16 @@ final class MulticlipPadInteractionState {
         return false;
     }
 
+    boolean hasHeldPadInAnotherRow(final int padIndex) {
+        final int row = padIndex / STEPS_PER_ROW;
+        for (int heldPad = 0; heldPad < PAD_COUNT; heldPad++) {
+            if (heldPad != padIndex && held[heldPad] && heldPad / STEPS_PER_ROW != row) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void consumeHeldRow(final int row) {
         final int start = row * STEPS_PER_ROW;
         for (int step = 0; step < STEPS_PER_ROW; step++) {

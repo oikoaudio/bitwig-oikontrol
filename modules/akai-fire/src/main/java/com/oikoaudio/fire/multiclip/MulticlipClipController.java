@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntPredicate;
 
-/** Owns the four independent Lane Clip cursors, observations, and direct clip edits. */
+/** Owns the row-scoped Lane Clip cursors, with only the active row pinned for editing. */
 final class MulticlipClipController {
     static final int VISIBLE_LANES = 4;
     private static final int SCENE_BANK_SIZE = 16;
