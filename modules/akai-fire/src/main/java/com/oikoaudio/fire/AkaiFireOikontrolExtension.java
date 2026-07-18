@@ -1546,7 +1546,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void switchActiveMode() {
-        releaseAutoPinnedDrumContext(true);
+        final boolean handOffDrumSelection =
+                modeState.activeMode() == Mode.DRUM
+                        && modeState.activeDrumMode().takesOverAutoPinnedDrumSelection();
+        releaseAutoPinnedDrumContext(!handOffDrumSelection);
         drumSequenceMode.deactivate();
         multiclipSequenceMode.deactivate();
         notePlayMode.deactivate();

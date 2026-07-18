@@ -21,7 +21,11 @@ public final class TopLevelModeState {
         }
 
         public boolean usesAutoPinnedDrumContext() {
-            return this == STANDARD || this == MULTICLIP_SEQ;
+            return this == STANDARD;
+        }
+
+        public boolean takesOverAutoPinnedDrumSelection() {
+            return this == MULTICLIP_SEQ;
         }
     }
 

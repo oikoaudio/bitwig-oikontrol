@@ -106,11 +106,19 @@ class TopLevelModeStateTest {
     }
 
     @Test
-    void drumMachineContextPinningIncludesXoxAndMulticlipOnly() {
+    void drumMachineContextPinningBelongsOnlyToXox() {
         assertTrue(TopLevelModeState.DrumMode.STANDARD.usesAutoPinnedDrumContext());
-        assertTrue(TopLevelModeState.DrumMode.MULTICLIP_SEQ.usesAutoPinnedDrumContext());
+        assertFalse(TopLevelModeState.DrumMode.MULTICLIP_SEQ.usesAutoPinnedDrumContext());
         assertFalse(TopLevelModeState.DrumMode.NESTED_RHYTHM.usesAutoPinnedDrumContext());
         assertFalse(TopLevelModeState.DrumMode.DRUM_PADS.usesAutoPinnedDrumContext());
+    }
+
+    @Test
+    void multiclipTakesOverTheDrumSelectionWhenLeavingXox() {
+        assertFalse(TopLevelModeState.DrumMode.STANDARD.takesOverAutoPinnedDrumSelection());
+        assertTrue(TopLevelModeState.DrumMode.MULTICLIP_SEQ.takesOverAutoPinnedDrumSelection());
+        assertFalse(TopLevelModeState.DrumMode.NESTED_RHYTHM.takesOverAutoPinnedDrumSelection());
+        assertFalse(TopLevelModeState.DrumMode.DRUM_PADS.takesOverAutoPinnedDrumSelection());
     }
 
     @Test
