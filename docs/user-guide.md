@@ -306,6 +306,8 @@ The active lane is always the active Bitwig child track. Selecting a child track
 
 Selecting a Multiclip Scene creates a `Default Clip Length` clip in that scene on every eligible child track that does not already have one. Cursor retargeting temporarily blocks step writes, so a pad press cannot fall through to the previously selected scene. If a Lane Clip is independently removed later, its first inserted step recreates only that child track's clip and writes the step after the new clip cursor is confirmed.
 
+Bitwig automatically displays a group-track **sub scene** when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq.
+
 Each row has its own playhead, loop length, and play start. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 
 Multiclip Seq first asks Bitwig to show the native scene context in the Detail Editor and then restores the active child track. If Bitwig does not retain the compound scene view, the controller shows the active Lane Clip instead. Fire continues to observe and edit all four visible Lane Clips in either case and never depends on additive GUI clip selection. `Edit only selected layers: On` is not a supported Multiclip Seq template setting.

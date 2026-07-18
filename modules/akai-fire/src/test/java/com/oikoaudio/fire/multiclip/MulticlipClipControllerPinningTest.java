@@ -1,11 +1,15 @@
 package com.oikoaudio.fire.multiclip;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import com.bitwig.extension.controller.api.ControllerHost;
@@ -14,12 +18,13 @@ import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.SettableBooleanValue;
 import com.bitwig.extension.controller.api.Track;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 class MulticlipClipControllerPinningTest {
     @Test
-    void retargetsEachIndependentClipViewBeforeMakingTheLaneReady() {
+    void pinsEachIndependentClipViewOnlyAfterTheRequestedSlotHasSettled() {
         final ControllerHost host = mock(ControllerHost.class);
         final CursorTrack[] cursors = new CursorTrack[MulticlipClipController.VISIBLE_LANES];
         final PinnableCursorClip[] clips =
@@ -46,9 +51,23 @@ class MulticlipClipControllerPinningTest {
         clearInvocations(clips[0].isPinned(), fineClips[0].isPinned(), cursors[0]);
         final Track track = mock(Track.class);
         controller.retarget(0, track, TrackLaneMapping.fromChildPosition(0), 0, 2);
+        assertFalse(controller.isReady(0));
 
         final SettableBooleanValue clipPinned = clips[0].isPinned();
         final SettableBooleanValue fineClipPinned = fineClips[0].isPinned();
+        org.mockito.Mockito.verify(clipPinned, never()).set(true);
+        org.mockito.Mockito.verify(fineClipPinned, never()).set(true);
+
+        final ArgumentCaptor<Runnable> settleTask = ArgumentCaptor.forClass(Runnable.class);
+        org.mockito.Mockito.verify(host).scheduleTask(settleTask.capture(), eq(50L));
+        settleTask.getValue().run();
+        assertFalse(controller.isReady(0));
+
+        final ArgumentCaptor<Runnable> readyTask = ArgumentCaptor.forClass(Runnable.class);
+        org.mockito.Mockito.verify(host, times(2)).scheduleTask(readyTask.capture(), eq(50L));
+        readyTask.getAllValues().get(1).run();
+        assertTrue(controller.isReady(0));
+
         final InOrder order = inOrder(clipPinned, fineClipPinned, cursors[0]);
         order.verify(clipPinned).set(false);
         order.verify(fineClipPinned).set(false);

@@ -159,9 +159,21 @@ final class MulticlipClipController {
                     if (targetGenerations[row] != generation) {
                         return;
                     }
-                    state.finishRetarget(row);
+                    clips[row].isPinned().set(true);
+                    fineClips[row].isPinned().set(true);
                     clips[row].scrollToStep(firstVisibleSteps[row]);
                     fineClips[row].scrollToStep(0);
+                    scheduleWriteReadiness(row, generation);
+                },
+                50);
+    }
+
+    private void scheduleWriteReadiness(final int row, final long generation) {
+        host.scheduleTask(
+                () -> {
+                    if (targetGenerations[row] == generation) {
+                        state.finishRetarget(row);
+                    }
                 },
                 50);
     }
@@ -280,7 +292,5 @@ final class MulticlipClipController {
         clips[row].isPinned().set(false);
         fineClips[row].isPinned().set(false);
         cursors[row].selectSlot(absoluteScene);
-        clips[row].isPinned().set(true);
-        fineClips[row].isPinned().set(true);
     }
 }
