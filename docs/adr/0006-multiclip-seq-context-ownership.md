@@ -9,7 +9,8 @@ Multiclip Seq edits four launcher clips on direct child tracks while the parent 
 Multiclip Seq keeps the parent and lane identities separate:
 
 - a named, pinned parent cursor owns the Drum Machine group and its direct-child TrackBank;
-- one row-indexed child-track cursor owns the active Lane Clip at a time; inactive row cursors are cleared and unpinned;
+- four row-indexed child-track cursors independently own the four visible Lane Clips;
+- each row cursor is pinned only after its track position and absolute clip scene have been observed to match the requested target;
 - direct child position, absolute scene, and a target generation identify every delayed write;
 - the active Track Lane is the active Bitwig child track;
 - GUI presentation selects only the active child Track Lane and its Lane Clip; group scene/sub-scene selection is never used as an editing target.
@@ -18,11 +19,11 @@ Fire sequencing never depends on additive Bitwig clip selection or on the order 
 
 ## Consequences
 
-- Each child clip retains its own notes, loop values, and play start, but Fire observes and displays only the active Lane Clip.
-- Touching another row explicitly selects that one child clip; the initiating edit is queued while retargeting, and held pads on one row block input from other rows.
+- All four visible child clips retain and expose independent notes, loop values, play starts, and playing steps on Fire.
+- Touching another row makes that already-observed Lane Clip active without retargeting the other rows; held pads on one row block input from other rows.
 - Scene, lane, and time retargeting must invalidate delayed clip-creation work.
 - Track and clip names remain descriptive; positional child order is authoritative.
-- The Detail Editor and Fire show the active Lane Clip; touching another row switches the single editable child clip.
+- Fire shows all four Lane Clips while the Detail Editor falls back to showing the active Lane Clip.
 - Runtime cursor behavior and repaint load require physical Bitwig/controller smoke testing after automated integration.
 
 ## Status

@@ -270,7 +270,7 @@ In `Drum Pads`, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting
 
 ### Multiclip Seq mode
 
-`Multiclip Seq` is the second `DRUM` surface. It sequences up to sixteen full child tracks rather than sixteen Drum Machine pad channels, making independent clip lengths and play starts available for polyrhythms. Four Track Lanes are visible, but only the active Lane Clip is observed and editable at a time.
+`Multiclip Seq` is the second `DRUM` surface. It sequences up to sixteen full child tracks rather than sixteen Drum Machine pad channels, making independent clip lengths and play starts available for polyrhythms. All four visible Track Lanes are observed and editable concurrently.
 
 Set up the Bitwig project as follows:
 
@@ -283,7 +283,7 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 
 | Pad row | Role |
 | --- | --- |
-| Rows 1-4 | Four child-track lane selectors; the active row shows and edits sixteen steps |
+| Rows 1-4 | Four child-track Lane Clips, each showing and editing sixteen steps |
 | Row 1 while `ALT` is held first | Momentary sixteen-scene selector |
 
 | Control | Action |
@@ -302,15 +302,15 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | Hold `ALT + SHIFT`, then scene pad | Create missing child-track clips, launch only those child clips, and edit the scene |
 | `PATTERN UP/DOWN` while Scene Overlay is visible | Page scenes by sixteen |
 
-The active lane is always the active Bitwig child track. Selecting a child clip from Bitwig reveals its lane page. Touching a sequencer pad on another row selects that child clip, waits for its cursor to settle, and then applies that initiating edit. Additional pad presses are blocked during the switch, and held pads on one row block input from other rows. `ALT + MUTE_n` selects without editing. Rows without an eligible child track remain off.
+The active lane is always the active Bitwig child track. Selecting a child clip from Bitwig reveals its lane page. Touching a sequencer pad on another row makes that already-observed child clip active and applies the edit without retargeting the other rows. Held pads on one row block input from other rows. `ALT + MUTE_n` selects without editing. Rows without an eligible child track remain off.
 
-Selecting a Multiclip Scene creates a `Default Clip Length` clip in that exact visible slot on every eligible child track that does not already have one, waits until those child slots exist, then retargets only the active Lane Clip without launching. Add `SHIFT` to launch only the eligible child clips. Cursor retargeting temporarily blocks step writes, so a pad press cannot fall through to the previously selected scene. If a Lane Clip is independently removed later, its first inserted step recreates only that exact child slot and writes the step after the new clip cursor is confirmed.
+Selecting a Multiclip Scene creates a `Default Clip Length` clip in that exact visible slot on every eligible child track that does not already have one, waits until those child slots exist, then retargets all four visible Lane Clips without launching. Add `SHIFT` to launch only the eligible child clips. Each row cursor must confirm both its child-track position and absolute scene before edits are enabled, so a pad press cannot fall through to the group track or a previous scene. If a Lane Clip is independently removed later, its first inserted step recreates only that exact child slot and writes the step after the new clip cursor is confirmed.
 
 Bitwig automatically displays a group-track **sub scene** when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq. Scene Overlay LEDs ignore that group-level alias and derive their population, color, queued, and playing feedback only from eligible child-track clip slots.
 
-Each child clip retains its own loop length and play start, while Fire displays the playhead and notes only for the active row. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
+Each child clip retains its own loop length and play start, and Fire displays independent notes and playing-step feedback on all four rows. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 
-Multiclip Seq never selects the group track's scene or sub scene as an editing target. It creates exact child slots without selecting them, selects only the active child clip, and shows that Lane Clip in Bitwig's Detail Editor. It never walks through the other rows or depends on additive GUI clip selection. `Edit only selected layers: On` is not a supported Multiclip Seq template setting.
+Multiclip Seq never selects the group track's scene or sub scene as an editing target. It creates exact child slots without selecting them, targets the four rows through independent controller cursors, and shows only the active Lane Clip in Bitwig's Detail Editor. Internal retargeting uses cursor-scoped slot selection rather than repeated global `ClipLauncherSlot.select()` calls and never depends on additive GUI clip selection. `Edit only selected layers: On` is not a supported Multiclip Seq template setting.
 
 ### Nested Rhythm mode
 
