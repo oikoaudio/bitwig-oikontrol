@@ -7,6 +7,8 @@ import com.bitwig.extension.controller.api.Device;
 import com.bitwig.extension.controller.api.DeviceBank;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
+import com.bitwig.extension.controller.api.Scene;
+import com.bitwig.extension.controller.api.SceneBank;
 import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extensions.framework.Layer;
@@ -43,6 +45,7 @@ public final class MulticlipSequenceMode extends Layer {
     private final Layer padLayer;
     private final CursorTrack groupCursor;
     private final TrackBank laneBank;
+    private final SceneBank sceneBank;
     private final RgbLightState[] laneColors = new RgbLightState[TrackLaneMapping.MAX_LANES];
     private final boolean[] laneExists = new boolean[TrackLaneMapping.MAX_LANES];
     private final String[] laneNames = new String[TrackLaneMapping.MAX_LANES];
@@ -58,6 +61,8 @@ public final class MulticlipSequenceMode extends Layer {
     private final MulticlipLaneState laneState = new MulticlipLaneState();
     private final PendingStepCreation[] pendingCreations =
             new PendingStepCreation[VISIBLE_LANES];
+    private final MulticlipSceneOverlayState sceneOverlay =
+            new MulticlipSceneOverlayState();
 
     private MulticlipPageState pageState = MulticlipPageState.initial(0);
     private int activeScene;
@@ -79,7 +84,9 @@ public final class MulticlipSequenceMode extends Layer {
         this.laneBank =
                 groupCursor.createTrackBank(
                         TrackLaneMapping.MAX_LANES, 0, SCENE_BANK_SIZE, false);
+        this.sceneBank = laneBank.sceneBank();
         laneBank.channelCount().markInterested();
+        observeScenes();
         observeGroupDevices();
         observeTrackLanes();
         createVisibleClipCursors();
@@ -90,6 +97,13 @@ public final class MulticlipSequenceMode extends Layer {
                     @Override
                     public void handlePadPress(
                             final int padIndex, final boolean pressed, final int velocity) {
+                        if (sceneOverlay.isActive()
+                                && padIndex < MulticlipPageState.STEPS_PER_PAGE) {
+                            if (pressed) {
+                                handleScenePad(padIndex);
+                            }
+                            return;
+                        }
                         if (pressed) {
                             heldPads[padIndex] = true;
                             handleStepPress(padIndex, velocity);
@@ -108,6 +122,83 @@ public final class MulticlipSequenceMode extends Layer {
                 });
         bindNavigationButtons();
         bindEncoderControls();
+        bindAltOverlay();
+    }
+
+    private void bindAltOverlay() {
+        driver.getButton(NoteAssign.ALT)
+                .bindPressed(
+                        padLayer,
+                        pressed -> {
+                            if (pressed) {
+                                sceneOverlay.altPressed(hasHeldPads());
+                                if (sceneOverlay.isActive()) {
+                                    driver.getOled().valueInfo("Select Scene", "ALT overlay");
+                                }
+                            } else {
+                                sceneOverlay.altReleased();
+                            }
+                        },
+                        () ->
+                                driver.isGlobalAltHeld()
+                                        ? BiColorLightState.HALF
+                                        : BiColorLightState.OFF);
+    }
+
+    private void observeScenes() {
+        sceneBank.scrollPosition().markInterested();
+        sceneBank.itemCount().markInterested();
+        sceneBank.canScrollBackwards().markInterested();
+        sceneBank.canScrollForwards().markInterested();
+        for (int index = 0; index < SCENE_BANK_SIZE; index++) {
+            final Scene scene = sceneBank.getScene(index);
+            scene.exists().markInterested();
+            scene.name().markInterested();
+            scene.color().markInterested();
+            scene.clipCount().markInterested();
+            scene.sceneIndex().markInterested();
+        }
+    }
+
+    private void handleScenePad(final int visibleScene) {
+        final int absoluteScene = sceneBank.scrollPosition().get() + visibleScene;
+        final Scene scene = sceneBank.getScene(visibleScene);
+        if (driver.isGlobalShiftHeld()) {
+            if (scene.exists().get()) {
+                scene.launch();
+                driver.getOled().valueInfo("Launch Scene " + (absoluteScene + 1), "Default quantize");
+            } else {
+                driver.getOled().valueInfo("Empty scene", "Nothing to launch");
+            }
+            return;
+        }
+        activeScene = absoluteScene;
+        if (scene.exists().get()) {
+            scene.selectInEditor();
+            scene.showInEditor();
+        }
+        retargetVisibleClipCursors();
+        selectActiveTrack();
+        driver.getOled().valueInfo("Scene " + (activeScene + 1), "Editing");
+    }
+
+    private void pageScenes(final int direction) {
+        if (direction < 0) {
+            sceneBank.scrollPageBackwards();
+        } else {
+            sceneBank.scrollPageForwards();
+        }
+        host.scheduleTask(
+                () ->
+                        driver.getOled()
+                                .valueInfo(
+                                        "Scenes "
+                                                + (sceneBank.scrollPosition().get() + 1)
+                                                + "-"
+                                                + (sceneBank.scrollPosition().get()
+                                                        + SCENE_BANK_SIZE),
+                                        "Scene Page"),
+                0);
     }
 
     private void bindNavigationButtons() {
@@ -205,21 +296,33 @@ public final class MulticlipSequenceMode extends Layer {
         buttons.setUpCallback(
                 pressed -> {
                     if (pressed) {
-                        pageLanes(-1);
+                        if (sceneOverlay.isActive()) {
+                            pageScenes(-1);
+                        } else {
+                            pageLanes(-1);
+                        }
                     }
                 },
                 () ->
-                        pageState.canPageLanes(-1)
+                        (sceneOverlay.isActive()
+                                        ? sceneBank.canScrollBackwards().get()
+                                        : pageState.canPageLanes(-1))
                                 ? BiColorLightState.HALF
                                 : BiColorLightState.OFF);
         buttons.setDownCallback(
                 pressed -> {
                     if (pressed) {
-                        pageLanes(1);
+                        if (sceneOverlay.isActive()) {
+                            pageScenes(1);
+                        } else {
+                            pageLanes(1);
+                        }
                     }
                 },
                 () ->
-                        pageState.canPageLanes(1)
+                        (sceneOverlay.isActive()
+                                        ? sceneBank.canScrollForwards().get()
+                                        : pageState.canPageLanes(1))
                                 ? BiColorLightState.HALF
                                 : BiColorLightState.OFF);
     }
@@ -296,6 +399,7 @@ public final class MulticlipSequenceMode extends Layer {
                             MulticlipPageState.STEPS_PER_PAGE,
                             1);
             clip.setStepSize(STEP_SIZE);
+            clip.exists().markInterested();
             clip.addNoteStepObserver(note -> handleObservedStep(laneRow, note));
             clip.playingStep()
                     .addValueObserver(
@@ -405,7 +509,7 @@ public final class MulticlipSequenceMode extends Layer {
         final Track track = laneBank.getItemAt(childPosition);
         pressWasOccupied[padIndex] = laneState.isOccupied(row, step);
         heldGestureConsumed[padIndex] = false;
-        if (!track.clipLauncherSlotBank().getItemAt(activeScene).hasContent().get()) {
+        if (!laneClips[row].exists().get()) {
             createClipAndAddFirstStep(row, step, velocity, track);
             return;
         }
@@ -435,12 +539,7 @@ public final class MulticlipSequenceMode extends Layer {
         return row >= 0
                 && childPosition >= 0
                 && childPosition < pageState.laneCount()
-                && laneBank
-                        .getItemAt(childPosition)
-                        .clipLauncherSlotBank()
-                        .getItemAt(activeScene)
-                        .hasContent()
-                        .get();
+                && laneClips[row].exists().get();
     }
 
     private void adjustActiveLoopLength(final int increment) {
@@ -599,9 +698,7 @@ public final class MulticlipSequenceMode extends Layer {
                     }
                     final int childPosition = childPositionForRow(row);
                     final Track track = laneBank.getItemAt(childPosition);
-                    final ClipLauncherSlot slot =
-                            track.clipLauncherSlotBank().getItemAt(activeScene);
-                    if (!slot.hasContent().get()) {
+                    if (!laneClips[row].exists().get()) {
                         if (attempt < 7) {
                             schedulePendingCreation(request, attempt + 1);
                         } else {
@@ -657,10 +754,26 @@ public final class MulticlipSequenceMode extends Layer {
             track.addIsSelectedInMixerObserver(selected -> handleExternalSelection(position, selected));
             track.addIsSelectedInEditorObserver(selected -> handleExternalSelection(position, selected));
             for (int scene = 0; scene < SCENE_BANK_SIZE; scene++) {
+                final int visibleScene = scene;
                 final ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(scene);
                 slot.exists().markInterested();
                 slot.hasContent().markInterested();
                 slot.isSelected().markInterested();
+                slot.isPlaying().markInterested();
+                slot.isPlaybackQueued().markInterested();
+                slot.isSelected()
+                        .addValueObserver(
+                                selected -> {
+                                    if (!selected || !active) {
+                                        return;
+                                    }
+                                    final int selectedScene =
+                                            sceneBank.scrollPosition().get() + visibleScene;
+                                    if (selectedScene != activeScene) {
+                                        activeScene = selectedScene;
+                                        retargetVisibleClipCursors();
+                                    }
+                                });
             }
             laneExists[position] = track.exists().get();
             laneNames[position] = track.name().get();
@@ -718,6 +831,9 @@ public final class MulticlipSequenceMode extends Layer {
     private RgbLightState laneIdentityLight(final int padIndex) {
         final int row = padIndex / MulticlipPageState.STEPS_PER_PAGE;
         final int step = padIndex % MulticlipPageState.STEPS_PER_PAGE;
+        if (sceneOverlay.isActive() && row == 0) {
+            return sceneLight(step);
+        }
         final int childPosition =
                 pageState.lanePage() * TrackLaneMapping.LANES_PER_PAGE + row;
         if (!isValidContext()
@@ -740,6 +856,47 @@ public final class MulticlipSequenceMode extends Layer {
         return childPosition == pageState.activeChildPosition()
                 ? color.getDimmed()
                 : color.getVeryDimmed();
+    }
+
+    private RgbLightState sceneLight(final int visibleScene) {
+        final Scene scene = sceneBank.getScene(visibleScene);
+        final int absoluteScene = sceneBank.scrollPosition().get() + visibleScene;
+        int clips = 0;
+        boolean playing = false;
+        boolean queued = false;
+        for (int childPosition = 0;
+                childPosition < pageState.laneCount();
+                childPosition++) {
+            final ClipLauncherSlot slot =
+                    laneBank
+                            .getItemAt(childPosition)
+                            .clipLauncherSlotBank()
+                            .getItemAt(visibleScene);
+            if (slot.hasContent().get()) {
+                clips++;
+            }
+            playing |= slot.isPlaying().get();
+            queued |= slot.isPlaybackQueued().get();
+        }
+        if (playing) {
+            return RgbLightState.WHITE;
+        }
+        if (queued) {
+            return RgbLightState.PURPLE;
+        }
+        final RgbLightState sceneColor =
+                scene.exists().get()
+                        ? ColorLookup.getColor(scene.color().get())
+                        : RgbLightState.GRAY_1;
+        if (absoluteScene == activeScene) {
+            return sceneColor.getBrightend();
+        }
+        return switch (ScenePopulation.of(scene.exists().get(), clips, pageState.laneCount())) {
+            case NEW -> RgbLightState.GRAY_1;
+            case EMPTY -> RgbLightState.GRAY_2.getVeryDimmed();
+            case PARTIAL -> sceneColor.getDimmed();
+            case POPULATED -> sceneColor.getSoftDimmed();
+        };
     }
 
     private boolean isValidContext() {
