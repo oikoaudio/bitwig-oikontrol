@@ -192,22 +192,30 @@ public final class MulticlipSequenceMode extends Layer {
                 || !isEligibleLane(childPosition)) {
             return;
         }
-        if (!clipController.isReady(row)) {
-            driver.getOled().valueInfo("Lane loading", "Try step again");
-            return;
-        }
-        pageState = pageState.withActiveChildPosition(childPosition);
         final Track track = laneBank.getItemAt(childPosition);
-        track.selectInMixer();
-        track.selectInEditor();
-        if (driver.isGlobalShiftHeld()) {
-            final boolean enabled = !track.solo().get();
-            track.solo().set(enabled);
-            driver.getOled().valueInfo(enabled ? "Solo On" : "Solo Off", activeLaneName());
-        } else {
-            final boolean enabled = !track.mute().get();
-            track.mute().set(enabled);
-            driver.getOled().valueInfo(enabled ? "Mute On" : "Mute Off", activeLaneName());
+        switch (MulticlipRowButtonAction.resolve(
+                driver.isGlobalAltHeld(), driver.isGlobalShiftHeld())) {
+            case SELECT -> {
+                pageState = pageState.withActiveChildPosition(childPosition);
+                track.selectInMixer();
+                track.selectInEditor();
+                if (clipController.isReady(row) && clipController.exists(row)) {
+                    clipController.showInEditor(row);
+                }
+                driver.getOled().valueInfo("Lane " + (childPosition + 1), laneName(childPosition));
+            }
+            case SOLO -> {
+                final boolean enabled = !track.solo().get();
+                track.solo().set(enabled);
+                driver.getOled()
+                        .valueInfo(enabled ? "Solo On" : "Solo Off", laneName(childPosition));
+            }
+            case MUTE -> {
+                final boolean enabled = !track.mute().get();
+                track.mute().set(enabled);
+                driver.getOled()
+                        .valueInfo(enabled ? "Mute On" : "Mute Off", laneName(childPosition));
+            }
         }
     }
 
@@ -258,6 +266,7 @@ public final class MulticlipSequenceMode extends Layer {
             return;
         }
         activeScene = absoluteScene;
+        populateSelectedScene(visibleScene, absoluteScene);
         if (scene.exists().get()) {
             scene.selectInEditor();
             scene.showInEditor();
@@ -266,6 +275,28 @@ public final class MulticlipSequenceMode extends Layer {
         selectActiveTrack();
         scheduleEditorFallback(visibleScene, currentTarget(pageState.activeRow()));
         driver.getOled().valueInfo("Scene " + (activeScene + 1), "Editing");
+    }
+
+    private void populateSelectedScene(final int visibleScene, final int absoluteScene) {
+        final int laneCount = pageState.laneCount();
+        final boolean[] eligible = new boolean[laneCount];
+        final boolean[] hasContent = new boolean[laneCount];
+        for (int childPosition = 0; childPosition < laneCount; childPosition++) {
+            eligible[childPosition] = isEligibleLane(childPosition);
+            if (eligible[childPosition]) {
+                hasContent[childPosition] =
+                        laneBank.getItemAt(childPosition)
+                                .clipLauncherSlotBank()
+                                .getItemAt(visibleScene)
+                                .hasContent()
+                                .get();
+            }
+        }
+        for (final int childPosition :
+                MulticlipSceneSelectionPlan.missingEligibleLanes(eligible, hasContent)) {
+            laneBank.getItemAt(childPosition)
+                    .createNewLauncherClip(absoluteScene, driver.getDefaultClipLengthBeats());
+        }
     }
 
     private void scheduleEditorFallback(
@@ -476,6 +507,10 @@ public final class MulticlipSequenceMode extends Layer {
                 || !isEligibleLane(childPosition)) {
             return;
         }
+        if (!clipController.isReady(row)) {
+            driver.getOled().valueInfo("Lane loading", "Try step again");
+            return;
+        }
         final Track track = laneBank.getItemAt(childPosition);
         padInteraction.captureOccupied(padIndex, clipController.isOccupied(row, step));
         if (!clipController.exists(row)) {
@@ -515,6 +550,10 @@ public final class MulticlipSequenceMode extends Layer {
 
     private String activeLaneName() {
         final int childPosition = pageState.activeChildPosition();
+        return laneName(childPosition);
+    }
+
+    private String laneName(final int childPosition) {
         if (childPosition < 0 || childPosition >= laneNames.length) {
             return "Lane";
         }
@@ -694,7 +733,9 @@ public final class MulticlipSequenceMode extends Layer {
         track.selectInMixer();
         track.selectInEditor();
         final int activeRow = pageState.activeRow();
-        if (activeRow >= 0 && clipController.exists(activeRow)) {
+        if (activeRow >= 0
+                && clipController.isReady(activeRow)
+                && clipController.exists(activeRow)) {
             clipController.showInEditor(activeRow);
         }
         showLaneInfo();

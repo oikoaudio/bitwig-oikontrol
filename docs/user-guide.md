@@ -295,15 +295,16 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | `ALT + BANK LEFT/RIGHT` | Move the active Lane Clip play start (lane rotation) |
 | `SHIFT + ALT + BANK LEFT/RIGHT` | Fine-nudge all notes in the active Lane Clip by 1/64 |
 | Channel encoder 1 | Change the active Lane Clip length in whole sequencer steps |
-| `MUTE_1`-`MUTE_4` | Select the aligned child track and toggle Track mute |
-| `SHIFT + MUTE_1`-`MUTE_4` | Select the aligned child track and toggle Track solo |
-| Hold `ALT`, then scene pad | Select that Multiclip Scene for editing without launching |
+| `MUTE_1`-`MUTE_4` | Toggle the aligned child Track mute; bright means audible, dim means muted |
+| `SHIFT + MUTE_1`-`MUTE_4` | Toggle the aligned child Track solo |
+| `ALT + MUTE_1`-`MUTE_4` | Select the aligned child track without changing mute or solo |
+| Hold `ALT`, then scene pad | Select that Multiclip Scene, creating missing clips on every eligible lane |
 | Hold `ALT + SHIFT`, then scene pad | Launch that scene with Bitwig's default quantization |
 | `PATTERN UP/DOWN` while Scene Overlay is visible | Page scenes by sixteen |
 
-The active lane is always the active Bitwig child track. Selecting a child track from Bitwig reveals its lane page; selecting a row from the Fire selects that track. Rows without an eligible child track remain off.
+The active lane is always the active Bitwig child track. Selecting a child track from Bitwig reveals its lane page; touching a sequencer pad selects that pad's lane before editing, while `ALT + MUTE_n` selects without editing. Rows without an eligible child track remain off.
 
-If a Lane Clip is missing, its row remains empty. The first inserted step creates only that child track's clip using `Default Clip Length`, then writes the step after the new clip cursor is confirmed. Selecting a scene never creates clips eagerly.
+Selecting a Multiclip Scene creates a `Default Clip Length` clip in that scene on every eligible child track that does not already have one. Cursor retargeting temporarily blocks step writes, so a pad press cannot fall through to the previously selected scene. If a Lane Clip is independently removed later, its first inserted step recreates only that child track's clip and writes the step after the new clip cursor is confirmed.
 
 Each row has its own playhead, loop length, and play start. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 

@@ -422,15 +422,16 @@
           <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Move the active Lane Clip play start (lane rotation)</td></tr>
           <tr><td><code>SHIFT + ALT + BANK LEFT/RIGHT</code></td><td>Fine-nudge all notes in the active Lane Clip by 1/64</td></tr>
           <tr><td>Channel encoder 1</td><td>Change the active Lane Clip length in whole sequencer steps</td></tr>
-          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Select the aligned child track and toggle Track mute</td></tr>
-          <tr><td><code>SHIFT + MUTE_1</code>-<code>MUTE_4</code></td><td>Select the aligned child track and toggle Track solo</td></tr>
-          <tr><td>Hold <code>ALT</code>, then scene pad</td><td>Select that Multiclip Scene for editing without launching</td></tr>
+          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Toggle the aligned child Track mute; bright means audible, dim means muted</td></tr>
+          <tr><td><code>SHIFT + MUTE_1</code>-<code>MUTE_4</code></td><td>Toggle the aligned child Track solo</td></tr>
+          <tr><td><code>ALT + MUTE_1</code>-<code>MUTE_4</code></td><td>Select the aligned child track without changing mute or solo</td></tr>
+          <tr><td>Hold <code>ALT</code>, then scene pad</td><td>Select that Multiclip Scene, creating missing clips on every eligible lane</td></tr>
           <tr><td>Hold <code>ALT + SHIFT</code>, then scene pad</td><td>Launch that scene with Bitwig's default quantization</td></tr>
           <tr><td><code>PATTERN UP/DOWN</code> while Scene Overlay is visible</td><td>Page scenes by sixteen</td></tr>
       </tbody>
       </table>
-      <p>The active lane is always the active Bitwig child track. Selecting a child track from Bitwig reveals its lane page; selecting a row from the Fire selects that track. Rows without an eligible child track remain off.</p>
-      <p>If a Lane Clip is missing, its row remains empty. The first inserted step creates only that child track's clip using <code>Default Clip Length</code>, then writes the step after the new clip cursor is confirmed. Selecting a scene never creates clips eagerly.</p>
+      <p>The active lane is always the active Bitwig child track. Selecting a child track from Bitwig reveals its lane page; touching a sequencer pad selects that pad's lane before editing, while <code>ALT + MUTE_n</code> selects without editing. Rows without an eligible child track remain off.</p>
+      <p>Selecting a Multiclip Scene creates a <code>Default Clip Length</code> clip in that scene on every eligible child track that does not already have one. Cursor retargeting temporarily blocks step writes, so a pad press cannot fall through to the previously selected scene. If a Lane Clip is independently removed later, its first inserted step recreates only that child track's clip and writes the step after the new clip cursor is confirmed.</p>
       <p>Each row has its own playhead, loop length, and play start. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.</p>
       <p>Multiclip Seq first asks Bitwig to show the native scene context in the Detail Editor and then restores the active child track. If Bitwig does not retain the compound scene view, the controller shows the active Lane Clip instead. Fire continues to observe and edit all four visible Lane Clips in either case and never depends on additive GUI clip selection. <code>Edit only selected layers: On</code> is not a supported Multiclip Seq template setting.</p>
       <h3>Nested Rhythm mode</h3>

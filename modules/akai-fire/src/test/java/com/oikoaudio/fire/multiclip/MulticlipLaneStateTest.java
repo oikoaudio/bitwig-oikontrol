@@ -4,9 +4,37 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class MulticlipLaneStateTest {
+    @Test
+    void observationsReceivedWhileRetargetSettlesRemainVisibleWhenEditingBecomesReady() {
+        final MulticlipLaneState state = new MulticlipLaneState();
+
+        state.beginRetarget(1);
+        assertFalse(state.isReady(1));
+        assertTrue(state.acceptsObservations(1));
+
+        state.observeChannel(1, 4, 7, true);
+        state.finishRetarget(1);
+
+        assertTrue(state.isReady(1));
+        assertTrue(state.isOccupied(1, 4));
+        assertEquals(Set.of(7), state.channelsAt(1, 4));
+    }
+
+    @Test
+    void deactivatedRowsRejectLateObservationsFromTheirPreviousTarget() {
+        final MulticlipLaneState state = new MulticlipLaneState();
+
+        state.beginRetarget(2);
+        state.deactivateRow(2);
+
+        assertFalse(state.isReady(2));
+        assertFalse(state.acceptsObservations(2));
+    }
+
     @Test
     void keepsStepsAndPlayheadsIndependentPerVisibleLane() {
         final MulticlipLaneState state = new MulticlipLaneState();

@@ -14,8 +14,8 @@ public final class MulticlipRowButtonRenderer {
             return BiColorLightState.AMBER_FULL;
         }
         if (muted) {
-            return BiColorLightState.GREEN_FULL;
+            return BiColorLightState.GREEN_HALF;
         }
-        return active ? BiColorLightState.AMBER_HALF : BiColorLightState.HALF;
+        return BiColorLightState.GREEN_FULL;
     }
 }

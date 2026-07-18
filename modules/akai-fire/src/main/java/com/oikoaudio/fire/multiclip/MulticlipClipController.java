@@ -33,7 +33,6 @@ final class MulticlipClipController {
 
     private final int[] firstVisibleSteps = new int[VISIBLE_LANES];
     private final long[] targetGenerations = new long[VISIBLE_LANES];
-    private final boolean[] ready = new boolean[VISIBLE_LANES];
 
     MulticlipClipController(final ControllerHost host) {
         this.host = host;
@@ -83,8 +82,7 @@ final class MulticlipClipController {
             final int firstVisibleStep,
             final int absoluteScene) {
         final long generation = ++targetGenerations[row];
-        ready[row] = false;
-        clearObservedRow(row);
+        beginRetarget(row);
         firstVisibleSteps[row] = firstVisibleStep;
         cursors[row].selectChannel(track);
         cursors[row].isPinned().set(true);
@@ -98,17 +96,12 @@ final class MulticlipClipController {
 
     void clearRow(final int row) {
         targetGenerations[row]++;
-        ready[row] = false;
-        clearObservedRow(row);
-    }
-
-    private void clearObservedRow(final int row) {
-        state.clearRow(row);
+        state.deactivateRow(row);
         fineNotes[row].clear();
     }
 
     boolean isReady(final int row) {
-        return ready[row];
+        return state.isReady(row);
     }
 
     void setPinned(final boolean pinned) {
@@ -148,8 +141,7 @@ final class MulticlipClipController {
 
     void selectSlot(final int row, final int absoluteScene) {
         final long generation = ++targetGenerations[row];
-        ready[row] = false;
-        clearObservedRow(row);
+        beginRetarget(row);
         cursors[row].selectSlot(absoluteScene);
         scheduleObservationRefresh(row, generation);
     }
@@ -160,8 +152,7 @@ final class MulticlipClipController {
                     if (targetGenerations[row] != generation) {
                         return;
                     }
-                    clearObservedRow(row);
-                    ready[row] = true;
+                    state.finishRetarget(row);
                     clips[row].scrollToStep(firstVisibleSteps[row]);
                     fineClips[row].scrollToStep(0);
                 },
@@ -230,7 +221,7 @@ final class MulticlipClipController {
     }
 
     private void observeStep(final int row, final NoteStep note) {
-        if (!ready[row]
+        if (!state.acceptsObservations(row)
                 || note.x() < 0
                 || note.x() >= MulticlipPageState.STEPS_PER_PAGE
                 || note.y() != 0) {
@@ -240,7 +231,7 @@ final class MulticlipClipController {
     }
 
     private void observePlayingStep(final int row, final int absoluteStep) {
-        if (!ready[row]) {
+        if (!state.acceptsObservations(row)) {
             return;
         }
         final int firstVisibleStep = firstVisibleSteps[row];
@@ -253,7 +244,10 @@ final class MulticlipClipController {
     }
 
     private void observeFineStep(final int row, final NoteStep note) {
-        if (!ready[row] || note.x() < 0 || note.x() >= FINE_OBSERVATION_STEPS || note.y() != 0) {
+        if (!state.acceptsObservations(row)
+                || note.x() < 0
+                || note.x() >= FINE_OBSERVATION_STEPS
+                || note.y() != 0) {
             return;
         }
         final Set<Integer> channels =
@@ -269,4 +263,9 @@ final class MulticlipClipController {
     }
 
     private record FineTarget(int fineStep, int channel) {}
+
+    private void beginRetarget(final int row) {
+        state.beginRetarget(row);
+        fineNotes[row].clear();
+    }
 }
