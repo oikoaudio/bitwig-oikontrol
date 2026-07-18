@@ -353,7 +353,7 @@
       </tbody>
       </table>
       <h3>DRUM Mode</h3>
-      <p><code>Drum XOX</code> is the default sequencer-oriented workflow for a Drum Machine. Press <code>DRUM</code> again to cycle through <code>Nested Rhythm</code> and <code>Drum Pads</code>. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, Drum XOX focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, Drum XOX follows the selected drum context.</p>
+      <p><code>Drum XOX</code> is the default sequencer-oriented workflow for a Drum Machine. Press <code>DRUM</code> again to cycle through <code>Multiclip Seq</code>, <code>Nested Rhythm</code>, and <code>Drum Pads</code>. If <code>Drum Mode Pinning</code> is <code>Auto-select First Drum Machine</code>, Drum XOX focuses and pins the first Drum Machine it finds. If it is <code>Follow Selection</code>, Drum XOX follows the selected drum context.</p>
       <p>When Drum XOX is idle, the OLED shows the selected pad name with the current encoder legend when <code>Idle Perf &amp; Drum OLED</code> is <code>Context</code>. Set <code>Idle Perf &amp; Drum OLED</code> to <code>Meters</code> to show vertical RMS meters for the 16 visible Drum Machine pad chains with the same legend. On the <code>Mixer</code> encoder page, it instead shows selected-pad maximum peak/RMS on the first large row, current peak/RMS on the second large row, and the compact encoder legend.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
@@ -395,8 +395,46 @@
       <p>Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.</p>
       <p>Hold <code>MUTE_3</code> and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.</p>
       <p>In <code>Drum Pads</code>, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; <code>BANK LEFT/RIGHT</code> reminds you to use Pattern for this, while <code>ALT + BANK LEFT/RIGHT</code> still undo/redo Bitwig project history. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: velocity center. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
+      <h3>Multiclip Seq mode</h3>
+      <p><code>Multiclip Seq</code> is the second <code>DRUM</code> surface. It sequences up to sixteen full child tracks rather than sixteen Drum Machine pad channels, making independent clip lengths and play starts available for polyrhythms.</p>
+      <p>Set up the Bitwig project as follows:</p>
+      <ul>
+        <li>Put a Drum Machine device on a group track.</li>
+        <li>Add one to sixteen direct child instrument or hybrid tracks and route their MIDI to that group.</li>
+        <li>Put each pattern's child-track clips in the same launcher scene.</li>
+        <li>Open the Detail Editor in Hybrid view and set <code>Edit only selected layers</code> to <code>Off</code> (recommended).</li>
+      </ul>
+      <p>Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MIDI channels 0-15, and Drum Machine notes 36-51. Track and clip names do not affect mapping; reordering tracks intentionally changes it.</p>
+      <table>
+        <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Rows 1-4</td><td>Four child-track Lane Clips, sixteen steps each</td></tr>
+          <tr><td>Row 1 while <code>ALT</code> is held first</td><td>Momentary sixteen-scene selector</td></tr>
+      </tbody>
+      </table>
+      <table class="control-map">
+        <thead><tr><th>Control</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><code>DRUM</code></td><td>Cycle to the next Drum surface</td></tr>
+          <tr><td><code>PATTERN UP/DOWN</code></td><td>Page Track Lanes by four</td></tr>
+          <tr><td><code>BANK LEFT/RIGHT</code></td><td>Page the shared time window by sixteen steps</td></tr>
+          <tr><td>Hold step(s) + <code>BANK LEFT/RIGHT</code></td><td>Fine-nudge only the held notes by 1/64</td></tr>
+          <tr><td><code>ALT + BANK LEFT/RIGHT</code></td><td>Move the active Lane Clip play start (lane rotation)</td></tr>
+          <tr><td><code>SHIFT + ALT + BANK LEFT/RIGHT</code></td><td>Fine-nudge all notes in the active Lane Clip by 1/64</td></tr>
+          <tr><td>Channel encoder 1</td><td>Change the active Lane Clip length in whole sequencer steps</td></tr>
+          <tr><td><code>MUTE_1</code>-<code>MUTE_4</code></td><td>Select the aligned child track and toggle Track mute</td></tr>
+          <tr><td><code>SHIFT + MUTE_1</code>-<code>MUTE_4</code></td><td>Select the aligned child track and toggle Track solo</td></tr>
+          <tr><td>Hold <code>ALT</code>, then scene pad</td><td>Select that Multiclip Scene for editing without launching</td></tr>
+          <tr><td>Hold <code>ALT + SHIFT</code>, then scene pad</td><td>Launch that scene with Bitwig's default quantization</td></tr>
+          <tr><td><code>PATTERN UP/DOWN</code> while Scene Overlay is visible</td><td>Page scenes by sixteen</td></tr>
+      </tbody>
+      </table>
+      <p>The active lane is always the active Bitwig child track. Selecting a child track from Bitwig reveals its lane page; selecting a row from the Fire selects that track. Rows without an eligible child track remain off.</p>
+      <p>If a Lane Clip is missing, its row remains empty. The first inserted step creates only that child track's clip using <code>Default Clip Length</code>, then writes the step after the new clip cursor is confirmed. Selecting a scene never creates clips eagerly.</p>
+      <p>Each row has its own playhead, loop length, and play start. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.</p>
+      <p>Multiclip Seq first asks Bitwig to show the native scene context in the Detail Editor and then restores the active child track. If Bitwig does not retain the compound scene view, the controller shows the active Lane Clip instead. Fire continues to observe and edit all four visible Lane Clips in either case and never depends on additive GUI clip selection. <code>Edit only selected layers: On</code> is not a supported Multiclip Seq template setting.</p>
       <h3>Nested Rhythm mode</h3>
-      <p><code>Nested Rhythm</code> is the second <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>
+      <p><code>Nested Rhythm</code> is the third <code>DRUM</code> surface. It generates rhythm from nested segment divisions, writes exact timing to a hidden fine clip grid, and projects the generated hits back to the Fire. It is suited to tuplets, ratchets, asymmetric subdivisions, and layered rhythmic structures that are awkward on a coarse step grid.</p>
       <p>Entering the mode never overwrites an existing clip. If there is no selected clip, the OLED prompts you to select or create one. Creating a clip from the Nested Rhythm clip row generates a starter pattern. Existing clips are protected from encoder-driven generator changes until you explicitly press <code>PATTERN DOWN</code> to overwrite and claim the clip for Nested Rhythm editing.</p>
       <table>
         <thead><tr><th>Pad row</th><th>Role</th></tr></thead>
@@ -420,7 +458,8 @@
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td><code>DRUM</code> while in <code>XOX Drum mode</code></td><td>Enter <code>Nested Rhythm mode</code></td></tr>
+          <tr><td><code>DRUM</code> while in <code>XOX Drum mode</code></td><td>Enter <code>Multiclip Seq</code></td></tr>
+          <tr><td><code>DRUM</code> while in <code>Multiclip Seq</code></td><td>Enter <code>Nested Rhythm mode</code></td></tr>
           <tr><td><code>DRUM</code> while in <code>Nested Rhythm</code></td><td>Enter <code>Drum Pads</code></td></tr>
           <tr><td><code>STEP</code></td><td>Enter <code>Poly Step</code></td></tr>
           <tr><td><code>ALT + STEP</code></td><td>Fill</td></tr>

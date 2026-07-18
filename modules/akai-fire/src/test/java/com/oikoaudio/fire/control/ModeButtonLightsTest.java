@@ -10,5 +10,8 @@ final class ModeButtonLightsTest {
         assertNotEquals(ModeButtonLights.MODE_1, ModeButtonLights.MODE_2);
         assertNotEquals(ModeButtonLights.MODE_1, ModeButtonLights.MODE_3);
         assertNotEquals(ModeButtonLights.MODE_2, ModeButtonLights.MODE_3);
+        assertNotEquals(ModeButtonLights.MODE_1, ModeButtonLights.MODE_4);
+        assertNotEquals(ModeButtonLights.MODE_2, ModeButtonLights.MODE_4);
+        assertNotEquals(ModeButtonLights.MODE_3, ModeButtonLights.MODE_4);
     }
 }

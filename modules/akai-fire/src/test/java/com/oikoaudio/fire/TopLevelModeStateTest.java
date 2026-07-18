@@ -106,6 +106,14 @@ class TopLevelModeStateTest {
     }
 
     @Test
+    void drumMachineContextPinningIncludesXoxAndMulticlipOnly() {
+        assertTrue(TopLevelModeState.DrumMode.STANDARD.usesAutoPinnedDrumContext());
+        assertTrue(TopLevelModeState.DrumMode.MULTICLIP_SEQ.usesAutoPinnedDrumContext());
+        assertFalse(TopLevelModeState.DrumMode.NESTED_RHYTHM.usesAutoPinnedDrumContext());
+        assertFalse(TopLevelModeState.DrumMode.DRUM_PADS.usesAutoPinnedDrumContext());
+    }
+
+    @Test
     void performButtonRestoresLastPerformModeWhenReEnteringPerformFamily() {
         final TopLevelModeState state = new TopLevelModeState();
 

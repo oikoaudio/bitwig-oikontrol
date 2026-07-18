@@ -13,9 +13,7 @@ public record MulticlipPageState(
     }
 
     public int activeRow() {
-        return activeChildPosition < 0
-                ? -1
-                : activeChildPosition % TrackLaneMapping.LANES_PER_PAGE;
+        return activeChildPosition < 0 ? -1 : activeChildPosition % TrackLaneMapping.LANES_PER_PAGE;
     }
 
     public MulticlipPageState withActiveChildPosition(final int childPosition) {
@@ -35,10 +33,12 @@ public record MulticlipPageState(
         }
 
         final int lastPage = (laneCount - 1) / TrackLaneMapping.LANES_PER_PAGE;
-        final int targetPage = Math.max(0, Math.min(lastPage, lanePage + Integer.signum(direction)));
-        final int targetPosition = Math.min(
-                targetPage * TrackLaneMapping.LANES_PER_PAGE + Math.max(0, activeRow()),
-                laneCount - 1);
+        final int targetPage =
+                Math.max(0, Math.min(lastPage, lanePage + Integer.signum(direction)));
+        final int targetPosition =
+                Math.min(
+                        targetPage * TrackLaneMapping.LANES_PER_PAGE + Math.max(0, activeRow()),
+                        laneCount - 1);
         return new MulticlipPageState(laneCount, targetPage, targetPosition, firstVisibleStep);
     }
 
@@ -54,7 +54,8 @@ public record MulticlipPageState(
         if (direction == 0) {
             return this;
         }
-        final int firstStep = Math.max(0, firstVisibleStep + Integer.signum(direction) * STEPS_PER_PAGE);
+        final int firstStep =
+                Math.max(0, firstVisibleStep + Integer.signum(direction) * STEPS_PER_PAGE);
         return new MulticlipPageState(laneCount, lanePage, activeChildPosition, firstStep);
     }
 

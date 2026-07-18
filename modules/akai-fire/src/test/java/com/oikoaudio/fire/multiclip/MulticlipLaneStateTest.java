@@ -1,5 +1,6 @@
 package com.oikoaudio.fire.multiclip;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,5 +34,20 @@ class MulticlipLaneStateTest {
 
         assertFalse(state.isOccupied(0, 3));
         assertTrue(state.isOccupied(1, 4));
+    }
+
+    @Test
+    void tracksUnexpectedObservedChannelsWithoutChangingLaneIdentity() {
+        final MulticlipLaneState state = new MulticlipLaneState();
+
+        state.observeChannel(2, 6, 11, true);
+        state.observeChannel(2, 6, 2, true);
+        assertTrue(state.isOccupied(2, 6));
+        assertEquals(java.util.Set.of(2, 11), state.channelsAt(2, 6));
+
+        state.observeChannel(2, 6, 2, false);
+        assertTrue(state.isOccupied(2, 6));
+        state.observeChannel(2, 6, 11, false);
+        assertFalse(state.isOccupied(2, 6));
     }
 }

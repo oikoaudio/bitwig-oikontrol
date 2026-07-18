@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Added Akai Fire Multiclip Seq as a four-row `DRUM` surface for sequencing up to sixteen positional child-track clips with independent lengths/play starts, lane and time paging, lazy clip creation, momentary scene selection/launch, Track mute/solo, and independent playheads.
 - Note Repeat divisions are now ordered monotonically from fastest to slowest, interleaving triplet and straight rates while retaining `1/16` as the default.
 - In live Note, Harmonic, and Drum Pads input, hold `MUTE_3` and turn `SELECT` to adjust the remembered Note Repeat division without toggling repeat; an unmodified `MUTE_3` tap still toggles it.
 - Live Note and Harmonic pads now use per-note ownership, so overlapping pads play their combined note union and shared notes remain sounding until the last owning pad is released, including with Hold mode.

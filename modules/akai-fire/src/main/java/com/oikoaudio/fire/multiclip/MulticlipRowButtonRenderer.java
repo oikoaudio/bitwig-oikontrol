@@ -6,10 +6,7 @@ public final class MulticlipRowButtonRenderer {
     private MulticlipRowButtonRenderer() {}
 
     public static BiColorLightState render(
-            final boolean exists,
-            final boolean active,
-            final boolean muted,
-            final boolean soloed) {
+            final boolean exists, final boolean active, final boolean muted, final boolean soloed) {
         if (!exists) {
             return BiColorLightState.OFF;
         }

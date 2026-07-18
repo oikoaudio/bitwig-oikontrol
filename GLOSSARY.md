@@ -36,6 +36,8 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Drum XOX**: The default Akai Fire `DRUM` x0x-style Drum Machine step sequencer.
 
+**Multiclip Seq**: The Akai Fire `DRUM` mode that shows four direct child-track clips at once, supports independent clip lengths and play starts, and pages across up to sixteen positional Track Lanes.
+
 **Nested Rhythm**: The Akai Fire `DRUM` structural rhythm generator that creates deterministic patterns from nested divisions, tuplets, ratchets, density, clustering, and editable generated hits.
 
 **Drum Pads**: The live Akai Fire Drum Machine playing surface with `Grid64`, `Velocity`, and `Bongos` layouts.
@@ -61,6 +63,18 @@ This file defines terms that agents and humans should use consistently. It is no
 **Birds-Eye**: The Akai Fire `PERFORM` overview page where each pad jumps the launcher viewport to a larger track/scene block.
 
 ## Sequencing and rhythm terms
+
+**Track Lane**: One Multiclip Seq row backed by a full direct child track of the parent Drum Machine group. It is not a Drum Machine pad channel.
+
+**Lane Clip**: The launcher clip on a Track Lane at the active Multiclip Scene.
+
+**Active Lane**: The Track Lane whose child track is currently active in Bitwig; Multiclip Seq has no separate controller-only lane selection.
+
+**Multiclip Scene**: An absolute Bitwig launcher scene used as the shared clip target across all Multiclip Seq Track Lanes.
+
+**Lane Page**: One four-track window within Multiclip Seq's maximum of sixteen positional Track Lanes.
+
+**Scene Overlay**: The momentary Multiclip Seq state entered by holding `ALT` before any lane pad, where row 1 becomes a sixteen-scene selector while rows 2-4 remain Track Lanes.
 
 **Step**: A time position in a step sequencer mode whose editing and clip-writing semantics are owned by that mode.
 

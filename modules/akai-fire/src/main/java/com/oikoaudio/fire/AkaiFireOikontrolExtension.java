@@ -25,10 +25,10 @@ import com.oikoaudio.fire.fugue.FugueStepMode;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
+import com.oikoaudio.fire.multiclip.MulticlipSequenceMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.note.DrumPadPlayMode;
-import com.oikoaudio.fire.multiclip.MulticlipSequenceMode;
 import com.oikoaudio.fire.note.NotePlayMode;
 import com.oikoaudio.fire.perform.PerformClipLauncherMode;
 import com.oikoaudio.fire.sequence.DrumSequenceMode;
@@ -1882,9 +1882,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return firePreferences != null && firePreferences.autoPinFirstDrumMachine();
     }
 
-    private boolean shouldAutoPinStandardDrumMode() {
+    private boolean shouldAutoPinDrumContext() {
         return modeState.activeMode() == Mode.DRUM
-                && modeState.activeDrumMode() == DrumMode.STANDARD
+                && modeState.activeDrumMode().usesAutoPinnedDrumContext()
                 && shouldAutoPinFirstDrumMachine();
     }
 
@@ -1907,7 +1907,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void initDrumAutoPinController() {
         drumAutoPinController =
                 new DrumAutoPinController(
-                        this::shouldAutoPinStandardDrumMode,
+                        this::shouldAutoPinDrumContext,
                         new DrumAutoPinController.Port() {
                             @Override
                             public boolean isTrackPinned() {
@@ -2314,7 +2314,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (inc == 0 || viewControl == null) {
             return;
         }
-        if (shouldAutoPinStandardDrumMode()) {
+        if (shouldAutoPinDrumContext()) {
             oled.valueInfo("Track Sel.", "Pinned");
             notifyPopup("Track Sel.", "Pinned");
             return;

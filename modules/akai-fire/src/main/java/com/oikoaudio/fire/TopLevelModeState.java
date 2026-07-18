@@ -19,6 +19,10 @@ public final class TopLevelModeState {
         public DrumMode next() {
             return values()[(ordinal() + 1) % values().length];
         }
+
+        public boolean usesAutoPinnedDrumContext() {
+            return this == STANDARD || this == MULTICLIP_SEQ;
+        }
     }
 
     public enum PerformMode {
