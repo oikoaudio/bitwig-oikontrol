@@ -285,14 +285,20 @@ public final class MulticlipSequenceMode extends Layer {
                     driver.getOled().valueInfo("Empty scene", "ALT + pad to edit");
                 }
             }
-            case LAUNCH -> {
-                MulticlipChildSceneLauncher.launch(eligibleChildSlots(visibleScene));
-                driver.getOled().valueInfo("Launch Scene " + (absoluteScene + 1), "From start");
-            }
+            case LAUNCH_AND_FOLLOW -> launchSceneAndFollow(visibleScene, absoluteScene);
             case SELECT -> selectSceneForEditing(absoluteScene);
             case COPY_CLIP -> copyLaneClipToScene(absoluteScene);
             case COPY_SCENE -> copyChildSceneToScene(absoluteScene);
         }
+    }
+
+    private void launchSceneAndFollow(final int visibleScene, final int absoluteScene) {
+        MulticlipChildSceneLauncher.launch(eligibleChildSlots(visibleScene));
+        creationGeneration++;
+        activeScene = absoluteScene;
+        groupSelected = false;
+        focusActiveTarget(null);
+        driver.getOled().valueInfo("Launch Scene " + (activeScene + 1), "Queued + editing");
     }
 
     private void selectSceneForEditing(final int absoluteScene) {

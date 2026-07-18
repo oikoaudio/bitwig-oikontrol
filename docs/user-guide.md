@@ -302,7 +302,7 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge only the held notes by 1/64 |
 | `ALT + BANK LEFT/RIGHT` | Move the active Lane Clip play start (lane rotation) |
 | `SHIFT + ALT + BANK LEFT/RIGHT` | Fine-nudge all notes in the active Lane Clip by 1/64 |
-| Scene pad | Launch that existing child-only scene from the start with project launch quantization; keep the edit source unchanged |
+| Scene pad | Launch that existing child-only scene from the start with project launch quantization, then follow it as the editing scene |
 | `ALT + scene pad` or hold `MUTE_1` + scene pad | Select that scene for editing; append missing empty project scenes when needed |
 | Hold `MUTE_3` + scene pad | Paste the active Lane Clip into that lane's destination slot |
 | `SHIFT + MUTE_3` + scene pad | Paste an exact child-only snapshot of the active scene, including empty source lanes |
@@ -315,7 +315,7 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 
 The active lane is normally the active Bitwig child track. Press a row-2 pad to change it; selecting a child clip in Bitwig updates both the lane and scene. After `ALT + MUTE_2` selects the group for direct Drum Machine access, pressing a row-2 pad returns to child-clip editing. Ineligible or nonexistent child-track pads remain off. The positional child order remains authoritative even when tracks or clips have duplicate or misleading names.
 
-Selecting a Multiclip Scene with `ALT` or `MUTE_1` creates only missing project scenes; every track slot, including the group-track slot, remains empty. A plain scene-pad launch never changes the editing source. Pressing the first pattern step creates a `Default Clip Length` clip only in the exact active child slot, waits for Bitwig to expose it through the selected-track cursor, and then writes the step. Every retarget confirms both child-track position and absolute scene before edits are enabled, so a pad press cannot fall through to the group track or a previous scene.
+Selecting a Multiclip Scene with `ALT` or `MUTE_1` creates only missing project scenes; every track slot, including the group-track slot, remains empty. This edit-only gesture can prepare a non-playing scene in advance. A plain scene-pad launch follows the triggered scene immediately as the editing scene and retargets the active lane to that scene's child slot, while playback still observes project launch quantization. Pressing the first pattern step creates a `Default Clip Length` clip only in the exact active child slot, waits for Bitwig to expose it through the selected-track cursor, and then writes the step. Every retarget confirms both child-track position and absolute scene before edits are enabled, so a pad press cannot fall through to the group track or a previous scene.
 
 Bitwig may display a group-track **sub scene** when its child tracks contain Launcher clips in that scene. This is an alias and visual summary of the child clips, not an additional group-track clip created by Multiclip Seq. Scene-row LEDs ignore it and derive population, color, queued, and playing feedback only from eligible child-track slots.
 

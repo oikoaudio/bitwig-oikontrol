@@ -3,7 +3,7 @@ package com.oikoaudio.fire.multiclip;
 final class MulticlipSceneActionResolver {
     enum Action {
         IGNORE,
-        LAUNCH,
+        LAUNCH_AND_FOLLOW,
         SELECT,
         COPY_CLIP,
         COPY_SCENE
@@ -27,6 +27,6 @@ final class MulticlipSceneActionResolver {
         if (altHeld || selectHeld) {
             return Action.SELECT;
         }
-        return sceneExists ? Action.LAUNCH : Action.IGNORE;
+        return sceneExists ? Action.LAUNCH_AND_FOLLOW : Action.IGNORE;
     }
 }

@@ -9,7 +9,7 @@ Multiclip Seq edits launcher clips on direct child tracks while the parent group
 Multiclip Seq keeps the parent and lane identities separate:
 
 - a named, pinned parent cursor owns only the Drum Machine group and its direct-child TrackBank;
-- row 1 launches a child-only project scene; `ALT` or the select modifier chooses the editing scene, row 2 selects one of sixteen direct child tracks, and rows 3-4 edit 32 steps of that one child clip;
+- row 1 launches a child-only project scene and follows it as the editing scene; `ALT` or the select modifier chooses an editing scene without launching it, row 2 selects one of sixteen direct child tracks, and rows 3-4 edit 32 steps of that one child clip;
 - the ordinary selected-track cursor follows the active child track and owns one unpinned launcher cursor clip;
 - targeting selects the exact child `ClipLauncherSlot`, then enables edits only after the selected-track position and cursor-clip scene match;
 - selecting a nonexistent scene appends empty project scenes with `Project.createScene()`; it does not create a clip on any track;
@@ -26,7 +26,7 @@ Fire sequencing never depends on additive Bitwig clip selection or on the order 
 
 - Every child clip retains independent notes, loop values, and play start, but Fire observes one child clip at a time.
 - Changing the lane or scene deliberately changes Bitwig's selected track and selected child clip once.
-- Launching a scene does not change the editing scene; selection remains an explicit operation.
+- Launching a scene follows it as the editing scene, while `ALT` or the select modifier can target a different non-playing scene for preparation.
 - Scene, lane, and time retargeting invalidates delayed clip-creation work.
 - Track and clip names remain descriptive; positional child order is authoritative.
 - The Fire pattern and Bitwig Detail Editor show the same active Lane Clip.

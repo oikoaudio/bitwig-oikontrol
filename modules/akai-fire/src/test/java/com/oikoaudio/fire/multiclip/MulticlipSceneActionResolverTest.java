@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Test;
 
 class MulticlipSceneActionResolverTest {
     @Test
-    void launchesAnExistingSceneWithoutSelectingIt() {
+    void launchesAndFollowsAnExistingSceneForEditing() {
         assertEquals(
-                MulticlipSceneActionResolver.Action.LAUNCH,
+                MulticlipSceneActionResolver.Action.LAUNCH_AND_FOLLOW,
                 MulticlipSceneActionResolver.resolve(true, true, false, false, false, false));
     }
 
