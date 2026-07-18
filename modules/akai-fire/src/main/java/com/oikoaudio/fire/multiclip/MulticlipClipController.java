@@ -53,6 +53,7 @@ final class MulticlipClipController {
                             "Multiclip Clip " + (row + 1),
                             MulticlipPageState.STEPS_PER_PAGE,
                             1);
+            clip.isPinned().markInterested();
             clip.exists().markInterested();
             clip.setStepSize(MulticlipTiming.STEP_BEATS);
             clip.addNoteStepObserver(note -> observeStep(laneRow, note));
@@ -66,6 +67,7 @@ final class MulticlipClipController {
                             "Multiclip Fine " + (row + 1),
                             FINE_OBSERVATION_STEPS,
                             1);
+            fineClip.isPinned().markInterested();
             fineClip.setStepSize(MulticlipTiming.FINE_STEP_BEATS);
             fineNotes[row] = new HashMap<>();
             fineClip.addNoteStepObserver(note -> observeFineStep(laneRow, note));
@@ -90,7 +92,7 @@ final class MulticlipClipController {
         clips[row].scrollToStep(firstVisibleStep);
         fineClips[row].scrollToKey(mapping.midiNote());
         fineClips[row].scrollToStep(0);
-        cursors[row].selectSlot(absoluteScene);
+        selectIndependentSlot(row, absoluteScene);
         scheduleObservationRefresh(row, generation);
     }
 
@@ -98,6 +100,9 @@ final class MulticlipClipController {
         targetGenerations[row]++;
         state.deactivateRow(row);
         fineNotes[row].clear();
+        cursors[row].isPinned().set(false);
+        clips[row].isPinned().set(false);
+        fineClips[row].isPinned().set(false);
     }
 
     boolean isReady(final int row) {
@@ -105,8 +110,10 @@ final class MulticlipClipController {
     }
 
     void setPinned(final boolean pinned) {
-        for (final CursorTrack cursor : cursors) {
-            cursor.isPinned().set(pinned);
+        for (int row = 0; row < VISIBLE_LANES; row++) {
+            cursors[row].isPinned().set(pinned);
+            clips[row].isPinned().set(pinned);
+            fineClips[row].isPinned().set(pinned);
         }
     }
 
@@ -142,7 +149,7 @@ final class MulticlipClipController {
     void selectSlot(final int row, final int absoluteScene) {
         final long generation = ++targetGenerations[row];
         beginRetarget(row);
-        cursors[row].selectSlot(absoluteScene);
+        selectIndependentSlot(row, absoluteScene);
         scheduleObservationRefresh(row, generation);
     }
 
@@ -267,5 +274,13 @@ final class MulticlipClipController {
     private void beginRetarget(final int row) {
         state.beginRetarget(row);
         fineNotes[row].clear();
+    }
+
+    private void selectIndependentSlot(final int row, final int absoluteScene) {
+        clips[row].isPinned().set(false);
+        fineClips[row].isPinned().set(false);
+        cursors[row].selectSlot(absoluteScene);
+        clips[row].isPinned().set(true);
+        fineClips[row].isPinned().set(true);
     }
 }
