@@ -83,6 +83,47 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.22.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.21.0...oikontrol-v2.22.0) (2026-07-19)
+
+
+### Features
+
+* **fire:** add multiclip lane timing controls ([219fcdf](https://github.com/oikoaudio/bitwig-oikontrol/commit/219fcdf9dbe0787185973fec5e5c473c8547fdd9))
+* **fire:** add multiclip scene overlay ([f0da4ae](https://github.com/oikoaudio/bitwig-oikontrol/commit/f0da4aef420b77a2addc697620856cc073f11793))
+* **fire:** add Multiclip Seq polyrhythm mode ([14ad8e0](https://github.com/oikoaudio/bitwig-oikontrol/commit/14ad8e04d139199d2121cb4c63135771415e51d7))
+* **fire:** add multiclip seq track lane shell ([1081874](https://github.com/oikoaudio/bitwig-oikontrol/commit/1081874b04b44810d7282a9bd2c9bf18c36aa7ee))
+* **fire:** add multiclip track actions and feedback ([721c9ab](https://github.com/oikoaudio/bitwig-oikontrol/commit/721c9ab108f63cc7c8610f1a14ab1cc81b7e51cf))
+* **fire:** align multiclip encoders with drum xox ([d6fb719](https://github.com/oikoaudio/bitwig-oikontrol/commit/d6fb7190dd80dce9f890c3af54d492234540c52a))
+* **fire:** align multiclip scene and pad controls ([8cbdcf9](https://github.com/oikoaudio/bitwig-oikontrol/commit/8cbdcf92a24356058cf5e6695de7bb0bdca5b3a7))
+* **fire:** create multiclip lane clips on first step ([f2e64d7](https://github.com/oikoaudio/bitwig-oikontrol/commit/f2e64d7332b20e8cc29aa15e8d392847a827177e))
+* **fire:** discover and mix PolySeq groups ([039ed40](https://github.com/oikoaudio/bitwig-oikontrol/commit/039ed40083d2a18c53a1560d07b6700d4aa74916))
+* **fire:** integrate and document multiclip seq ([e821914](https://github.com/oikoaudio/bitwig-oikontrol/commit/e8219140a0e553ba3078deea23c323bebe5f531f))
+* **fire:** integrate multiclip detail editor context ([a008d3f](https://github.com/oikoaudio/bitwig-oikontrol/commit/a008d3fc83d7ec50b42c99f78fd9b1335af2a3e7))
+* **fire:** page multiclip lanes and time ([76a4606](https://github.com/oikoaudio/bitwig-oikontrol/commit/76a4606e002fadb20431f35a28cd1bf34bf21700))
+* **fire:** place multiclip last in drum cycle ([4ecde79](https://github.com/oikoaudio/bitwig-oikontrol/commit/4ecde79bd1ccfaaef7353fc20013097b98b3c6de))
+* **fire:** sequence four multiclip lanes ([9c22f3a](https://github.com/oikoaudio/bitwig-oikontrol/commit/9c22f3a59ba1cd44f33beae1305a1c86dbd4596f))
+* **fire:** show multiclip loop boundaries ([a24e946](https://github.com/oikoaudio/bitwig-oikontrol/commit/a24e9463f74228924818cb93607c40697743d469))
+* **fire:** show multiclip scene playback feedback ([019a90c](https://github.com/oikoaudio/bitwig-oikontrol/commit/019a90c59d35075eb0079f03315fbd15fd9d294a))
+
+
+### Bug Fixes
+
+* **fire:** add multiclip edit button feedback ([dab321d](https://github.com/oikoaudio/bitwig-oikontrol/commit/dab321db0b2a4c9723d21c13508314c8d998e160))
+* **fire:** bind multiclip rows to exact child slots ([ae19d88](https://github.com/oikoaudio/bitwig-oikontrol/commit/ae19d88a2383bddb0a5d78b8dc9b400d240a1f2a))
+* **fire:** brighten unselected multiclip lanes ([341597b](https://github.com/oikoaudio/bitwig-oikontrol/commit/341597b425aba37cadd5e4b3363a74f8cd0487ce))
+* **fire:** correct multiclip scene targeting and feedback ([0a4f5a9](https://github.com/oikoaudio/bitwig-oikontrol/commit/0a4f5a9a65e3dd4bb0d00efc3605cd49067e5819))
+* **fire:** focus multiclip on one child clip ([a739f13](https://github.com/oikoaudio/bitwig-oikontrol/commit/a739f1349258b2121a4475504bd9f4113b686937))
+* **fire:** follow launched multiclip scenes ([6258d8b](https://github.com/oikoaudio/bitwig-oikontrol/commit/6258d8b0311ea47abf9a30c47494abbc061f02eb))
+* **fire:** initialize four multiclip lane cursors ([22ee039](https://github.com/oikoaudio/bitwig-oikontrol/commit/22ee0398a5e7ce98b8e86b4b940fe28778edf617))
+* **fire:** keep multiclip editing on one child lane ([5a3935d](https://github.com/oikoaudio/bitwig-oikontrol/commit/5a3935d7ef289d246fb80e3b300ef8df0797fb85))
+* **fire:** launch child-only multiclip scene targets ([82345b7](https://github.com/oikoaudio/bitwig-oikontrol/commit/82345b7b8485837bd62cf71e8e0bef0731f8a43d))
+* **fire:** limit multiclip playback blink to scenes ([f5fc6e9](https://github.com/oikoaudio/bitwig-oikontrol/commit/f5fc6e9691868fe173771f5a760277ad5a197755))
+* **fire:** pin multiclip cursors to selected scenes ([54af05d](https://github.com/oikoaudio/bitwig-oikontrol/commit/54af05d2485027e976fafdc40a28c63cb1c1711f))
+* **fire:** register multiclip position interest at init ([b3e5eab](https://github.com/oikoaudio/bitwig-oikontrol/commit/b3e5eab3274379b0bb2f6624da38b0626ad78c0b))
+* **fire:** release drum pins for multiclip editing ([1c81d84](https://github.com/oikoaudio/bitwig-oikontrol/commit/1c81d84b2dc22ebedbfad03b92a0fc136c03b751))
+* **fire:** show multiclip playhead and clip length ([2d017ae](https://github.com/oikoaudio/bitwig-oikontrol/commit/2d017ae2f8913f3d8d06d49a11a21c6c56d19070))
+* **fire:** wait for multiclip scene retargets ([ba248de](https://github.com/oikoaudio/bitwig-oikontrol/commit/ba248debb8dc55cd1557a72a7628767ec6395a58))
+
 ## [2.21.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.20.0...oikontrol-v2.21.0) (2026-07-17)
 
 
