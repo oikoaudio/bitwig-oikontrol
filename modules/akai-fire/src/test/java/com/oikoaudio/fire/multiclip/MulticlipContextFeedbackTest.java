@@ -8,20 +8,24 @@ class MulticlipContextFeedbackTest {
     @Test
     void asksForAGroupOrChildWhenNoContainingGroupWasFound() {
         assertEquals(
-                new MulticlipContextFeedback.Message("Setup not found", "Select group/child"),
-                MulticlipContextFeedback.message(false, false, 0, 0));
+                new MulticlipContextFeedback.Message("No PolySeq", "Select or name group"),
+                MulticlipContextFeedback.message(
+                        MulticlipGroupCursorController.Discovery.NOT_FOUND, false, 0, 0));
+        assertEquals(
+                new MulticlipContextFeedback.Message("Multiple PolySeq", "Select target group"),
+                MulticlipContextFeedback.message(
+                        MulticlipGroupCursorController.Discovery.MULTIPLE, false, 0, 0));
     }
 
     @Test
     void identifiesTheMissingPartOfARecognizedGroupSetup() {
         assertEquals(
-                new MulticlipContextFeedback.Message("No Drum Machine", "Add to target group"),
-                MulticlipContextFeedback.message(true, false, 4, 4));
-        assertEquals(
                 new MulticlipContextFeedback.Message("No MIDI children", "Add direct tracks"),
-                MulticlipContextFeedback.message(true, true, 0, 0));
+                MulticlipContextFeedback.message(
+                        MulticlipGroupCursorController.Discovery.SELECTED, true, 0, 0));
         assertEquals(
                 new MulticlipContextFeedback.Message("No MIDI children", "Use direct tracks"),
-                MulticlipContextFeedback.message(true, true, 4, 0));
+                MulticlipContextFeedback.message(
+                        MulticlipGroupCursorController.Discovery.NAMED, true, 4, 0));
     }
 }

@@ -38,6 +38,8 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Multiclip Seq**: The Akai Fire `DRUM` mode with a scene row, a sixteen-child Track Lane row, and a 32-step view of one active Lane Clip. Each child clip retains an independent length and play start.
 
+**PolySeq group**: A Multiclip Seq parent group containing one to sixteen direct MIDI-capable Track Lanes routed to a shared group instrument. Explicit selection is authoritative; `[PolySeq]` in the group name enables project-search fallback when another context is selected.
+
 **Nested Rhythm**: The Akai Fire `DRUM` structural rhythm generator that creates deterministic patterns from nested divisions, tuplets, ratchets, density, clustering, and editable generated hits.
 
 **Drum Pads**: The live Akai Fire Drum Machine playing surface with `Grid64`, `Velocity`, and `Bongos` layouts.
@@ -64,7 +66,7 @@ This file defines terms that agents and humans should use consistently. It is no
 
 ## Sequencing and rhythm terms
 
-**Track Lane**: One positional Multiclip Seq lane backed by a full direct child track of the parent Drum Machine group. It is not a Drum Machine pad channel.
+**Track Lane**: One positional Multiclip Seq lane backed by a full direct child track of the parent PolySeq group. It is not a Drum Machine pad channel.
 
 **Lane Clip**: The launcher clip on a Track Lane at the active Multiclip Scene.
 

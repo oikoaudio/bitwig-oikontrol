@@ -4,7 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
-- The `DRUM` button now places setup-specific Multiclip Seq last, after Nested Rhythm and Drum Pads. Multiclip keeps an actionable setup error on the idle OLED when the selected group context is missing a containing group, Drum Machine, or eligible direct MIDI children.
+- The `DRUM` button now places setup-specific Multiclip Seq last, after Nested Rhythm and Drum Pads. Multiclip prefers the selected group context, falls back to an unambiguous project group marked `[PolySeq]`, and reports missing, ambiguous, or ineligible setups on the OLED. Mixer follows a matching Drum Machine pad or materialized group-instrument output chain, while remote-page navigation follows the group's first instrument.
 - Multiclip Seq now turns pattern pads beyond the active Lane Clip's loop off, marks a shifted play start in purple, and blocks plain step entry beyond the loop until Last Step extends it.
 - Multiclip Seq now keeps Bitwig's selected child clip authoritative on entry while slow-blinking playing scenes and fast-blinking queued ones. Row-2 lane pads remain steady because playback is controlled at scene level.
 - Multiclip Seq row-2 Track Lane pads now match Drum XOX's soft-dim intensity when unselected, while retaining the darker state for muted or excluded solo lanes.

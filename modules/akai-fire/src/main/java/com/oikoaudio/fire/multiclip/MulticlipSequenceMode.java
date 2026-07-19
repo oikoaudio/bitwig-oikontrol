@@ -5,8 +5,7 @@ import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorDeviceFollowMode;
 import com.bitwig.extension.controller.api.CursorRemoteControlsPage;
 import com.bitwig.extension.controller.api.CursorTrack;
-import com.bitwig.extension.controller.api.Device;
-import com.bitwig.extension.controller.api.DeviceBank;
+import com.bitwig.extension.controller.api.DeviceLayerBank;
 import com.bitwig.extension.controller.api.DrumPadBank;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.Scene;
@@ -23,9 +22,9 @@ import com.oikoaudio.fire.utils.PatternButtons;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Scene, child-track, and 32-step sequencer for clips feeding a Drum Machine group. */
+/** Scene, child-track, and 32-step sequencer for clips feeding a shared group instrument. */
 public final class MulticlipSequenceMode extends Layer {
-    private static final int DEVICE_SCAN_SIZE = 16;
+    private static final int PROJECT_SEARCH_BANK_SIZE = 16;
     private static final int SCENE_BANK_SIZE = MulticlipXoxLayout.SCENE_COUNT;
     private static final int MAX_LANES = MulticlipXoxLayout.LANE_COUNT;
     private static final int MAX_CREATION_ATTEMPTS = 20;
@@ -51,7 +50,6 @@ public final class MulticlipSequenceMode extends Layer {
     private final boolean[] laneExists = new boolean[MAX_LANES];
     private final boolean[] laneCanHoldNotes = new boolean[MAX_LANES];
     private final String[] laneNames = new String[MAX_LANES];
-    private final boolean[] groupDeviceIsDrumMachine = new boolean[DEVICE_SCAN_SIZE];
 
     private int laneCount;
     private int activeChildPosition = -1;
@@ -70,6 +68,8 @@ public final class MulticlipSequenceMode extends Layer {
     private boolean deleteHeld;
     private boolean laneMuteMode;
     private boolean laneSoloMode;
+    private MulticlipGroupCursorController.Discovery groupDiscovery =
+            MulticlipGroupCursorController.Discovery.SELECTED;
 
     public MulticlipSequenceMode(final AkaiFireOikontrolExtension driver) {
         super(driver.getLayers(), "MULTICLIP_SEQUENCE");
@@ -83,24 +83,34 @@ public final class MulticlipSequenceMode extends Layer {
         groupCursor.exists().markInterested();
         groupCursor.isGroup().markInterested();
         groupCursor.isPinned().markInterested();
-        groupCursorController = new MulticlipGroupCursorController(host, groupCursor);
-        final PinnableCursorDevice drumMachine =
+        final TrackBank projectTracks = host.createTrackBank(PROJECT_SEARCH_BANK_SIZE, 0, 0, true);
+        groupCursorController =
+                new MulticlipGroupCursorController(host, groupCursor, projectTracks);
+        final PinnableCursorDevice groupInstrument =
                 groupCursor.createCursorDevice(
-                        "MULTICLIP_DRUM_MACHINE",
-                        "Multiclip Drum Machine",
+                        "MULTICLIP_GROUP_INSTRUMENT",
+                        "Multiclip Group Instrument",
                         2,
                         CursorDeviceFollowMode.FIRST_INSTRUMENT);
-        drumMachine.exists().markInterested();
-        drumMachine.hasDrumPads().markInterested();
-        final DrumPadBank drumPads = drumMachine.createDrumPadBank(MAX_LANES);
+        groupInstrument.exists().markInterested();
+        groupInstrument.hasDrumPads().markInterested();
+        final CursorRemoteControlsPage groupRemoteControls =
+                groupInstrument.createCursorRemoteControlsPage(8);
+        final DrumPadBank drumPads = groupInstrument.createDrumPadBank(MAX_LANES);
+        final DeviceLayerBank groupInstrumentChains = groupInstrument.createLayerBank(MAX_LANES);
         drumPadEncoderController =
-                new MulticlipDrumPadEncoderController(drumPads, driver.getOled());
+                new MulticlipDrumPadEncoderController(
+                        drumPads,
+                        groupInstrumentChains,
+                        groupRemoteControls,
+                        () -> groupInstrument.hasDrumPads().get(),
+                        () -> groupInstrument.exists().get(),
+                        driver.getOled());
         laneBank = groupCursor.createTrackBank(MAX_LANES, 0, SCENE_BANK_SIZE, false);
         sceneBank = laneBank.sceneBank();
         laneBank.channelCount().markInterested();
         laneBank.channelCount().addValueObserver(ignored -> refreshLaneCount());
         observeScenes();
-        observeGroupDevices();
         observeTrackLanes();
 
         sceneCreator =
@@ -898,19 +908,6 @@ public final class MulticlipSequenceMode extends Layer {
         }
     }
 
-    private void observeGroupDevices() {
-        final DeviceBank devices = groupCursor.createDeviceBank(DEVICE_SCAN_SIZE);
-        for (int index = 0; index < DEVICE_SCAN_SIZE; index++) {
-            final int deviceIndex = index;
-            final Device device = devices.getItemAt(index);
-            device.exists().markInterested();
-            device.hasDrumPads().markInterested();
-            device.hasDrumPads()
-                    .addValueObserver(value -> groupDeviceIsDrumMachine[deviceIndex] = value);
-            groupDeviceIsDrumMachine[deviceIndex] = device.hasDrumPads().get();
-        }
-    }
-
     private void observeTrackLanes() {
         for (int child = 0; child < MAX_LANES; child++) {
             final int position = child;
@@ -1079,16 +1076,7 @@ public final class MulticlipSequenceMode extends Layer {
                 || !hasEligibleLane()) {
             return false;
         }
-        return hasDrumMachine();
-    }
-
-    private boolean hasDrumMachine() {
-        for (final boolean drumMachine : groupDeviceIsDrumMachine) {
-            if (drumMachine) {
-                return true;
-            }
-        }
-        return false;
+        return true;
     }
 
     private boolean isEligibleLane(final int childPosition) {
@@ -1119,7 +1107,7 @@ public final class MulticlipSequenceMode extends Layer {
 
     private MulticlipContextFeedback.Message invalidContextMessage() {
         return MulticlipContextFeedback.message(
-                groupContextReady, hasDrumMachine(), laneCount, eligibleLaneCount());
+                groupDiscovery, groupContextReady, laneCount, eligibleLaneCount());
     }
 
     public boolean showIdleInfoIfNeeded() {
@@ -1154,6 +1142,10 @@ public final class MulticlipSequenceMode extends Layer {
 
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
         return encoderController.getActiveRemoteControlsPage();
+    }
+
+    public boolean usesDrumPadRemotePage() {
+        return drumPadEncoderController.usesDrumPadRemotePage();
     }
 
     public void notifyBlink(final int blinkTicks) {
@@ -1200,6 +1192,7 @@ public final class MulticlipSequenceMode extends Layer {
     protected void onActivate() {
         active = true;
         groupContextReady = false;
+        groupDiscovery = MulticlipGroupCursorController.Discovery.SELECTED;
         cursorRetargetInProgress = true;
         padLayer.activate();
         encoderController.activate();
@@ -1211,6 +1204,31 @@ public final class MulticlipSequenceMode extends Layer {
                     }
                     groupContextReady = ready;
                     if (!ready) {
+                        findNamedGroup();
+                        return;
+                    }
+                    refreshLaneCount();
+                    if (isValidContext()) {
+                        syncSelectedChildClipTarget();
+                        ensureActiveLane();
+                        focusActiveTarget(null);
+                        showLaneInfo();
+                    } else {
+                        findNamedGroup();
+                    }
+                });
+    }
+
+    private void findNamedGroup() {
+        groupContextReady = false;
+        groupCursorController.findNamed(
+                discovery -> {
+                    if (!active) {
+                        return;
+                    }
+                    groupDiscovery = discovery;
+                    groupContextReady = discovery == MulticlipGroupCursorController.Discovery.NAMED;
+                    if (!groupContextReady) {
                         cursorRetargetInProgress = false;
                         showInvalidContext();
                         return;

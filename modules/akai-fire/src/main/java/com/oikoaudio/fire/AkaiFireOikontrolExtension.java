@@ -2516,7 +2516,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeDrumMode() == DrumMode.MULTICLIP_SEQ && multiclipSequenceMode != null) {
             final CursorRemoteControlsPage page =
                     multiclipSequenceMode.getActiveRemoteControlsPage();
-            return page == null ? null : new RemotePageTarget(page, "Lane Pad");
+            final String label =
+                    multiclipSequenceMode.usesDrumPadRemotePage() ? "Lane Pad" : "Group Instrument";
+            return page == null ? null : new RemotePageTarget(page, label);
         }
         if (modeState.activeDrumMode() != DrumMode.STANDARD || drumSequenceMode == null) {
             return null;

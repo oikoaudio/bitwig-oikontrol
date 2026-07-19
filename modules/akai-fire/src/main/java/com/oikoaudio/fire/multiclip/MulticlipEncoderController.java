@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Reuses Drum XOX encoder pages against the active Lane Clip and group-pinned DrumPad. */
+/** Reuses Drum XOX note pages against the active Lane Clip and group-rooted device context. */
 final class MulticlipEncoderController implements StepSequencerHost {
     private static final int DEFAULT_VELOCITY = 100;
     private static final int ACCENT_VELOCITY = 127;

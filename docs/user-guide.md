@@ -279,22 +279,27 @@ In `Drum Pads`, the third `DRUM` surface, `Grid64` plays a 64-pad Bitwig Drum Ma
 
 ### Multiclip Seq mode
 
-`Multiclip Seq` is the fourth and final `DRUM` surface because it requires a specific Bitwig track layout. It sequences up to sixteen full child tracks rather than Drum Machine pad channels, making independent clip lengths and play starts available for polyrhythms. It deliberately focuses one child clip at a time so the Fire pattern and Bitwig Detail Editor always refer to the same clip.
+`Multiclip Seq` is the fourth and final `DRUM` surface because it requires a specific Bitwig track layout. It sequences up to sixteen full child tracks rather than device channels, making independent clip lengths and play starts available for polyrhythms. It deliberately focuses one child clip at a time so the Fire pattern and Bitwig Detail Editor always refer to the same clip.
 
 Set up the Bitwig project as follows:
 
-- Put a Drum Machine device on a group track.
-- Add one to sixteen direct child instrument or hybrid tracks and route their MIDI to that group.
-- Keep the group track's own Launcher slots empty; its role is to host the Drum Machine.
-- Put each pattern's child-track clips in the same launcher scene.
-- Before entering Multiclip Seq, select either the group track or one of those direct child tracks. Selecting a child clip is preferred when that exact lane and scene should open for editing.
-- Open the Detail Editor in Hybrid view and set `Edit only selected layers` to `Off` (recommended).
+- Put the receiving instrument on a group track. This can be a Drum Machine, synth, sampler, or another note-processing/device construction.
+- For a multi-output plug-in, use Bitwig's `Add Missing Chains` action if its output chains should be available to the Multiclip Mixer page.
+- Add one to sixteen direct child instrument or hybrid tracks.
+- Keep the group track's own Launcher slots empty; its role is to host the shared receiving instrument.
+- Put each pattern's child-track clips in the same launcher scene and route note output to the group track.
+- To view the pattern, open the Detail Editor in Hybrid view and set `Edit only selected layers` to `Off` (recommended).
 
-Multiclip Seq anchors itself to the current Bitwig track selection; it does not search the whole project for a matching template. If the group is selected, the mode pins it and chooses an eligible direct child lane. If a direct child is selected, the mode moves to and pins its parent group while keeping the selected child clip authoritative for editing. A deeper nested track resolves only to its nearest group, so the sequencing tracks must be direct children of the Drum Machine group. The extension can verify the group, Drum Machine, and MIDI-capable direct children, but it cannot verify that the children's MIDI routing reaches the group.
+Choose either discovery path before entering Multiclip Seq:
 
-If the selected track does not resolve to this setup, the pad grid remains off and the OLED persistently identifies the missing context: `Setup not found`, `No Drum Machine`, or `No MIDI children`. Correct the Bitwig selection or setup, leave Multiclip Seq, and enter it again to reacquire the group.
+- **Explicit selection:** Select the target group or one of its direct child tracks. A compatible selected context is authoritative and does not require `[PolySeq]` in the group name. Selecting a child clip also opens that exact lane and scene for editing.
+- **Named discovery:** If the current selection is elsewhere, include `PolySeq` in the name of exactly one suitable group; `[PolySeq]` is the recommended spelling. If several groups match, select the intended group or child explicitly.
 
-Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MIDI channels 0-15, and Drum Machine notes 36-51. Track and clip names do not affect mapping; reordering tracks intentionally changes it.
+Multiclip Seq tries explicit selection first. If the group is selected, the mode pins it and chooses an eligible direct child lane. If a direct child is selected, the mode moves to and pins its nearest parent group while keeping the selected child clip authoritative for editing. An explicitly selected context is accepted when it is a group with at least one MIDI-capable direct child; the extension cannot verify that the children's MIDI routing reaches the group.
+
+If that selected context is unsuitable, Multiclip Seq uses named discovery across the whole project. Matching ignores case, spaces, hyphens, and underscores. Exactly one matching group is pinned; `No PolySeq` means none was found, while `Multiple PolySeq` asks you to select the intended group explicitly. A named group must still contain at least one MIDI-capable direct child. Deeper nested sequencing tracks are not included.
+
+Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MIDI channels 0-15, and MIDI notes 36-51. Track and clip names do not affect mapping; reordering tracks intentionally changes it.
 
 | Pad row | Role |
 | --- | --- |
@@ -305,7 +310,7 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | Encoder page | Encoder 1 | Encoder 2 | Encoder 3 | Encoder 4 |
 | --- | --- | --- | --- | --- |
 | `Channel` | Note length | Chance | Velocity spread | Repeats |
-| `Mixer` | Matching Drum Machine pad volume | Pad pan | Pad send 1 | Pad send 2 |
+| `Mixer` | Matching group-device channel volume | Channel pan | Channel send 1 | Channel send 2 |
 | `User 1` | Velocity or insertion velocity | Pressure or insertion pressure | Timbre or insertion timbre | Pitch expression |
 | `User 2` | Lane Clip Euclid length | Euclid pulses | Euclid rotation | Accent density |
 
@@ -325,12 +330,12 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | `SHIFT + MUTE_1` | Toggle child-track Mute mode; row-2 pads then toggle lane mute |
 | `MUTE_2` | Last Step modifier; press a pattern pad to set the active clip length |
 | `SHIFT + MUTE_2` | Toggle child-track Solo mode; row-2 pads then toggle lane solo |
-| `ALT + MUTE_2` | Select the containing Drum Machine group without forgetting the active lane |
+| `ALT + MUTE_2` | Select the containing PolySeq group without forgetting the active lane |
 | Hold `MUTE_4` + pattern pad | Delete that step immediately; scene and lane pads are protected from deletion |
 
 The four TRACK status LEDs beside the rows follow the shared sequencer convention: Select, Last Step, and Copy/Paste are green, while Delete is red. Each is half-bright while idle and full-bright while its button function or latched Multiclip alternate is active. Pressing a button shows its function and valid pad target on the OLED; `SHIFT + MUTE_3` identifies the whole Child Scene paste rather than the single Lane Clip paste.
 
-The active lane is normally the active Bitwig child track. Press a row-2 pad to change it; selecting a child clip in Bitwig updates both the lane and scene. On entry, that selected child clip remains authoritative for editing, just as the selected clip does in Drum XOX; playback does not silently replace it. Playing scenes slow-blink and queued scenes fast-blink, so a non-playing scene can remain selected for preparation without hiding what is sounding. Row-2 lane pads remain steady because Multiclip launches at scene level rather than launching individual Lane Clips. The active lane is brightest and other eligible lanes use the same soft-dim intensity as unselected Drum XOX pads; the much darker state is reserved for muted or excluded solo lanes. After `ALT + MUTE_2` selects the group for direct Drum Machine access, pressing a row-2 pad returns to child-clip editing. Ineligible or nonexistent child-track pads remain off. The positional child order remains authoritative even when tracks or clips have duplicate or misleading names.
+The active lane is normally the active Bitwig child track. Press a row-2 pad to change it; selecting a child clip in Bitwig updates both the lane and scene. On entry, that selected child clip remains authoritative for editing, just as the selected clip does in Drum XOX; playback does not silently replace it. Playing scenes slow-blink and queued scenes fast-blink, so a non-playing scene can remain selected for preparation without hiding what is sounding. Row-2 lane pads remain steady because Multiclip launches at scene level rather than launching individual Lane Clips. The active lane is brightest and other eligible lanes use the same soft-dim intensity as unselected Drum XOX pads; the much darker state is reserved for muted or excluded solo lanes. After `ALT + MUTE_2` selects the group for direct device access, pressing a row-2 pad returns to child-clip editing. Ineligible or nonexistent child-track pads remain off. The positional child order remains authoritative even when tracks or clips have duplicate or misleading names.
 
 Selecting a Multiclip Scene with `ALT` or `MUTE_1` creates only missing project scenes; every track slot, including the group-track slot, remains empty. This edit-only gesture can prepare a non-playing scene in advance. A plain scene-pad launch follows the triggered scene immediately as the editing scene and retargets the active lane to that scene's child slot, while playback still observes project launch quantization. Pressing the first pattern step creates a `Default Clip Length` clip only in the exact active child slot, waits for Bitwig to expose it through the selected-track cursor, and then writes the step. Every retarget confirms both child-track position and absolute scene before edits are enabled, so a pad press cannot fall through to the group track or a previous scene.
 
@@ -338,7 +343,7 @@ Bitwig may display a group-track **sub scene** when its child tracks contain Lau
 
 Each child clip retains its own loop length and play start. Fire displays the active clip's existing notes and playing-step feedback across rows 3-4. Existing notes on unexpected MIDI channels are preserved and can still be removed or nudged; the positional MIDI channel is the convention for newly inserted notes.
 
-The encoder pages use the same assignments and OLED feedback as Drum XOX, but resolve their targets through Multiclip's split context. `Channel` and held-step `User 1` edits act on notes in the active Lane Clip. With no held step, User 1 encoders 1-3 edit the velocity, pressure, and timbre defaults applied to the next inserted notes; pitch expression requires a held step. `Mixer` controls the Drum Machine pad at the active lane's positional mapping through the group-rooted device cursor, so it does not move Bitwig away from the selected child clip. `User 2` keeps session-local Euclid settings independently for each lane and scene and applies the pattern to the active clip's visible page only.
+The encoder pages use the same assignments and OLED feedback as Drum XOX, but resolve their targets through Multiclip's split context. `Channel` and held-step `User 1` edits act on notes in the active Lane Clip. With no held step, User 1 encoders 1-3 edit the velocity, pressure, and timbre defaults applied to the next inserted notes; pitch expression requires a held step. With a Drum Machine, `Mixer` controls the pad at the active lane's positional mapping through the group-rooted device cursor. Otherwise it controls the corresponding materialized device/output chain when the group's first instrument exposes one to Bitwig; multi-output plug-ins may require `Add Missing Chains` first. If no matching channel exists, Mixer reports `Unmapped`; it never controls the silent note-output child tracks. Remote-page navigation follows the group's first instrument. `User 2` keeps session-local Euclid settings independently for each lane and scene and applies the pattern to the active clip's visible page only.
 
 The OLED keeps the compact four-encoder legend visible. Tap `KNOB MODE` to cycle pages, or hold `MUTE_1` and tap `KNOB MODE` to show all four assignments for the current page without changing it. Touching or turning an encoder shows its current target and value; `KNOB MODE + touch encoder` performs the same supported reset gesture as Drum XOX.
 
