@@ -13,10 +13,19 @@ public final class TopLevelModeState {
     public enum DrumMode {
         STANDARD,
         NESTED_RHYTHM,
-        DRUM_PADS;
+        DRUM_PADS,
+        MULTICLIP_SEQ;
 
         public DrumMode next() {
             return values()[(ordinal() + 1) % values().length];
+        }
+
+        public boolean usesAutoPinnedDrumContext() {
+            return this == STANDARD;
+        }
+
+        public boolean takesOverAutoPinnedDrumSelection() {
+            return this == MULTICLIP_SEQ;
         }
     }
 

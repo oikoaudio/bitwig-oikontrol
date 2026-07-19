@@ -4,6 +4,17 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- The `DRUM` button now places setup-specific Multiclip Seq last, after Nested Rhythm and Drum Pads. Multiclip prefers the selected group context, falls back to an unambiguous project group marked `[PolySeq]`, and reports missing, ambiguous, or ineligible setups on the OLED. Mixer follows a matching Drum Machine pad or materialized group-instrument output chain, while remote-page navigation follows the group's first instrument.
+- Multiclip Seq now turns pattern pads beyond the active Lane Clip's loop off, marks a shifted play start in purple, and blocks plain step entry beyond the loop until Last Step extends it.
+- Multiclip Seq now keeps Bitwig's selected child clip authoritative on entry while slow-blinking playing scenes and fast-blinking queued ones. Row-2 lane pads remain steady because playback is controlled at scene level.
+- Multiclip Seq row-2 Track Lane pads now match Drum XOX's soft-dim intensity when unselected, while retaining the darker state for muted or excluded solo lanes.
+- Multiclip Seq now drives the four TRACK status LEDs with the shared sequencer palette and shows each mute-row button's function and valid target on the OLED, including Lane Clip versus Child Scene paste.
+- Multiclip Seq now hydrates the active Lane Clip playhead immediately after lane or scene retargeting and displays it across pattern rows 3-4. Holding `MUTE_2` previews that clip's length and sets its Last Step without changing another lane.
+- Added Akai Fire Multiclip Seq as a `DRUM` surface with sixteen project scenes on row 1, sixteen positional child tracks on row 2, and a focused 32-step Lane Clip on rows 3-4. Child clips retain independent lengths and play starts for polyrhythms.
+- Multiclip Seq now follows a plainly launched child-only scene as its editing source, while `ALT + scene` or `MUTE_1 + scene` can select a non-playing scene for preparation. `MUTE_3` pastes either the active Lane Clip or an exact child-only scene snapshot.
+- Multiclip Seq now shares Drum XOX's four encoder pages and OLED legends: active-clip note properties and insertion defaults, the corresponding group-pinned Drum Machine pad mixer, and deterministic per-Lane-Clip Euclid controls.
+- Multiclip Seq creates real empty project scenes without group-track clips, selects one exact child slot through Bitwig's ordinary selected-track cursor, hydrates existing notes and playhead feedback, and delays writes until the requested child track and scene are confirmed.
+- Fixed Drum XOX auto-pinning fighting Multiclip's selected child cursor, which blocked step entry and repeatedly forced selection back through the Drum Machine group. Entering Multiclip now takes over the located Drum Machine selection while releasing the shared track/device pins.
 - Note Repeat divisions are now ordered monotonically from fastest to slowest, interleaving triplet and straight rates while retaining `1/16` as the default.
 - In live Note, Harmonic, and Drum Pads input, hold `MUTE_3` and turn `SELECT` to adjust the remembered Note Repeat division without toggling repeat; an unmodified `MUTE_3` tap still toggles it.
 - Live Note and Harmonic pads now use per-note ownership, so overlapping pads play their combined note union and shared notes remain sounding until the last owning pad is released, including with Hold mode.

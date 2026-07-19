@@ -25,6 +25,7 @@ import com.oikoaudio.fire.fugue.FugueStepMode;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.melodic.MelodicStepMode;
+import com.oikoaudio.fire.multiclip.MulticlipSequenceMode;
 import com.oikoaudio.fire.music.SharedPitchContextController;
 import com.oikoaudio.fire.nestedrhythm.NestedRhythmMode;
 import com.oikoaudio.fire.note.DrumPadPlayMode;
@@ -135,6 +136,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final Map<NoteAssign, BiColorButton> controlButtons = new HashMap<>();
     private NoteInput noteInput;
     private DrumSequenceMode drumSequenceMode;
+    private MulticlipSequenceMode multiclipSequenceMode;
     private ViewCursorControl viewControl;
     private FireDeviceLocator deviceLocator;
     private DrumAutoPinController drumAutoPinController;
@@ -330,6 +332,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         // ready.
         patternButtons = new PatternButtons(this, mainLayer);
         drumSequenceMode = new DrumSequenceMode(this, noteRepeatHandler);
+        multiclipSequenceMode = new MulticlipSequenceMode(this);
         notePlayMode = new NotePlayMode(this, noteRepeatHandler);
         drumPadPlayMode = new DrumPadPlayMode(this, noteRepeatHandler);
         chordStepMode = new ChordStepMode(this);
@@ -355,6 +358,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         ensureDrumPinningStillValid();
         oled.notifyBlink(blinkTicks);
         drumSequenceMode.notifyBlink(blinkTicks);
+        multiclipSequenceMode.notifyBlink(blinkTicks);
         notePlayMode.notifyBlink(blinkTicks);
         drumPadPlayMode.notifyBlink(blinkTicks);
         chordStepMode.notifyBlink(blinkTicks);
@@ -797,6 +801,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private BiColorLightState drumModeLightState(final DrumMode mode) {
         return switch (mode) {
             case STANDARD -> ModeButtonLights.MODE_1;
+            case MULTICLIP_SEQ -> ModeButtonLights.MODE_4;
             case NESTED_RHYTHM -> ModeButtonLights.MODE_2;
             case DRUM_PADS -> ModeButtonLights.MODE_3;
         };
@@ -805,6 +810,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private String drumModeLabel(final DrumMode mode) {
         return switch (mode) {
             case STANDARD -> "Drum XOX";
+            case MULTICLIP_SEQ -> "Multiclip Seq";
             case NESTED_RHYTHM -> "NestedRytm";
             case DRUM_PADS -> "Drum Pads";
         };
@@ -1541,8 +1547,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void switchActiveMode() {
-        releaseAutoPinnedDrumContext(true);
+        final boolean handOffDrumSelection =
+                modeState.activeMode() == Mode.DRUM
+                        && modeState.activeDrumMode().takesOverAutoPinnedDrumSelection();
+        releaseAutoPinnedDrumContext(!handOffDrumSelection);
         drumSequenceMode.deactivate();
+        multiclipSequenceMode.deactivate();
         notePlayMode.deactivate();
         drumPadPlayMode.deactivate();
         chordStepMode.deactivate();
@@ -1556,6 +1566,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                 nestedRhythmMode.activate();
             } else if (modeState.activeDrumMode() == DrumMode.DRUM_PADS) {
                 drumPadPlayMode.activate();
+            } else if (modeState.activeDrumMode() == DrumMode.MULTICLIP_SEQ) {
+                multiclipSequenceMode.activate();
             } else {
                 drumSequenceMode.activate();
             }
@@ -1874,9 +1886,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         return firePreferences != null && firePreferences.autoPinFirstDrumMachine();
     }
 
-    private boolean shouldAutoPinStandardDrumMode() {
+    private boolean shouldAutoPinDrumContext() {
         return modeState.activeMode() == Mode.DRUM
-                && modeState.activeDrumMode() == DrumMode.STANDARD
+                && modeState.activeDrumMode().usesAutoPinnedDrumContext()
                 && shouldAutoPinFirstDrumMachine();
     }
 
@@ -1899,7 +1911,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private void initDrumAutoPinController() {
         drumAutoPinController =
                 new DrumAutoPinController(
-                        this::shouldAutoPinStandardDrumMode,
+                        this::shouldAutoPinDrumContext,
                         new DrumAutoPinController.Port() {
                             @Override
                             public boolean isTrackPinned() {
@@ -2030,6 +2042,12 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (modeState.activeMode() == Mode.NOTE_PLAY
                 && notePlayMode != null
                 && notePlayMode.showIdleInfoIfNeeded()) {
+            return true;
+        }
+        if (modeState.activeMode() == Mode.DRUM
+                && modeState.activeDrumMode() == DrumMode.MULTICLIP_SEQ
+                && multiclipSequenceMode != null
+                && multiclipSequenceMode.showIdleInfoIfNeeded()) {
             return true;
         }
         if (modeState.activeMode() == Mode.DRUM
@@ -2306,7 +2324,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         if (inc == 0 || viewControl == null) {
             return;
         }
-        if (shouldAutoPinStandardDrumMode()) {
+        if (shouldAutoPinDrumContext()) {
             oled.valueInfo("Track Sel.", "Pinned");
             notifyPopup("Track Sel.", "Pinned");
             return;
@@ -2494,6 +2512,13 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private RemotePageTarget currentDrumRemotePageTarget() {
         if (modeState.activeDrumMode() == DrumMode.DRUM_PADS && drumPadPlayMode != null) {
             return drumPadPlayMode.currentRemotePageTarget();
+        }
+        if (modeState.activeDrumMode() == DrumMode.MULTICLIP_SEQ && multiclipSequenceMode != null) {
+            final CursorRemoteControlsPage page =
+                    multiclipSequenceMode.getActiveRemoteControlsPage();
+            final String label =
+                    multiclipSequenceMode.usesDrumPadRemotePage() ? "Lane Pad" : "Group Instrument";
+            return page == null ? null : new RemotePageTarget(page, label);
         }
         if (modeState.activeDrumMode() != DrumMode.STANDARD || drumSequenceMode == null) {
             return null;

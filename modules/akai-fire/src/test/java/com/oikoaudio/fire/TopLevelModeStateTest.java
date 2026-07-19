@@ -85,11 +85,40 @@ class TopLevelModeStateTest {
         state.cycleDrumMode();
         assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.activeDrumMode());
 
+        state.cycleDrumMode();
+        assertEquals(TopLevelModeState.DrumMode.DRUM_PADS, state.activeDrumMode());
+
         state.activatePerform();
         state.activateDrum();
 
         assertEquals(TopLevelModeState.Mode.DRUM, state.activeMode());
-        assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.activeDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.DRUM_PADS, state.activeDrumMode());
+    }
+
+    @Test
+    void drumModeCycleKeepsSetupSpecificMulticlipLast() {
+        final TopLevelModeState state = new TopLevelModeState();
+
+        assertEquals(TopLevelModeState.DrumMode.NESTED_RHYTHM, state.cycleDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.DRUM_PADS, state.cycleDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.MULTICLIP_SEQ, state.cycleDrumMode());
+        assertEquals(TopLevelModeState.DrumMode.STANDARD, state.cycleDrumMode());
+    }
+
+    @Test
+    void drumMachineContextPinningBelongsOnlyToXox() {
+        assertTrue(TopLevelModeState.DrumMode.STANDARD.usesAutoPinnedDrumContext());
+        assertFalse(TopLevelModeState.DrumMode.MULTICLIP_SEQ.usesAutoPinnedDrumContext());
+        assertFalse(TopLevelModeState.DrumMode.NESTED_RHYTHM.usesAutoPinnedDrumContext());
+        assertFalse(TopLevelModeState.DrumMode.DRUM_PADS.usesAutoPinnedDrumContext());
+    }
+
+    @Test
+    void multiclipTakesOverTheDrumSelectionWhenLeavingXox() {
+        assertFalse(TopLevelModeState.DrumMode.STANDARD.takesOverAutoPinnedDrumSelection());
+        assertTrue(TopLevelModeState.DrumMode.MULTICLIP_SEQ.takesOverAutoPinnedDrumSelection());
+        assertFalse(TopLevelModeState.DrumMode.NESTED_RHYTHM.takesOverAutoPinnedDrumSelection());
+        assertFalse(TopLevelModeState.DrumMode.DRUM_PADS.takesOverAutoPinnedDrumSelection());
     }
 
     @Test

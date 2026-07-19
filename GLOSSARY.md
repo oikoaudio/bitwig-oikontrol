@@ -36,6 +36,10 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Drum XOX**: The default Akai Fire `DRUM` x0x-style Drum Machine step sequencer.
 
+**Multiclip Seq**: The Akai Fire `DRUM` mode with a scene row, a sixteen-child Track Lane row, and a 32-step view of one active Lane Clip. Each child clip retains an independent length and play start.
+
+**PolySeq group**: A Multiclip Seq parent group containing one to sixteen direct MIDI-capable Track Lanes routed to a shared group instrument. Explicit selection is authoritative; `[PolySeq]` in the group name enables project-search fallback when another context is selected.
+
 **Nested Rhythm**: The Akai Fire `DRUM` structural rhythm generator that creates deterministic patterns from nested divisions, tuplets, ratchets, density, clustering, and editable generated hits.
 
 **Drum Pads**: The live Akai Fire Drum Machine playing surface with `Grid64`, `Velocity`, and `Bongos` layouts.
@@ -61,6 +65,18 @@ This file defines terms that agents and humans should use consistently. It is no
 **Birds-Eye**: The Akai Fire `PERFORM` overview page where each pad jumps the launcher viewport to a larger track/scene block.
 
 ## Sequencing and rhythm terms
+
+**Track Lane**: One positional Multiclip Seq lane backed by a full direct child track of the parent PolySeq group. It is not a Drum Machine pad channel.
+
+**Lane Clip**: The launcher clip on a Track Lane at the active Multiclip Scene.
+
+**Active Lane**: The Track Lane whose child track is the Multiclip Seq editing target and is normally active in Bitwig. Explicit group access temporarily selects the parent without forgetting this lane; pressing a Lane Row pad restores child-track editing.
+
+**Multiclip Scene**: An absolute Bitwig launcher scene used as the shared clip target across all Multiclip Seq Track Lanes.
+
+**Scene Row**: Multiclip Seq row 1, which launches sixteen project scenes or selects them for editing with `ALT`/Select and derives its feedback only from eligible child-track slots.
+
+**Lane Row**: Multiclip Seq row 2, where each pad selects one of up to sixteen positional direct child tracks.
 
 **Step**: A time position in a step sequencer mode whose editing and clip-writing semantics are owned by that mode.
 
