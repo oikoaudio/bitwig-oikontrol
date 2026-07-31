@@ -11,6 +11,8 @@ public final class PeakRmsOledView {
     private String bottomLegend = null;
     private EncoderLegendPosition legendPosition = EncoderLegendPosition.BOTTOM;
     private long layoutRevision = Long.MIN_VALUE;
+    private String maxMeterLine = null;
+    private String currentMeterLine = null;
 
     public PeakRmsOledView(final OledDisplay oled) {
         this.oled = oled;
@@ -44,17 +46,26 @@ public final class PeakRmsOledView {
             this.bottomLegend = normalizedBottomLegend;
             legendPosition = currentLegendPosition;
             layoutRevision = oled.layoutRevision();
+            invalidateNumericRows();
         }
-        oled.sendString(
-                2,
-                OledDisplay.TextJustification.LEFT,
-                maxMeterRow(legendPosition),
-                VuMeterFormatter.meterPairLine(maxPeak, maxRms));
-        oled.sendString(
-                2,
-                OledDisplay.TextJustification.LEFT,
-                currentMeterRow(legendPosition),
-                VuMeterFormatter.meterPairLine(currentPeak, currentRms));
+        final String nextMaxMeterLine = VuMeterFormatter.meterPairLine(maxPeak, maxRms);
+        if (!Objects.equals(maxMeterLine, nextMaxMeterLine)) {
+            oled.sendString(
+                    2,
+                    OledDisplay.TextJustification.LEFT,
+                    maxMeterRow(legendPosition),
+                    nextMaxMeterLine);
+            maxMeterLine = nextMaxMeterLine;
+        }
+        final String nextCurrentMeterLine = VuMeterFormatter.meterPairLine(currentPeak, currentRms);
+        if (!Objects.equals(currentMeterLine, nextCurrentMeterLine)) {
+            oled.sendString(
+                    2,
+                    OledDisplay.TextJustification.LEFT,
+                    currentMeterRow(legendPosition),
+                    nextCurrentMeterLine);
+            currentMeterLine = nextCurrentMeterLine;
+        }
     }
 
     public void showValueInfo(final String title, final String value) {
@@ -87,6 +98,12 @@ public final class PeakRmsOledView {
         bottomLegend = null;
         legendPosition = EncoderLegendPosition.BOTTOM;
         layoutRevision = Long.MIN_VALUE;
+        invalidateNumericRows();
+    }
+
+    private void invalidateNumericRows() {
+        maxMeterLine = null;
+        currentMeterLine = null;
     }
 
     private boolean hasBottomLegend() {

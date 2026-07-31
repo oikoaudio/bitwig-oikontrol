@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Added an Akai Fire `VU Meters` hardware preference with `Off`, `Selected`, and `All` modes, defaulting to efficient selected-track/pad numeric meters while only `All` subscribes the full banks used by graphical meters. Numeric Peak/RMS pages refresh at 5 Hz, suppress unchanged OLED rows, and reset cached maxima when meter subscriptions resume.
 - The `DRUM` button now places setup-specific Multiclip Seq last, after Nested Rhythm and Drum Pads. Multiclip prefers the selected group context, falls back to an unambiguous project group marked `[PolySeq]`, and reports missing, ambiguous, or ineligible setups on the OLED. Mixer follows a matching Drum Machine pad or materialized group-instrument output chain, while remote-page navigation follows the group's first instrument.
 - Multiclip Seq now turns pattern pads beyond the active Lane Clip's loop off, marks a shifted play start in purple, and blocks plain step entry beyond the loop until Last Step extends it.
 - Multiclip Seq now keeps Bitwig's selected child clip authoritative on entry while slow-blinking playing scenes and fast-blinking queued ones. Row-2 lane pads remain steady because playback is controlled at scene level.

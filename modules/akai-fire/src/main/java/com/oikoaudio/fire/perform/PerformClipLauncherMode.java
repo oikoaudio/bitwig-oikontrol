@@ -25,6 +25,7 @@ import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.FireControlPreferences;
 import com.oikoaudio.fire.NoteAssign;
 import com.oikoaudio.fire.SharedMusicalContext;
+import com.oikoaudio.fire.VuMeterSubscriptions;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderValueProfile;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
@@ -65,11 +66,14 @@ public class PerformClipLauncherMode extends Layer {
     private static final int SCENE_ROW = 0;
     private static final double MIN_DUPLICATE_CLIP_LENGTH = 1.0;
     private static final double MAX_DUPLICATE_CLIP_LENGTH = 256.0;
-    private static final int METER_REFRESH_TICKS = 1;
+    private static final int GRAPHIC_METER_REFRESH_TICKS = 1;
+    private static final int NUMERIC_METER_REFRESH_TICKS = 2;
     private final AkaiFireOikontrolExtension driver;
     private final SharedMusicalContext sharedMusicalContext;
     private final OledDisplay oled;
     private final TrackBank trackBank;
+    private final TrackBank meterTrackBank;
+    private final VuMeterSubscriptions.Group meterSubscriptions;
     private final CursorTrack cursorTrack;
     private final CursorTrack remoteCursorTrack;
     private final CursorRemoteControlsPage projectRemoteControls;
@@ -135,6 +139,12 @@ public class PerformClipLauncherMode extends Layer {
         this.oled = driver.getOled();
         this.selectedTrackMeterView = new PeakRmsOledView(oled);
         this.trackBank = host.createTrackBank(MAX_TRACKS, 0, MAX_SCENES, true);
+        this.meterTrackBank = host.createTrackBank(MAX_TRACKS, 0, 0, true);
+        this.meterSubscriptions = driver.getVuMeterSubscriptions().createGroup(meterTrackBank);
+        driver.getVuMeterSubscriptions().onReEnabled(this::clearSelectedTrackMeterMax);
+        this.trackBank
+                .scrollPosition()
+                .addValueObserver(position -> meterTrackBank.scrollPosition().set(position));
         this.cursorTrack = driver.getViewControl().getCursorTrack();
         this.remoteCursorTrack =
                 host.createCursorTrack("PERFORM_REMOTE_TRACK", "Perform Remote Track", 8, 0, true);
@@ -266,16 +276,18 @@ public class PerformClipLauncherMode extends Layer {
                             handleHostTrackSelection(column);
                         }
                     });
-            track.addVuMeterObserver(
+            final Track meterTrack = meterTrackBank.getItemAt(trackIndex);
+            meterTrack.addVuMeterObserver(
                     VuMeterFormatter.RANGE,
                     -1,
                     true,
                     value -> handlePeakMeterChanged(column, value));
-            track.addVuMeterObserver(
+            meterTrack.addVuMeterObserver(
                     VuMeterFormatter.RANGE,
                     -1,
                     false,
                     value -> handleRmsMeterChanged(column, value));
+            meterSubscriptions.register(meterTrack);
             final DeviceBank deviceBank = track.createDeviceBank(MIX_DEVICE_SLOTS);
             trackDeviceBanks[column] = deviceBank;
             for (int deviceIndex = 0; deviceIndex < MIX_DEVICE_SLOTS; deviceIndex++) {
@@ -1187,6 +1199,7 @@ public class PerformClipLauncherMode extends Layer {
         final int trackOffset = jump.trackOffset();
         final int sceneOffset = jump.sceneOffset();
         trackBank.scrollPosition().set(trackOffset);
+        meterTrackBank.scrollPosition().set(trackOffset);
         trackBank.sceneBank().scrollPosition().set(sceneOffset);
         showValueInfo(
                 "Birds Eye",
@@ -1589,6 +1602,7 @@ public class PerformClipLauncherMode extends Layer {
                         current, totalTrackCount, visibleTrackCount(), direction, increment);
         if (next != current) {
             trackBank.scrollPosition().set(next);
+            meterTrackBank.scrollPosition().set(next);
             showValueInfo(
                     "Launcher Tracks", offsetLabel(next, totalTrackCount, visibleTrackCount()));
         }
@@ -2033,6 +2047,7 @@ public class PerformClipLauncherMode extends Layer {
             return;
         }
 
+        selectMeterTrack(trackAddress.sourceIndex(), false);
         final int source = trackAddress.sourceIndex();
         final int currentRms = observationState.rms(source);
         final int maxRms = isSelectedMeterTrack(trackAddress) ? selectedTrackRmsMax : currentRms;
@@ -2154,7 +2169,8 @@ public class PerformClipLauncherMode extends Layer {
 
     private boolean shouldShowPerformTrackLegendIdle() {
         return shouldShowPerformTrackLegendIdle(
-                encoderControls.mode(), driver.isIdleOledMetersEnabled());
+                encoderControls.mode(),
+                driver.isIdleOledMetersEnabled() && driver.areAllVuMetersEnabled());
     }
 
     private void showPerformTrackLegendIdle() {
@@ -2491,11 +2507,17 @@ public class PerformClipLauncherMode extends Layer {
         if (shouldShowPerformTrackLegendIdle() && mixMeterDisplayActive) {
             return;
         }
-        if (!mixMeterDisplayActive || blinkState - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
+        if (!mixMeterDisplayActive || blinkState - lastMeterDisplayBlink >= meterRefreshTicks()) {
             showPerformMeterDisplay();
             mixMeterDisplayActive = true;
             lastMeterDisplayBlink = blinkState;
         }
+    }
+
+    private int meterRefreshTicks() {
+        return encoderControls.mode() == EncoderMode.MIXER
+                ? NUMERIC_METER_REFRESH_TICKS
+                : GRAPHIC_METER_REFRESH_TICKS;
     }
 
     private boolean shouldShowPerformMeters() {
@@ -2533,6 +2555,7 @@ public class PerformClipLauncherMode extends Layer {
 
     @Override
     protected void onActivate() {
+        meterSubscriptions.setActive(true);
         active = true;
         applyEncoderStepSizes();
         encoderControls.currentLayer().activate();
@@ -2546,6 +2569,7 @@ public class PerformClipLauncherMode extends Layer {
 
     @Override
     protected void onDeactivate() {
+        meterSubscriptions.setActive(false);
         active = false;
         mixMeterDisplayActive = false;
         resetSelectedTrackMeterText();
@@ -2976,10 +3000,16 @@ public class PerformClipLauncherMode extends Layer {
                         || absoluteTrackIndex != selectedMeterAbsoluteIndex;
         selectedMeterSourceIndex = sourceTrackIndex;
         selectedMeterAbsoluteIndex = absoluteTrackIndex;
+        meterSubscriptions.select(sourceTrackIndex);
         if (resetMax || changed) {
             selectedTrackRmsMax = observationState.rms(sourceTrackIndex);
             selectedTrackPeakMax = observationState.peak(sourceTrackIndex);
         }
+    }
+
+    private void clearSelectedTrackMeterMax() {
+        selectedTrackRmsMax = 0;
+        selectedTrackPeakMax = 0;
     }
 
     private void handleHostTrackSelection(final int sourceTrackIndex) {
@@ -2997,7 +3027,11 @@ public class PerformClipLauncherMode extends Layer {
                 suppressedTrackSelectionNotificationAbsoluteIndex,
                 lastTrackSelectionNotificationAbsoluteIndex)) {
             lastTrackSelectionNotificationAbsoluteIndex = absoluteTrackIndex;
-            showValueInfo("Track Select", trackLabel(sourceTrackIndex, absoluteTrackIndex));
+            driver.showIncidentalModeFeedback(
+                    () ->
+                            showValueInfo(
+                                    "Track Select",
+                                    trackLabel(sourceTrackIndex, absoluteTrackIndex)));
         }
     }
 

@@ -36,7 +36,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
     private static final int OBSERVED_FINE_STEP_CAPACITY = 16 * 8 * 2 * 2;
-    private static final int METER_REFRESH_TICKS = 1;
+    private static final int GRAPHIC_METER_REFRESH_TICKS = 1;
+    private static final int NUMERIC_METER_REFRESH_TICKS = 2;
 
     private final OledDisplay oled;
 
@@ -1294,11 +1295,17 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (shouldShowDrumContextIdle() && drumMeterDisplayActive) {
             return;
         }
-        if (!drumMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
+        if (!drumMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= meterRefreshTicks()) {
             showDrumMeterDisplay();
             drumMeterDisplayActive = true;
             lastMeterDisplayBlink = blinkTicks;
         }
+    }
+
+    private int meterRefreshTicks() {
+        return encoderLayer.getEncoderMode() == EncoderMode.MIXER
+                ? NUMERIC_METER_REFRESH_TICKS
+                : GRAPHIC_METER_REFRESH_TICKS;
     }
 
     private void showDrumMeterDisplay() {
@@ -1351,7 +1358,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private boolean shouldShowDrumContextIdle() {
         return shouldShowDrumContextIdle(
-                encoderLayer.getEncoderMode(), driver.isIdleOledMetersEnabled());
+                encoderLayer.getEncoderMode(),
+                driver.isIdleOledMetersEnabled() && driver.areAllVuMetersEnabled());
     }
 
     static boolean shouldShowDrumContextIdle(
@@ -1684,6 +1692,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @Override
     protected void onActivate() {
+        padHandler.setMeterSubscriptionActive(true);
         active = true;
         suppressDrumMeterDisplay();
         padHandler.resetSelectedPadMeterDisplay();
@@ -1701,6 +1710,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     @Override
     protected void onDeactivate() {
+        padHandler.setMeterSubscriptionActive(false);
         active = false;
         drumMeterDisplayActive = false;
         padHandler.resetSelectedPadMeterDisplay();

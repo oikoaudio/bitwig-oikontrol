@@ -1,8 +1,10 @@
 package com.oikoaudio.fire.display;
 
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,6 +14,54 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 class PeakRmsOledViewTest {
+    @Test
+    void unchangedNumericRowsAreNotSentAgain() {
+        final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.BOTTOM);
+        final PeakRmsOledView view = new PeakRmsOledView(oled);
+        view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
+        clearInvocations(oled);
+
+        view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
+
+        verify(oled, never())
+                .sendString(
+                        2,
+                        OledDisplay.TextJustification.LEFT,
+                        1,
+                        VuMeterFormatter.meterPairLine(127, 64));
+        verify(oled, never())
+                .sendString(
+                        2,
+                        OledDisplay.TextJustification.LEFT,
+                        4,
+                        VuMeterFormatter.meterPairLine(20, 0));
+    }
+
+    @Test
+    void onlyChangedNumericRowIsSent() {
+        final OledDisplay oled = mock(OledDisplay.class);
+        when(oled.footerLegendPosition()).thenReturn(EncoderLegendPosition.BOTTOM);
+        final PeakRmsOledView view = new PeakRmsOledView(oled);
+        view.show(127, 64, 20, 0, EncoderFooterLegend.MIXER);
+        clearInvocations(oled);
+
+        view.show(127, 64, 40, 0, EncoderFooterLegend.MIXER);
+
+        verify(oled, never())
+                .sendString(
+                        2,
+                        OledDisplay.TextJustification.LEFT,
+                        1,
+                        VuMeterFormatter.meterPairLine(127, 64));
+        verify(oled)
+                .sendString(
+                        2,
+                        OledDisplay.TextJustification.LEFT,
+                        4,
+                        VuMeterFormatter.meterPairLine(40, 0));
+    }
+
     @Test
     void drawsPeakRmsRowsWithBottomLegend() {
         final OledDisplay oled = mock(OledDisplay.class);

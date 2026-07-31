@@ -231,6 +231,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private long stoppedMeterRingOutUntilMs = 0;
     private int stoppedMeterRingOutGeneration = 0;
     private long lastStoppedIdleTrackRefreshMs = 0;
+    private final ModeChangeFeedback modeChangeFeedback = new ModeChangeFeedback();
     private final SharedPitchContextController sharedPitchContext =
             new SharedPitchContextController(
                     new SharedMusicalContext(MusicalScaleLibrary.getInstance()),
@@ -249,6 +250,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private PerformClipLauncherMode performMode;
     private NoteRepeatHandler noteRepeatHandler;
     private final TopLevelModeState modeState = new TopLevelModeState();
+    private final VuMeterSubscriptions vuMeterSubscriptions = new VuMeterSubscriptions();
 
     protected AkaiFireOikontrolExtension(
             final AkaiFireOikontrolDefinition definition, final ControllerHost host) {
@@ -348,6 +350,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         oled.valueInfo("Oikontrol", "");
         mainLayer.activate();
         switchActiveMode();
+        host.scheduleTask(vuMeterSubscriptions::start, 0);
         host.scheduleTask(this::handlePing, 100);
         notifyPopup("Fire Oikontrol", "Active");
     }
@@ -437,6 +440,11 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                             @Override
                             public void encoderLegendPositionChanged(final String position) {
                                 applyEncoderLegendPositionPreference(position);
+                            }
+
+                            @Override
+                            public void vuMeterModeChanged(final VuMeterMode mode) {
+                                applyVuMeterMode(mode);
                             }
                         });
         redrawRgbPads();
@@ -722,7 +730,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean shouldShowMeterIdleDisplay() {
-        return isTransportPlaying() || System.currentTimeMillis() < stoppedMeterRingOutUntilMs;
+        return vuMeterSubscriptions.mode() != VuMeterMode.OFF
+                && (isTransportPlaying()
+                        || System.currentTimeMillis() < stoppedMeterRingOutUntilMs);
     }
 
     public boolean shouldShowPlaybackNoteChordDisplay() {
@@ -733,6 +743,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     private void handleTransportPlayingChanged(final boolean playing) {
         stoppedMeterRingOutGeneration++;
+        if (vuMeterSubscriptions.mode() == VuMeterMode.OFF) {
+            stoppedMeterRingOutUntilMs = 0;
+            return;
+        }
         if (playing) {
             stoppedMeterRingOutUntilMs = 0;
             lastStoppedIdleTrackRefreshMs = 0;
@@ -807,10 +821,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         };
     }
 
-    private String drumModeLabel(final DrumMode mode) {
+    static String drumModeLabel(final DrumMode mode) {
         return switch (mode) {
             case STANDARD -> "Drum XOX";
-            case MULTICLIP_SEQ -> "Multiclip Seq";
+            case MULTICLIP_SEQ -> MulticlipSequenceMode.DISPLAY_NAME;
             case NESTED_RHYTHM -> "NestedRytm";
             case DRUM_PADS -> "Drum Pads";
         };
@@ -1047,8 +1061,18 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showModeChangeInfo(final String modeLabel) {
-        showIdleModeTrackInfo(modeLabel);
+        modeChangeFeedback.show(oled, modeLabel, screenMessageHoldMs, host::scheduleTask);
         notifyPopup("Mode", modeLabel);
+    }
+
+    private void switchActiveModeWithFeedback(final String modeLabel) {
+        modeChangeFeedback.showDuring(
+                oled, modeLabel, screenMessageHoldMs, host::scheduleTask, this::switchActiveMode);
+        notifyPopup("Mode", modeLabel);
+    }
+
+    public void showIncidentalModeFeedback(final Runnable feedback) {
+        modeChangeFeedback.runIncidental(feedback);
     }
 
     public void notifyPopup(final String title, final String value) {
@@ -1075,12 +1099,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
         if (modeState.activeMode() == Mode.DRUM) {
             modeState.cycleDrumMode();
-            switchActiveMode();
-            showModeChangeInfo(drumModeLabel(modeState.activeDrumMode()));
+            switchActiveModeWithFeedback(drumModeLabel(modeState.activeDrumMode()));
         } else {
             modeState.activateDrum();
-            switchActiveMode();
-            showModeChangeInfo(drumModeLabel(modeState.activeDrumMode()));
+            switchActiveModeWithFeedback(drumModeLabel(modeState.activeDrumMode()));
         }
     }
 
@@ -1513,6 +1535,25 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public boolean isIdleOledMetersEnabled() {
         return firePreferences != null && firePreferences.idleOledMeters();
+    }
+
+    public boolean areAllVuMetersEnabled() {
+        return vuMeterSubscriptions.mode() == VuMeterMode.ALL;
+    }
+
+    public VuMeterSubscriptions getVuMeterSubscriptions() {
+        return vuMeterSubscriptions;
+    }
+
+    private void applyVuMeterMode(final VuMeterMode mode) {
+        vuMeterSubscriptions.setMode(mode);
+        if (mode == VuMeterMode.OFF) {
+            stoppedMeterRingOutGeneration++;
+            stoppedMeterRingOutUntilMs = 0;
+        }
+        if (drumSequenceMode != null) {
+            showIdleOledInfo();
+        }
     }
 
     private void applyScreenMessageHoldPreference(final long holdMillis) {
@@ -2386,7 +2427,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     private void showSelectedTrackInfo(final boolean pageStep, final String trackName) {
-        showTrackInfo(pageStep ? "Track Page" : "Track Select", trackName);
+        showIncidentalModeFeedback(
+                () -> showTrackInfo(pageStep ? "Track Page" : "Track Select", trackName));
     }
 
     private void showIdleModeTrackInfo(final String modeLabel) {
