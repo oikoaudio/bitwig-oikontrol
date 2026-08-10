@@ -2466,6 +2466,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalAltHeld()) {
             mainEncoderPressConsumed = true;

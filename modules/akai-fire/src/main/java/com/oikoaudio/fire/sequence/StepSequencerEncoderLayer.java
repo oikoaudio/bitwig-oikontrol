@@ -113,6 +113,10 @@ public class StepSequencerEncoderLayer extends Layer {
         // No alternate page variants in the shared step-page model.
     }
 
+    public void refreshFooterLegend() {
+        applyFooterLegend();
+    }
+
     public void bindNoteAccess(
             final Layer layer,
             final TouchEncoder encoder,
@@ -260,6 +264,12 @@ public class StepSequencerEncoderLayer extends Layer {
                     secondaryNoteExpressionPage
                             ? "1: Velocity\n2: Note Gain\n3: Note Pan\n4: Pitch Expr"
                             : parent.getModeInfo(EncoderMode.USER_1));
+            oled.clearScreenDelayed(MODE_INFO_HOLD_MS);
+            return;
+        }
+        if (driver.isGlobalAltHeld() && parent.cycleAlternateEncoderTarget(encoderMode)) {
+            applyFooterLegend();
+            oled.detailInfo("Encoder Target", modeInfo(encoderMode));
             oled.clearScreenDelayed(MODE_INFO_HOLD_MS);
             return;
         }

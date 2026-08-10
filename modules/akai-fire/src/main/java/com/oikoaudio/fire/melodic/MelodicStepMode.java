@@ -1270,6 +1270,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalAltHeld()) {
             mainEncoderPressConsumed = true;

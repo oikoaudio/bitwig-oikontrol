@@ -37,6 +37,10 @@ public final class MainEncoderRouting {
         extension.routeBrowserMainEncoderPress(pressed);
     }
 
+    public boolean routeDeviceDeletionPress(final boolean pressed) {
+        return extension.handleGlobalDeviceDeletionPress(pressed);
+    }
+
     public void markTurned() {
         extension.markMainEncoderTurned();
     }

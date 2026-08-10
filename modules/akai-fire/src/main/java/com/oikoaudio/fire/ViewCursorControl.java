@@ -74,6 +74,7 @@ public class ViewCursorControl {
         }
 
         deviceBank = cursorTrack.createDeviceBank(8);
+        deviceBank.getDevice(0).exists().markInterested();
         primaryDevice =
                 cursorTrack.createCursorDevice(
                         "drumdetection", "Pad Device", 8, CursorDeviceFollowMode.FIRST_INSTRUMENT);

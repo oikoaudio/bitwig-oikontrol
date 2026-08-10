@@ -93,6 +93,7 @@ public final class PadBankRowControlBindings {
                 layer,
                 driver.getButton(NoteAssign.BANK_L),
                 driver.getButton(NoteAssign.BANK_R),
+                driver::handleGlobalTrackCreationBankButton,
                 new BankButtonBindings.Host() {
                     @Override
                     public void handleBankButton(final boolean pressed, final int amount) {

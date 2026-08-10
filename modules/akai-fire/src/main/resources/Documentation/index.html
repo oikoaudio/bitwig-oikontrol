@@ -274,6 +274,8 @@
           <tr><td><code>ALT + REC</code></td><td>Arranger overdub</td></tr>
           <tr><td><code>PATTERN</code></td><td>Write automation</td></tr>
           <tr><td><code>PATTERN + REC</code></td><td>Record the selected track into the next free launcher slot, regardless of mode</td></tr>
+          <tr><td><code>PATTERN + BANK LEFT/RIGHT</code></td><td>Create an instrument track before/after the selected track; when an FX track is selected, create an FX track instead</td></tr>
+          <tr><td><code>ALT + PATTERN + BANK LEFT/RIGHT</code></td><td>Create an audio track before/after the selected track; when an FX track is selected, create an FX track instead</td></tr>
           <tr><td><code>SHIFT + PATTERN</code></td><td>Metronome</td></tr>
           <tr><td><code>ALT + PATTERN</code></td><td>Clip launcher overdub; when enabling, also enables automation write in touch mode</td></tr>
           <tr><td><code>KNOB MODE + PATTERN UP/DOWN</code></td><td>Previous/next remote page for the active encoder page, when that page controls remotes</td></tr>
@@ -329,7 +331,7 @@
       <p>In Drum XOX, Poly Step, and Melo Gen, go to <code>User 1</code> and press <code>ALT + KNOB MODE</code> to latch the secondary expression page. Its legend is <code>Velo / Gain / Pan / PExp</code>; press <code>ALT + KNOB MODE</code> again to return to <code>Velo / Pres / Timb / PExp</code>. Note Gain and Note Pan use ordinary edit/default/reset behavior on that latched page, so their <code>SHIFT + ALT</code> variation gesture needs no extra held button.</p>
       <p>Applying variation again produces a new stable result. A later deliberate generator action in Melo Gen, Fugue, or Nested Rhythm may rewrite those values. Variation amounts are shared by parameter across compatible modes for the current extension session, but are not stored in controller preferences or project metadata.</p>
       <h3>Main SELECT encoder</h3>
-      <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window.</p>
+      <p>Tap <code>SELECT</code> to swap between <code>Last Touched Parameter</code> and the current alternate role. Press <code>SHIFT + SELECT</code> to cycle the alternate role. Press <code>ALT + SELECT</code> to open or close the selected device window. Press <code>SHIFT + ALT + SELECT</code> to delete Bitwig's explicitly selected device. If no device is selected, the OLED reports <code>No Device</code> and nothing is deleted.</p>
       <p>Global <code>SELECT</code> turn chords:</p>
       <table class="control-map">
         <thead><tr><th>Control</th><th>Action</th></tr></thead>
@@ -379,7 +381,7 @@
           <tr class="encoder-primary"><td><code>Channel</code></td><td>Note length</td><td>Chance</td><td>Velocity spread</td><td>Repeats</td></tr>
           <tr class="encoder-shared"><td><code>Mixer</code></td><td>Selected pad volume</td><td>Selected pad pan</td><td>Selected pad send 1</td><td>Selected pad send 2</td></tr>
           <tr class="encoder-expression"><td><code>User 1</code></td><td>Velocity or default velocity</td><td>Pressure or default pressure</td><td>Timbre or default timbre</td><td>Pitch</td></tr>
-          <tr class="encoder-mode"><td><code>User 2</code></td><td>Euclid length</td><td>Euclid pulses</td><td>Euclid rotation</td><td>Accent density</td></tr>
+          <tr class="encoder-shared"><td><code>User 2</code></td><td>Selected pad-device remote 1</td><td>Pad remote 2</td><td>Pad remote 3</td><td>Pad remote 4</td></tr>
       </tbody>
       </table>
       <table class="control-map">
@@ -400,9 +402,13 @@
           <tr><td><code>SHIFT + MUTE_2</code></td><td>Toggle Solo pad mode</td></tr>
           <tr><td><code>MUTE_3</code></td><td>Copy / paste</td></tr>
           <tr><td><code>MUTE_4</code></td><td>Delete / reset</td></tr>
+          <tr><td>Hold drum pad + turn <code>SELECT</code></td><td>Select a direct device in that pad's chain</td></tr>
+          <tr><td>Hold drum pad + <code>BROWSER</code></td><td>Open Bitwig's browser for that pad</td></tr>
+          <tr><td><code>ALT + KNOB MODE</code> on <code>User 2</code></td><td>Cycle Pad Remotes, Drum Machine Remotes, and Euclid targets</td></tr>
       </tbody>
       </table>
       <p>Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.</p>
+      <p><code>User 2</code> defaults to the selected pad device's first four remotes; hold <code>ALT</code> for remotes 5-8. Hold a drum pad and turn <code>SELECT</code> to choose another direct device in that pad's chain, which is remembered independently for each pad. Hold a drum pad and press <code>BROWSER</code> to replace that selected device, or to browse from the pad's insertion context when its chain is empty. On <code>User 2</code>, press <code>ALT + KNOB MODE</code> to cycle from Pad Remotes to the parent Drum Machine's remotes, then to Euclid length, pulses, rotation, and accent density, and back to Pad Remotes. The two remote targets both use <code>ALT</code> for remotes 5-8, and <code>KNOB MODE + PATTERN UP/DOWN</code> changes the active target's Bitwig remote page.</p>
       <p>Hold <code>MUTE_3</code> and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.</p>
       <p>In <code>Drum Pads</code>, the third <code>DRUM</code> surface, <code>Grid64</code> plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. <code>PATTERN UP/DOWN</code> scrolls the pad window by 16 pads; <code>BANK LEFT/RIGHT</code> reminds you to use Pattern for this, while <code>ALT + BANK LEFT/RIGHT</code> still undo/redo Bitwig project history. On the <code>Channel</code> page, encoder 1 selects layouts (<code>Grid64</code>, <code>Velocity</code>, and <code>Bongos</code>) and encoder 2 controls velocity sensitivity / <code>SHIFT</code>: velocity center. In <code>Velocity</code> and <code>Bongos</code>, the left 4x4 block selects the sound. <code>Velocity</code> uses the remaining 12x4 pads as fixed velocity zones; <code>Bongos</code> leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.</p>
       <h3>Multiclip Seq mode</h3>

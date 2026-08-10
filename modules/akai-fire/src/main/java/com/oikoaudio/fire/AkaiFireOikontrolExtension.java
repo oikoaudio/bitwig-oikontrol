@@ -78,6 +78,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private static final double LAST_TOUCHED_ENCODER_STEP = 0.04;
     private static final double LAST_TOUCHED_ENCODER_FINE_STEP = 0.01;
     private static final int DEVICE_DISCOVERY_WIDTH = 128;
+    private static final int EFFECT_TRACK_DISCOVERY_WIDTH = 128;
     private static final int CUE_MARKER_BANK_SIZE = 128;
     private static final int GLOBAL_VELOCITY_CENTER_DEFAULT = 100;
     private static final int GLOBAL_VELOCITY_MIN = 1;
@@ -138,6 +139,7 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private DrumSequenceMode drumSequenceMode;
     private MulticlipSequenceMode multiclipSequenceMode;
     private ViewCursorControl viewControl;
+    private TrackBank effectTrackDiscoveryBank;
     private FireDeviceLocator deviceLocator;
     private DrumAutoPinController drumAutoPinController;
 
@@ -150,6 +152,9 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     private final BooleanValueObject altActive = new BooleanValueObject();
     private final NoteVariationAmounts noteVariationAmounts = new NoteVariationAmounts();
     private PopupBrowserController popupBrowserController;
+    private GlobalTrackCreationController globalTrackCreationController;
+    private GlobalDeviceDeletionController globalDeviceDeletionController;
+    private int selectedEffectTrackIndex = -1;
     private GlobalMainEncoderController globalMainEncoderController;
     private final GlobalMainEncoderController.RoleActions globalMainEncoderRoleActions =
             new GlobalMainEncoderController.RoleActions() {
@@ -300,11 +305,38 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         noteInput = midiIn.createNoteInput("MIDI", "80????", "90????", "A0????", "D0????");
         noteInput.setShouldConsumeEvents(false);
         viewControl = new ViewCursorControl(host, 16);
+        initializeGlobalTrackCreationTracking();
         deviceLocator = new FireDeviceLocator(host, DEVICE_DISCOVERY_WIDTH);
         initDrumAutoPinController();
 
         mainLayer = new Layer(layers, "Main");
         oled = new OledDisplay(midiOut);
+        globalTrackCreationController =
+                new GlobalTrackCreationController(
+                        application, () -> patternGestureConsumed = true, this::notifyAction);
+        globalDeviceDeletionController =
+                new GlobalDeviceDeletionController(
+                        new GlobalDeviceDeletionController.Host() {
+                            @Override
+                            public boolean shiftHeld() {
+                                return isGlobalShiftHeld();
+                            }
+
+                            @Override
+                            public boolean altHeld() {
+                                return isGlobalAltHeld();
+                            }
+
+                            @Override
+                            public PinnableCursorDevice selectedDevice() {
+                                return viewControl.getSelectedDevice();
+                            }
+
+                            @Override
+                            public void notifyAction(final String title, final String value) {
+                                AkaiFireOikontrolExtension.this.notifyAction(title, value);
+                            }
+                        });
         initPopupBrowserController();
         globalMainEncoderController =
                 new GlobalMainEncoderController(
@@ -559,6 +591,29 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
         }
     }
 
+    private void initializeGlobalTrackCreationTracking() {
+        final CursorTrack cursorTrack = viewControl.getCursorTrack();
+        cursorTrack.trackType().markInterested();
+        effectTrackDiscoveryBank = host.createEffectTrackBank(EFFECT_TRACK_DISCOVERY_WIDTH, 0, 0);
+        for (int index = 0; index < EFFECT_TRACK_DISCOVERY_WIDTH; index++) {
+            final int effectIndex = index;
+            final Track effectTrack = effectTrackDiscoveryBank.getItemAt(index);
+            effectTrack.exists().markInterested();
+            effectTrack.addIsSelectedInMixerObserver(
+                    selected -> {
+                        if (selected) {
+                            selectedEffectTrackIndex = effectIndex;
+                        }
+                    });
+            effectTrack.addIsSelectedInEditorObserver(
+                    selected -> {
+                        if (selected) {
+                            selectedEffectTrackIndex = effectIndex;
+                        }
+                    });
+        }
+    }
+
     private void initGlobalSettingsOverlay() {
         globalSettingsOverlay =
                 new GlobalSettingsOverlayController(
@@ -647,6 +702,14 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
                             @Override
                             public boolean altHeld() {
                                 return isGlobalAltHeld();
+                            }
+
+                            @Override
+                            public InsertionPoint heldDrumPadInsertionPoint() {
+                                if (!isDrumGridRoleAvailable() || drumSequenceMode == null) {
+                                    return null;
+                                }
+                                return drumSequenceMode.heldPadInsertionPoint();
                             }
 
                             @Override
@@ -2200,7 +2263,8 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     }
 
     public boolean isPopupBrowserActive() {
-        return popupBrowserController != null && popupBrowserController.isActive();
+        return popupBrowserController != null
+                && popupBrowserController.isHandlingMainEncoderGesture();
     }
 
     public BiColorLightState getBrowserLightState() {
@@ -2228,6 +2292,21 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
     public boolean isGlobalShiftHeld() {
         final BiColorButton button = getButton(NoteAssign.SHIFT);
         return button != null ? button.isPressed() : shiftActive.get();
+    }
+
+    public boolean handleGlobalTrackCreationBankButton(final boolean pressed, final int direction) {
+        if (globalTrackCreationController == null) {
+            return false;
+        }
+        final CursorTrack cursorTrack = viewControl.getCursorTrack();
+        return globalTrackCreationController.handleBankButton(
+                pressed,
+                direction,
+                patternPressed,
+                isGlobalAltHeld(),
+                cursorTrack.trackType().get(),
+                cursorTrack.position().get(),
+                selectedEffectTrackIndex);
     }
 
     public boolean handleGlobalUndoRedoBankButton(final boolean pressed, final int amount) {
@@ -2468,6 +2547,10 @@ public class AkaiFireOikontrolExtension extends ControllerExtension {
 
     public void routeBrowserMainEncoderPress(final boolean pressed) {
         popupBrowserController.handleMainEncoderPress(pressed);
+    }
+
+    public boolean handleGlobalDeviceDeletionPress(final boolean pressed) {
+        return globalDeviceDeletionController.handleMainEncoderPress(pressed);
     }
 
     public boolean isKnobModeHeld() {

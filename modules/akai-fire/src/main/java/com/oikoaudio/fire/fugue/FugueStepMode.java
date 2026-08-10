@@ -229,6 +229,9 @@ public final class FugueStepMode extends Layer {
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         if (templatePads.isEditing()) {
             if (pressed) {
                 oled.valueInfo("Template Pitch", templatePads.pitchLabel());

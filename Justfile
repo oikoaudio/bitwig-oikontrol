@@ -8,7 +8,12 @@ gradlew := if gradle_java_home != "" {
 } else {
     "mise exec -- ./gradlew " + gradle_daemon_flag
 }
-bitwig_extensions_dir := env_var_or_default("BITWIG_EXTENSIONS_DIR", env_var("HOME") + "/Documents/Bitwig Studio/Extensions")
+default_bitwig_extensions_dir := if os() == "linux" {
+    env_var("HOME") + "/Bitwig Studio/Extensions"
+} else {
+    env_var("HOME") + "/Documents/Bitwig Studio/Extensions"
+}
+bitwig_extensions_dir := env_var_or_default("BITWIG_EXTENSIONS_DIR", default_bitwig_extensions_dir)
 
 default:
     @just --list

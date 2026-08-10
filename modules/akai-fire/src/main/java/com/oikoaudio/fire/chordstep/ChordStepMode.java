@@ -273,6 +273,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         // Physical bindings and activation
         this.chordStepControlBindings =
                 new ChordStepControlBindings(
+                        driver::handleGlobalTrackCreationBankButton,
                         this,
                         driver.getRgbButtons(),
                         driver.getButton(NoteAssign.STEP_SEQ),

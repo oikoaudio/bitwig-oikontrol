@@ -1772,6 +1772,9 @@ public class PerformClipLauncherMode extends Layer {
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         suppressMixMeterDisplay();
         driver.setMainEncoderPressed(pressed);
         if (pressed && isAltHeld()) {

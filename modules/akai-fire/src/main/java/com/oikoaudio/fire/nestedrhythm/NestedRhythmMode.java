@@ -469,6 +469,9 @@ public final class NestedRhythmMode extends Layer implements StepSequencerHost, 
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalAltHeld()) {
             mainEncoderPressConsumed = true;

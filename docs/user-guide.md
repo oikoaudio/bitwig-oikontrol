@@ -136,6 +136,8 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + REC` | Arranger overdub |
 | `PATTERN` | Write automation |
 | `PATTERN + REC` | Record the selected track into the next free launcher slot, regardless of mode |
+| `PATTERN + BANK LEFT/RIGHT` | Create an instrument track before/after the selected track; when an FX track is selected, create an FX track instead |
+| `ALT + PATTERN + BANK LEFT/RIGHT` | Create an audio track before/after the selected track; when an FX track is selected, create an FX track instead |
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub; when enabling, also enables automation write in touch mode |
 | `KNOB MODE + PATTERN UP/DOWN` | Previous/next remote page for the active encoder page, when that page controls remotes |
@@ -205,6 +207,7 @@ Applying variation again produces a new stable result. A later deliberate genera
 
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
 Press `ALT + SELECT` to open or close the selected device window.
+Press `SHIFT + ALT + SELECT` to delete Bitwig's explicitly selected device. If no device is selected, the OLED reports `No Device` and nothing is deleted.
 
 Global `SELECT` turn chords:
 
@@ -251,7 +254,7 @@ When Drum XOX is idle, the OLED shows the selected pad name with the current enc
 | `Channel` | Note length | Chance | Velocity spread | Repeats |
 | `Mixer` | Selected pad volume | Selected pad pan | Selected pad send 1 | Selected pad send 2 |
 | `User 1` | Velocity or default velocity | Pressure or default pressure | Timbre or default timbre | Pitch |
-| `User 2` | Euclid length | Euclid pulses | Euclid rotation | Accent density |
+| `User 2` | Selected pad-device remote 1 | Pad remote 2 | Pad remote 3 | Pad remote 4 |
 
 | Control | Action |
 | --- | --- |
@@ -270,8 +273,13 @@ When Drum XOX is idle, the OLED shows the selected pad name with the current enc
 | `SHIFT + MUTE_2` | Toggle Solo pad mode |
 | `MUTE_3` | Copy / paste |
 | `MUTE_4` | Delete / reset |
+| Hold drum pad + turn `SELECT` | Select a direct device in that pad's chain |
+| Hold drum pad + `BROWSER` | Open Bitwig's browser for that pad |
+| `ALT + KNOB MODE` on `User 2` | Cycle Pad Remotes, Drum Machine Remotes, and Euclid targets |
 
 Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.
+
+`User 2` defaults to the selected pad device's first four remotes; hold `ALT` for remotes 5-8. Hold a drum pad and turn `SELECT` to choose another direct device in that pad's chain, which is remembered independently for each pad. Hold a drum pad and press `BROWSER` to replace that selected device, or to browse from the pad's insertion context when its chain is empty. On `User 2`, press `ALT + KNOB MODE` to cycle from Pad Remotes to the parent Drum Machine's remotes, then to Euclid length, pulses, rotation, and accent density, and back to Pad Remotes. The two remote targets both use `ALT` for remotes 5-8, and `KNOB MODE + PATTERN UP/DOWN` changes the active target's Bitwig remote page.
 
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 

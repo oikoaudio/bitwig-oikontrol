@@ -4,6 +4,11 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Fixed Browser on an empty newly created track incorrectly using a stale pinned device from the previous track and showing that device's presets.
+- Added global `SHIFT + ALT + SELECT` deletion for Bitwig's explicitly selected device; when none is selected, the gesture reports `No Device` without deleting anything.
+- Holding a Drum XOX drum pad while pressing `BROWSER` now replaces that pad's selected direct device, or opens from the pad's insertion context when its device chain is empty.
+- Drum XOX User 2 now defaults to selected pad-device remotes 1-4 with `ALT` exposing 5-8; `ALT + KNOB MODE` cycles Pad Remotes, parent Drum Machine Remotes, and the existing Euclid controls. Holding a drum pad and turning `SELECT` chooses and remembers a direct device in that pad's chain.
+- Added global Akai Fire track creation: `PATTERN + BANK LEFT/RIGHT` inserts an instrument track before/after the selection, `ALT` creates audio instead, and an FX-track selection creates another FX track in its own section.
 - Added an Akai Fire `VU Meters` hardware preference with `Off`, `Selected`, and `All` modes, defaulting to efficient selected-track/pad numeric meters while only `All` subscribes the full banks used by graphical meters. Numeric Peak/RMS pages refresh at 5 Hz, suppress unchanged OLED rows, and reset cached maxima when meter subscriptions resume.
 - The `DRUM` button now places setup-specific Multiclip Seq last, after Nested Rhythm and Drum Pads. Multiclip prefers the selected group context, falls back to an unambiguous project group marked `[PolySeq]`, and reports missing, ambiguous, or ineligible setups on the OLED. Mixer follows a matching Drum Machine pad or materialized group-instrument output chain, while remote-page navigation follows the group's first instrument.
 - Multiclip Seq now turns pattern pads beyond the active Lane Clip's loop off, marks a shifted play start in purple, and blocks plain step entry beyond the loop until Last Step extends it.

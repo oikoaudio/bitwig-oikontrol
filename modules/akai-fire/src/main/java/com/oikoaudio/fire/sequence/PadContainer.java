@@ -12,6 +12,8 @@ import com.oikoaudio.fire.values.DawColor;
 
 class PadContainer {
 
+    private static final int DEVICE_CHAIN_CAPACITY = 16;
+
     private int lastKnobValue = 0;
 
     private static final RgbLightState TR_RED = new RgbLightState(70, 0, 0, true);
@@ -48,6 +50,11 @@ class PadContainer {
     private final Send[] sendParameters = new Send[8];
 
     private final CursorRemoteControlsPage remoteControls;
+    private final Device[] devices = new Device[DEVICE_CHAIN_CAPACITY];
+    private final CursorRemoteControlsPage[] deviceRemotePages =
+            new CursorRemoteControlsPage[DEVICE_CHAIN_CAPACITY];
+    private final boolean[] deviceExists = new boolean[DEVICE_CHAIN_CAPACITY];
+    private int selectedDeviceIndex;
     private final ParameterDisplayBinding macro1Binding;
     private final ParameterDisplayBinding macro2Binding;
     private final ParameterDisplayBinding macro3Binding;
@@ -111,11 +118,26 @@ class PadContainer {
                 new ParameterDisplayBinding(
                         1, index, panParameter, padHandler.getDisplayTarget(), true);
 
-        remoteControls = pad.createDeviceBank(1).getDevice(0).createCursorRemoteControlsPage(8);
-        remoteControls.selectedPageIndex().markInterested();
-        remoteControls.getName().markInterested();
-        remoteControls.pageCount().markInterested();
-        remoteControls.pageNames().markInterested();
+        final DeviceBank deviceBank = pad.createDeviceBank(DEVICE_CHAIN_CAPACITY);
+        for (int deviceIndex = 0; deviceIndex < DEVICE_CHAIN_CAPACITY; deviceIndex++) {
+            final int observedIndex = deviceIndex;
+            final Device device = deviceBank.getDevice(deviceIndex);
+            devices[deviceIndex] = device;
+            device.exists().markInterested();
+            device.name().markInterested();
+            device.exists()
+                    .addValueObserver(
+                            exists -> {
+                                deviceExists[observedIndex] = exists;
+                                if (selectedDeviceIndex < 0 || !deviceExists[selectedDeviceIndex]) {
+                                    selectedDeviceIndex = firstExistingDeviceIndex();
+                                }
+                            });
+            final CursorRemoteControlsPage page = device.createCursorRemoteControlsPage(8);
+            deviceRemotePages[deviceIndex] = page;
+            observeRemotePage(page);
+        }
+        remoteControls = deviceRemotePages[0];
 
         macro1Binding =
                 new ParameterDisplayBinding(
@@ -180,6 +202,28 @@ class PadContainer {
         }
     }
 
+    private void observeRemotePage(final CursorRemoteControlsPage page) {
+        page.selectedPageIndex().markInterested();
+        page.getName().markInterested();
+        page.pageCount().markInterested();
+        page.pageNames().markInterested();
+        for (int index = 0; index < page.getParameterCount(); index++) {
+            page.getParameter(index).value().markInterested();
+            page.getParameter(index).name().markInterested();
+            page.getParameter(index).displayedValue().markInterested();
+            page.getParameter(index).exists().markInterested();
+        }
+    }
+
+    private int firstExistingDeviceIndex() {
+        for (int index = 0; index < deviceExists.length; index++) {
+            if (deviceExists[index]) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
     public void bindParameters(final Layer layer) {
         layer.addBinding(volumeBinding);
         layer.addBinding(panBinding);
@@ -231,7 +275,7 @@ class PadContainer {
         this.selected = selected;
         if (this.selected) {
             padHandler.executePadSelection(this);
-            padHandler.parent.setActiveRemoteControlsPage(remoteControls);
+            padHandler.parent.setActiveRemoteControlsPage(activeRemoteControlsPage());
         }
     }
 
@@ -279,6 +323,64 @@ class PadContainer {
 
     public void select() {
         pad.selectInEditor();
+    }
+
+    public CursorRemoteControlsPage activeRemoteControlsPage() {
+        if (selectedDeviceIndex < 0 || selectedDeviceIndex >= deviceRemotePages.length) {
+            return null;
+        }
+        return deviceRemotePages[selectedDeviceIndex];
+    }
+
+    public boolean selectDevice(final int direction) {
+        final int next =
+                DrumPadDeviceSelection.nextIndex(selectedDeviceIndex, direction, deviceExists);
+        if (next < 0) {
+            return false;
+        }
+        selectedDeviceIndex = next;
+        devices[selectedDeviceIndex].selectInEditor();
+        if (selected) {
+            padHandler.parent.setActiveRemoteControlsPage(activeRemoteControlsPage());
+        }
+        return true;
+    }
+
+    public String selectedDeviceLabel() {
+        if (selectedDeviceIndex < 0 || !deviceExists[selectedDeviceIndex]) {
+            return "No Devices";
+        }
+        int ordinal = 0;
+        int count = 0;
+        for (int index = 0; index < deviceExists.length; index++) {
+            if (!deviceExists[index]) {
+                continue;
+            }
+            if (index == selectedDeviceIndex) {
+                ordinal = count + 1;
+            }
+            count++;
+        }
+        final String name = devices[selectedDeviceIndex].name().get();
+        return "%d/%d %s".formatted(ordinal, count, name.isBlank() ? "Device" : name);
+    }
+
+    InsertionPoint browserInsertionPoint() {
+        final boolean selectedDeviceExists =
+                selectedDeviceIndex >= 0
+                        && selectedDeviceIndex < devices.length
+                        && deviceExists[selectedDeviceIndex];
+        return browserInsertionPoint(
+                pad,
+                selectedDeviceExists ? devices[selectedDeviceIndex] : null,
+                selectedDeviceExists);
+    }
+
+    static InsertionPoint browserInsertionPoint(
+            final DrumPad pad, final Device selectedDevice, final boolean selectedDeviceExists) {
+        return selectedDeviceExists
+                ? selectedDevice.replaceDeviceInsertionPoint()
+                : pad.insertionPoint();
     }
 
     public void modifyValue(

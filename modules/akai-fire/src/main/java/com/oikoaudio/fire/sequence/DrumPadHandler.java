@@ -341,6 +341,35 @@ public class DrumPadHandler {
         return !padsHeld.isEmpty();
     }
 
+    public InsertionPoint heldPadInsertionPoint() {
+        if (padsHeld.isEmpty()) {
+            return null;
+        }
+        final int heldPadIndex =
+                selectedPad != null && padsHeld.contains(selectedPad.index)
+                        ? selectedPad.index
+                        : padsHeld.iterator().next();
+        return pads.get(heldPadIndex).browserInsertionPoint();
+    }
+
+    public boolean selectHeldPadDevice(final int direction) {
+        if (padsHeld.isEmpty()) {
+            return false;
+        }
+        final int heldPadIndex =
+                selectedPad != null && padsHeld.contains(selectedPad.index)
+                        ? selectedPad.index
+                        : padsHeld.iterator().next();
+        final PadContainer heldPad = pads.get(heldPadIndex);
+        if (!heldPad.selectDevice(direction)) {
+            parent.getOled().valueInfo("Pad Device", "No Devices");
+            return true;
+        }
+        parent.setActiveRemoteControlsPage(heldPad.activeRemoteControlsPage());
+        parent.getOled().valueInfo("Pad Device", heldPad.selectedDeviceLabel());
+        return true;
+    }
+
     public RgbLightState getCurrentPadColor() {
         return currentPadColor;
     }
