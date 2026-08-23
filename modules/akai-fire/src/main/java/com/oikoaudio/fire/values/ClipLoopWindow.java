@@ -29,4 +29,13 @@ public final class ClipLoopWindow {
             final double relativeBeat, final double loopStart, final double loopLength) {
         return Math.max(0.0, loopStart) + relativeBeat(relativeBeat, 0.0, loopLength);
     }
+
+    public static double movePlayStart(
+            final double playStart,
+            final double loopStart,
+            final double loopLength,
+            final double deltaBeats) {
+        return absoluteBeat(
+                relativeBeat(playStart, loopStart, loopLength) + deltaBeats, loopStart, loopLength);
+    }
 }

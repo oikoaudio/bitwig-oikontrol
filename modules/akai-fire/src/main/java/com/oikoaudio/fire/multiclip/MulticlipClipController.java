@@ -248,6 +248,10 @@ final class MulticlipClipController {
         clip.getLoopLength().set(beats);
     }
 
+    void duplicateContent() {
+        clip.duplicateContent();
+    }
+
     double playStart() {
         return clip.getPlayStart().get();
     }

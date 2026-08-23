@@ -42,6 +42,7 @@ import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SelectedNoteClipCoordinator;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
@@ -65,6 +66,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private static final int STEP_COUNT = MelodicStepPadSurface.STEP_COUNT;
     private static final int DEFAULT_LOOP_STEPS = 16;
     private static final double STEP_LENGTH = 0.25;
+    private static final double FINE_PLAY_START_STEP = 1.0 / 64.0;
     private static final int MAX_CLIP_LENGTH_BEATS = (int) (STEP_COUNT * STEP_LENGTH);
     private static final int DEFAULT_VELOCITY = 96;
     private static final double DEFAULT_GATE = 0.8;
@@ -209,6 +211,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 });
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
         this.cursorClip.getLoopLength().markInterested();
+        this.cursorClip.getPlayStart().markInterested();
         this.cursorClip
                 .getLoopLength()
                 .addValueObserver(
@@ -299,11 +302,38 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
             return;
         }
-        applyTransform(
-                patternState.currentPattern().rotated(amount),
-                "Rotate",
-                amount < 0 ? "Left" : "Right",
-                false);
+        moveClipPlayStart(amount, driver.isGlobalShiftHeld());
+    }
+
+    private void moveClipPlayStart(final int amount, final boolean fine) {
+        if (amount == 0 || !ensureClipAvailable()) {
+            return;
+        }
+        refreshClipCursor();
+        final double loopLength = Math.max(STEP_LENGTH, cursorClip.getLoopLength().get());
+        final double step = fine ? FINE_PLAY_START_STEP : STEP_LENGTH;
+        final double next =
+                ClipLoopWindow.movePlayStart(
+                        cursorClip.getPlayStart().get(),
+                        cursorClip.getLoopStart().get(),
+                        loopLength,
+                        amount * step);
+        cursorClip.getPlayStart().set(next);
+        final double relative =
+                ClipLoopWindow.relativeBeat(next, cursorClip.getLoopStart().get(), loopLength);
+        oled.valueInfo(
+                fine ? "Clip Start Fine" : "Clip Start",
+                fine
+                        ? "%.3f beats".formatted(relative)
+                        : "Step %d".formatted((int) Math.round(relative / STEP_LENGTH) + 1));
+    }
+
+    private int shiftedClipStartColumn() {
+        return StepPadLightHelper.nearestColumnForShiftedClipStart(
+                cursorClip.getPlayStart().get(),
+                cursorClip.getLoopStart().get(),
+                cursorClip.getLoopLength().get(),
+                16);
     }
 
     private void handleMuteButton(final int index, final boolean pressed) {
@@ -3326,6 +3356,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         @Override
         public int playingStep() {
             return playingStep;
+        }
+
+        @Override
+        public int shiftedClipStartColumn() {
+            return MelodicStepMode.this.shiftedClipStartColumn();
         }
 
         @Override

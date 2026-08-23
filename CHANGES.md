@@ -4,6 +4,7 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Aligned Akai Fire sequencer navigation: `PATTERN UP/DOWN` pages Multiclip time (`SHIFT` pages scenes), while `GRID LEFT/RIGHT` rotates whole clips through play start and retains note/line movement for focused subtargets. Melo Gen now shows shifted clip-start feedback, and Fugue source/derived lines follow the same target rule.
 - Fixed Browser on an empty newly created track incorrectly using a stale pinned device from the previous track and showing that device's presets.
 - Added global `SHIFT + ALT + SELECT` deletion for Bitwig's explicitly selected device; when none is selected, the gesture reports `No Device` without deleting anything.
 - Holding a Drum XOX drum pad while pressing `BROWSER` now replaces that pad's selected direct device, or opens from the pad's insertion context when its device chain is empty.

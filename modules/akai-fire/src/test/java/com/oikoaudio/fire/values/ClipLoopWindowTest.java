@@ -14,4 +14,11 @@ class ClipLoopWindowTest {
         assertEquals(7.0, ClipLoopWindow.relativeBeat(7.0, 8.0, 8.0), 0.0001);
         assertEquals(10.0, ClipLoopWindow.absoluteBeat(2.0, 8.0, 8.0), 0.0001);
     }
+
+    @Test
+    void movesAndWrapsPlayStartInsideTheLoopWindow() {
+        assertEquals(8.25, ClipLoopWindow.movePlayStart(8.0, 8.0, 8.0, 0.25), 0.0001);
+        assertEquals(15.75, ClipLoopWindow.movePlayStart(8.0, 8.0, 8.0, -0.25), 0.0001);
+        assertEquals(8.0, ClipLoopWindow.movePlayStart(15.75, 8.0, 8.0, 0.25), 0.0001);
+    }
 }

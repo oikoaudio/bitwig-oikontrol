@@ -32,6 +32,7 @@ public final class FugueStepMode extends Layer {
     private static final int STEP_COUNT = FuguePattern.MAX_STEPS;
     private static final int DEFAULT_LOOP_STEPS = 32;
     private static final double STEP_LENGTH = 0.125;
+    private static final double FINE_PLAY_START_STEP = 1.0 / 64.0;
     private static final int LINE_COUNT = 4;
     private static final int PAD_COLUMNS = 16;
     private static final int SOURCE_CHANGE_REBUILD_DELAY_MS = 20;
@@ -195,15 +196,18 @@ public final class FugueStepMode extends Layer {
         if (!pressed) {
             return;
         }
-        if (driver.isGlobalAltHeld()) {
-            if (amount < 0) {
-                halveClipLength();
-            } else {
-                doubleClipLength();
+        switch (FugueGridGesture.resolve(
+                activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL, driver.isGlobalAltHeld())) {
+            case SOURCE_PLAY_START -> moveClipPlayStart(amount, driver.isGlobalShiftHeld());
+            case DERIVED_LINE_START -> adjustStartOffset(activeLineIndex(), amount);
+            case CLIP_LENGTH -> {
+                if (amount < 0) {
+                    halveClipLength();
+                } else {
+                    doubleClipLength();
+                }
             }
-            return;
         }
-        adjustStartOffset(activeLineIndex(), amount);
     }
 
     private void bindMainEncoder() {
@@ -957,6 +961,25 @@ public final class FugueStepMode extends Layer {
                 cursorClip.getPlayStart().get(),
                 cursorClip.getLoopStart().get(),
                 currentLoopSteps() * STEP_LENGTH);
+    }
+
+    private void moveClipPlayStart(final int amount, final boolean fine) {
+        final double loopLength = Math.max(STEP_LENGTH, cursorClip.getLoopLength().get());
+        final double step = fine ? FINE_PLAY_START_STEP : STEP_LENGTH;
+        final double next =
+                ClipLoopWindow.movePlayStart(
+                        cursorClip.getPlayStart().get(),
+                        cursorClip.getLoopStart().get(),
+                        loopLength,
+                        amount * step);
+        cursorClip.getPlayStart().set(next);
+        final double relative =
+                ClipLoopWindow.relativeBeat(next, cursorClip.getLoopStart().get(), loopLength);
+        oled.valueInfo(
+                fine ? "Clip Start Fine" : "Clip Start",
+                fine
+                        ? "%.3f beats".formatted(relative)
+                        : "Step %d".formatted((int) Math.round(relative / STEP_LENGTH) + 1));
     }
 
     private String formatPlayStart(final double beatTime) {

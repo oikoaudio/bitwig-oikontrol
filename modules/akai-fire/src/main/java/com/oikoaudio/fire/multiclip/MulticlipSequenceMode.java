@@ -613,9 +613,10 @@ public final class MulticlipSequenceMode extends Layer {
     private void handleGridButton(final int direction) {
         switch (MulticlipGridGesture.resolve(
                 driver.isGlobalShiftHeld(), driver.isGlobalAltHeld(), heldPatternPadExists())) {
-            case TIME_PAGE -> pageTime(direction);
             case HELD_STEP_NUDGE -> timingController.fineNudge(direction, true);
-            case PLAY_START -> timingController.movePlayStart(direction);
+            case PLAY_START -> timingController.movePlayStart(direction, false);
+            case PLAY_START_FINE -> timingController.movePlayStart(direction, true);
+            case CLIP_LENGTH -> timingController.adjustLength(direction);
             case WHOLE_LANE_NUDGE -> timingController.fineNudge(direction, false);
         }
     }
@@ -1173,23 +1174,35 @@ public final class MulticlipSequenceMode extends Layer {
         buttons.setUpCallback(
                 pressed -> {
                     if (pressed) {
-                        pageScenes(-1);
+                        handlePatternButton(-1);
                     }
                 },
-                () ->
-                        sceneBank.canScrollBackwards().get()
-                                ? BiColorLightState.HALF
-                                : BiColorLightState.OFF);
+                () -> patternPageLight(-1));
         buttons.setDownCallback(
                 pressed -> {
                     if (pressed) {
-                        pageScenes(1);
+                        handlePatternButton(1);
                     }
                 },
-                () ->
-                        sceneBank.canScrollForwards().get()
-                                ? BiColorLightState.HALF
-                                : BiColorLightState.OFF);
+                () -> patternPageLight(1));
+    }
+
+    private void handlePatternButton(final int direction) {
+        switch (MulticlipPatternGesture.resolve(driver.isGlobalShiftHeld())) {
+            case TIME_PAGE -> pageTime(direction);
+            case SCENE_PAGE -> pageScenes(direction);
+        }
+    }
+
+    private BiColorLightState patternPageLight(final int direction) {
+        final boolean available =
+                MulticlipPatternGesture.resolve(driver.isGlobalShiftHeld())
+                                == MulticlipPatternGesture.SCENE_PAGE
+                        ? direction < 0
+                                ? sceneBank.canScrollBackwards().get()
+                                : sceneBank.canScrollForwards().get()
+                        : direction < 0 ? firstVisibleStep > 0 : firstVisibleStep < MAX_TIME_START;
+        return available ? BiColorLightState.HALF : BiColorLightState.OFF;
     }
 
     private void clearPatternButtons() {

@@ -3,6 +3,7 @@ package com.oikoaudio.fire.melodic;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.sequence.HeldStepRecurrenceRow;
 import com.oikoaudio.fire.sequence.RecurrencePattern;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -67,13 +68,19 @@ final class MelodicStepPadSurface {
             return callbacks.pitchPoolPadLight(padIndex - PITCH_POOL_PAD_OFFSET);
         }
         final int stepIndex = padIndex - STEP_PAD_OFFSET;
-        return MelodicRenderer.stepLight(
-                callbacks.currentPattern().step(stepIndex),
-                heldSteps.contains(stepIndex),
-                stepIndex < callbacks.loopSteps(),
-                stepIndex == callbacks.playingStep(),
-                stepIndex,
-                callbacks.selectedClipColor());
+        final boolean inLoop = stepIndex < callbacks.loopSteps();
+        final RgbLightState rendered =
+                MelodicRenderer.stepLight(
+                        callbacks.currentPattern().step(stepIndex),
+                        heldSteps.contains(stepIndex),
+                        inLoop,
+                        stepIndex == callbacks.playingStep(),
+                        stepIndex,
+                        callbacks.selectedClipColor());
+        return inLoop
+                ? StepPadLightHelper.renderClipStartColumnOverlay(
+                        stepIndex % 16, callbacks.shiftedClipStartColumn(), rendered)
+                : rendered;
     }
 
     int editingStepIndex() {
@@ -264,6 +271,8 @@ final class MelodicStepPadSurface {
         int loopSteps();
 
         int playingStep();
+
+        int shiftedClipStartColumn();
 
         RgbLightState selectedClipColor();
 
