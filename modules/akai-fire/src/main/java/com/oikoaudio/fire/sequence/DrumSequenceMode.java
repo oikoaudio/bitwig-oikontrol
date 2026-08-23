@@ -18,6 +18,7 @@ import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.utils.PatternButtons;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import com.oikoaudio.fire.values.StepViewPosition;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -166,6 +167,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         observeSelectedClip();
 
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
+        cursorClip
+                .getLoopStart()
+                .addValueObserver(
+                        loopStart ->
+                                bigCursorClip.scrollToStep(
+                                        ClipLoopWindow.startStep(loopStart, FINE_STEP_SIZE)));
 
         padHandler =
                 new DrumPadHandler(
@@ -1554,7 +1561,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         final int pages = positionHandler.getPages();
         cursorClip.clearStepsAtY(0, 0);
         for (int page = 0; page < pages; page++) {
-            cursorClip.scrollToStep(page * 32);
+            cursorClip.scrollToStep(
+                    ClipLoopWindow.startStep(
+                                    cursorClip.getLoopStart().get(),
+                                    positionHandler.getGridResolution())
+                            + page * 32);
             final int pageStart = page * 32;
             final int pageSteps = Math.min(32, Math.max(0, totalSteps - pageStart));
             for (int localIndex = 0; localIndex < pageSteps; localIndex++) {
@@ -1568,7 +1579,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 }
             }
         }
-        cursorClip.scrollToStep(originalPage * 32);
+        cursorClip.scrollToStep(
+                ClipLoopWindow.startStep(
+                                cursorClip.getLoopStart().get(),
+                                positionHandler.getGridResolution())
+                        + originalPage * 32);
         oled.detailInfo("EUCLID", "Applied Full Clip");
         oled.clearScreenDelayed();
     }
@@ -1706,7 +1721,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (playingStep == -1) {
             this.playingStep = -1;
         }
-        this.playingStep = playingStep - positionHandler.getStepOffset();
+        this.playingStep = playingStep - positionHandler.getAbsoluteStepOffset();
     }
 
     @Override

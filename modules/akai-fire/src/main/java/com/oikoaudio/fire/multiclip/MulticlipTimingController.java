@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.multiclip;
 
 import com.oikoaudio.fire.display.OledDisplay;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 
 /** Owns active-Lane Clip play-start and 1/64-note nudge operations. */
 final class MulticlipTimingController {
@@ -26,12 +27,14 @@ final class MulticlipTimingController {
             return;
         }
         final double loopLength = Math.max(MulticlipTiming.STEP_BEATS, clips.loopLength());
-        double newStart = clips.playStart() + direction * MulticlipTiming.STEP_BEATS;
+        double newStart =
+                ClipLoopWindow.relativeBeat(clips.playStart(), clips.loopStart(), loopLength)
+                        + direction * MulticlipTiming.STEP_BEATS;
         newStart %= loopLength;
         if (newStart < 0) {
             newStart += loopLength;
         }
-        clips.setPlayStart(newStart);
+        clips.setPlayStart(ClipLoopWindow.absoluteBeat(newStart, clips.loopStart(), loopLength));
         final int startStep = (int) Math.round(newStart / MulticlipTiming.STEP_BEATS);
         oled.valueInfo("Play start " + startStep + " steps", context.activeLaneName());
     }

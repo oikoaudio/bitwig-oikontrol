@@ -2,6 +2,7 @@ package com.oikoaudio.fire.chordstep;
 
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.oikoaudio.fire.display.OledDisplay;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import com.oikoaudio.fire.values.StepViewPosition;
 
 /**
@@ -90,9 +91,12 @@ final class ChordStepClipNavigation {
             return;
         }
         final double loopLength = Math.max(STEP_LENGTH, clip.getLoopLength().get());
+        final double loopStart = clip.getLoopStart().get();
         final double step = fine ? fineStepLength : STEP_LENGTH;
-        final double next = wrapBeatTime(clip.getPlayStart().get() + direction * step, loopLength);
-        clip.getPlayStart().set(next);
+        final double current =
+                ClipLoopWindow.relativeBeat(clip.getPlayStart().get(), loopStart, loopLength);
+        final double next = wrapBeatTime(current + direction * step, loopLength);
+        clip.getPlayStart().set(ClipLoopWindow.absoluteBeat(next, loopStart, loopLength));
         final String title = fine ? "Clip Start Fine" : "Clip Start";
         final String value = formatPlayStart(next);
         oled.valueInfo(title, value);
@@ -104,10 +108,12 @@ final class ChordStepClipNavigation {
             return;
         }
         final double loopLength = Math.max(STEP_LENGTH, clip.getLoopLength().get());
-        final double current = wrapBeatTime(clip.getPlayStart().get(), loopLength);
+        final double loopStart = clip.getLoopStart().get();
+        final double current =
+                ClipLoopWindow.relativeBeat(clip.getPlayStart().get(), loopStart, loopLength);
         final double next =
                 wrapBeatTime(Math.round(current / STEP_LENGTH) * STEP_LENGTH, loopLength);
-        clip.getPlayStart().set(next);
+        clip.getPlayStart().set(ClipLoopWindow.absoluteBeat(next, loopStart, loopLength));
         final String value = formatPlayStart(next);
         oled.valueInfo("Clip Start Snap", value);
         popupFeedback.notify("Clip Start Snap", value);

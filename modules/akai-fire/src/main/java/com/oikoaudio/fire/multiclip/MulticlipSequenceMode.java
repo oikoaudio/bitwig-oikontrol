@@ -826,6 +826,7 @@ public final class MulticlipSequenceMode extends Layer {
                 hasClip
                         ? StepPadLightHelper.nearestVisibleStepForShiftedClipStart(
                                 clipController.playStart(),
+                                clipController.loopStart(),
                                 clipController.loopLength(),
                                 MulticlipTiming.STEP_BEATS,
                                 firstVisibleStep,

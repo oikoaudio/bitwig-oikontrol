@@ -45,6 +45,7 @@ import com.oikoaudio.fire.sequence.SeqClipRowHost;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -193,8 +194,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.cursorClip =
                 cursorTrack.createLauncherCursorClip(
                         "MELODIC_STEP_CLIP", "MELODIC_STEP_CLIP", STEP_COUNT, 128);
+        this.cursorClip.setStepSize(STEP_LENGTH);
         this.cursorClip.scrollToKey(0);
-        this.cursorClip.scrollToStep(0);
+        this.cursorClip
+                .getLoopStart()
+                .addValueObserver(
+                        loopStart ->
+                                cursorClip.scrollToStep(
+                                        ClipLoopWindow.startStep(loopStart, STEP_LENGTH)));
         this.cursorClip.addNoteStepObserver(
                 noteStep -> {
                     noteVariationAdapter.handleObservedNote(noteStep);
@@ -223,7 +230,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         this::showClipAvailabilityFailure,
                         this::applySelectedClipState,
                         () -> cursorClip.scrollToKey(0),
-                        () -> cursorClip.scrollToStep(0));
+                        this::scrollToLoopStart);
         final PinnableCursorDevice cursorDevice =
                 cursorTrack.createCursorDevice(
                         "MELODIC_STEP_DEVICE",
@@ -2068,8 +2075,15 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void handlePlayingStep(final int clipPlayingStep) {
-        this.playingStep =
-                clipPlayingStep >= 0 && clipPlayingStep < STEP_COUNT ? clipPlayingStep : -1;
+        final int relativeStep =
+                ClipLoopWindow.relativeStep(
+                        clipPlayingStep, cursorClip.getLoopStart().get(), STEP_LENGTH);
+        this.playingStep = relativeStep >= 0 && relativeStep < STEP_COUNT ? relativeStep : -1;
+    }
+
+    private void scrollToLoopStart() {
+        cursorClip.scrollToStep(
+                ClipLoopWindow.startStep(cursorClip.getLoopStart().get(), STEP_LENGTH));
     }
 
     private void rebuildCachedPattern() {

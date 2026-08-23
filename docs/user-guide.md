@@ -180,6 +180,8 @@ Where the active mode has a four-encoder page, the OLED can keep a compact legen
 
 Single-clip sequencers follow Bitwig's primary selected launcher clip without changing passive DAW selections. Entering Drum XOX, Nested Rhythm, Melo Gen, Poly Step, or Fugue without an available primary clip shows `No Clip / Select clip`. Select a clip in Bitwig or use an explicit Fire clip-row gesture; live Note input and other inactive modes do not replace Bitwig's additive clip selection.
 
+Sequencer grids follow the selected clip's loop region rather than assuming that it begins at `1.1.1`. If the loop is moved later in the clip, Drum XOX, Multiclip Seq, Nested Rhythm, Melo Gen, Poly Step, and Fugue display and edit that moved segment; their playhead and clip-start feedback remains relative to the loop window.
+
 ### Baked Note Variation
 
 Sequencer and generator modes can write stable, clip-wide variation into continuous per-note values. This is **Baked Note Variation**: values are written once into the notes and do not change again merely because the clip loops.

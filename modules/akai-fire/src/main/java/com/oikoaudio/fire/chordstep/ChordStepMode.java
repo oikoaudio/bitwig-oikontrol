@@ -229,7 +229,9 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
                         this::clearObservedChordCaches,
                         chordStepClips::scrollNoteClipToKeyStart,
                         chordStepClips::scrollObservedClipToKeyStart,
-                        () -> chordStepClips.scrollNoteClipToStep(chordStepOffset()),
+                        () ->
+                                chordStepClips.scrollNoteClipToStep(
+                                        chordStepClips.position().getAbsoluteStepOffset()),
                         chordStepClips::scrollObservedClipToStepStart);
 
         // Pads and feedback
@@ -1140,7 +1142,8 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     }
 
     private void handlePlayingStep(final int playingStep) {
-        final int localPlayingStep = playingStep - chordStepOffset();
+        final int localPlayingStep =
+                playingStep - chordStepClips.position().getAbsoluteStepOffset();
         if (localPlayingStep < 0 || localPlayingStep >= STEP_COUNT) {
             this.playingStep = -1;
             return;
@@ -1151,6 +1154,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
     private int shiftedClipStartColumn() {
         return StepPadLightHelper.nearestVisibleColumnForShiftedClipStart(
                 chordStepClips.noteClip().getPlayStart().get(),
+                chordStepClips.noteClip().getLoopStart().get(),
                 chordStepClips.noteClip().getLoopLength().get(),
                 STEP_LENGTH,
                 chordStepOffset(),
