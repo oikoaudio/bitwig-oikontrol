@@ -178,6 +178,8 @@ The `Screen Message Hold` hardware preference controls how long transient OLED m
 
 Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Multiclip Seq, Melo Gen, Poly Step, Nested Rhythm, and Fugue. The `Encoder Legend Position` hardware preference defaults to `Bottom`; set it to `Top` if the top row is easier to read in your controller setup.
 
+Single-clip sequencers follow Bitwig's primary selected launcher clip without changing passive DAW selections. Entering Drum XOX, Nested Rhythm, Melo Gen, Poly Step, or Fugue without an available primary clip shows `No Clip / Select clip`. Select a clip in Bitwig or use an explicit Fire clip-row gesture; live Note input and other inactive modes do not replace Bitwig's additive clip selection.
+
 ### Baked Note Variation
 
 Sequencer and generator modes can write stable, clip-wide variation into continuous per-note values. This is **Baked Note Variation**: values are written once into the notes and do not change again merely because the clip loops.

@@ -13,6 +13,40 @@ import org.junit.jupiter.api.Test;
 class ChordStepObservationControllerTest {
 
     @Test
+    void inactiveControllerDoesNotScheduleSelectionResync() {
+        final List<ScheduledTask> scheduled = new ArrayList<>();
+        final ChordStepClipController clipController =
+                new ChordStepClipController(() -> true, () -> false, () -> {}, failure -> {});
+        final ChordStepObservationController controller =
+                new ChordStepObservationController(
+                        (task, delayTicks) -> scheduled.add(new ScheduledTask(task, delayTicks)),
+                        null,
+                        () -> -1,
+                        () -> RgbLightState.GRAY_1,
+                        clipController,
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        (slotBank,
+                                selectedClipSlotIndex,
+                                refreshSelectedClipState,
+                                slotIndexSupplier,
+                                scrollNoteClipToKeyStart,
+                                scrollObservedClipToKeyStart,
+                                scrollNoteClipToCurrentStep,
+                                scrollObservedClipToStepStart) -> {},
+                        (slotBank, defaultColor) ->
+                                SelectedClipSlotState.fromValues(-1, false, defaultColor));
+
+        controller.queueResync();
+
+        assertFalse(controller.isResyncQueued());
+        assertTrue(scheduled.isEmpty());
+    }
+
+    @Test
     void refreshPassClearsCachesAndDelegatesCursorRefresh() {
         final List<String> events = new ArrayList<>();
         final ChordStepClipController clipController =
@@ -56,6 +90,7 @@ class ChordStepObservationControllerTest {
                         (slotBank, defaultColor) ->
                                 SelectedClipSlotState.fromValues(3, true, defaultColor));
 
+        controller.setActive(true);
         controller.refreshPass();
 
         assertEquals(
@@ -103,6 +138,7 @@ class ChordStepObservationControllerTest {
                         (slotBank, defaultColor) ->
                                 SelectedClipSlotState.fromValues(0, false, defaultColor));
 
+        controller.setActive(true);
         controller.queueResync();
         controller.queueResync();
 
@@ -115,6 +151,44 @@ class ChordStepObservationControllerTest {
         assertEquals(List.of("refresh-pass"), events.subList(events.size() - 1, events.size()));
         assertEquals(
                 List.of(0, 1, 6, 18), scheduled.stream().map(ScheduledTask::delayTicks).toList());
+    }
+
+    @Test
+    void deactivationCancelsPendingSelectionResync() {
+        final List<ScheduledTask> scheduled = new ArrayList<>();
+        final List<String> events = new ArrayList<>();
+        final ChordStepClipController clipController =
+                new ChordStepClipController(() -> true, () -> false, () -> {}, failure -> {});
+        final ChordStepObservationController controller =
+                new ChordStepObservationController(
+                        (task, delayTicks) -> scheduled.add(new ScheduledTask(task, delayTicks)),
+                        null,
+                        () -> -1,
+                        () -> RgbLightState.GRAY_1,
+                        clipController,
+                        () -> events.add("clear"),
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        () -> {},
+                        (slotBank,
+                                selectedClipSlotIndex,
+                                refreshSelectedClipState,
+                                slotIndexSupplier,
+                                scrollNoteClipToKeyStart,
+                                scrollObservedClipToKeyStart,
+                                scrollNoteClipToCurrentStep,
+                                scrollObservedClipToStepStart) -> events.add("refresh"),
+                        (slotBank, defaultColor) ->
+                                SelectedClipSlotState.fromValues(-1, false, defaultColor));
+
+        controller.setActive(true);
+        controller.queueResync();
+        controller.setActive(false);
+        scheduled.get(0).task().run();
+
+        assertFalse(controller.isResyncQueued());
+        assertTrue(events.isEmpty());
     }
 
     @Test
@@ -146,6 +220,7 @@ class ChordStepObservationControllerTest {
                         (slotBank, defaultColor) ->
                                 SelectedClipSlotState.fromValues(0, false, defaultColor));
 
+        controller.setActive(true);
         controller.refresh();
 
         assertEquals(List.of("clear", "pass"), events);

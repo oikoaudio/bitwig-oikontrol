@@ -116,6 +116,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final Set<Integer> initializedAddedSteps = new HashSet<>();
     private final EncoderBankLayout encoderBankLayout;
     private boolean selectedClipHasContent = false;
+    private boolean hasSelectedClip = false;
     private boolean active = false;
     private boolean drumMeterDisplayActive = false;
     private int lastMeterDisplayBlink = Integer.MIN_VALUE;
@@ -1724,6 +1725,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (positionHandler.getPages() > 1) {
             oled.valueInfo("Drum 1/%d".formatted(positionHandler.getPages()), "Step Page");
         }
+        refreshSelectedClipState();
+        if (!hasSelectedClip) {
+            oled.valueInfo("No Clip", "Select clip");
+            notifyPopup("No Clip", "Select clip");
+        }
     }
 
     @Override
@@ -1852,7 +1858,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void refreshSelectedClipState() {
-        selectedClipHasContent = SelectedClipSlotState.scan(clipSlotBank, null).hasContent();
+        final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, null);
+        hasSelectedClip = state.hasSelection();
+        selectedClipHasContent = state.hasContent();
     }
 
     private boolean ensureSelectedClip() {

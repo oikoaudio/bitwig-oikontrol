@@ -2137,6 +2137,7 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
 
     @Override
     protected void onActivate() {
+        chordStepObservationController.setActive(true);
         noteStepActive = true;
         chordSelection.resetToBuilder();
         chordStepPadSurface.clearStepTracking();
@@ -2146,10 +2147,12 @@ public final class ChordStepMode extends Layer implements StepSequencerHost, Seq
         chordStepControlBindings.activatePatternButtons();
         encoderLayer.deactivate();
         enterCurrentStepSubMode();
+        ensureSelectedNoteClipSlot();
     }
 
     @Override
     protected void onDeactivate() {
+        chordStepObservationController.setActive(false);
         chordStepControlBindings.deactivatePatternButtons();
         noteStepActive = false;
         chordDisplayRefreshPending = false;

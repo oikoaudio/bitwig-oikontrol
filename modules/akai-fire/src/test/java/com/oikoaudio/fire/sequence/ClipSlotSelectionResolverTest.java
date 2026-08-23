@@ -38,7 +38,7 @@ class ClipSlotSelectionResolverTest {
     }
 
     @Test
-    void resolveSelectsPlayingSlotWhenNothingElseIsSelected() {
+    void passiveResolveDoesNotSelectPlayingSlotWhenNothingElseIsSelected() {
         final ClipLauncherSlotBank bank = mock(ClipLauncherSlotBank.class);
         final ClipLauncherSlot slot = slot(true, false, false, true);
         when(bank.getSizeOfBank()).thenReturn(1);
@@ -46,8 +46,8 @@ class ClipSlotSelectionResolverTest {
 
         final boolean resolved = ClipSlotSelectionResolver.resolve(bank, -1, -1);
 
-        assertTrue(resolved);
-        verify(slot).select();
+        assertFalse(resolved);
+        verify(slot, never()).select();
     }
 
     @Test

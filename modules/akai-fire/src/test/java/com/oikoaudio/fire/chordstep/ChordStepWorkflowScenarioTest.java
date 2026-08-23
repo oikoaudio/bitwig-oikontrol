@@ -117,6 +117,7 @@ class ChordStepWorkflowScenarioTest {
                                 SelectedClipSlotState.fromValues(3, true, RgbLightState.PURPLE));
         observationRef.set(observation);
 
+        observation.setActive(true);
         observation.refresh();
 
         assertEquals(3, clip.slotIndex(), "the selected clip index should be refreshed");

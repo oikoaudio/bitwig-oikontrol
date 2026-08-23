@@ -94,6 +94,7 @@ public final class FugueStepMode extends Layer {
         this.cursorClip.setStepSize(STEP_LENGTH);
         this.cursorClip.scrollToKey(0);
         this.cursorClip.scrollToStep(0);
+        this.cursorClip.exists().markInterested();
         this.cursorClip.getLoopLength().markInterested();
         this.cursorClip.getPlayStart().markInterested();
         this.cursorClip
@@ -162,6 +163,10 @@ public final class FugueStepMode extends Layer {
             showEncoderModeInfo();
         }
         oled.clearScreenDelayed();
+        if (!cursorClip.exists().get()) {
+            oled.valueInfo("No Clip", "Select clip");
+            driver.notifyPopup("No Clip", "Select clip");
+        }
     }
 
     @Override

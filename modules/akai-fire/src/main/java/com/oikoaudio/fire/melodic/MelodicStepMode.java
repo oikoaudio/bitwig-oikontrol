@@ -2103,6 +2103,13 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         driver.notifyPopup(failure.title(), failure.popupDetail());
     }
 
+    private void showNoClipIfNeeded() {
+        final NoteClipAvailability.Failure failure = selectedClipCoordinator.availabilityFailure();
+        if (failure != null) {
+            showClipAvailabilityFailure(failure);
+        }
+    }
+
     private void refreshClipCursor() {
         selectedClipCoordinator.refreshCursor();
     }
@@ -2959,6 +2966,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
         padSurface.clampSelectedStep(loopSteps);
+        showNoClipIfNeeded();
     }
 
     @Override
