@@ -15,6 +15,7 @@ class PerformClipRecordingLengthTest {
     void roundsFourFourRecordingsToTheNearestBar() {
         assertEquals(20.0, PerformClipLauncherMode.roundToNearestBar(18.5, 4, 4));
         assertEquals(16.0, PerformClipLauncherMode.roundToNearestBar(17.4, 4, 4));
+        assertEquals(16.0, PerformClipLauncherMode.roundToNearestBar(16.0, 4, 4));
     }
 
     @Test

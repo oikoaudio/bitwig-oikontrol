@@ -89,6 +89,9 @@ final class MulticlipControlBindings {
                 .bindPressed(
                         layer,
                         pressed -> {
+                            if (driver.handleGlobalTrackCreationBankButton(pressed, direction)) {
+                                return;
+                            }
                             if (pressed) {
                                 host.gridButton(direction);
                             }

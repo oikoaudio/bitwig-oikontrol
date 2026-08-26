@@ -1,6 +1,7 @@
 package com.oikoaudio.fire.sequence;
 
 import com.oikoaudio.fire.lights.RgbLightState;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 
 /**
  * Shared pad-light rendering for step rows. Encapsulates the visual policy for empty steps,
@@ -76,6 +77,21 @@ public final class StepPadLightHelper {
         return localStep >= 0 && localStep < visibleStepCount ? localStep : -1;
     }
 
+    public static int nearestVisibleStepForShiftedClipStart(
+            final double playStart,
+            final double loopStart,
+            final double loopLength,
+            final double stepLength,
+            final int visibleStepOffset,
+            final int visibleStepCount) {
+        return nearestVisibleStepForShiftedClipStart(
+                ClipLoopWindow.relativeBeat(playStart, loopStart, loopLength),
+                loopLength,
+                stepLength,
+                visibleStepOffset,
+                visibleStepCount);
+    }
+
     public static int nearestVisibleColumnForShiftedClipStart(
             final double playStart,
             final double loopLength,
@@ -86,6 +102,25 @@ public final class StepPadLightHelper {
         final int localStep =
                 nearestVisibleStepForShiftedClipStart(
                         playStart, loopLength, stepLength, visibleStepOffset, visibleStepCount);
+        return localStep < 0 || columnCount <= 0 ? -1 : Math.floorMod(localStep, columnCount);
+    }
+
+    public static int nearestVisibleColumnForShiftedClipStart(
+            final double playStart,
+            final double loopStart,
+            final double loopLength,
+            final double stepLength,
+            final int visibleStepOffset,
+            final int visibleStepCount,
+            final int columnCount) {
+        final int localStep =
+                nearestVisibleStepForShiftedClipStart(
+                        playStart,
+                        loopStart,
+                        loopLength,
+                        stepLength,
+                        visibleStepOffset,
+                        visibleStepCount);
         return localStep < 0 || columnCount <= 0 ? -1 : Math.floorMod(localStep, columnCount);
     }
 
@@ -104,7 +139,19 @@ public final class StepPadLightHelper {
 
     public static int nearestColumnForShiftedClipStart(
             final double playStart, final double loopLength, final int columnCount) {
-        final int bucket = nearestBucketForShiftedClipStart(playStart, loopLength, columnCount);
+        return nearestColumnForShiftedClipStart(playStart, 0.0, loopLength, columnCount);
+    }
+
+    public static int nearestColumnForShiftedClipStart(
+            final double playStart,
+            final double loopStart,
+            final double loopLength,
+            final int columnCount) {
+        final int bucket =
+                nearestBucketForShiftedClipStart(
+                        ClipLoopWindow.relativeBeat(playStart, loopStart, loopLength),
+                        loopLength,
+                        columnCount);
         return bucket < 0 ? -1 : Math.floorMod(bucket, columnCount);
     }
 

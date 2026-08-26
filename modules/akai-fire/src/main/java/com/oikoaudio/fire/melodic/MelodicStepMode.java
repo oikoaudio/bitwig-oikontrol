@@ -42,9 +42,11 @@ import com.oikoaudio.fire.sequence.RecurrencePattern;
 import com.oikoaudio.fire.sequence.SelectedClipSlotState;
 import com.oikoaudio.fire.sequence.SelectedNoteClipCoordinator;
 import com.oikoaudio.fire.sequence.SeqClipRowHost;
+import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.sequence.StepSequencerEncoderLayer;
 import com.oikoaudio.fire.sequence.StepSequencerHost;
 import com.oikoaudio.fire.utils.PatternButtons;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -64,6 +66,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private static final int STEP_COUNT = MelodicStepPadSurface.STEP_COUNT;
     private static final int DEFAULT_LOOP_STEPS = 16;
     private static final double STEP_LENGTH = 0.25;
+    private static final double FINE_PLAY_START_STEP = 1.0 / 64.0;
     private static final int MAX_CLIP_LENGTH_BEATS = (int) (STEP_COUNT * STEP_LENGTH);
     private static final int DEFAULT_VELOCITY = 96;
     private static final double DEFAULT_GATE = 0.8;
@@ -193,8 +196,14 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         this.cursorClip =
                 cursorTrack.createLauncherCursorClip(
                         "MELODIC_STEP_CLIP", "MELODIC_STEP_CLIP", STEP_COUNT, 128);
+        this.cursorClip.setStepSize(STEP_LENGTH);
         this.cursorClip.scrollToKey(0);
-        this.cursorClip.scrollToStep(0);
+        this.cursorClip
+                .getLoopStart()
+                .addValueObserver(
+                        loopStart ->
+                                cursorClip.scrollToStep(
+                                        ClipLoopWindow.startStep(loopStart, STEP_LENGTH)));
         this.cursorClip.addNoteStepObserver(
                 noteStep -> {
                     noteVariationAdapter.handleObservedNote(noteStep);
@@ -202,6 +211,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 });
         this.cursorClip.playingStep().addValueObserver(this::handlePlayingStep);
         this.cursorClip.getLoopLength().markInterested();
+        this.cursorClip.getPlayStart().markInterested();
         this.cursorClip
                 .getLoopLength()
                 .addValueObserver(
@@ -223,7 +233,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                         this::showClipAvailabilityFailure,
                         this::applySelectedClipState,
                         () -> cursorClip.scrollToKey(0),
-                        () -> cursorClip.scrollToStep(0));
+                        this::scrollToLoopStart);
         final PinnableCursorDevice cursorDevice =
                 cursorTrack.createCursorDevice(
                         "MELODIC_STEP_DEVICE",
@@ -292,11 +302,38 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             }
             return;
         }
-        applyTransform(
-                patternState.currentPattern().rotated(amount),
-                "Rotate",
-                amount < 0 ? "Left" : "Right",
-                false);
+        moveClipPlayStart(amount, driver.isGlobalShiftHeld());
+    }
+
+    private void moveClipPlayStart(final int amount, final boolean fine) {
+        if (amount == 0 || !ensureClipAvailable()) {
+            return;
+        }
+        refreshClipCursor();
+        final double loopLength = Math.max(STEP_LENGTH, cursorClip.getLoopLength().get());
+        final double step = fine ? FINE_PLAY_START_STEP : STEP_LENGTH;
+        final double next =
+                ClipLoopWindow.movePlayStart(
+                        cursorClip.getPlayStart().get(),
+                        cursorClip.getLoopStart().get(),
+                        loopLength,
+                        amount * step);
+        cursorClip.getPlayStart().set(next);
+        final double relative =
+                ClipLoopWindow.relativeBeat(next, cursorClip.getLoopStart().get(), loopLength);
+        oled.valueInfo(
+                fine ? "Clip Start Fine" : "Clip Start",
+                fine
+                        ? "%.3f beats".formatted(relative)
+                        : "Step %d".formatted((int) Math.round(relative / STEP_LENGTH) + 1));
+    }
+
+    private int shiftedClipStartColumn() {
+        return StepPadLightHelper.nearestColumnForShiftedClipStart(
+                cursorClip.getPlayStart().get(),
+                cursorClip.getLoopStart().get(),
+                cursorClip.getLoopLength().get(),
+                16);
     }
 
     private void handleMuteButton(final int index, final boolean pressed) {
@@ -1270,6 +1307,9 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalAltHeld()) {
             mainEncoderPressConsumed = true;
@@ -2065,8 +2105,15 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     }
 
     private void handlePlayingStep(final int clipPlayingStep) {
-        this.playingStep =
-                clipPlayingStep >= 0 && clipPlayingStep < STEP_COUNT ? clipPlayingStep : -1;
+        final int relativeStep =
+                ClipLoopWindow.relativeStep(
+                        clipPlayingStep, cursorClip.getLoopStart().get(), STEP_LENGTH);
+        this.playingStep = relativeStep >= 0 && relativeStep < STEP_COUNT ? relativeStep : -1;
+    }
+
+    private void scrollToLoopStart() {
+        cursorClip.scrollToStep(
+                ClipLoopWindow.startStep(cursorClip.getLoopStart().get(), STEP_LENGTH));
     }
 
     private void rebuildCachedPattern() {
@@ -2098,6 +2145,13 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
     private void showClipAvailabilityFailure(final NoteClipAvailability.Failure failure) {
         oled.valueInfo(failure.title(), failure.oledDetail());
         driver.notifyPopup(failure.title(), failure.popupDetail());
+    }
+
+    private void showNoClipIfNeeded() {
+        final NoteClipAvailability.Failure failure = selectedClipCoordinator.availabilityFailure();
+        if (failure != null) {
+            showClipAvailabilityFailure(failure);
+        }
     }
 
     private void refreshClipCursor() {
@@ -2956,6 +3010,7 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
                 () -> BiColorLightState.GREEN_HALF);
         encoderLayer.activate();
         padSurface.clampSelectedStep(loopSteps);
+        showNoClipIfNeeded();
     }
 
     @Override
@@ -3301,6 +3356,11 @@ public class MelodicStepMode extends Layer implements StepSequencerHost, SeqClip
         @Override
         public int playingStep() {
             return playingStep;
+        }
+
+        @Override
+        public int shiftedClipStartColumn() {
+            return MelodicStepMode.this.shiftedClipStartColumn();
         }
 
         @Override

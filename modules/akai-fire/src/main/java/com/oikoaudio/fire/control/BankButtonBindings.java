@@ -10,13 +10,29 @@ public final class BankButtonBindings {
             final Layer layer,
             final BiColorButton leftButton,
             final BiColorButton rightButton,
+            final GestureInterceptor interceptor,
             final Host host) {
         leftButton.bindPressed(
                 layer,
-                pressed -> host.handleBankButton(pressed, -1),
+                pressed -> {
+                    if (!interceptor.handle(pressed, -1)) {
+                        host.handleBankButton(pressed, -1);
+                    }
+                },
                 () -> host.bankLightState(-1));
         rightButton.bindPressed(
-                layer, pressed -> host.handleBankButton(pressed, 1), () -> host.bankLightState(1));
+                layer,
+                pressed -> {
+                    if (!interceptor.handle(pressed, 1)) {
+                        host.handleBankButton(pressed, 1);
+                    }
+                },
+                () -> host.bankLightState(1));
+    }
+
+    @FunctionalInterface
+    public interface GestureInterceptor {
+        boolean handle(boolean pressed, int amount);
     }
 
     public interface Host {

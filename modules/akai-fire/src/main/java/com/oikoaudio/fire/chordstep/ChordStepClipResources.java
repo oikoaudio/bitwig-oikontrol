@@ -6,6 +6,7 @@ import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import com.oikoaudio.fire.values.StepViewPosition;
 import java.util.function.IntConsumer;
 
@@ -15,6 +16,7 @@ final class ChordStepClipResources {
     private final Clip observedClip;
     private final StepViewPosition position;
     private final ClipLauncherSlotBank clipSlotBank;
+    private final double fineStepLength;
 
     public ChordStepClipResources(
             final ControllerHost host,
@@ -24,6 +26,7 @@ final class ChordStepClipResources {
             final double fineStepLength) {
         noteClip = cursorTrack.createLauncherCursorClip("NOTE_STEP", "NOTE_STEP", stepCount, 128);
         observedClip = host.createLauncherCursorClip(observedFineStepCapacity, 128);
+        this.fineStepLength = fineStepLength;
         position = new StepViewPosition(noteClip, stepCount, "CHORD");
         clipSlotBank = cursorTrack.clipLauncherSlotBank();
         clipSlotBank.cursorIndex().markInterested();
@@ -31,6 +34,7 @@ final class ChordStepClipResources {
         observedClip.scrollToKey(0);
         observedClip.setStepSize(fineStepLength);
         noteClip.getPlayStart().markInterested();
+        noteClip.getLoopStart().addValueObserver(ignored -> scrollObservedClipToStepStart());
     }
 
     public void observe(
@@ -75,7 +79,8 @@ final class ChordStepClipResources {
     }
 
     public void scrollObservedClipToStepStart() {
-        observedClip.scrollToStep(0);
+        observedClip.scrollToStep(
+                ClipLoopWindow.startStep(noteClip.getLoopStart().get(), fineStepLength));
     }
 
     @FunctionalInterface

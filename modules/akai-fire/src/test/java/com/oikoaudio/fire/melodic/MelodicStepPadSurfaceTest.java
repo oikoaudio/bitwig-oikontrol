@@ -94,6 +94,21 @@ class MelodicStepPadSurfaceTest {
         assertEquals(-1, callbacks.lastRecurrenceTogglePad);
     }
 
+    @Test
+    void shiftedClipStartIsVisibleAcrossTheStepRows() {
+        final FakeCallbacks callbacks = new FakeCallbacks();
+        callbacks.pattern = MelodicPattern.empty(32);
+        callbacks.shiftedClipStartColumn = 4;
+        final MelodicStepPadSurface surface = new MelodicStepPadSurface(callbacks);
+
+        assertEquals(
+                new RgbLightState(30, 0, 127, true),
+                surface.getPadLight(MelodicStepPadSurface.STEP_PAD_OFFSET + 4));
+        assertEquals(
+                new RgbLightState(30, 0, 127, true),
+                surface.getPadLight(MelodicStepPadSurface.STEP_PAD_OFFSET + 20));
+    }
+
     private static MelodicPattern.Step activeStep(final int index, final int pitch) {
         return new MelodicPattern.Step(index, true, false, pitch, 96, 0.8, false, false);
     }
@@ -108,6 +123,7 @@ class MelodicStepPadSurfaceTest {
         private int lastRecurrenceTogglePad = -1;
         private List<Integer> lastRecurrenceSpanTargets = List.of();
         private int lastRecurrenceSpan = -1;
+        private int shiftedClipStartColumn = -1;
 
         @Override
         public boolean isAccentGestureActive() {
@@ -194,6 +210,11 @@ class MelodicStepPadSurfaceTest {
         @Override
         public int playingStep() {
             return -1;
+        }
+
+        @Override
+        public int shiftedClipStartColumn() {
+            return shiftedClipStartColumn;
         }
 
         @Override

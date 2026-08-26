@@ -2,6 +2,7 @@ package com.oikoaudio.fire;
 
 import com.bitwig.extension.controller.api.BrowserResultsItem;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.InsertionPoint;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
 import com.bitwig.extension.controller.api.PopupBrowser;
 import com.oikoaudio.fire.display.OledDisplay;
@@ -19,7 +20,9 @@ final class PopupBrowserController {
     private final ViewCursorControl viewControl;
     private final OledDisplay oled;
     private final Host host;
+    private boolean mainEncoderGestureActive;
     private int pressToken;
+    private InsertionPoint pendingDrumPadInsertionPoint;
 
     static PopupBrowserController create(
             final ControllerHost controllerHost,
@@ -87,6 +90,8 @@ final class PopupBrowserController {
             return;
         }
         host.refreshOverlayState();
+        pendingDrumPadInsertionPoint =
+                !host.shiftHeld() && !host.altHeld() ? host.heldDrumPadInsertionPoint() : null;
         final int scheduledToken = ++pressToken;
         scheduler.scheduleTask(() -> maybeOpen(scheduledToken), OPEN_DEFER_MS);
     }
@@ -98,15 +103,25 @@ final class PopupBrowserController {
         if (host.overlayActive() || isActive()) {
             return;
         }
-        openAtSelectedInsertionPoint();
+        openAtSelectedInsertionPoint(pendingDrumPadInsertionPoint);
     }
 
-    private void openAtSelectedInsertionPoint() {
+    private void openAtSelectedInsertionPoint(final InsertionPoint drumPadInsertionPoint) {
+        if (drumPadInsertionPoint != null) {
+            drumPadInsertionPoint.browse();
+            scheduleResultsPrime();
+            host.notifyAction("Browser", "Pad");
+            return;
+        }
         final PinnableCursorDevice primaryDevice = viewControl.getPrimaryDevice();
+        final boolean currentTrackHasDevice =
+                viewControl.getDeviceBank().getDevice(0).exists().get();
+        final boolean primaryDeviceAvailable =
+                currentTrackHasDevice && primaryDevice.exists().get();
         final boolean shiftHeld = host.shiftHeld();
         final boolean altHeld = host.altHeld();
         if (shiftHeld && altHeld) {
-            if (primaryDevice.exists().get()) {
+            if (primaryDeviceAvailable) {
                 primaryDevice.beforeDeviceInsertionPoint().browse();
             } else {
                 viewControl.getCursorTrack().startOfDeviceChainInsertionPoint().browse();
@@ -116,7 +131,7 @@ final class PopupBrowserController {
             return;
         }
         if (altHeld) {
-            if (primaryDevice.exists().get()) {
+            if (primaryDeviceAvailable) {
                 primaryDevice.afterDeviceInsertionPoint().browse();
             } else {
                 viewControl.getCursorTrack().endOfDeviceChainInsertionPoint().browse();
@@ -125,7 +140,7 @@ final class PopupBrowserController {
             host.notifyAction("Browser", "After");
             return;
         }
-        if (primaryDevice.exists().get()) {
+        if (primaryDeviceAvailable) {
             primaryDevice.replaceDeviceInsertionPoint().browse();
             scheduleResultsPrime();
             host.notifyAction("Browser", "Replace");
@@ -177,9 +192,18 @@ final class PopupBrowserController {
     }
 
     void handleMainEncoderPress(final boolean pressed) {
-        if (pressed && isActive()) {
-            commit();
+        if (pressed) {
+            if (isActive()) {
+                mainEncoderGestureActive = true;
+                commit();
+            }
+        } else {
+            mainEncoderGestureActive = false;
         }
+    }
+
+    boolean isHandlingMainEncoderGesture() {
+        return isActive() || mainEncoderGestureActive;
     }
 
     void commit() {
@@ -204,6 +228,8 @@ final class PopupBrowserController {
         boolean shiftHeld();
 
         boolean altHeld();
+
+        InsertionPoint heldDrumPadInsertionPoint();
 
         boolean overlayActive();
 

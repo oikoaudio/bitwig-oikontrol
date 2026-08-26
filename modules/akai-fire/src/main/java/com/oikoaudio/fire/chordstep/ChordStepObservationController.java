@@ -22,6 +22,8 @@ final class ChordStepObservationController {
     private final CursorRefresh cursorRefresh;
     private final StateScanner stateScanner;
     private final TaskScheduler scheduler;
+    private boolean active;
+    private int activationGeneration;
     private boolean resyncQueued;
 
     public ChordStepObservationController(
@@ -113,13 +115,28 @@ final class ChordStepObservationController {
         clipController.refresh(stateScanner.scan(noteClipSlotBank, defaultColorSupplier.get()));
     }
 
+    public void setActive(final boolean active) {
+        if (this.active == active) {
+            return;
+        }
+        this.active = active;
+        activationGeneration++;
+        if (!active) {
+            resyncQueued = false;
+        }
+    }
+
     public void queueResync() {
-        if (resyncQueued) {
+        if (!active || resyncQueued) {
             return;
         }
         resyncQueued = true;
+        final int scheduledGeneration = activationGeneration;
         scheduler.schedule(
                 () -> {
+                    if (!active || activationGeneration != scheduledGeneration) {
+                        return;
+                    }
                     resyncQueued = false;
                     refresh();
                 },
@@ -127,6 +144,9 @@ final class ChordStepObservationController {
     }
 
     public void refresh() {
+        if (!active) {
+            return;
+        }
         refreshSelectedClipState();
         refreshPass();
         scheduler.schedule(this::refreshPass, 1);
@@ -135,6 +155,9 @@ final class ChordStepObservationController {
     }
 
     public void refreshPass() {
+        if (!active) {
+            return;
+        }
         clearObservedCaches.run();
         cursorRefresh.refresh(
                 noteClipSlotBank,

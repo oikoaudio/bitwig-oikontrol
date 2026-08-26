@@ -71,6 +71,10 @@ public interface StepSequencerHost {
         return false;
     }
 
+    default boolean cycleAlternateEncoderTarget(final EncoderMode mode) {
+        return false;
+    }
+
     default boolean handleNoteVariationTurn(final NoteStepAccess access, final int amount) {
         return false;
     }

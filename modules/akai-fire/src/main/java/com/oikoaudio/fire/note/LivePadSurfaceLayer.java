@@ -21,6 +21,7 @@ import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.BitwigEditorToolActions;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.NoteAssign;
+import com.oikoaudio.fire.VuMeterSubscriptions;
 import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.ContinuousEncoderScaler;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
@@ -86,7 +87,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private static final double STEP_INPUT_DISPLAY_STEP_SIZE_BEATS = 0.25;
     private static final int MIN_SCALE_DEGREE_GLISS = -14;
     private static final int MAX_SCALE_DEGREE_GLISS = 14;
-    private static final int METER_REFRESH_TICKS = 1;
+    private static final int NUMERIC_METER_REFRESH_TICKS = 2;
     private static final long LIVE_PAD_NOTE_CHORD_RELEASE_HOLD_MS = 900L;
     private static final long DAW_NOTE_CHORD_RELEASE_HOLD_MS = 2000L;
     private static final RgbLightState ROOT_COLOR = new RgbLightState(120, 64, 0, true);
@@ -209,6 +210,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private boolean liveContextDisplayActive = false;
     private long liveContextDisplayRevision = Long.MIN_VALUE;
     private final PeakRmsOledView selectedTrackMeterView;
+    private final VuMeterSubscriptions.SelectedSource meterSubscription;
     private final NoteChordOledView liveNoteChordOledView;
     private List<Integer> selectedTrackPlayingNotes = List.of();
     private List<Integer> livePadSoundingNotes = List.of();
@@ -277,10 +279,19 @@ public abstract class LivePadSurfaceLayer extends Layer {
         this.cursorTrack
                 .color()
                 .addValueObserver((r, g, b) -> trackBaseColor = ColorLookup.getColor(r, g, b));
-        this.cursorTrack.addVuMeterObserver(
+        final CursorTrack meterCursorTrack =
+                host.createCursorTrack(
+                        meterCursorId(layerName),
+                        drumPadsOnly ? "Drum Pad Meter View" : "Note Meter View",
+                        0,
+                        0,
+                        true);
+        meterCursorTrack.addVuMeterObserver(
                 VuMeterFormatter.RANGE, -1, true, this::handleSelectedTrackPeakMeterChanged);
-        this.cursorTrack.addVuMeterObserver(
+        meterCursorTrack.addVuMeterObserver(
                 VuMeterFormatter.RANGE, -1, false, this::handleSelectedTrackRmsMeterChanged);
+        meterSubscription = driver.getVuMeterSubscriptions().registerSelected(meterCursorTrack);
+        driver.getVuMeterSubscriptions().onReEnabled(this::clearSelectedTrackMeterMax);
         this.cursorTrack.playingNotes().addValueObserver(this::handleSelectedTrackPlayingNotes);
         trackBaseColor = ColorLookup.getColor(this.cursorTrack.color().get());
         this.stepInputCursorClip =
@@ -405,6 +416,10 @@ public abstract class LivePadSurfaceLayer extends Layer {
         applyDefaultVelocitySensitivityPreference();
     }
 
+    static String meterCursorId(final String layerName) {
+        return layerName + "_METER_VIEW";
+    }
+
     private void observeLiveDrumPads() {
         liveDrumPadBank.canScrollBackwards().markInterested();
         liveDrumPadBank.canScrollForwards().markInterested();
@@ -473,6 +488,11 @@ public abstract class LivePadSurfaceLayer extends Layer {
     private void resetSelectedTrackMeterMax() {
         selectedTrackPeakMax = selectedTrackPeakMeter;
         selectedTrackRmsMax = selectedTrackRmsMeter;
+    }
+
+    private void clearSelectedTrackMeterMax() {
+        selectedTrackPeakMax = 0;
+        selectedTrackRmsMax = 0;
     }
 
     private void handleSelectedTrackPlayingNotes(final PlayingNote[] playingNotes) {
@@ -611,7 +631,8 @@ public abstract class LivePadSurfaceLayer extends Layer {
             refreshLiveContextIdleIfVisible();
             return;
         }
-        if (!liveMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
+        if (!liveMeterDisplayActive
+                || blinkTicks - lastMeterDisplayBlink >= NUMERIC_METER_REFRESH_TICKS) {
             showLiveMeterDisplay();
             liveMeterDisplayActive = true;
             liveContextDisplayActive = false;
@@ -2445,6 +2466,9 @@ public abstract class LivePadSurfaceLayer extends Layer {
             driver.routeBrowserMainEncoderPress(pressed);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
+            return;
+        }
         driver.setMainEncoderPressed(pressed);
         if (pressed && driver.isGlobalAltHeld()) {
             mainEncoderPressConsumed = true;
@@ -2934,6 +2958,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     @Override
     protected void onActivate() {
+        meterSubscription.setActive(true);
         active = true;
         resetLiveIdleDisplay();
         notePlayController.activate();
@@ -2954,6 +2979,7 @@ public abstract class LivePadSurfaceLayer extends Layer {
 
     @Override
     protected void onDeactivate() {
+        meterSubscription.setActive(false);
         clearStepInputHelper();
         active = false;
         selectedTrackPlayingNotes = List.of();

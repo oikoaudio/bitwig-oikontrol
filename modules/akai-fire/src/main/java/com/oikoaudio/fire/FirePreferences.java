@@ -37,6 +37,7 @@ public final class FirePreferences {
     private final SettableBooleanValue exclusiveTrackArmValue;
     private final SettableBooleanValue stepSequencerPadAudition;
     private final SettableBooleanValue screenNotifications;
+    private final SettableEnumValue vuMeterMode;
 
     private double padBrightness;
     private double padSaturation;
@@ -201,6 +202,13 @@ public final class FirePreferences {
                                 FireControlPreferences.CATEGORY_HARDWARE,
                                 FireControlPreferences.NOTE_CHORD_DISPLAY_MODES,
                                 FireControlPreferences.NOTE_CHORD_DISPLAY_PADS));
+        vuMeterMode =
+                interested(
+                        preferences.getEnumSetting(
+                                "VU Meters",
+                                FireControlPreferences.CATEGORY_HARDWARE,
+                                FireControlPreferences.VU_METER_MODES,
+                                FireControlPreferences.VU_METER_MODE_SELECTED));
         showDeactivatedTracks =
                 interested(
                         preferences.getBooleanSetting(
@@ -261,6 +269,8 @@ public final class FirePreferences {
                         listener.encoderLegendPositionChanged(
                                 FireControlPreferences.normalizeEncoderLegendPosition(value)));
         exclusiveTrackArmValue.addValueObserver(value -> exclusiveTrackArm = value);
+        vuMeterMode.addValueObserver(
+                value -> listener.vuMeterModeChanged(VuMeterMode.fromPreference(value)));
 
         listener.launchQuantizationChanged(
                 FireControlPreferences.toLaunchQuantizationValue(launchQuantization.get()));
@@ -271,6 +281,7 @@ public final class FirePreferences {
         listener.encoderLegendPositionChanged(
                 FireControlPreferences.normalizeEncoderLegendPosition(encoderLegendPosition.get()));
         listener.padAppearanceChanged(padBrightness, padSaturation);
+        listener.vuMeterModeChanged(VuMeterMode.fromPreference(vuMeterMode.get()));
     }
 
     public String clipLaunchMode() {
@@ -350,6 +361,10 @@ public final class FirePreferences {
 
     public boolean idleOledMeters() {
         return FireControlPreferences.IDLE_OLED_METERS.equals(idleOledMode.get());
+    }
+
+    public VuMeterMode vuMeterMode() {
+        return VuMeterMode.fromPreference(vuMeterMode.get());
     }
 
     public String noteChordDisplay() {
@@ -437,5 +452,7 @@ public final class FirePreferences {
         default void screenMessageHoldChanged(final long holdMillis) {}
 
         default void encoderLegendPositionChanged(final String position) {}
+
+        default void vuMeterModeChanged(final VuMeterMode mode) {}
     }
 }

@@ -6,6 +6,7 @@ import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.NoteStep;
 import com.bitwig.extension.controller.api.PinnableCursorClip;
 import com.bitwig.extension.controller.api.Track;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -60,10 +61,19 @@ final class MulticlipClipController {
         clip.exists().markInterested();
         clip.clipLauncherSlot().sceneIndex().markInterested();
         clip.getLoopLength().markInterested();
+        clip.getLoopStart().markInterested();
         clip.getPlayStart().markInterested();
         clip.setStepSize(MulticlipTiming.STEP_BEATS);
         clip.addNoteStepObserver(this::observeStep);
         clip.playingStep().addValueObserver(this::observePlayingStep);
+        clip.getLoopStart()
+                .addValueObserver(
+                        ignored -> {
+                            if (ready) {
+                                refreshObservedViews();
+                                observePlayingStep(clip.playingStep().get());
+                            }
+                        });
 
         fineClip =
                 cursor.createLauncherCursorClip(
@@ -151,14 +161,19 @@ final class MulticlipClipController {
     }
 
     private void refreshObservedViews() {
+        final int coarseLoopStart =
+                ClipLoopWindow.startStep(clip.getLoopStart().get(), MulticlipTiming.STEP_BEATS);
+        final int fineLoopStart =
+                ClipLoopWindow.startStep(
+                        clip.getLoopStart().get(), MulticlipTiming.FINE_STEP_BEATS);
         clip.scrollToKey(Math.max(0, midiNote - 1));
-        clip.scrollToStep(firstVisibleStep + 1);
+        clip.scrollToStep(coarseLoopStart + firstVisibleStep + 1);
         clip.scrollToKey(midiNote);
-        clip.scrollToStep(firstVisibleStep);
+        clip.scrollToStep(coarseLoopStart + firstVisibleStep);
         fineClip.scrollToKey(Math.max(0, midiNote - 1));
-        fineClip.scrollToStep(1);
+        fineClip.scrollToStep(fineLoopStart + 1);
         fineClip.scrollToKey(midiNote);
-        fineClip.scrollToStep(0);
+        fineClip.scrollToStep(fineLoopStart);
     }
 
     void clear() {
@@ -233,8 +248,16 @@ final class MulticlipClipController {
         clip.getLoopLength().set(beats);
     }
 
+    void duplicateContent() {
+        clip.duplicateContent();
+    }
+
     double playStart() {
         return clip.getPlayStart().get();
+    }
+
+    double loopStart() {
+        return clip.getLoopStart().get();
     }
 
     void setPlayStart(final double beats) {
@@ -305,12 +328,15 @@ final class MulticlipClipController {
     }
 
     private void observePlayingStep(final int absoluteStep) {
+        final int relativeStep =
+                ClipLoopWindow.relativeStep(
+                        absoluteStep, clip.getLoopStart().get(), MulticlipTiming.STEP_BEATS);
         if (!ready
-                || absoluteStep < firstVisibleStep
-                || absoluteStep >= firstVisibleStep + MulticlipXoxLayout.PATTERN_COUNT) {
+                || relativeStep < firstVisibleStep
+                || relativeStep >= firstVisibleStep + MulticlipXoxLayout.PATTERN_COUNT) {
             playingStep = -1;
         } else {
-            playingStep = absoluteStep - firstVisibleStep;
+            playingStep = relativeStep - firstVisibleStep;
         }
     }
 

@@ -11,12 +11,14 @@ import com.oikoaudio.fire.control.BiColorButton;
 import com.oikoaudio.fire.control.EncoderStepAccumulator;
 import com.oikoaudio.fire.control.MixerEncoderProfile;
 import com.oikoaudio.fire.control.PadMatrixBindings;
+import com.oikoaudio.fire.control.ParameterEncoderBinding;
 import com.oikoaudio.fire.control.TouchEncoder;
 import com.oikoaudio.fire.display.EncoderFooterLegend;
 import com.oikoaudio.fire.display.OledDisplay;
 import com.oikoaudio.fire.lights.BiColorLightState;
 import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.utils.PatternButtons;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import com.oikoaudio.fire.values.StepViewPosition;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,7 +38,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final NoteStep[] assignments = new NoteStep[32];
     private static final double FINE_STEP_SIZE = 1.0 / 64.0;
     private static final int OBSERVED_FINE_STEP_CAPACITY = 16 * 8 * 2 * 2;
-    private static final int METER_REFRESH_TICKS = 1;
+    private static final int GRAPHIC_METER_REFRESH_TICKS = 1;
+    private static final int NUMERIC_METER_REFRESH_TICKS = 2;
 
     private final OledDisplay oled;
 
@@ -96,6 +99,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private boolean pendingBankWasAlt = false;
     private boolean mainEncoderPressConsumed = false;
     private CursorRemoteControlsPage activeRemoteControlsPage;
+    private final CursorRemoteControlsPage kitRemoteControlsPage;
+    private final DrumUser2TargetState user2TargetState = new DrumUser2TargetState();
     private final EncoderStepAccumulator euclidLengthEncoder = new EncoderStepAccumulator(3);
     private final EncoderStepAccumulator euclidPulsesEncoder = new EncoderStepAccumulator(3);
     private final EncoderStepAccumulator euclidRotationEncoder = new EncoderStepAccumulator(3);
@@ -112,6 +117,7 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     private final Set<Integer> initializedAddedSteps = new HashSet<>();
     private final EncoderBankLayout encoderBankLayout;
     private boolean selectedClipHasContent = false;
+    private boolean hasSelectedClip = false;
     private boolean active = false;
     private boolean drumMeterDisplayActive = false;
     private int lastMeterDisplayBlink = Integer.MIN_VALUE;
@@ -161,10 +167,19 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         observeSelectedClip();
 
         positionHandler = new StepViewPosition(cursorClip, 32, "AKAI");
+        cursorClip
+                .getLoopStart()
+                .addValueObserver(
+                        loopStart ->
+                                bigCursorClip.scrollToStep(
+                                        ClipLoopWindow.startStep(loopStart, FINE_STEP_SIZE)));
 
         padHandler =
                 new DrumPadHandler(
                         driver, this, mainLayer, muteLayer, soloLayer, noteRepeatHandler);
+        kitRemoteControlsPage =
+                driver.getViewControl().getPrimaryDevice().createCursorRemoteControlsPage(8);
+        observeRemoteControlsPage(kitRemoteControlsPage);
         clipHandler = new ClipRowHandler(this);
         bindClipRowPads(driver);
         recurrenceEditor = new RecurrenceEditor(driver, this);
@@ -195,6 +210,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         initButtonBehaviour(driver);
         encoderBankLayout = createEncoderBankLayout();
         encoderLayer = new StepSequencerEncoderLayer(this, driver, encoderBankLayout);
+        altActive.addValueObserver(
+                ignored -> {
+                    if (encoderLayer.getEncoderMode() == EncoderMode.USER_2) {
+                        encoderLayer.refreshFooterLegend();
+                    }
+                });
 
         muteMode.addValueObserver(
                 active -> {
@@ -725,6 +746,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (driver.handleMainEncoderGlobalChord(inc)) {
             return;
         }
+        if (padHandler.selectHeldPadDevice(inc)) {
+            return;
+        }
         final String mainEncoderRole = getEffectiveMainEncoderRole();
         final boolean fine = isShiftHeld();
         if (FireControlPreferences.MAIN_ENCODER_NOTE_REPEAT.equals(mainEncoderRole)) {
@@ -1184,6 +1208,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
             driver.routeBrowserMainEncoderPress(press);
             return;
         }
+        if (driver.handleGlobalDeviceDeletionPress(press)) {
+            return;
+        }
         suppressDrumMeterDisplay();
         driver.setMainEncoderPressed(press);
         if (press && isAltHeld()) {
@@ -1294,11 +1321,17 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (shouldShowDrumContextIdle() && drumMeterDisplayActive) {
             return;
         }
-        if (!drumMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= METER_REFRESH_TICKS) {
+        if (!drumMeterDisplayActive || blinkTicks - lastMeterDisplayBlink >= meterRefreshTicks()) {
             showDrumMeterDisplay();
             drumMeterDisplayActive = true;
             lastMeterDisplayBlink = blinkTicks;
         }
+    }
+
+    private int meterRefreshTicks() {
+        return encoderLayer.getEncoderMode() == EncoderMode.MIXER
+                ? NUMERIC_METER_REFRESH_TICKS
+                : GRAPHIC_METER_REFRESH_TICKS;
     }
 
     private void showDrumMeterDisplay() {
@@ -1351,7 +1384,8 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
 
     private boolean shouldShowDrumContextIdle() {
         return shouldShowDrumContextIdle(
-                encoderLayer.getEncoderMode(), driver.isIdleOledMetersEnabled());
+                encoderLayer.getEncoderMode(),
+                driver.isIdleOledMetersEnabled() && driver.areAllVuMetersEnabled());
     }
 
     static boolean shouldShowDrumContextIdle(
@@ -1527,7 +1561,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         final int pages = positionHandler.getPages();
         cursorClip.clearStepsAtY(0, 0);
         for (int page = 0; page < pages; page++) {
-            cursorClip.scrollToStep(page * 32);
+            cursorClip.scrollToStep(
+                    ClipLoopWindow.startStep(
+                                    cursorClip.getLoopStart().get(),
+                                    positionHandler.getGridResolution())
+                            + page * 32);
             final int pageStart = page * 32;
             final int pageSteps = Math.min(32, Math.max(0, totalSteps - pageStart));
             for (int localIndex = 0; localIndex < pageSteps; localIndex++) {
@@ -1541,7 +1579,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 }
             }
         }
-        cursorClip.scrollToStep(originalPage * 32);
+        cursorClip.scrollToStep(
+                ClipLoopWindow.startStep(
+                                cursorClip.getLoopStart().get(),
+                                positionHandler.getGridResolution())
+                        + originalPage * 32);
         oled.detailInfo("EUCLID", "Applied Full Clip");
         oled.clearScreenDelayed();
     }
@@ -1679,11 +1721,12 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (playingStep == -1) {
             this.playingStep = -1;
         }
-        this.playingStep = playingStep - positionHandler.getStepOffset();
+        this.playingStep = playingStep - positionHandler.getAbsoluteStepOffset();
     }
 
     @Override
     protected void onActivate() {
+        padHandler.setMeterSubscriptionActive(true);
         active = true;
         suppressDrumMeterDisplay();
         padHandler.resetSelectedPadMeterDisplay();
@@ -1697,10 +1740,16 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         if (positionHandler.getPages() > 1) {
             oled.valueInfo("Drum 1/%d".formatted(positionHandler.getPages()), "Step Page");
         }
+        refreshSelectedClipState();
+        if (!hasSelectedClip) {
+            oled.valueInfo("No Clip", "Select clip");
+            notifyPopup("No Clip", "Select clip");
+        }
     }
 
     @Override
     protected void onDeactivate() {
+        padHandler.setMeterSubscriptionActive(false);
         active = false;
         drumMeterDisplayActive = false;
         padHandler.resetSelectedPadMeterDisplay();
@@ -1774,6 +1823,10 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         return padHandler.isPadBeingHeld();
     }
 
+    public InsertionPoint heldPadInsertionPoint() {
+        return padHandler.heldPadInsertionPoint();
+    }
+
     void registerExpectedNoteChange(final int x, final DrumNoteStepValues noteStep) {
         expectedNoteChanges.put(x, noteStep);
     }
@@ -1807,7 +1860,11 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
-        return activeRemoteControlsPage;
+        return switch (user2TargetState.target()) {
+            case PAD_REMOTES -> activeRemoteControlsPage;
+            case KIT_REMOTES -> kitRemoteControlsPage;
+            case EUCLID -> null;
+        };
     }
 
     private void observeSelectedClip() {
@@ -1816,7 +1873,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void refreshSelectedClipState() {
-        selectedClipHasContent = SelectedClipSlotState.scan(clipSlotBank, null).hasContent();
+        final SelectedClipSlotState state = SelectedClipSlotState.scan(clipSlotBank, null);
+        hasSelectedClip = state.hasSelection();
+        selectedClipHasContent = state.hasContent();
     }
 
     private boolean ensureSelectedClip() {
@@ -1906,12 +1965,22 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
         banks.put(
                 EncoderMode.USER_2,
                 new EncoderBank(
-                        "1: Euclid Len\n2: Euclid Pulses\n3: Euclid Rotation\n4: Accent Density",
-                        EncoderFooterLegend.of("ELen", "EPul", "ERot", "ADen"),
+                        "1: Pad Remote 1\n2: Pad Remote 2\n3: Pad Remote 3\n4: Pad Remote 4",
+                        EncoderFooterLegend.of("P1", "P2", "P3", "P4"),
                         new EncoderSlotBinding[] {
-                            euclidSlot(0), euclidSlot(1), euclidSlot(2), euclidSlot(3)
+                            user2Slot(0), user2Slot(1), user2Slot(2), user2Slot(3)
                         }));
         return new EncoderBankLayout(banks);
+    }
+
+    private void observeRemoteControlsPage(final CursorRemoteControlsPage page) {
+        page.selectedPageIndex().markInterested();
+        page.pageCount().markInterested();
+        page.pageNames().markInterested();
+        page.getName().markInterested();
+        for (int index = 0; index < 8; index++) {
+            ParameterEncoderBinding.markInterested(page.getParameter(index));
+        }
     }
 
     private EncoderSlotBinding noteAccessSlot(final NoteStepAccess access) {
@@ -2009,6 +2078,115 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
                 encoder.bindTouched(layer, touched -> handleUser2Touch(handler, touched, index));
             }
         };
+    }
+
+    private EncoderSlotBinding user2Slot(final int index) {
+        return new EncoderSlotBinding() {
+            @Override
+            public double stepSize() {
+                return MixerEncoderProfile.STEP_SIZE;
+            }
+
+            @Override
+            public void bind(
+                    final StepSequencerEncoderLayer handler,
+                    final Layer layer,
+                    final TouchEncoder encoder,
+                    final int slotIndex) {
+                encoder.bindContinuousEncoder(
+                        layer,
+                        driver::isGlobalShiftHeld,
+                        inc -> {
+                            if (user2TargetState.target() == DrumUser2TargetState.Target.EUCLID) {
+                                adjustEuclidEncoder(index, inc);
+                                return;
+                            }
+                            adjustUser2Remote(index, inc);
+                        });
+                encoder.bindTouched(layer, touched -> handleUser2TargetTouch(touched, index));
+            }
+        };
+    }
+
+    private void adjustEuclidEncoder(final int index, final int inc) {
+        final int effective =
+                switch (index) {
+                    case 0 -> euclidLengthEncoder.consume(inc);
+                    case 1 -> euclidPulsesEncoder.consume(inc);
+                    case 2 -> euclidRotationEncoder.consume(inc);
+                    default -> euclidAccentEncoder.consume(inc);
+                };
+        if (effective != 0) {
+            handleEuclidAdjust(index, effective);
+        }
+    }
+
+    private void adjustUser2Remote(final int encoderIndex, final int inc) {
+        final Parameter parameter = user2RemoteParameter(encoderIndex);
+        if (parameter == null || !ParameterEncoderBinding.isMapped(parameter)) {
+            oled.valueInfo(user2RemoteFallback(encoderIndex), "Unmapped");
+            return;
+        }
+        ParameterEncoderBinding.adjustParameter(parameter, driver.isGlobalShiftHeld(), inc);
+        showUser2Remote(parameter, encoderIndex);
+    }
+
+    private Parameter user2RemoteParameter(final int encoderIndex) {
+        final CursorRemoteControlsPage page = activeUser2RemotePage();
+        if (page == null) {
+            return null;
+        }
+        final int parameterIndex =
+                DrumUser2TargetState.remoteParameterIndex(encoderIndex, driver.isGlobalAltHeld());
+        return page.getParameter(parameterIndex);
+    }
+
+    private CursorRemoteControlsPage activeUser2RemotePage() {
+        return user2TargetState.target() == DrumUser2TargetState.Target.KIT_REMOTES
+                ? kitRemoteControlsPage
+                : activeRemoteControlsPage;
+    }
+
+    private String user2RemoteFallback(final int encoderIndex) {
+        final int parameterIndex =
+                DrumUser2TargetState.remoteParameterIndex(encoderIndex, driver.isGlobalAltHeld());
+        return (user2TargetState.target() == DrumUser2TargetState.Target.KIT_REMOTES ? "K" : "P")
+                + (parameterIndex + 1);
+    }
+
+    private void showUser2Remote(final Parameter parameter, final int encoderIndex) {
+        final String name =
+                parameter.name().get().isBlank()
+                        ? user2RemoteFallback(encoderIndex)
+                        : parameter.name().get();
+        oled.valueInfo(name, parameter.displayedValue().get());
+    }
+
+    private void handleUser2TargetTouch(final boolean touched, final int index) {
+        if (!touched) {
+            oled.clearScreenDelayed();
+            return;
+        }
+        if (user2TargetState.target() == DrumUser2TargetState.Target.EUCLID) {
+            handleUser2Touch(encoderLayer, true, index);
+            return;
+        }
+        final Parameter parameter = user2RemoteParameter(index);
+        final String fallback = user2RemoteFallback(index);
+        if (driver.handleKnobModeEncoderReset(
+                true,
+                parameter != null && ParameterEncoderBinding.isMapped(parameter),
+                fallback,
+                "Unmapped",
+                () -> parameter.reset(),
+                () -> showUser2Remote(parameter, index))) {
+            return;
+        }
+        if (parameter != null && ParameterEncoderBinding.isMapped(parameter)) {
+            showUser2Remote(parameter, index);
+        } else {
+            oled.valueInfo(fallback, "Unmapped");
+        }
     }
 
     @FunctionalInterface
@@ -2236,9 +2414,63 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     @Override
     public String getModeInfo(final EncoderMode mode) {
         if (mode == EncoderMode.USER_2) {
-            return "1: Euclid Len\n2: Euclid Pulses\n3: Euclid Rotation\n4: Accent Density";
+            return switch (user2TargetState.target()) {
+                case PAD_REMOTES -> remoteModeInfo(activeRemoteControlsPage, "Pad");
+                case KIT_REMOTES -> remoteModeInfo(kitRemoteControlsPage, "Kit");
+                case EUCLID ->
+                        "1: Euclid Len\n2: Euclid Pulses\n3: Euclid Rotation\n4: Accent Density";
+            };
         }
         return StepSequencerHost.super.getModeInfo(mode);
+    }
+
+    @Override
+    public String getEncoderFooterLegend(final EncoderMode mode) {
+        if (mode != EncoderMode.USER_2) {
+            return StepSequencerHost.super.getEncoderFooterLegend(mode);
+        }
+        if (user2TargetState.target() == DrumUser2TargetState.Target.EUCLID) {
+            return EncoderFooterLegend.of("ELen", "EPul", "ERot", "ADen");
+        }
+        final CursorRemoteControlsPage page = activeUser2RemotePage();
+        final String prefix =
+                user2TargetState.target() == DrumUser2TargetState.Target.KIT_REMOTES ? "K" : "P";
+        final int offset = driver.isGlobalAltHeld() ? 4 : 0;
+        final String[] labels = new String[4];
+        for (int index = 0; index < labels.length; index++) {
+            final Parameter parameter = page == null ? null : page.getParameter(offset + index);
+            labels[index] =
+                    parameter == null || parameter.name().get().isBlank()
+                            ? prefix + (offset + index + 1)
+                            : parameter.name().get();
+        }
+        return EncoderFooterLegend.of(labels[0], labels[1], labels[2], labels[3]);
+    }
+
+    @Override
+    public boolean cycleAlternateEncoderTarget(final EncoderMode mode) {
+        if (mode != EncoderMode.USER_2) {
+            return false;
+        }
+        user2TargetState.cycle();
+        return true;
+    }
+
+    private String remoteModeInfo(final CursorRemoteControlsPage page, final String prefix) {
+        final int offset = driver.isGlobalAltHeld() ? 4 : 0;
+        final StringBuilder info = new StringBuilder();
+        for (int index = 0; index < 4; index++) {
+            if (index > 0) {
+                info.append('\n');
+            }
+            final Parameter parameter = page == null ? null : page.getParameter(offset + index);
+            final String name =
+                    parameter == null || parameter.name().get().isBlank()
+                            ? prefix + " Remote " + (offset + index + 1)
+                            : parameter.name().get();
+            info.append(index + 1).append(": ").append(name);
+        }
+        return info.toString();
     }
 
     private void handleStepSeqPressed(final boolean pressed) {
@@ -2293,6 +2525,9 @@ public class DrumSequenceMode extends Layer implements StepSequencerHost, SeqCli
     }
 
     private void handleBankButton(final boolean pressed, final int dir) {
+        if (driver.handleGlobalTrackCreationBankButton(pressed, dir)) {
+            return;
+        }
         if (pressed) {
             pendingBankDir = dir;
             pendingBankForceFractional = shiftActive.get();

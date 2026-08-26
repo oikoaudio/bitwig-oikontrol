@@ -7,6 +7,7 @@ import com.bitwig.extensions.framework.values.BooleanValueObject;
 import com.oikoaudio.fire.AkaiFireOikontrolExtension;
 import com.oikoaudio.fire.ColorLookup;
 import com.oikoaudio.fire.ViewCursorControl;
+import com.oikoaudio.fire.VuMeterSubscriptions;
 import com.oikoaudio.fire.control.RgbButton;
 import com.oikoaudio.fire.display.DisplayInfo;
 import com.oikoaudio.fire.display.DisplayTarget;
@@ -38,6 +39,7 @@ public class DrumPadHandler {
     private final PinnableCursorClip cursorClip;
     private final NoteInput noteInput;
     private final DrumPadBank padBank;
+    private final VuMeterSubscriptions.Group meterSubscriptions;
     private RgbLightState trackColor = RgbLightState.PURPLE;
 
     private final NoteRepeatHandler noteRepeatHandler;
@@ -103,21 +105,26 @@ public class DrumPadHandler {
         displayTarget = new DisplayTarget(parent.getOled());
 
         final RgbButton[] rgbButtons = driver.getRgbButtons();
+        meterSubscriptions =
+                driver.getVuMeterSubscriptions().createGroup(control.getDrumMeterPadBank());
+        driver.getVuMeterSubscriptions().onReEnabled(this::clearSelectedPadMeterMax);
         for (int i = 0; i < VISIBLE_PAD_COUNT; i++) {
             final RgbButton button = rgbButtons[i + DRUM_PAD_BUTTON_OFFSET];
             final DrumPad drumPad = control.getDrumPadBank().getItemAt(i);
+            final DrumPad meterPad = control.getDrumMeterPadBank().getItemAt(i);
             final PadContainer pad = new PadContainer(this, i, drumPad, playing[i]);
             final int padIndex = i;
-            drumPad.addVuMeterObserver(
+            meterPad.addVuMeterObserver(
                     VuMeterFormatter.RANGE,
                     -1,
                     true,
                     value -> handlePeakMeterChanged(padIndex, value));
-            drumPad.addVuMeterObserver(
+            meterPad.addVuMeterObserver(
                     VuMeterFormatter.RANGE,
                     -1,
                     false,
                     value -> handleRmsMeterChanged(padIndex, value));
+            meterSubscriptions.register(meterPad);
 
             bindMain(button, mainLayer, pad);
             button.bind(
@@ -296,7 +303,8 @@ public class DrumPadHandler {
         displayTarget.setFocusIndex(selectedPadIndex);
         displayTarget.setName(selectedPad.getName());
 
-        parent.getOled().showInfo(padDisplayInfo);
+        parent.getDriver()
+                .showIncidentalModeFeedback(() -> parent.getOled().showInfo(padDisplayInfo));
 
         selectedPad.updateDisplay(displayTarget.getTypeIndex());
         final NoteAction pendingAction = parent.getPendingAction();
@@ -331,6 +339,35 @@ public class DrumPadHandler {
 
     public boolean isPadBeingHeld() {
         return !padsHeld.isEmpty();
+    }
+
+    public InsertionPoint heldPadInsertionPoint() {
+        if (padsHeld.isEmpty()) {
+            return null;
+        }
+        final int heldPadIndex =
+                selectedPad != null && padsHeld.contains(selectedPad.index)
+                        ? selectedPad.index
+                        : padsHeld.iterator().next();
+        return pads.get(heldPadIndex).browserInsertionPoint();
+    }
+
+    public boolean selectHeldPadDevice(final int direction) {
+        if (padsHeld.isEmpty()) {
+            return false;
+        }
+        final int heldPadIndex =
+                selectedPad != null && padsHeld.contains(selectedPad.index)
+                        ? selectedPad.index
+                        : padsHeld.iterator().next();
+        final PadContainer heldPad = pads.get(heldPadIndex);
+        if (!heldPad.selectDevice(direction)) {
+            parent.getOled().valueInfo("Pad Device", "No Devices");
+            return true;
+        }
+        parent.setActiveRemoteControlsPage(heldPad.activeRemoteControlsPage());
+        parent.getOled().valueInfo("Pad Device", heldPad.selectedDeviceLabel());
+        return true;
     }
 
     public RgbLightState getCurrentPadColor() {
@@ -618,6 +655,10 @@ public class DrumPadHandler {
         resetSelectedPadMeterText();
     }
 
+    public void setMeterSubscriptionActive(final boolean active) {
+        meterSubscriptions.setActive(active);
+    }
+
     public void showMixerValue(final String title, final String value) {
         selectedPadMeterView.showValueInfo(title, value);
     }
@@ -640,11 +681,17 @@ public class DrumPadHandler {
         }
         final boolean changed = padIndex != selectedMeterPadIndex;
         selectedMeterPadIndex = padIndex;
+        meterSubscriptions.select(padIndex);
         if (resetMax || changed) {
             selectedPadPeakMax = padPeakMeters[padIndex];
             selectedPadRmsMax = padRmsMeters[padIndex];
             selectedPadMeterView.reset();
         }
+    }
+
+    private void clearSelectedPadMeterMax() {
+        selectedPadPeakMax = 0;
+        selectedPadRmsMax = 0;
     }
 
     public void bindPadParameters(final Layer layer) {

@@ -50,6 +50,7 @@ class FirePreferencesTest {
         assertFalse(preferences.exclusiveTrackArm());
         assertTrue(preferences.stepSequencerPadAudition());
         assertTrue(preferences.screenNotifications());
+        assertEquals(VuMeterMode.SELECTED, preferences.vuMeterMode());
         assertEquals(FireControlPreferences.PAD_BRIGHTNESS_DEFAULT, preferences.padBrightness());
         assertEquals(FireControlPreferences.PAD_SATURATION_DEFAULT, preferences.padSaturation());
 
@@ -66,6 +67,7 @@ class FirePreferencesTest {
                 .padAppearanceChanged(
                         FireControlPreferences.PAD_BRIGHTNESS_DEFAULT,
                         FireControlPreferences.PAD_SATURATION_DEFAULT);
+        verify(listener).vuMeterModeChanged(VuMeterMode.SELECTED);
     }
 
     @Test
@@ -80,6 +82,7 @@ class FirePreferencesTest {
         source.changeEnum("Screen Message Hold", "unexpected");
         source.changeEnum(
                 "Drum Mode Pinning", FireControlPreferences.DRUM_PIN_MODE_FOLLOW_SELECTION);
+        source.changeEnum("VU Meters", "Off");
 
         assertEquals(FireControlPreferences.PAD_BRIGHTNESS_MAX, preferences.padBrightness());
         assertEquals(FireControlPreferences.PAD_SATURATION_MIN, preferences.padSaturation());
@@ -94,6 +97,8 @@ class FirePreferencesTest {
         verify(listener)
                 .screenMessageHoldChanged(FireControlPreferences.SCREEN_MESSAGE_HOLD_NORMAL_MS);
         verify(listener).drumPinModeChanged(false);
+        verify(listener).vuMeterModeChanged(VuMeterMode.OFF);
+        assertEquals(VuMeterMode.OFF, preferences.vuMeterMode());
     }
 
     @Test
@@ -243,6 +248,11 @@ class FirePreferencesTest {
 
         private boolean booleanValue(final String name) {
             return booleanValues.get(name).get();
+        }
+
+        private void changeBoolean(final String name, final boolean value) {
+            booleanValues.get(name).set(value);
+            booleanObservers.get(name).valueChanged(value);
         }
     }
 }

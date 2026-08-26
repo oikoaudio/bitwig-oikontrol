@@ -13,6 +13,7 @@ import com.oikoaudio.fire.lights.RgbLightState;
 import com.oikoaudio.fire.utils.PatternButtons;
 
 final class ChordStepControlBindings {
+    private final BankButtonBindings.GestureInterceptor bankGestureInterceptor;
     private final Layer layer;
     private final RgbButton[] pads;
     private final BiColorButton stepButton;
@@ -24,6 +25,7 @@ final class ChordStepControlBindings {
     private final Host host;
 
     ChordStepControlBindings(
+            final BankButtonBindings.GestureInterceptor bankGestureInterceptor,
             final Layer layer,
             final RgbButton[] pads,
             final BiColorButton stepButton,
@@ -33,6 +35,7 @@ final class ChordStepControlBindings {
             final PatternButtons patternButtons,
             final MultiStateHardwareLight[] stateLights,
             final Host host) {
+        this.bankGestureInterceptor = bankGestureInterceptor;
         this.layer = layer;
         this.pads = pads;
         this.stepButton = stepButton;
@@ -84,6 +87,7 @@ final class ChordStepControlBindings {
                 layer,
                 bankLeftButton,
                 bankRightButton,
+                bankGestureInterceptor,
                 new BankButtonBindings.Host() {
                     @Override
                     public void handleBankButton(final boolean pressed, final int amount) {

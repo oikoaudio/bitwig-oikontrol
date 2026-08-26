@@ -4,6 +4,15 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 
 ## Unreleased
 
+- Aligned Akai Fire sequencer navigation: `PATTERN UP/DOWN` pages Multiclip time (`SHIFT` pages scenes), while `GRID LEFT/RIGHT` rotates whole clips through play start and retains note/line movement for focused subtargets. Melo Gen now shows shifted clip-start feedback, and Fugue source/derived lines follow the same target rule.
+- Fixed Browser on an empty newly created track incorrectly using a stale pinned device from the previous track and showing that device's presets.
+- Added global `SHIFT + ALT + SELECT` deletion for Bitwig's explicitly selected device; when none is selected, the gesture reports `No Device` without deleting anything.
+- Holding a Drum XOX drum pad while pressing `BROWSER` now replaces that pad's selected direct device, or opens from the pad's insertion context when its device chain is empty.
+- Drum XOX User 2 now defaults to selected pad-device remotes 1-4 with `ALT` exposing 5-8; `ALT + KNOB MODE` cycles Pad Remotes, parent Drum Machine Remotes, and the existing Euclid controls. Holding a drum pad and turning `SELECT` chooses and remembers a direct device in that pad's chain.
+- Added global Akai Fire track creation: `PATTERN + BANK LEFT/RIGHT` inserts an instrument track before/after the selection, `ALT` creates audio instead, and an FX-track selection creates another FX track in its own section.
+- Akai Fire single-clip sequencers no longer select a playing launcher clip during passive cursor refresh, and inactive Poly Step observation no longer schedules clip-selection resyncs that can collapse Bitwig's additive clip selection.
+- Akai Fire sequencers now display and edit the selected clip's actual loop window when its loop start is moved later than `1.1.1`, including loop-relative playhead and clip-start feedback.
+- Added an Akai Fire `VU Meters` hardware preference with `Off`, `Selected`, and `All` modes, defaulting to efficient selected-track/pad numeric meters while only `All` subscribes the full banks used by graphical meters. Numeric Peak/RMS pages refresh at 5 Hz, suppress unchanged OLED rows, and reset cached maxima when meter subscriptions resume.
 - The `DRUM` button now places setup-specific Multiclip Seq last, after Nested Rhythm and Drum Pads. Multiclip prefers the selected group context, falls back to an unambiguous project group marked `[PolySeq]`, and reports missing, ambiguous, or ineligible setups on the OLED. Mixer follows a matching Drum Machine pad or materialized group-instrument output chain, while remote-page navigation follows the group's first instrument.
 - Multiclip Seq now turns pattern pads beyond the active Lane Clip's loop off, marks a shifted play start in purple, and blocks plain step entry beyond the loop until Last Step extends it.
 - Multiclip Seq now keeps Bitwig's selected child clip authoritative on entry while slow-blinking playing scenes and fast-blinking queued ones. Row-2 lane pads remain steady because playback is controlled at scene level.

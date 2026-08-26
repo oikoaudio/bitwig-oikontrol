@@ -136,6 +136,8 @@ Pad colors in `DRUM` and `PERFORM` follow Bitwig track, drum-lane, and clip colo
 | `ALT + REC` | Arranger overdub |
 | `PATTERN` | Write automation |
 | `PATTERN + REC` | Record the selected track into the next free launcher slot, regardless of mode |
+| `PATTERN + GRID LEFT/RIGHT` | Create an instrument track before/after the selected track; when an FX track is selected, create an FX track instead |
+| `ALT + PATTERN + GRID LEFT/RIGHT` | Create an audio track before/after the selected track; when an FX track is selected, create an FX track instead |
 | `SHIFT + PATTERN` | Metronome |
 | `ALT + PATTERN` | Clip launcher overdub; when enabling, also enables automation write in touch mode |
 | `KNOB MODE + PATTERN UP/DOWN` | Previous/next remote page for the active encoder page, when that page controls remotes |
@@ -172,9 +174,13 @@ Press `SHIFT + BROWSER` to latch the global settings overlay. Press `SHIFT + BRO
 
 On the `Pins` page, turn an encoder right for `On` and left for `Off`; the pin controls stop at those two states and do not wrap. The `Input` velocity settings are shared by live `NOTE`, `Drum Pads`, and `Poly Step` input. The global settings screen also shows whether launcher and mixer track views are using all tracks or only active tracks. Press the bottom-right pad from the overlay to toggle `Show deactivated tracks`; the same persistent option is available in the controller preferences and defaults to off.
 
-The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages that already maintain visible-track or visible-pad meter data. The `Note OLED Notes/Chords` hardware preference defaults to `Pads`: live Note pads show notes/chords on the OLED, while selected-track DAW playback notes do not take over the idle display. Set it to `Pads + DAW` if you also want playing clip notes/chords to appear during playback.
+The `Screen Message Hold` hardware preference controls how long transient OLED messages stay visible before persistent screens return: `Short` is 750 ms, `Normal` is 1.5 s, and `Long` is 3 s. While playback is running, idle OLED pages can return to mode-specific meters. When playback stops, those meters keep refreshing briefly so levels can ring out, then the idle OLED falls back to the selected track name instead of silent meter displays. Numeric Peak/RMS pages sample the cached Bitwig levels at 5 Hz and only resend rows whose formatted values changed; graphical meters retain their smoother 10 Hz refresh. The `VU Meters` hardware preference defaults to `Selected`: `Off` disables every Fire meter display and unsubscribes all dedicated meter sources, `Selected` retains only the selected track or pad source used by numeric Peak/RMS pages, and `All` also subscribes the full visible banks used by graphical meters. The `Idle Perf & Drum OLED` hardware preference defaults to `Context`; set it to `Meters` to prefer decorative VU-style idle displays on Launcher/Mix and Drum XOX pages when `VU Meters` is `All`. The `Note OLED Notes/Chords` hardware preference defaults to `Pads`: live Note pads show notes/chords on the OLED, while selected-track DAW playback notes do not take over the idle display. Set it to `Pads + DAW` if you also want playing clip notes/chords to appear during playback.
 
 Where the active mode has a four-encoder page, the OLED can keep a compact legend for the current encoder assignments. This is used by live Note and the shared step-sequencer encoder pages, including Drum XOX, Multiclip Seq, Melo Gen, Poly Step, Nested Rhythm, and Fugue. The `Encoder Legend Position` hardware preference defaults to `Bottom`; set it to `Top` if the top row is easier to read in your controller setup.
+
+Single-clip sequencers follow Bitwig's primary selected launcher clip without changing passive DAW selections. Entering Drum XOX, Nested Rhythm, Melo Gen, Poly Step, or Fugue without an available primary clip shows `No Clip / Select clip`. Select a clip in Bitwig or use an explicit Fire clip-row gesture; live Note input and other inactive modes do not replace Bitwig's additive clip selection.
+
+Sequencer grids follow the selected clip's loop region rather than assuming that it begins at `1.1.1`. If the loop is moved later in the clip, Drum XOX, Multiclip Seq, Nested Rhythm, Melo Gen, Poly Step, and Fugue display and edit that moved segment; their playhead and clip-start feedback remains relative to the loop window.
 
 ### Baked Note Variation
 
@@ -205,6 +211,7 @@ Applying variation again produces a new stable result. A later deliberate genera
 
 Tap `SELECT` to swap between `Last Touched Parameter` and the current alternate role. Press `SHIFT + SELECT` to cycle the alternate role.
 Press `ALT + SELECT` to open or close the selected device window.
+Press `SHIFT + ALT + SELECT` to delete Bitwig's explicitly selected device. If no device is selected, the OLED reports `No Device` and nothing is deleted.
 
 Global `SELECT` turn chords:
 
@@ -251,7 +258,7 @@ When Drum XOX is idle, the OLED shows the selected pad name with the current enc
 | `Channel` | Note length | Chance | Velocity spread | Repeats |
 | `Mixer` | Selected pad volume | Selected pad pan | Selected pad send 1 | Selected pad send 2 |
 | `User 1` | Velocity or default velocity | Pressure or default pressure | Timbre or default timbre | Pitch |
-| `User 2` | Euclid length | Euclid pulses | Euclid rotation | Accent density |
+| `User 2` | Selected pad-device remote 1 | Pad remote 2 | Pad remote 3 | Pad remote 4 |
 
 | Control | Action |
 | --- | --- |
@@ -261,21 +268,26 @@ When Drum XOX is idle, the OLED shows the selected pad name with the current enc
 | `ALT + STEP` | Fill |
 | `PATTERN UP/DOWN` | Page visible steps |
 | `ALT + PATTERN UP/DOWN` | Scroll the visible Drum Machine pad window |
-| `BANK LEFT/RIGHT` | Move or rotate pattern |
-| `SHIFT + BANK LEFT/RIGHT` | Fine nudge |
-| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| `GRID LEFT/RIGHT` | Move or rotate pattern |
+| `SHIFT + GRID LEFT/RIGHT` | Fine nudge |
+| `ALT + GRID LEFT/RIGHT` | Halve / double clip length |
 | `MUTE_1` | Select |
 | `SHIFT + MUTE_1` | Toggle Mute pad mode |
 | `MUTE_2` | Last Step |
 | `SHIFT + MUTE_2` | Toggle Solo pad mode |
 | `MUTE_3` | Copy / paste |
 | `MUTE_4` | Delete / reset |
+| Hold drum pad + turn `SELECT` | Select a direct device in that pad's chain |
+| Hold drum pad + `BROWSER` | Open Bitwig's browser for that pad |
+| `ALT + KNOB MODE` on `User 2` | Cycle Pad Remotes, Drum Machine Remotes, and Euclid targets |
 
 Hold one or more step pads, then use the timing gestures to move those held notes directly. Fine-nudged notes stay attached to the held target during the gesture.
 
+`User 2` defaults to the selected pad device's first four remotes; hold `ALT` for remotes 5-8. Hold a drum pad and turn `SELECT` to choose another direct device in that pad's chain, which is remembered independently for each pad. Hold a drum pad and press `BROWSER` to replace that selected device, or to browse from the pad's insertion context when its chain is empty. On `User 2`, press `ALT + KNOB MODE` to cycle from Pad Remotes to the parent Drum Machine's remotes, then to Euclid length, pulses, rotation, and accent density, and back to Pad Remotes. The two remote targets both use `ALT` for remotes 5-8, and `KNOB MODE + PATTERN UP/DOWN` changes the active target's Bitwig remote page.
+
 Hold `MUTE_3` and press a clip slot, drum pad, or step to paste from the selected item of the same type. Clip-row paste falls back to the playing clip on that track if no clip was explicitly selected.
 
-In `Drum Pads`, the third `DRUM` surface, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `BANK LEFT/RIGHT` reminds you to use Pattern for this, while `ALT + BANK LEFT/RIGHT` still undo/redo Bitwig project history. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
+In `Drum Pads`, the third `DRUM` surface, `Grid64` plays a 64-pad Bitwig Drum Machine window. The starting page puts C1 on the lower-left pad, then pads run left-to-right from the bottom row. LEDs use explicit Drum Machine pad colors when set; pads with a sound but no explicit color use the track color, and empty pads stay dark. Pressing a pad shows the Bitwig pad name. `PATTERN UP/DOWN` scrolls the pad window by 16 pads; `GRID LEFT/RIGHT` reminds you to use Pattern for this, while `ALT + GRID LEFT/RIGHT` still undo/redo Bitwig project history. On the `Channel` page, encoder 1 selects layouts (`Grid64`, `Velocity`, and `Bongos`) and encoder 2 controls velocity sensitivity / `SHIFT`: velocity center. In `Velocity` and `Bongos`, the left 4x4 block selects the sound. `Velocity` uses the remaining 12x4 pads as fixed velocity zones; `Bongos` leaves separator columns between the selector and two 5x4 bongo surfaces, uses hit velocity for note velocity, and maps surface position to per-note pressure.
 
 ### Multiclip Seq mode
 
@@ -317,11 +329,13 @@ Direct child order is the lane contract. Positions 1-16 map to Lane 1-16, API MI
 | Control | Action |
 | --- | --- |
 | `DRUM` | Cycle to the next Drum surface |
-| `PATTERN UP/DOWN` | Page scenes by sixteen |
-| `BANK LEFT/RIGHT` | Page the active clip's time window by 32 steps |
-| Hold step(s) + `BANK LEFT/RIGHT` | Fine-nudge only the held notes by 1/64 |
-| `ALT + BANK LEFT/RIGHT` | Move the active Lane Clip play start (lane rotation) |
-| `SHIFT + ALT + BANK LEFT/RIGHT` | Fine-nudge all notes in the active Lane Clip by 1/64 |
+| `PATTERN UP/DOWN` | Page the active clip's time window by 32 steps |
+| `SHIFT + PATTERN UP/DOWN` | Page scenes by sixteen |
+| `GRID LEFT/RIGHT` | Move the active Lane Clip play start (lane rotation) |
+| `SHIFT + GRID LEFT/RIGHT` | Fine-move the active Lane Clip play start |
+| Hold step(s) + `GRID LEFT/RIGHT` | Fine-nudge only the held notes by 1/64 |
+| `ALT + GRID LEFT/RIGHT` | Halve / double the active Lane Clip length |
+| `SHIFT + ALT + GRID LEFT/RIGHT` | Fine-nudge all notes in the active Lane Clip by 1/64 |
 | Scene pad | Launch that existing child-only scene from the start with project launch quantization, then follow it as the editing scene |
 | `ALT + scene pad` or hold `MUTE_1` + scene pad | Select that scene for editing; append missing empty project scenes when needed |
 | Hold `MUTE_3` + scene pad | Paste the active Lane Clip into that lane's destination slot |
@@ -382,10 +396,10 @@ The `Channel` encoder page is the primary Nested Rhythm surface: it changes the 
 | `ALT + STEP` | Fill |
 | `PATTERN UP` or `ALT + MUTE_4` | Reset hit edits for the selected clip |
 | `PATTERN DOWN` | Generate current nested rhythm into the selected clip |
-| `BANK LEFT/RIGHT` | Move clip play start |
-| `SHIFT + BANK LEFT/RIGHT` | Fine move clip play start |
-| `SHIFT + both BANK buttons` | Snap clip play start back to the nearest coarse grid position |
-| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| `GRID LEFT/RIGHT` | Move clip play start |
+| `SHIFT + GRID LEFT/RIGHT` | Fine move clip play start |
+| `SHIFT + both GRID buttons` | Snap clip play start back to the nearest coarse grid position |
+| `ALT + GRID LEFT/RIGHT` | Halve / double clip length |
 | `MUTE_1` | Select clip-row pads without launching |
 | Hold `MUTE_2` + projected rhythm pad | Set last step within the 32-step edit view |
 | `MUTE_3` | Copy / paste clip-row content |
@@ -395,7 +409,7 @@ The `Channel` encoder page is the primary Nested Rhythm surface: it changes the 
 | Hold bottom-row hit pad + expression encoder | Edit that hit directly |
 | `SHIFT` + hit pad | Reset that hit's local edits |
 
-Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. `Clip length` adjusts from that DAW value, and `ALT + BANK LEFT/RIGHT` halves or doubles it.
+Nested Rhythm reads the selected clip loop length from Bitwig when the clip is selected or the mode is activated. `Clip length` adjusts from that DAW value, and `ALT + GRID LEFT/RIGHT` halves or doubles it.
 
 `Density` thins the generated phrase without stretching retained notes. `ALT + Density` toggles whether density prefers structurally strong hits or weaker decorative hits. `Cluster` packs retained hits into a smaller phrase region; `ALT + Cluster` adjusts clip play start.
 
@@ -417,8 +431,8 @@ Nested Rhythm reads the selected clip loop length from Bitwig when the clip is s
 | `ALT + NOTE` | Toggle the current layout variant: chromatic / in-key in melodic and Poly Step builder input, bass columns / full field in harmonic input |
 | `STEP` | Enter `Poly Step`; press again for `Melo Gen` |
 | `SHIFT + STEP` | Toggle Bitwig Step Input helper for the selected clip |
-| `BANK LEFT/RIGHT` | Shared octave down / up |
-| `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
+| `GRID LEFT/RIGHT` | Shared octave down / up |
+| `ALT + GRID LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `PATTERN DOWN/UP` | Next / previous shared scale |
 | `ALT + PATTERN DOWN/UP` | Lower / higher shared root key |
 | `MUTE_1` | Sustain |
@@ -481,8 +495,9 @@ Press `STEP` from `Poly Step` to enter `Melo Gen`; press `STEP` again to enter `
 | `PATTERN UP` / `ALT + PATTERN UP` | Generate / mutate pitch pool |
 | `PATTERN DOWN` / `ALT + PATTERN DOWN` | Generate / mutate phrase |
 | `SHIFT + PATTERN UP/DOWN` | Cycle `Notes`, `Expression`, and `Process` views |
-| `BANK LEFT/RIGHT` | Rotate phrase |
-| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| `GRID LEFT/RIGHT` | Move clip play start |
+| `SHIFT + GRID LEFT/RIGHT` | Fine-move clip play start |
+| `ALT + GRID LEFT/RIGHT` | Halve / double clip length |
 
 | Left-side button | Action |
 | --- | --- |
@@ -528,11 +543,11 @@ Press `STEP` from normal performance modes to enter `Poly Step`. Press `STEP` ag
 | `ALT + STEP` | Fill |
 | `PATTERN UP/DOWN` | Page visible chord-step window |
 | `SHIFT + PATTERN DOWN/UP` | Set builder latch off / on |
-| `BANK LEFT/RIGHT` | Move clip start |
-| `SHIFT + BANK LEFT/RIGHT` with no held steps | Fine move clip start |
-| `SHIFT + both BANK buttons` with no held steps | Snap clip start back to the nearest coarse grid position |
-| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
-| Hold step(s) + `BANK LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
+| `GRID LEFT/RIGHT` | Move clip start |
+| `SHIFT + GRID LEFT/RIGHT` with no held steps | Fine move clip start |
+| `SHIFT + both GRID buttons` with no held steps | Snap clip start back to the nearest coarse grid position |
+| `ALT + GRID LEFT/RIGHT` | Halve / double clip length |
+| Hold step(s) + `GRID LEFT/RIGHT` | Experimental micro-timing nudge for held chord material |
 
 Each note or chord is owned by the step pad nearest to its note-on position. Fine nudge keeps that
 ownership until the note-on crosses the midpoint to the neighboring step, then transfers it as one
@@ -578,8 +593,9 @@ Press `STEP` from `Melo Gen` to enter `Fugue`. `Fugue` treats MIDI channel 1 as 
 | `MUTE_1`-`MUTE_4` | Enable / turn off the corresponding line; turning off a derived line clears its MIDI channel |
 | `PATTERN UP` | Cycle preset for the active derived line |
 | `PATTERN DOWN` | Reread channel 1 from the clip and rebuild derived lines |
-| `BANK LEFT/RIGHT` | Adjust active line start; on channel 1, adjust clip length |
-| `ALT + BANK LEFT/RIGHT` | Halve / double clip length |
+| `GRID LEFT/RIGHT` | Move the source clip play start, or adjust the active derived line's start offset |
+| `SHIFT + GRID LEFT/RIGHT` on channel 1 | Fine-move the source clip play start |
+| `ALT + GRID LEFT/RIGHT` | Halve / double clip length |
 | `STEP` | Enter `Poly Step` |
 | Encoder turn on a derived-line page | Immediately rebuild that line with the new parameter |
 | Channel 1 pads and encoders | Edit the source/template line |
@@ -590,7 +606,7 @@ Press `STEP` from `Melo Gen` to enter `Fugue`. `Fugue` treats MIDI channel 1 as 
 | Derived lines 2-4 | Direction / `SHIFT`: preset / `ALT`: velocity | Tempo / `ALT`: chance | Start / `ALT`: gate | Interval / `ALT`: octave jump |
 | Held channel 1 pad | Velocity | Chance | Gate | Pitch |
 
-When a sequencer clip start is shifted in `Poly Step`, `Nested Rhythm`, or `Fugue`, the nearest visible pad-grid column is tinted blue. Fine shifts use the nearest coarse column.
+When a sequencer clip start is shifted in `Poly Step`, `Nested Rhythm`, `Melo Gen`, or `Fugue`, the nearest visible pad-grid column is tinted purple. Fine shifts use the nearest coarse column.
 
 For a source-only clip, Fugue starts with derived lines 2-4 off. Enable a line to generate it from channel 1; turn it off to clear that generated MIDI channel. If channels 2-4 already contain notes when you enter Fugue, those notes are protected and the OLED prompts for `PATTERN DOWN`. Pressing `PATTERN DOWN` explicitly replaces all three derived channels and enables them for subsequent Fugue editing.
 
@@ -613,9 +629,9 @@ For immediate derived-line feedback, change source expression from the controlle
 | `SHIFT + MUTE_2` | Halve selected visible clip length |
 | `MUTE_3` + pad | Paste selected clip to target slot |
 | `MUTE_4` + pad | Delete |
-| `BANK LEFT/RIGHT` | Scroll tracks by visible page |
-| `SHIFT + BANK LEFT/RIGHT` | Scroll tracks by one |
-| `ALT + BANK LEFT/RIGHT` | Undo / redo Bitwig project history |
+| `GRID LEFT/RIGHT` | Scroll tracks by visible page |
+| `SHIFT + GRID LEFT/RIGHT` | Scroll tracks by one |
+| `ALT + GRID LEFT/RIGHT` | Undo / redo Bitwig project history |
 | `PATTERN UP/DOWN` | Scroll scenes by visible page |
 | `SHIFT + PATTERN UP/DOWN` | Scroll scenes by one |
 | `KNOB MODE` | Cycle Launcher encoder pages |
@@ -636,7 +652,7 @@ Hold `REC` and press a pad to target recording directly into that visible slot. 
 
 The `Scene Launch` page keeps the same encoder and navigation controls as Launcher. Its top row addresses the 16 visible scenes: press a scene pad to launch, hold `MUTE_1` and press a scene pad to select it as the scene copy source, hold `MUTE_3` and press a scene pad to copy the selected scene to that target, and hold `MUTE_4` and press a scene pad to delete it. If no scene source is selected, scene copy falls back to the first visible scene with playing clips, then the first visible scene with recording clips. `MUTE_2` is unused on this page.
 
-On `Scene Launch`, `BANK LEFT/RIGHT` also scrolls the visible scene window, with `SHIFT + BANK LEFT/RIGHT` scrolling by one scene.
+On `Scene Launch`, `GRID LEFT/RIGHT` also scrolls the visible scene window, with `SHIFT + GRID LEFT/RIGHT` scrolling by one scene.
 
 On remote encoder pages, hold `ALT` while turning an encoder to control remotes 5-8 on the same page.
 
@@ -737,6 +753,7 @@ Use `Fugue` when you already have a melodic idea and want related material aroun
 - `Pad Brightness`
 - `Pad Saturation`
 - `Screen Message Hold`
+- `VU Meters`: choose `Off`, numeric `Selected` track/pad meters, or `All` meters; defaults to `Selected`
 - `Idle Perf & Drum OLED`: choose contextual idle text/values or visible-track/pad meters for Perform and Drum XOX
 - `Encoder Legend Position`: choose whether compact OLED encoder legends appear on the bottom or top row
 - `Note OLED Notes/Chords`: choose whether live Note pad notes/chords stay pad-only or also follow selected-track DAW playback notes

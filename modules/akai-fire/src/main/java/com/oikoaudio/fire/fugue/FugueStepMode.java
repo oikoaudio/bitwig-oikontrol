@@ -21,6 +21,7 @@ import com.oikoaudio.fire.sequence.NoteVariationParameter;
 import com.oikoaudio.fire.sequence.ObservedNoteVariationAdapter;
 import com.oikoaudio.fire.sequence.StepPadLightHelper;
 import com.oikoaudio.fire.utils.PatternButtons;
+import com.oikoaudio.fire.values.ClipLoopWindow;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +32,7 @@ public final class FugueStepMode extends Layer {
     private static final int STEP_COUNT = FuguePattern.MAX_STEPS;
     private static final int DEFAULT_LOOP_STEPS = 32;
     private static final double STEP_LENGTH = 0.125;
+    private static final double FINE_PLAY_START_STEP = 1.0 / 64.0;
     private static final int LINE_COUNT = 4;
     private static final int PAD_COLUMNS = 16;
     private static final int SOURCE_CHANGE_REBUILD_DELAY_MS = 20;
@@ -93,7 +95,13 @@ public final class FugueStepMode extends Layer {
                         "FUGUE_STEP_CLIP", "FUGUE_STEP_CLIP", STEP_COUNT, 128);
         this.cursorClip.setStepSize(STEP_LENGTH);
         this.cursorClip.scrollToKey(0);
-        this.cursorClip.scrollToStep(0);
+        this.cursorClip
+                .getLoopStart()
+                .addValueObserver(
+                        loopStart ->
+                                cursorClip.scrollToStep(
+                                        ClipLoopWindow.startStep(loopStart, STEP_LENGTH)));
+        this.cursorClip.exists().markInterested();
         this.cursorClip.getLoopLength().markInterested();
         this.cursorClip.getPlayStart().markInterested();
         this.cursorClip
@@ -111,7 +119,15 @@ public final class FugueStepMode extends Layer {
                     noteVariationAdapter.handleObservedNote(noteStep);
                     handleNoteStepObject(noteStep);
                 });
-        this.cursorClip.playingStep().addValueObserver(observations::updatePlayingStep);
+        this.cursorClip
+                .playingStep()
+                .addValueObserver(
+                        step ->
+                                observations.updatePlayingStep(
+                                        ClipLoopWindow.relativeStep(
+                                                step,
+                                                cursorClip.getLoopStart().get(),
+                                                STEP_LENGTH)));
         this.templatePads =
                 new FugueTemplatePadController(
                         new TemplatePadClipPort(),
@@ -162,6 +178,10 @@ public final class FugueStepMode extends Layer {
             showEncoderModeInfo();
         }
         oled.clearScreenDelayed();
+        if (!cursorClip.exists().get()) {
+            oled.valueInfo("No Clip", "Select clip");
+            driver.notifyPopup("No Clip", "Select clip");
+        }
     }
 
     @Override
@@ -176,15 +196,18 @@ public final class FugueStepMode extends Layer {
         if (!pressed) {
             return;
         }
-        if (driver.isGlobalAltHeld()) {
-            if (amount < 0) {
-                halveClipLength();
-            } else {
-                doubleClipLength();
+        switch (FugueGridGesture.resolve(
+                activeLineIndex() == FugueClipAdapter.SOURCE_CHANNEL, driver.isGlobalAltHeld())) {
+            case SOURCE_PLAY_START -> moveClipPlayStart(amount, driver.isGlobalShiftHeld());
+            case DERIVED_LINE_START -> adjustStartOffset(activeLineIndex(), amount);
+            case CLIP_LENGTH -> {
+                if (amount < 0) {
+                    halveClipLength();
+                } else {
+                    doubleClipLength();
+                }
             }
-            return;
         }
-        adjustStartOffset(activeLineIndex(), amount);
     }
 
     private void bindMainEncoder() {
@@ -227,6 +250,9 @@ public final class FugueStepMode extends Layer {
     private void handleMainEncoderPress(final boolean pressed) {
         if (driver.isPopupBrowserActive()) {
             driver.routeBrowserMainEncoderPress(pressed);
+            return;
+        }
+        if (driver.handleGlobalDeviceDeletionPress(pressed)) {
             return;
         }
         if (templatePads.isEditing()) {
@@ -576,9 +602,7 @@ public final class FugueStepMode extends Layer {
                                 "Line 1 Velocity", "%+d".formatted(settings.velocityOffset()));
                 case 1 -> oled.valueInfo("Line 1 Chance", settings.chancePercent() + "%");
                 case 2 -> oled.valueInfo("Line 1 Gate", settings.gatePercent() + "%");
-                case 3 ->
-                        oled.valueInfo(
-                                "Clip Start", formatPlayStart(cursorClip.getPlayStart().get()));
+                case 3 -> oled.valueInfo("Clip Start", formatPlayStart(relativePlayStart()));
                 default -> {}
             }
             return;
@@ -589,8 +613,7 @@ public final class FugueStepMode extends Layer {
                             "Template Root", NoteGridLayout.noteName(driver.getSharedRootNote()));
             case 1 -> oled.valueInfo("Template Scale", driver.getSharedScaleDisplayName());
             case 2 -> oled.valueInfo("Clip Length", formatSteps(currentLoopSteps()));
-            case 3 ->
-                    oled.valueInfo("Clip Start", formatPlayStart(cursorClip.getPlayStart().get()));
+            case 3 -> oled.valueInfo("Clip Start", formatPlayStart(relativePlayStart()));
             default -> {}
         }
     }
@@ -914,14 +937,49 @@ public final class FugueStepMode extends Layer {
 
     private int shiftedClipStartColumn() {
         return StepPadLightHelper.nearestColumnForShiftedClipStart(
-                cursorClip.getPlayStart().get(), currentLoopSteps() * STEP_LENGTH, PAD_COLUMNS);
+                cursorClip.getPlayStart().get(),
+                cursorClip.getLoopStart().get(),
+                currentLoopSteps() * STEP_LENGTH,
+                PAD_COLUMNS);
     }
 
     private void setClipPlayStart(final int startStep) {
-        final double playStart =
+        final double relativeStart =
                 Math.max(0.0, Math.min((loopSteps - 1) * STEP_LENGTH, startStep * STEP_LENGTH));
-        cursorClip.getPlayStart().set(playStart);
-        oled.valueInfo("Clip Start", formatPlayStart(playStart));
+        cursorClip
+                .getPlayStart()
+                .set(
+                        ClipLoopWindow.absoluteBeat(
+                                relativeStart,
+                                cursorClip.getLoopStart().get(),
+                                currentLoopSteps() * STEP_LENGTH));
+        oled.valueInfo("Clip Start", formatPlayStart(relativeStart));
+    }
+
+    private double relativePlayStart() {
+        return ClipLoopWindow.relativeBeat(
+                cursorClip.getPlayStart().get(),
+                cursorClip.getLoopStart().get(),
+                currentLoopSteps() * STEP_LENGTH);
+    }
+
+    private void moveClipPlayStart(final int amount, final boolean fine) {
+        final double loopLength = Math.max(STEP_LENGTH, cursorClip.getLoopLength().get());
+        final double step = fine ? FINE_PLAY_START_STEP : STEP_LENGTH;
+        final double next =
+                ClipLoopWindow.movePlayStart(
+                        cursorClip.getPlayStart().get(),
+                        cursorClip.getLoopStart().get(),
+                        loopLength,
+                        amount * step);
+        cursorClip.getPlayStart().set(next);
+        final double relative =
+                ClipLoopWindow.relativeBeat(next, cursorClip.getLoopStart().get(), loopLength);
+        oled.valueInfo(
+                fine ? "Clip Start Fine" : "Clip Start",
+                fine
+                        ? "%.3f beats".formatted(relative)
+                        : "Step %d".formatted((int) Math.round(relative / STEP_LENGTH) + 1));
     }
 
     private String formatPlayStart(final double beatTime) {
@@ -1278,7 +1336,7 @@ public final class FugueStepMode extends Layer {
     }
 
     private void adjustTemplatePlayStart(final int inc) {
-        final int currentStart = (int) Math.round(cursorClip.getPlayStart().get() / STEP_LENGTH);
+        final int currentStart = (int) Math.round(relativePlayStart() / STEP_LENGTH);
         setClipPlayStart(Math.max(0, Math.min(loopSteps - 1, currentStart + inc)));
     }
 

@@ -115,6 +115,32 @@ class MulticlipClipControllerPinningTest {
     }
 
     @Test
+    void observesAndMapsStepsRelativeToAMovedLoopWindow() {
+        final Fixture fixture = new Fixture();
+        final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);
+        final ClipLauncherSlot targetSlot = mock(ClipLauncherSlot.class);
+        when(targetTrack.position().get()).thenReturn(7);
+        when(fixture.cursor.position().get()).thenReturn(7);
+        fixture.existingClipAtScene(5);
+        when(fixture.clip.getLoopStart().get()).thenReturn(8.0);
+        when(fixture.clip.playingStep().get()).thenReturn(65);
+
+        fixture.controller.retarget(
+                targetTrack,
+                targetSlot,
+                TrackLaneMapping.fromChildPosition(0),
+                32,
+                5,
+                true,
+                ignored -> {});
+        fixture.runAllTasks();
+
+        verify(fixture.clip).scrollToStep(64);
+        verify(fixture.fineClip).scrollToStep(512);
+        assertTrue(fixture.controller.isPlaying(1));
+    }
+
+    @Test
     void exposesObservedNoteObjectsForHeldStepEncoderEditing() {
         final Fixture fixture = new Fixture();
         final Track targetTrack = mock(Track.class, Mockito.RETURNS_DEEP_STUBS);

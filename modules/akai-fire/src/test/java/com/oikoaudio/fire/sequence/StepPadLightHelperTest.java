@@ -30,6 +30,15 @@ class StepPadLightHelperTest {
     }
 
     @Test
+    void mapsShiftedClipStartRelativeToMovedLoopStart() {
+        assertEquals(4, StepPadLightHelper.nearestColumnForShiftedClipStart(10.0, 8.0, 8.0, 16));
+        assertEquals(
+                3,
+                StepPadLightHelper.nearestVisibleStepForShiftedClipStart(
+                        16.75, 8.0, 16.0, 0.25, 32, 32));
+    }
+
+    @Test
     void mapsShiftedClipStartToNearestColumnOnVisibleStepPage() {
         assertEquals(
                 3,

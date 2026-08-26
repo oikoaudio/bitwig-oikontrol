@@ -87,6 +87,9 @@ final class ChordStepEncoderControls {
             mainEncoderRouting.routeBrowserPress(pressed);
             return;
         }
+        if (mainEncoderRouting.routeDeviceDeletionPress(pressed)) {
+            return;
+        }
         mainEncoderRouting.setPressed(pressed);
         if (pressed && mainEncoderRouting.isAltHeld()) {
             mainEncoderPressConsumed = true;

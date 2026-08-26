@@ -20,6 +20,7 @@ public class ViewCursorControl {
     private final PinnableCursorClip selectedClip;
     private final DeviceBank drumBank;
     private final DrumPadBank drumPadBank;
+    private final DrumPadBank drumMeterPadBank;
     private final TrackBank trackBank;
     private int selectedTrackIndex = -1;
     private int selectedClipSlotIndex = -1;
@@ -73,6 +74,7 @@ public class ViewCursorControl {
         }
 
         deviceBank = cursorTrack.createDeviceBank(8);
+        deviceBank.getDevice(0).exists().markInterested();
         primaryDevice =
                 cursorTrack.createCursorDevice(
                         "drumdetection", "Pad Device", 8, CursorDeviceFollowMode.FIRST_INSTRUMENT);
@@ -100,6 +102,10 @@ public class ViewCursorControl {
         drumBank.setDeviceMatcher(drumMatcher);
         // drumDevice = drumBank.getItemAt(0);
         drumPadBank = primaryDevice.createDrumPadBank(16);
+        drumMeterPadBank = primaryDevice.createDrumPadBank(16);
+        drumPadBank
+                .scrollPosition()
+                .addValueObserver(position -> drumMeterPadBank.scrollPosition().set(position));
     }
 
     public TrackBank getTrackBank() {
@@ -147,5 +153,9 @@ public class ViewCursorControl {
 
     public DrumPadBank getDrumPadBank() {
         return drumPadBank;
+    }
+
+    public DrumPadBank getDrumMeterPadBank() {
+        return drumMeterPadBank;
     }
 }

@@ -24,6 +24,8 @@ import java.util.List;
 
 /** Scene, child-track, and 32-step sequencer for clips feeding a shared group instrument. */
 public final class MulticlipSequenceMode extends Layer {
+    public static final String DISPLAY_NAME = "Multiclp Seq";
+
     private static final int PROJECT_SEARCH_BANK_SIZE = 16;
     private static final int SCENE_BANK_SIZE = MulticlipXoxLayout.SCENE_COUNT;
     private static final int MAX_LANES = MulticlipXoxLayout.LANE_COUNT;
@@ -440,7 +442,8 @@ public final class MulticlipSequenceMode extends Layer {
         drumPadEncoderController.setActivePad(activeChildPosition);
         final int visibleScene = activeScene - sceneBank.scrollPosition().get();
         if (visibleScene < 0 || visibleScene >= SCENE_BANK_SIZE) {
-            driver.getOled().valueInfo("Scene off page", "Select scene again");
+            driver.showIncidentalModeFeedback(
+                    () -> driver.getOled().valueInfo("Scene off page", "Select scene again"));
             return;
         }
         final long generation = ++targetGeneration;
@@ -463,7 +466,10 @@ public final class MulticlipSequenceMode extends Layer {
                     }
                     cursorRetargetInProgress = false;
                     if (!ready) {
-                        driver.getOled().valueInfo("Clip not ready", "Select lane again");
+                        driver.showIncidentalModeFeedback(
+                                () ->
+                                        driver.getOled()
+                                                .valueInfo("Clip not ready", "Select lane again"));
                         return;
                     }
                     if (clipController.exists()) {
@@ -607,9 +613,10 @@ public final class MulticlipSequenceMode extends Layer {
     private void handleGridButton(final int direction) {
         switch (MulticlipGridGesture.resolve(
                 driver.isGlobalShiftHeld(), driver.isGlobalAltHeld(), heldPatternPadExists())) {
-            case TIME_PAGE -> pageTime(direction);
             case HELD_STEP_NUDGE -> timingController.fineNudge(direction, true);
-            case PLAY_START -> timingController.movePlayStart(direction);
+            case PLAY_START -> timingController.movePlayStart(direction, false);
+            case PLAY_START_FINE -> timingController.movePlayStart(direction, true);
+            case CLIP_LENGTH -> timingController.adjustLength(direction);
             case WHOLE_LANE_NUDGE -> timingController.fineNudge(direction, false);
         }
     }
@@ -659,7 +666,7 @@ public final class MulticlipSequenceMode extends Layer {
                                                 + "-"
                                                 + (sceneBank.scrollPosition().get()
                                                         + SCENE_BANK_SIZE),
-                                        "Multiclip Seq"),
+                                        DISPLAY_NAME),
                 0);
     }
 
@@ -820,6 +827,7 @@ public final class MulticlipSequenceMode extends Layer {
                 hasClip
                         ? StepPadLightHelper.nearestVisibleStepForShiftedClipStart(
                                 clipController.playStart(),
+                                clipController.loopStart(),
                                 clipController.loopLength(),
                                 MulticlipTiming.STEP_BEATS,
                                 firstVisibleStep,
@@ -1102,7 +1110,8 @@ public final class MulticlipSequenceMode extends Layer {
 
     private void showInvalidContext() {
         final MulticlipContextFeedback.Message message = invalidContextMessage();
-        driver.getOled().valueInfo(message.title(), message.detail());
+        driver.showIncidentalModeFeedback(
+                () -> driver.getOled().valueInfo(message.title(), message.detail()));
     }
 
     private MulticlipContextFeedback.Message invalidContextMessage() {
@@ -1124,20 +1133,25 @@ public final class MulticlipSequenceMode extends Layer {
             showInvalidContext();
             return;
         }
-        driver.getOled()
-                .detailInfo(
-                        "Multiclip Seq",
-                        activeLaneName()
-                                + "  Lane "
-                                + (activeChildPosition + 1)
-                                + "\nScene "
-                                + (activeScene + 1)
-                                + "  Steps "
-                                + (firstVisibleStep + 1)
-                                + "-"
-                                + (firstVisibleStep + MulticlipXoxLayout.PATTERN_COUNT)
-                                + "\n"
-                                + (clipController.exists() ? "Clip ready" : "Empty lane"));
+        driver.showIncidentalModeFeedback(
+                () ->
+                        driver.getOled()
+                                .detailInfo(
+                                        DISPLAY_NAME,
+                                        activeLaneName()
+                                                + "  Lane "
+                                                + (activeChildPosition + 1)
+                                                + "\nScene "
+                                                + (activeScene + 1)
+                                                + "  Steps "
+                                                + (firstVisibleStep + 1)
+                                                + "-"
+                                                + (firstVisibleStep
+                                                        + MulticlipXoxLayout.PATTERN_COUNT)
+                                                + "\n"
+                                                + (clipController.exists()
+                                                        ? "Clip ready"
+                                                        : "Empty lane")));
     }
 
     public CursorRemoteControlsPage getActiveRemoteControlsPage() {
@@ -1160,23 +1174,35 @@ public final class MulticlipSequenceMode extends Layer {
         buttons.setUpCallback(
                 pressed -> {
                     if (pressed) {
-                        pageScenes(-1);
+                        handlePatternButton(-1);
                     }
                 },
-                () ->
-                        sceneBank.canScrollBackwards().get()
-                                ? BiColorLightState.HALF
-                                : BiColorLightState.OFF);
+                () -> patternPageLight(-1));
         buttons.setDownCallback(
                 pressed -> {
                     if (pressed) {
-                        pageScenes(1);
+                        handlePatternButton(1);
                     }
                 },
-                () ->
-                        sceneBank.canScrollForwards().get()
-                                ? BiColorLightState.HALF
-                                : BiColorLightState.OFF);
+                () -> patternPageLight(1));
+    }
+
+    private void handlePatternButton(final int direction) {
+        switch (MulticlipPatternGesture.resolve(driver.isGlobalShiftHeld())) {
+            case TIME_PAGE -> pageTime(direction);
+            case SCENE_PAGE -> pageScenes(direction);
+        }
+    }
+
+    private BiColorLightState patternPageLight(final int direction) {
+        final boolean available =
+                MulticlipPatternGesture.resolve(driver.isGlobalShiftHeld())
+                                == MulticlipPatternGesture.SCENE_PAGE
+                        ? direction < 0
+                                ? sceneBank.canScrollBackwards().get()
+                                : sceneBank.canScrollForwards().get()
+                        : direction < 0 ? firstVisibleStep > 0 : firstVisibleStep < MAX_TIME_START;
+        return available ? BiColorLightState.HALF : BiColorLightState.OFF;
     }
 
     private void clearPatternButtons() {

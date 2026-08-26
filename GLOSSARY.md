@@ -22,6 +22,8 @@ This file defines terms that agents and humans should use consistently. It is no
 
 **Remote Page Navigation**: Controller navigation through Bitwig remote-control pages for the active encoder target.
 
+**Grid Buttons**: The Akai Fire hardware `GRID LEFT` and `GRID RIGHT` buttons. Implementation code may retain historical `bank` names, but user-facing documentation calls the physical controls `GRID`.
+
 **Launcher Recording**: Akai Fire recording into Bitwig launcher slots from controller gestures such as `REC + pad` or `PATTERN + REC`.
 
 **Factory Template**: A Launch Control XL template that preserves Bitwig factory-style mixer, send, track, and device behaviour.
@@ -87,6 +89,12 @@ This file defines terms that agents and humans should use consistently. It is no
 **Accent Mode**: A controller editing state that applies accent velocity to held or newly edited steps.
 
 **Fine Nudge**: The Akai Fire timing gesture for moving held step material on a finer grid than the visible step grid.
+
+**Clip Rotation**: Moving a clip's Bitwig play start within its loop window without rewriting note positions.
+
+**Event Rotation**: Moving the notes or generated line offset that form a sequencer subtarget, rather than moving the containing clip's play start.
+
+**View Paging**: Moving the controller's visible step or scene window without changing clip timing or note positions.
 
 **Euclidean Controls**: Drum XOX generation controls for Euclidean length, pulses, rotation, and accent density.
 
