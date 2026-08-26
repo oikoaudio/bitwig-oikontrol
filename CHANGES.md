@@ -92,6 +92,22 @@ This document now tracks intentional modifications made to the `bitwig-oikontrol
 - Akai Fire now separates fixed `Default Clip Length` for empty clip creation from `Launcher Record Length` for fixed/manual/rounded launcher recording.
 - Added an Akai Fire `Screen Message Hold` preference with 750 ms, 1.5 s, and 3 s OLED transient message durations.
 
+## [2.23.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.22.0...oikontrol-v2.23.0) (2026-08-26)
+
+
+### Features
+
+* **fire:** add configurable VU meter polling ([a8fc0d5](https://github.com/oikoaudio/bitwig-oikontrol/commit/a8fc0d587e400f5e06fa33478bd514da24312c7e))
+* **fire:** align sequencer pattern and grid gestures ([d95a02b](https://github.com/oikoaudio/bitwig-oikontrol/commit/d95a02b44a232e2bd46a228993a97110e228ad7b))
+* **fire:** improve browser, device, and track workflows ([c49834e](https://github.com/oikoaudio/bitwig-oikontrol/commit/c49834e076158a925d0bf51d0a81a45549975bde))
+
+
+### Bug Fixes
+
+* **fire:** follow moved clip loop windows ([765e2ec](https://github.com/oikoaudio/bitwig-oikontrol/commit/765e2ec4089a4b33beadc0a97dddaa1e37959161))
+* **fire:** improve controller efficiency and gesture consistency ([ad46c3f](https://github.com/oikoaudio/bitwig-oikontrol/commit/ad46c3f20c9e73429f0fa21f3be558bb1a60d61e))
+* **fire:** preserve additive launcher clip selection ([2844b3c](https://github.com/oikoaudio/bitwig-oikontrol/commit/2844b3cfda2f89fdf5b0a8811142d51bd6ccadba))
+
 ## [2.22.0](https://github.com/oikoaudio/bitwig-oikontrol/compare/oikontrol-v2.21.0...oikontrol-v2.22.0) (2026-07-19)
 
 
