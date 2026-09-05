@@ -1,7 +1,7 @@
 import com.oikoaudio.gradle.BundledDocumentationRenderer
 
 plugins {
-    id 'com.diffplug.spotless' version '8.8.0'
+    id 'com.diffplug.spotless' version '8.10.2'
 }
 
 apply plugin: 'base'
