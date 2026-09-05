@@ -31,7 +31,7 @@ subprojects {
     }
 
     dependencies {
-        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.14.4'
     }
 
     test {
