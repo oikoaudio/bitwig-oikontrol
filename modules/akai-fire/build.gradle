@@ -11,6 +11,6 @@ jar {
 dependencies {
     implementation project(':modules:common')
     implementation 'com.bitwig:extension-api:25'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.4'
     testImplementation 'org.mockito:mockito-core:5.23.0'
 }
