@@ -31,7 +31,7 @@ jobs:
 
       - name: Install just
         if: steps.release.outputs.release_created == 'true'
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
 
       - name: Build combined Oikontrol extension
         if: steps.release.outputs.release_created == 'true'
