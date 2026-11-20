@@ -1,0 +1,292 @@
+# Akai Fire mode maps: what each control does, per mode. Written from docs/user-guide.md; `guide` names the
+# section each mode is taken from. Rendered by make_fire_maps.py.
+#
+# encoders: four columns (encoder 1-4), each with one label per encoder page: Channel, Mixer, User 1, User 2.
+# pages: optional tags for the encoder lines when a mode pages its encoders differently (Fugue).
+# controls: callout lines per control. The first line is the title; "TAG: text" renders the tag small.
+# pads: regions of whole pad rows, 1 = top row.
+# notes: shown under the map. `CONTROL` renders bold.
+
+[[mode]]
+key = "note"
+title = "Note"
+guide = "NOTE mode"
+entry = "NOTE"
+how = "Press `NOTE`."
+intro = "A 16 × 4 playing surface for melodic and harmonic input. Root, scale, and octave are shared with Melo Gen, Poly Step, and the settings overlay."
+encoders = [
+  ["Mod", "Track volume", "Velocity sens.", "Device remote 1"],
+  ["Pitch bend", "Track pan", "Aftertouch", "Device remote 2"],
+  ["Pitch gliss", "Send 1", "Breath", "Device remote 3"],
+  ["Timbre", "Send 2", "Pitch expression", "Device remote 4"],
+]
+pads = [
+  { rows = [1, 2, 3, 4], lines = ["Note grid", "low notes bottom left", "lit: root, in scale"] },
+]
+notes = [
+  "Press `NOTE` again for harmonic input: a scale-aware lattice where each pad plays a stack. Its `Mixer` page sets notes per pad, octave span, bass grid, and voicing.",
+  "`ALT + NOTE` toggles chromatic / in-key in melodic input, and bass columns / full field in harmonic input.",
+  "`SHIFT` on `User 1` encoder 1 sets the velocity center. `ALT` on `Channel` encoder 3 changes the gliss mode.",
+  "Note Repeat divisions run from `1/32T` to `1/4`; the default is `1/16`.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "▲ previous / ▼ next scale", "ALT: ▲ higher / ▼ lower root"]
+"SELECT" = ["Select", "hold Repeat + turn: division"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Octave down / up", "ALT: undo / redo"]
+"MUTE 1" = ["Sustain"]
+"MUTE 2" = ["Sostenuto"]
+"MUTE 3" = ["Note repeat", "hold + SELECT: division"]
+"MUTE 4" = ["Hold", "latch pads already down"]
+"NOTE" = ["NOTE", "melodic ↔ harmonic", "ALT: layout variant"]
+"STEP" = ["STEP", "Poly Step", "SHIFT: Step Input helper"]
+
+[[mode]]
+key = "drum-xox"
+title = "Drum XOX"
+guide = "DRUM Mode"
+entry = "DRUM"
+how = "Press `DRUM`. Press again for Nested Rhythm, Drum Pads, then Multiclip Seq."
+intro = "A step sequencer for a Bitwig Drum Machine: clip slots on top, the visible drum lanes below, and 32 steps for the selected lane."
+encoders = [
+  ["Note length", "Pad volume", "Velocity", "Pad remote 1"],
+  ["Chance", "Pad pan", "Pressure", "Pad remote 2"],
+  ["Velocity spread", "Pad send 1", "Timbre", "Pad remote 3"],
+  ["Repeats", "Pad send 2", "Pitch", "Pad remote 4"],
+]
+pads = [
+  { rows = [1], lines = ["Clip slots"] },
+  { rows = [2], lines = ["Drum pads", "visible lanes"] },
+  { rows = [3, 4], lines = ["Steps 1–32", "selected lane", "hold + STEP: accent"] },
+]
+notes = [
+  "Hold one or more step pads, then use the `GRID` timing gestures to move those notes directly.",
+  "Hold `Copy` and press a clip slot, drum pad, or step to paste from the selected item of the same type.",
+  "`User 2`: hold `ALT` for remotes 5–8. `ALT + KNOB MODE` cycles Pad Remotes, Drum Machine Remotes, and Euclid.",
+  "Encoders 1–3 on `User 1` set the held steps' values, or the defaults for new steps when no step is held.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2", "ALT: U2 remote target"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "Page visible steps", "ALT: scroll drum pads"]
+"BROWSER" = ["Browser", "hold pad: browse that pad"]
+"SELECT" = ["Select", "hold pad + turn: pad device"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Move / rotate pattern", "SHIFT: fine nudge", "ALT: halve / double length"]
+"MUTE 1" = ["Select", "SHIFT: Mute pad mode"]
+"MUTE 2" = ["Last step", "SHIFT: Solo pad mode"]
+"MUTE 3" = ["Copy / paste"]
+"MUTE 4" = ["Delete / reset"]
+"DRUM" = ["DRUM", "again: Nested Rhythm"]
+"STEP" = ["STEP", "Poly Step", "SHIFT: latch accent", "ALT: fill"]
+"TRANSPORT" = ["Transport", "REC: launcher overdub"]
+
+[[mode]]
+key = "launcher"
+title = "Launcher"
+guide = "Launcher mode (`PERFORM`)"
+entry = "PERFORM"
+how = "Press `PERFORM`."
+intro = "A 16 × 4 clip launcher. Filled slots select and launch from the clip start; empty slots create a clip of `Default Clip Length` and launch it."
+encoders = [
+  ["Global remote 1", "Track volume", "Track remote 1", "Device remote 1"],
+  ["Global remote 2", "Track pan", "Track remote 2", "Device remote 2"],
+  ["Global remote 3", "Send 1", "Track remote 3", "Device remote 3"],
+  ["Global remote 4", "Send 2", "Track remote 4", "Device remote 4"],
+]
+pads = [
+  { rows = [1, 2, 3, 4], lines = ["Clip slots", "press: select + launch", "empty: new clip"] },
+]
+notes = [
+  "`SHIFT + PERFORM` latches the Mix page: rows select, solo, mute, and arm the 16 visible tracks. `PATTERN DOWN` there steps into device view and device layers.",
+  "`PERFORM` again shows the Scene Launch page: the top row launches the 16 visible scenes. `SHIFT + ALT + PERFORM` opens Birds-Eye navigation for large sets.",
+  "On remote encoder pages, hold `ALT` while turning for remotes 5–8.",
+  "`Perform Clip Launcher Layout` sets whether the launcher starts vertical or horizontal; `ALT + PERFORM` toggles it for the session.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "Scroll scenes by page", "SHIFT: by one"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Scroll tracks by page", "SHIFT: by one", "ALT: undo / redo"]
+"MUTE 1" = ["Select", "hold + pad: no launch"]
+"MUTE 2" = ["Double length", "SHIFT: halve"]
+"MUTE 3" = ["Paste", "hold + pad: selected clip"]
+"MUTE 4" = ["Delete", "hold + pad"]
+"PERFORM" = ["PERFORM", "again: Scene Launch page", "SHIFT: Mix page", "ALT: vertical / horizontal"]
+"TRANSPORT" = ["Transport", "REC + pad: record into slot"]
+
+[[mode]]
+key = "multiclip-seq"
+title = "Multiclip Seq"
+guide = "Multiclip Seq mode"
+entry = "DRUM"
+how = "Press `DRUM` until Multiclip Seq: Drum XOX, Nested Rhythm, Drum Pads, then Multiclip Seq."
+intro = "Sequences up to sixteen child tracks of one group, each with its own clip length and play start. It needs a group-track setup; see the user guide."
+encoders = [
+  ["Note length", "Channel volume", "Velocity", "Euclid length"],
+  ["Chance", "Channel pan", "Pressure", "Euclid pulses"],
+  ["Velocity spread", "Channel send 1", "Timbre", "Euclid rotation"],
+  ["Repeats", "Channel send 2", "Pitch expression", "Accent density"],
+]
+pads = [
+  { rows = [1], lines = ["Scenes", "press: launch", "ALT: select for editing"] },
+  { rows = [2], lines = ["Lanes", "child tracks 1–16"] },
+  { rows = [3, 4], lines = ["Steps 1–32", "active lane clip"] },
+]
+notes = [
+  "Child track order is the lane order: positions 1–16 map to lanes 1–16, MIDI channels 1–16, and notes 36–51.",
+  "With no step held, `User 1` encoders 1–3 set velocity, pressure, and timbre for the next inserted notes.",
+  "`User 2` Euclid settings are kept per lane and scene, and apply to the visible page of the active clip.",
+  "Hold `Copy` and press a scene pad to paste the active lane clip there; `SHIFT + Copy` pastes the whole scene. `ALT + Last step` selects the group for direct device access.",
+  "Hold `Select` and tap `KNOB MODE` to show all four assignments of the current page on the OLED.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "Page steps by 32", "SHIFT: page scenes by 16"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Move lane play start", "SHIFT: fine move", "ALT: halve / double length", "SHIFT + ALT: nudge all notes"]
+"MUTE 1" = ["Select", "SHIFT: lane Mute mode"]
+"MUTE 2" = ["Last step", "SHIFT: lane Solo mode"]
+"MUTE 3" = ["Copy / paste", "hold + scene pad"]
+"MUTE 4" = ["Delete", "hold + step"]
+"DRUM" = ["DRUM", "again: Drum XOX"]
+
+[[mode]]
+key = "poly-step"
+title = "Poly Step"
+guide = "Poly Step mode"
+entry = "STEP"
+how = "Press `STEP`. Press again for Melo Gen; `NOTE` returns to live input."
+intro = "A step sequencer for single notes or chords. The builder starts blank in chromatic view and uses the shared root and scale."
+encoders = [
+  ["Chord octave", "Track volume", "Note velocity", "Note length"],
+  ["Velocity sens.", "Track pan", "Pressure", "Chance"],
+  ["Chord set", "Send 1", "Timbre", "Velocity spread"],
+  ["Interpretation", "Send 2", "Pitch", "Repeats"],
+]
+pads = [
+  { rows = [1], lines = ["Clip slots"] },
+  { rows = [2], lines = ["Chord slots", "or builder notes"] },
+  { rows = [3, 4], lines = ["Steps 1–32", "tap: place / remove", "hold + chord: rewrite"] },
+]
+notes = [
+  "`Channel` modifiers: encoder 1 `ALT` root / `SHIFT` scale; encoder 2 `SHIFT` velocity center; encoder 3 `ALT` set page; encoder 4 `ALT` invert chord / `SHIFT` builder layout.",
+  "`User 1` and `User 2` edit held or selected notes; with no note target they set the default for the next inserted chord.",
+  "Hold source pitch or chord pads and tap a lit step to replace its pitches, keeping timing, length, and expression.",
+  "Press several chord pads together to combine them into one grip.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "Page visible steps", "SHIFT: builder latch ▼ off / ▲ on"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Move clip start", "SHIFT: fine move", "ALT: halve / double length", "hold step: micro-nudge"]
+"MUTE 1" = ["Select / load step"]
+"MUTE 2" = ["Last step"]
+"MUTE 3" = ["Paste", "to step or clip slot"]
+"MUTE 4" = ["Delete", "step or clip"]
+"STEP" = ["STEP", "again: Melo Gen", "SHIFT: latch accent", "ALT: fill"]
+"NOTE" = ["NOTE", "back to live input", "ALT: chromatic / in-key"]
+
+[[mode]]
+key = "nested-rhythm"
+title = "Nested Rhythm"
+guide = "Nested Rhythm mode"
+entry = "DRUM"
+how = "Press `DRUM` twice: Drum XOX, then Nested Rhythm."
+intro = "Generates rhythm from nested divisions (tuplets, ratchets, asymmetric subdivisions) with exact timing, and shows the hits on the pads. It never overwrites an existing clip until you press `PATTERN DOWN`."
+encoders = [
+  ["Density", "Volume", "Velocity spread", "Linear pitch"],
+  ["Tuplet", "Pan", "Pressure spread", "Pitch expr spread"],
+  ["Ratchet", "Send 1", "Timbre spread", "Clip length"],
+  ["Cluster", "Send 2", "Chance", "Reset hit edits"],
+]
+pads = [
+  { rows = [1], lines = ["Clip slots", "hold hit: recurrence mask"] },
+  { rows = [2, 3], lines = ["Projected rhythm", "32 bins", "hold: grab nearest hit"] },
+  { rows = [4], lines = ["Hits 1–16", "tap: toggle hit", "SHIFT: reset hit"] },
+]
+notes = [
+  "`Channel` changes the generator structure. `ALT` gives density direction, tuplet and ratchet divisions (`x2`–`x16`), and play start; `SHIFT` gives recurrence, target phase, and rate.",
+  "On `User 1` and `User 2`, `ALT` sets the center and `SHIFT` rotates the contour. Hold a hit pad and turn an expression encoder to edit that hit.",
+  "Timing is not edited from the pads: they are a projection of the generated notes, not Bitwig's note grid.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "▲ reset hit edits", "▼ generate into clip"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Move play start", "SHIFT: fine move", "ALT: halve / double length"]
+"MUTE 1" = ["Select", "clip, no launch"]
+"MUTE 2" = ["Last step", "hold + rhythm pad"]
+"MUTE 3" = ["Copy / paste", "clip row"]
+"MUTE 4" = ["Delete", "ALT: reset hit edits"]
+"DRUM" = ["DRUM", "again: Drum Pads"]
+"STEP" = ["STEP", "Poly Step", "ALT: fill"]
+
+[[mode]]
+key = "melo-gen"
+title = "Melo Gen"
+guide = "Melo Gen mode"
+entry = "STEP"
+how = "Press `STEP` twice: Poly Step, then Melo Gen."
+intro = "A generative, editable mono phrase sequencer for basslines, motifs, and hooks. It edits a 2-bar, 32-step window and keeps phrases inside the pitch pool."
+encoders = [
+  ["Engine", "Length", "Velocity", "Note length"],
+  ["Density", "Swivel / mirror", "Pressure", "Chance"],
+  ["Pool octave", "Reverse", "Timbre", "Velocity spread"],
+  ["Mutation type", "Invert", "Pitch", "Repeats"],
+]
+pads = [
+  { rows = [1], lines = ["Clip slots", "hold step: recurrence"] },
+  { rows = [2], lines = ["Pitch pool", "tap: add / remove", "hold step + pad: assign"] },
+  { rows = [3, 4], lines = ["Phrase 1–32", "hold + encoder: edit step"] },
+]
+notes = [
+  "Engines: `Acid`, `Motif`, `Call/Resp`, `Rolling`, and `Octave`. A pitch pool you edit by hand stays yours when you switch engine.",
+  "`Channel` modifiers: encoder 1 `ALT` subtype; encoder 2 `ALT` thin/fill; encoder 3 `ALT` root / `SHIFT` scale; encoder 4 `ALT` strength.",
+  "`Mixer` processes the phrase: `ALT` gives channel shape, tension, legato, and recurrence info.",
+  "Recurrence: hold active steps and row 1 becomes an 8-pad recurrence editor.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Encoder page", "CH · MX · U1 · U2"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "▲ generate pitch pool", "▼ generate phrase", "ALT: mutate", "SHIFT: cycle view"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Move play start", "SHIFT: fine move", "ALT: halve / double length"]
+"MUTE 1" = ["Select", "clip, no launch"]
+"MUTE 2" = ["Last step"]
+"MUTE 3" = ["Paste", "to clip slot"]
+"MUTE 4" = ["Clear", "step or clip", "SHIFT: remove clip"]
+"STEP" = ["STEP", "again: Fugue", "SHIFT: latch accent", "ALT: fill"]
+
+[[mode]]
+key = "fugue"
+title = "Fugue"
+guide = "Fugue mode"
+entry = "STEP"
+how = "Press `STEP` three times: Poly Step, Melo Gen, then Fugue."
+intro = "MIDI channel 1 is the source line; Fugue generates related lines on channels 2–4. The encoders follow the active line, chosen with `KNOB MODE`."
+pages = ["SRC", "2–4", "HELD"]
+encoders = [
+  ["Shared root", "Direction", "Velocity"],
+  ["Shared scale", "Tempo", "Chance"],
+  ["Clip length", "Start", "Gate"],
+  ["Play start", "Interval", "Pitch"],
+]
+pads = [
+  { rows = [1], lines = ["Source line", "channel 1", "tap: add / remove note"] },
+  { rows = [2, 3, 4], lines = ["Derived lines 2–4", "press: select line", "and set its start"] },
+]
+notes = [
+  "Encoder lines: `SRC` with the source line active, `2–4` with a derived line active, `HELD` while holding a source pad. `ALT` on the source gives velocity, chance, and gate; on derived lines it gives velocity, chance, gate, and octave jump.",
+  "Turning an encoder on a derived line rebuilds that line at once.",
+  "Existing notes on channels 2–4 are protected; press `PATTERN DOWN` to replace them. After editing channel 1 in Bitwig, press `PATTERN DOWN` to rebuild.",
+]
+
+[mode.controls]
+"KNOB MODE" = ["Active line", "source · 2 · 3 · 4"]
+"PATTERN UP/DOWN" = ["Pattern ▲ ▼", "▲ next preset", "▼ reread source, rebuild"]
+"GRID LEFT/RIGHT" = ["Grid ◀ ▶", "Play start / line offset", "SHIFT: fine (source)", "ALT: halve / double length"]
+"MUTE 1" = ["Source", "on / off"]
+"MUTE 2" = ["Line 2", "on / off"]
+"MUTE 3" = ["Line 3", "on / off"]
+"MUTE 4" = ["Line 4", "on / off"]
+"STEP" = ["STEP", "again: Poly Step"]

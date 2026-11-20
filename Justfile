@@ -96,5 +96,9 @@ oikontrol-build-install:
     cp modules/oikontrol/build/libs/Oikontrol.bwextension "{{bitwig_extensions_dir}}/"
     @ls -l "{{bitwig_extensions_dir}}/Oikontrol.bwextension"
 
+fire-maps:
+    python3 -m unittest discover -s tools/fire-maps
+    python3 tools/fire-maps/make_fire_maps.py build/fire-maps
+
 artifacts:
     @find modules -type f \( -name '*.bwextension' -o -name '*.jar' \) | sort

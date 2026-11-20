@@ -8,6 +8,9 @@ Akai Fire class names below are rooted under `modules/akai-fire/src/main/java/co
 - `modules/launchcontrol/` is the Launch Control XL extension; do not apply Akai Fire assumptions there unless explicitly intended.
 - `modules/common/` contains copied/shared Bitwig framework helpers. Avoid broad changes there unless required by both controllers.
 - `modules/oikontrol/` contains package/output resources for the Oikontrol extension build.
+- `tools/fire-maps/` generates the Akai Fire mode maps (panel SVG with callouts per mode) as HTML, PDF, and website data.
+  Labels live in `modes.toml`, written from `docs/user-guide.md`; update a mode's entry when its guide section changes.
+  Run `just fire-maps`; see `docs/feature/fire-mode-maps.md`.
 
 ## Shared Akai Fire areas
 
