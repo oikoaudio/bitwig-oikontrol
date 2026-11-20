@@ -21,7 +21,7 @@ jobs:
       - uses: jdx/mise-action@v2
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
 
       - name: Build combined Oikontrol extension
         run: just oikontrol-build
